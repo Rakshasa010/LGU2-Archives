@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLRM System - Quick Start Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 60px;
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            color: #dc2626;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+        }
+        .feature-box {
+            background: #f9fafb;
+            border-left: 4px solid #dc2626;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .feature-box h3 {
+            color: #1f2937;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        .feature-box p {
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        .feature-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .feature-list li {
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+        .start-button {
+            display: block;
+            background: linear-gradient(to right, #dc2626, #b91c1c);
+            color: white;
+            text-align: center;
+            padding: 20px 40px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin: 40px auto 20px;
+            max-width: 400px;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+            transition: all 0.3s ease;
+        }
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .info-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .info-card .number {
+            font-size: 2em;
+            color: #dc2626;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .info-card .label {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        .badge {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin: 5px;
+        }
+        .warning {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warning strong {
+            color: #b45309;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <svg width="80" height="80" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="#dc2626"/>
+                <path d="M30 45 L45 60 L70 35" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+            </svg>
+        </div>
+        
+        <h1>🎉 Welcome to LLRM System</h1>
+        <p class="subtitle">Legislative Records Management System - Capstone Template</p>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="number">7</div>
+                <div class="label">Modules</div>
+            </div>
+            <div class="info-card">
+                <div class="number">50+</div>
+                <div class="label">Features</div>
+            </div>
+            <div class="info-card">
+                <div class="number">100%</div>
+                <div class="label">HTML/CSS/JS</div>
+            </div>
+        </div>
+
+        <div class="feature-box">
+            <h3>📊 What's Inside</h3>
+            <ul class="feature-list">
+                <li><strong>Dashboard</strong> - Statistics, charts, and quick actions</li>
+                <li><strong>Document Management</strong> - CRUD operations with filtering</li>
+                <li><strong>Advanced Search</strong> - Multi-field search with filters</li>
+                <li><strong>Analytics</strong> - Reports with Chart.js visualizations</li>
+                <li><strong>User Management</strong> - Complete user directory</li>
+                <li><strong>Audit Logs</strong> - Activity tracking and filtering</li>
+                <li><strong>Profile Page</strong> - With functional image upload!</li>
+            </ul>
+        </div>
+
+        <div class="feature-box">
+            <h3>✨ Special Features</h3>
+            <p>
+                <span class="badge">Responsive Design</span>
+                <span class="badge">Smooth Animations</span>
+                <span class="badge">Red Theme</span>
+                <span class="badge">Chart.js Integration</span>
+                <span class="badge">Profile Picture Upload</span>
+                <span class="badge">Modal System</span>
+                <span class="badge">Notifications</span>
+                <span class="badge">No Backend Required</span>
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <h3>🎯 Profile Picture Upload</h3>
+            <p><strong>NEW!</strong> Fully functional profile picture upload feature:</p>
+            <ul class="feature-list">
+                <li>Click camera icon on profile page to upload</li>
+                <li>Supports JPEG, PNG, GIF, WEBP (max 5MB)</li>
+                <li>Real-time preview and validation</li>
+                <li>Updates navbar, sidebar, and profile page</li>
+                <li>Automatic audit logging</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Important:</strong> This is a demonstration template using in-memory storage. 
+            Data will be lost on page refresh. For production use, integrate localStorage or a backend database.
+        </div>
+
+        <a href="system-template-full.html" class="start-button">
+            🚀 Launch LLRM System
+        </a>
+
+        <div class="feature-box" style="text-align: center; background: #f3f4f6;">
+            <p style="margin-bottom: 10px;"><strong>Default Login Credentials:</strong></p>
+            <p style="color: #6b7280;">
+                <strong>Email:</strong> admin@lgu.gov.ph<br>
+                <strong>Role:</strong> Administrator<br>
+                <strong>Status:</strong> Active
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: #9ca3af; font-size: 0.9em;">
+            <p>Developed for Valenzuela City LGU</p>
+            <p>Version 1.0.0 | December 2, 2025</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>LAMS - Legislative Archiving Management System | City of Valenzuela</title>
+    <meta name="description" content="Legislative Records Management System - City Government of Valenzuela, Metropolitan Manila">
+    <meta name="keywords" content="LAMS, Valenzuela, Legislative Records, Document Management">
+    <link rel="icon" type="image/png" href="images/logo.webp">
+    <link rel="apple-touch-icon" href="images/logo.webp">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Prevent dark mode flicker - must run before page renders -->
+    <script>
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+        }
+        
+        // Check if user is logged in (for demo purposes)
+        // In production, this would check actual session/token
+        if (!localStorage.getItem('isLoggedIn') && !sessionStorage.getItem('isLoggedIn')) {
+            // Redirect to login if not logged in
+            window.location.href = 'login.html';
+        }
+        
+        // Clear sidebar collapsed state for fresh start (can be removed after testing)
+        // localStorage.removeItem('sidebarCollapsed');
+    </script>
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Ensure sidebar is visible on desktop (when not collapsed) -->
+    <style>
+        @media (min-width: 768px) {
+            #sidebar:not(.sidebar-collapsed) {
+                display: flex !important;
+                transform: translateX(0) !important;
+                position: relative !important;
+            }
+            /* Desktop: show sidebar toggle, hide mobile elements */
+            .desktop-toggle {
+                display: flex !important;
+            }
+            .mobile-toggle,
+            .mobile-only {
+                display: none !important;
+            }
+        }
+        /* Mobile: hide desktop sidebar and toggle */
+        @media (max-width: 767px) {
+            #sidebar {
+                display: none !important;
+            }
+            .desktop-toggle {
+                display: none !important;
+            }
+            .mobile-toggle {
+                display: flex !important;
+            }
+            .mobile-only {
+                display: flex !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
+    
+    <!-- Mobile Sidebar -->
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
+        <!-- Mobile sidebar header -->
+        <div class="p-4 border-b border-red-700/50 sidebar-header">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3 sidebar-logo">
+                    <div class="bg-white rounded-full p-1.5 shadow-lg">
+                        <img src="images/logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight">LAMS</h1>
+                        <p class="text-xs text-red-200">Legislative Archiving</p>
+                    </div>
+                </div>
+                <button id="close-mobile-sidebar" class="text-white/80 p-2 hover:bg-red-700/50 hover:text-white rounded-lg transition-all duration-200 hover:rotate-90">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Navigation Menu -->
+        <nav class="flex-1 py-4 px-3 overflow-y-auto">
+            <!-- Dashboard -->
+            <a href="#" onclick="showSection('dashboard')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                <i class="bi bi-speedometer2 mr-3 text-lg"></i>
+                <span>Dashboard</span>
+            </a>
+            
+            <!-- Documents Section -->
+            <div class="mt-4 mb-2 px-4">
+                <p class="text-xs font-semibold text-red-300/80 uppercase tracking-wider">Documents</p>
+            </div>
+            
+            <a href="#" onclick="showSection('documents')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-file-earmark-text mr-3 text-lg"></i>
+                <span>All Documents</span>
+            </a>
+            
+            <a href="#" onclick="showSection('search')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-search mr-3 text-lg"></i>
+                <span>Advanced Search</span>
+            </a>
+            
+            <!-- Analytics Section -->
+            <div class="mt-4 mb-2 px-4">
+                <p class="text-xs font-semibold text-red-300/80 uppercase tracking-wider">Analytics</p>
+            </div>
+            
+            <a href="#" onclick="showSection('analytics')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-graph-up mr-3 text-lg"></i>
+                <span>Reports & Analytics</span>
+            </a>
+            
+            <!-- Administration Section -->
+            <div class="mt-4 mb-2 px-4">
+                <p class="text-xs font-semibold text-red-300/80 uppercase tracking-wider">Administration</p>
+            </div>
+            
+            <a href="#" onclick="showSection('users')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-people mr-3 text-lg"></i>
+                <span>User Management</span>
+            </a>
+            
+            <a href="#" onclick="showSection('audit')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-shield-check mr-3 text-lg"></i>
+                <span>Audit Log</span>
+            </a>
+            
+            <!-- Help Section -->
+            <div class="mt-4 mb-2 px-4">
+                <p class="text-xs font-semibold text-red-300/80 uppercase tracking-wider">Support</p>
+            </div>
+            
+            <a href="#" onclick="showSection('help')" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-question-circle mr-3 text-lg"></i>
+                <span>Help & Support</span>
+            </a>
+        </nav>
+        
+        <!-- Mobile User Profile Section - Fixed at Bottom -->
+        <div class="p-3 mt-auto border-t border-red-700/40">
+            <!-- User Info -->
+            <div class="flex items-center space-x-2.5 mb-2.5">
+                <div class="w-9 h-9 rounded-full bg-red-700 flex items-center justify-center">
+                    <i class="bi bi-person-fill text-white text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white truncate">Admin User</p>
+                    <p class="text-xs text-red-300 truncate">Administrator</p>
+                </div>
+            </div>
+            
+            <!-- Action Buttons - Side by Side -->
+            <div class="flex gap-2">
+                <a href="#" onclick="showSection('profile')" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">
+                    <i class="bi bi-person-gear"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="#" onclick="logout()" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium bg-red-950 hover:bg-red-900 text-red-200 rounded-lg transition-colors">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex h-screen overflow-hidden">
+        <!-- Desktop Sidebar -->
+        <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out animate-slide-in-left h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
+            <!-- Logo Section -->
+            <div class="p-6 border-b border-red-700 animate-fade-in sidebar-logo">
+                <a href="#" onclick="showSection('dashboard')" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
+                    <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
+                        <img src="images/logo.webp" alt="Valenzuela Logo" style="width: 100%; height: 100%;" class="object-contain">
+                    </div>
+                    <div class="transform transition-all duration-300 group-hover:translate-x-1 sidebar-text">
+                        <h1 class="text-lg font-bold">LAMS</h1>
+                        <p class="text-xs text-red-200">City of Valenzuela</p>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="flex-1 overflow-y-auto py-4">
+                <div class="px-4 space-y-1">
+                    <!-- Dashboard -->
+                    <a href="#" onclick="showSection('dashboard')" class="nav-item active" data-section="dashboard">
+                        <i class="bi bi-speedometer2"></i>
+                        <span class="sidebar-text">Dashboard</span>
+                    </a>
+                    
+                    <!-- Documents Section -->
+                    <div class="pt-4 pb-2 sidebar-text">
+                        <p class="px-4 text-xs font-semibold text-red-300 uppercase tracking-wider">Documents</p>
+                    </div>
+                    
+                    <a href="#" onclick="showSection('documents')" class="nav-item" data-section="documents">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span class="sidebar-text">All Documents</span>
+                    </a>
+                    
+                    <a href="#" onclick="showSection('search')" class="nav-item" data-section="search">
+                        <i class="bi bi-search"></i>
+                        <span class="sidebar-text">Advanced Search</span>
+                    </a>
+                    
+                    <!-- Analytics Section -->
+                    <div class="pt-4 pb-2 sidebar-text">
+                        <p class="px-4 text-xs font-semibold text-red-300 uppercase tracking-wider">Analytics</p>
+                    </div>
+                    
+                    <a href="#" onclick="showSection('analytics')" class="nav-item" data-section="analytics">
+                        <i class="bi bi-graph-up"></i>
+                        <span class="sidebar-text">Reports & Analytics</span>
+                    </a>
+                    
+                    <!-- Administration Section -->
+                    <div class="pt-4 pb-2 sidebar-text">
+                        <p class="px-4 text-xs font-semibold text-red-300 uppercase tracking-wider">Administration</p>
+                    </div>
+                    
+                    <a href="#" onclick="showSection('users')" class="nav-item" data-section="users">
+                        <i class="bi bi-people"></i>
+                        <span class="sidebar-text">User Management</span>
+                    </a>
+                    
+                    <a href="#" onclick="showSection('audit')" class="nav-item" data-section="audit">
+                        <i class="bi bi-shield-check"></i>
+                        <span class="sidebar-text">Audit Logs</span>
+                    </a>
+                    
+                    <a href="#" onclick="showSection('profile')" class="nav-item" data-section="profile">
+                        <i class="bi bi-person-circle"></i>
+                        <span class="sidebar-text">My Profile</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <!-- User Info -->
+            <div class="p-4 border-t border-red-700 sidebar-user">
+                <div class="flex items-center space-x-3">
+                    <div id="sidebar-profile-pic" class="bg-red-600 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-person-fill text-white"></i>
+                    </div>
+                    <div class="flex-1 min-w-0 sidebar-text">
+                        <p class="text-sm font-semibold truncate">Admin User</p>
+                        <p class="text-xs text-red-200 truncate">Administrator</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header / Navbar -->
+            <nav class="bg-white shadow-md border-b border-gray-200 sticky top-0 z-40">
+                <div class="px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <!-- Left Side: Toggle buttons and Logo -->
+                        <div class="flex items-center">
+                            <!-- Sidebar Toggle Button (Desktop) - Always visible on md+ screens -->
+                            <button id="sidebar-toggle" class="desktop-toggle items-center justify-center w-10 h-10 rounded-lg text-gray-600 bg-gray-50 hover:bg-gray-100 hover:text-red-600 focus:outline-none transition-all duration-200 border border-gray-200" title="Toggle Sidebar">
+                                <i class="bi bi-layout-sidebar-inset text-xl"></i>
+                            </button>
+                            
+                            <!-- Mobile Menu Button -->
+                            <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 hover:text-gray-900 focus:outline-none p-2 hover:bg-gray-100 rounded-lg transition-all duration-200">
+                                <i class="bi bi-list text-2xl"></i>
+                            </button>
+                            
+                            <!-- Logo (Mobile) -->
+                            <div class="mobile-only flex items-center ml-2">
+                                <img src="images/logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                            </div>
+                        </div>
+                        
+                        <!-- Page Title & Breadcrumb -->
+                        <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
+                            <div class="ml-2 md:ml-4 min-w-0">
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800">Dashboard</h2>
+                                <nav class="hidden md:flex text-sm text-gray-600 mt-1" aria-label="Breadcrumb">
+                                    <a href="#" onclick="showSection('dashboard')" class="hover:text-red-600">Home</a>
+                                    <i class="bi bi-chevron-right mx-2 text-xs"></i>
+                                    <span id="breadcrumb-current" class="text-gray-800 font-medium">Dashboard</span>
+                                </nav>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side Actions -->
+                        <div class="flex items-center space-x-1 md:space-x-4">
+                            <!-- Search Bar (Hidden on mobile) -->
+                            <div class="hidden lg:block">
+                                <div class="relative group">
+                                    <input type="text" 
+                                           id="quick-search"
+                                           placeholder="Quick search documents... (Ctrl+K)"
+                                           class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200">
+                                    <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 transition-all group-focus-within:text-red-600 group-focus-within:scale-110"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Dark Mode Toggle -->
+                            <button id="theme-toggle" onclick="toggleTheme()" class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition" title="Toggle dark mode">
+                                <i class="bi bi-moon-fill text-lg md:text-xl dark-mode-icon"></i>
+                                <i class="bi bi-sun-fill text-xl light-mode-icon hidden"></i>
+                            </button>
+                        
+                            <!-- Notifications -->
+                            <div class="relative">
+                                <button id="notifications-btn" onclick="toggleNotifications()" class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">
+                                    <i class="bi bi-bell text-xl"></i>
+                                    <span id="notification-badge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                                </button>
+                            
+                                <!-- Notifications Dropdown -->
+                                <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-fade-in-up" style="background-color: white;">
+                                    <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                                        <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
+                                        <button onclick="clearAllNotifications()" class="text-xs text-red-600 hover:text-red-700">Clear All</button>
+                                    </div>
+                                    <div class="max-h-96 overflow-y-auto" id="notifications-list">
+                                        <div class="p-4 hover:bg-gray-50 border-b border-gray-100 cursor-pointer">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="bg-blue-100 rounded-full p-2">
+                                                    <i class="bi bi-file-earmark-text text-blue-600"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-sm text-gray-800">New ordinance document uploaded</p>
+                                                    <p class="text-xs text-gray-500 mt-1">5 minutes ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-4 hover:bg-gray-50 border-b border-gray-100 cursor-pointer">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="bg-green-100 rounded-full p-2">
+                                                    <i class="bi bi-check-circle text-green-600"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-sm text-gray-800">Document approved successfully</p>
+                                                    <p class="text-xs text-gray-500 mt-1">15 minutes ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 border-t border-gray-200">
+                                        <a href="#" class="text-sm text-red-600 hover:text-red-700 font-medium">View all notifications</a>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <!-- User Profile Dropdown -->
+                            <div class="relative">
+                                <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition">
+                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    <div class="hidden sm:block text-left">
+                                        <p class="text-sm font-medium text-gray-800 truncate max-w-[120px] md:max-w-none">Admin User</p>
+                                        <p class="text-xs text-gray-500">Administrator</p>
+                                    </div>
+                                    <i class="bi bi-chevron-down text-gray-600 text-xs hidden sm:inline"></i>
+                                </button>
+                            
+                                <!-- Profile Dropdown -->
+                                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-fade-in-up" style="background-color: white;">
+                                    <div class="p-4 border-b border-gray-200">
+                                        <p class="text-sm font-medium text-gray-800">admin@lgu.gov.ph</p>
+                                        <p class="text-xs text-gray-500 mt-1">Legislative Office</p>
+                                    </div>
+                                    <div class="py-2">
+                                        <a href="#" onclick="showSection('profile'); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="bi bi-person mr-2"></i>My Profile
+                                        </a>
+                                        <a href="#" onclick="showSection('settings'); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="bi bi-gear mr-2"></i>Settings
+                                        </a>
+                                        <a href="#" onclick="showSection('help'); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i class="bi bi-question-circle mr-2"></i>Help & Support
+                                        </a>
+                                    </div>
+                                    <div class="border-t border-gray-200 py-2">
+                                        <a href="javascript:void(0);" onclick="logout(); return false;" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer">
+                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto bg-gray-100 p-3 sm:p-4 lg:p-6">
+                <!-- Content sections will be loaded here -->
+                <div id="content-area"></div>
+            </main>
+            
+            <!-- Footer -->
+            <footer class="bg-white border-t border-gray-200">
+                <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 md:py-4">
+                    <!-- Desktop Layout -->
+                    <div class="hidden md:flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <img src="images/logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                            <div class="text-sm text-gray-600">
+                                &copy; 2025 City Government of Valenzuela - LAMS. All rights reserved.
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-6">
+                            <a href="#" class="text-sm text-gray-600 hover:text-red-600">Privacy</a>
+                            <a href="#" class="text-sm text-gray-600 hover:text-red-600">Terms</a>
+                            <a href="#" class="text-sm text-gray-600 hover:text-red-600">Support</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Layout -->
+                    <div class="md:hidden text-center">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
+                            <img src="images/logo.webp" alt="Valenzuela" style="width: 24px; height: 24px; object-fit: contain;">
+                            <span class="text-xs text-gray-600">&copy; 2025 LAMS</span>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <a href="#" class="text-xs text-gray-500 hover:text-red-600">Privacy</a>
+                            <span class="text-gray-300">•</span>
+                            <a href="#" class="text-xs text-gray-500 hover:text-red-600">Terms</a>
+                            <span class="text-gray-300">•</span>
+                            <a href="#" class="text-xs text-gray-500 hover:text-red-600">Support</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Upload Document Modal -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content p-6 max-w-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900">Upload Document</h3>
+                <button onclick="closeModal('upload-modal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+            <form id="upload-form" onsubmit="handleDocumentUpload(event)">
+                <div class="space-y-4">
+                    <!-- File Upload Area -->
+                    <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-red-500 transition cursor-pointer">
+                        <i class="bi bi-cloud-upload text-5xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-600 mb-2">Drag and drop your file here or click to browse</p>
+                        <input type="file" id="file-input" class="hidden" accept=".pdf,.doc,.docx" onchange="handleFileSelect(event)">
+                        <button type="button" onclick="document.getElementById('file-input').click()" class="btn-outline mt-2">
+                            <i class="bi bi-folder2-open mr-2"></i>Select File
+                        </button>
+                        <p id="file-name" class="text-sm text-gray-500 mt-2"></p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
+                            <input type="text" name="reference" class="input-field" placeholder="ORD-2025-001" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                            <select name="type" class="input-field" required>
+                                <option value="">Select type</option>
+                                <option value="ordinance">Ordinance</option>
+                                <option value="resolution">Resolution</option>
+                                <option value="session">Session Minutes</option>
+                                <option value="agenda">Agenda</option>
+                                <option value="committee">Committee Report</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                        <input type="text" name="title" class="input-field" placeholder="Enter document title" required>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Document Date</label>
+                            <input type="date" name="date" class="input-field" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select name="status" class="input-field" required>
+                                <option value="draft">Draft</option>
+                                <option value="pending">Pending Review</option>
+                                <option value="approved">Approved</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea name="description" class="input-field" rows="3" placeholder="Enter document description"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tags (comma separated)</label>
+                        <input type="text" name="tags" class="input-field" placeholder="budget, finance, 2025">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeModal('upload-modal')" class="btn-outline">Cancel</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="bi bi-upload mr-2"></i>Upload Document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Document View Modal -->
+    <div id="view-modal" class="modal">
+        <div class="modal-content p-6 max-w-4xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900">Document Details</h3>
+                <button onclick="closeModal('view-modal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+            <div id="document-details"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="app-features.js"></script>
+    
+    <!-- Desktop Sidebar Toggle Functionality - Must run after DOM is ready -->
+    <script>
+        // ========================================
+        // Desktop Sidebar Toggle Functionality
+        // ========================================
+        (function() {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = sidebar?.nextElementSibling;
+            
+            if (!sidebarToggle || !sidebar) {
+                console.log('Sidebar toggle or sidebar not found');
+                return;
+            }
+            
+            // Ensure sidebar has proper initial classes
+            if (!sidebar.classList.contains('sidebar-collapsed')) {
+                sidebar.classList.add('sidebar-expanded');
+            }
+            
+            // Check for saved sidebar state - apply immediately without animation
+            const sidebarState = localStorage.getItem('sidebarCollapsed');
+            if (sidebarState === 'true') {
+                // Apply collapsed state immediately (no animation on page load)
+                sidebar.style.transition = 'none';
+                sidebar.classList.remove('sidebar-expanded', 'w-64');
+                sidebar.classList.add('sidebar-collapsed');
+                sidebarToggle.classList.add('sidebar-hidden');
+                
+                // Re-enable transitions after a frame
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        sidebar.style.transition = '';
+                    });
+                });
+            }
+            
+            // Toggle sidebar on button click
+            sidebarToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const isExpanded = sidebar.classList.contains('sidebar-expanded');
+                
+                // Add a subtle scale animation to the button
+                this.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+                
+                if (isExpanded) {
+                    // Collapse sidebar with smooth animation
+                    sidebar.classList.remove('sidebar-expanded', 'w-64');
+                    sidebar.classList.add('sidebar-collapsed');
+                    this.classList.add('sidebar-hidden');
+                    localStorage.setItem('sidebarCollapsed', 'true');
+                } else {
+                    // Expand sidebar with smooth animation
+                    sidebar.classList.remove('sidebar-collapsed');
+                    sidebar.classList.add('sidebar-expanded', 'w-64');
+                    this.classList.remove('sidebar-hidden');
+                    localStorage.setItem('sidebarCollapsed', 'false');
+                }
+            });
+            
+            console.log('Desktop sidebar toggle initialized');
+        })();
+        
+        // ========================================
+        // Logout Function - Defined globally
+        // ========================================
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear any stored session data
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('currentUser');
+                sessionStorage.removeItem('isLoggedIn');
+                sessionStorage.removeItem('currentUser');
+                
+                // Redirect to login page with logout success message
+                window.location.href = 'login.html?logout=success';
+            }
+            return false;
+        }
+        
+        // ========================================
+        // Mobile Sidebar Toggle - Inline backup
+        // ========================================
+        (function() {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileSidebar = document.getElementById('mobile-sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const closeMobileSidebarBtn = document.getElementById('close-mobile-sidebar');
+            
+            function openMobileSidebar() {
+                if (!mobileSidebar || !sidebarOverlay) return;
+                
+                // Show overlay
+                sidebarOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.add('opacity-100', 'pointer-events-auto');
+                
+                // Slide in sidebar
+                mobileSidebar.classList.remove('-translate-x-full');
+                mobileSidebar.classList.add('translate-x-0');
+                
+                // Prevent body scroll
+                document.body.style.overflow = 'hidden';
+            }
+            
+            function closeMobileSidebar() {
+                if (!mobileSidebar || !sidebarOverlay) return;
+                
+                // Hide overlay
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+                
+                // Slide out sidebar
+                mobileSidebar.classList.add('-translate-x-full');
+                mobileSidebar.classList.remove('translate-x-0');
+                
+                // Restore body scroll
+                document.body.style.overflow = '';
+            }
+            
+            // Event listeners
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openMobileSidebar();
+                });
+            }
+            
+            if (closeMobileSidebarBtn) {
+                closeMobileSidebarBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    closeMobileSidebar();
+                });
+            }
+            
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeMobileSidebar);
+            }
+            
+            // Close on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && mobileSidebar && mobileSidebar.classList.contains('translate-x-0')) {
+                    closeMobileSidebar();
+                }
+            });
+            
+            // Close sidebar when clicking navigation links
+            const mobileNavLinks = mobileSidebar?.querySelectorAll('nav a');
+            mobileNavLinks?.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    setTimeout(closeMobileSidebar, 200);
+                });
+            });
+            
+            console.log('Mobile sidebar toggle initialized');
+        })();
+    </script>
+</body>
+</html>
