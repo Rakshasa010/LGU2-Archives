@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -144,7 +144,7 @@
                     <i class="bi bi-people mr-3 text-lg"></i>
                     <span>User Management</span>
                 </a>
-                <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
                 </a>
@@ -177,7 +177,7 @@
                         <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" style="width: 100%; height: 100%;" class="object-contain">
                     </div>
                     <div class="transform transition-all duration-300 group-hover:translate-x-1 sidebar-text">
-                        <h1 class="text-lg font-bold">VALCHIVES</h1>
+                        <h1 class="text-lg font-bold">LAS</h1>
                         <p class="text-xs text-red-200">City of Valenzuela</p>
                     </div>
                 </a>
@@ -218,7 +218,7 @@
                         <i class="bi bi-people mr-3"></i>
                         <span class="sidebar-text">User Management</span>
                     </a>
-                    <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
                         <span class="sidebar-text">Audit Logs</span>
                     </a>
@@ -284,7 +284,64 @@
                                 </svg>
                             </button>
                         
-                            <!-- User Profile Dropdown -->
+                            <!-- Notification Dropdown (placed beside theme toggle) -->
+                            <div class="relative">
+                                <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
+                                    <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
+                                    <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
+                                </button>
+
+                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                    <div class="p-4">
+                                        <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
+
+                                        <!-- Notification items now link to audit-logs.php with id -->
+                                        <a href="audit-logs.php?id=1" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
+                                            <div class="flex-shrink-0">
+                                                <span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                                                    <i class="bi bi-file-earmark-text text-red-600 dark:text-red-400"></i>
+                                                </span>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">New document uploaded: <span class="font-semibold">Ordinance No. 123</span></p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">2 minutes ago</p>
+                                            </div>
+                                        </a>
+
+                                        <a href="audit-logs.php?id=2" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
+                                            <div class="flex-shrink-0">
+                                                <span class="block w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                                    <i class="bi bi-check-circle text-green-600 dark:text-green-400"></i>
+                                                </span>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">Document approved: <span class="font-semibold">Resolution No. 456</span></p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">1 hour ago</p>
+                                            </div>
+                                        </a>
+
+                                        <a href="audit-logs.php?id=3" class="flex items-center space-x-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
+                                            <div class="flex-shrink-0">
+                                                <span class="block w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                                    <i class="bi bi-info-circle text-blue-600 dark:text-blue-400"></i>
+                                                </span>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">New message from admin</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">3 hours ago</p>
+                                            </div>
+                                        </a>
+                                    </div>
+
+                                    <div class="px-4 py-2 border-t border-gray-200 dark:border-slate-700">
+                                        <a href="audit-logs.php" class="block text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                            View All Notifications
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- User Profile Dropdown (moved right of notification) -->
                             <div class="relative">
                                 <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
                                     <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
@@ -300,7 +357,7 @@
                                     </div>
                                     <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
                                 </button>
-                            
+
                                 <!-- Profile Dropdown -->
                                 <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
@@ -534,6 +591,23 @@
         
         document.addEventListener('click', () => {
             profileDropdown?.classList.add('hidden');
+        });
+
+        // Notification dropdown (simple toggle)
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notifDropdown?.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            // keep existing profile behavior
+            // hide notification dropdown when clicking outside
+            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                notifDropdown?.classList.add('hidden');
+            }
         });
         
         // Restore sidebar state

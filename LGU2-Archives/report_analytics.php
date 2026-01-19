@@ -146,6 +146,14 @@ function format_bytes($bytes) {
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
+                            <!-- Back to Dashboard + Theme toggle -->
+                            <div class="hidden md:flex items-center ml-3 space-x-2">
+                                <a href="archives-landing.php" class="px-3 py-1 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr; Dashboard</a>
+                                <button id="themeToggleReport" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
+                                    <svg id="moonIconReport" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                                    <svg id="sunIconReport" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
@@ -321,6 +329,14 @@ function format_bytes($bytes) {
         if (recordsCtx) new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
         const downloadsCtx = document.getElementById('downloadsTypeChart')?.getContext('2d');
         if (downloadsCtx) new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } });
+
+        // Apply saved theme for this page and wire per-page toggle
+        (function(){
+            function applyTheme(t){ if (t==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
+            var saved = localStorage.getItem('theme') || 'light'; applyTheme(saved);
+            var btn = document.getElementById('themeToggleReport');
+            btn?.addEventListener('click', function(){ var cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; applyTheme(cur==='dark'?'light':'dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); });
+        })();
     </script>
 </body>
 </html>
