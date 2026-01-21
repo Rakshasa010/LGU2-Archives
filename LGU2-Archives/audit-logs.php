@@ -115,7 +115,44 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                     <i class="bi bi-trash mr-3 text-lg"></i>
                     <span>Recently Deleted</span>
                 </a>
+                 <!-- ANALYTICS Section -->
+            <div class="mt-4 pt-4 border-t border-red-700/50">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-graph-up mr-3 text-lg"></i>
+                    <span>Reports & Analytics</span>
+                </a>
+            </div>
+            
+            <!-- ADMINISTRATION Section -->
+            <div class="mt-4 pt-4 border-t border-red-700/50">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                <a href="burgersettings.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-people mr-3 text-lg"></i>
+                    <span>User Management</span>
+                </a>
+                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-shield-check mr-3 text-lg"></i>
+                    <span>Audit Logs</span>
+                </a>
+            </div>
+            
+            <!-- Storage Bar -->
+            <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-red-100">Storage Usage</span>
+                        <span class="text-xs font-bold text-white">2%</span>
+                    </div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
+                        <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                    </div>
+                    <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                </div>
+            </div>
             </nav>
+
         </div>
 
         <div class="flex h-screen overflow-hidden">

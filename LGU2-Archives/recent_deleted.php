@@ -415,10 +415,30 @@
             }
         })();
 
-        // Load deleted files from localStorage
+        // Load deleted files from localStorage and prune expired entries
         function loadDeletedFiles() {
-            const stored = localStorage.getItem('deletedFiles');
-            return stored ? JSON.parse(stored) : [];
+            const key = 'deletedFiles';
+            try {
+                const stored = localStorage.getItem(key);
+                let arr = stored ? JSON.parse(stored) : [];
+                const now = Date.now();
+                // keep items that have no expireAt or expireAt in the future
+                arr = arr.filter(it => {
+                    if (!it) return false;
+                    if (!it.expireAt) return true;
+                    try {
+                        return new Date(it.expireAt).getTime() > now;
+                    } catch (e) {
+                        return true;
+                    }
+                });
+                // persist pruned list
+                localStorage.setItem(key, JSON.stringify(arr));
+                return arr;
+            } catch (e) {
+                console.error('Could not load deleted files', e);
+                return [];
+            }
         }
 
         function saveDeletedFiles(files) {

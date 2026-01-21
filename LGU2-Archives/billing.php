@@ -118,6 +118,11 @@ $conn->close();
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m-3 3V4m0 6V4" />
                                         </svg>
                                     </button>
+                                    <button onclick="openDeleteConfirm(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>')" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 ml-1" title="Delete">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7L5 7M10 11v6m4-6v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -219,6 +224,72 @@ $conn->close();
             panel.classList.add('translate-x-full');
             document.body.style.overflow = 'auto';
         }
+
+        // Delete handling
+        function openDeleteConfirm(id, title) {
+            if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+            deleteRecord(id, title, 'Billing');
+        }
+
+        function addToDeletedStorage(obj) {
+            try {
+                const key = 'deletedFiles';
+                const raw = localStorage.getItem(key);
+                let arr = raw ? JSON.parse(raw) : [];
+                // prune expired entries
+                const now = Date.now();
+                arr = arr.filter(it => { try { return !it.expireAt || new Date(it.expireAt).getTime() > now; } catch(e){ return true; } });
+                // prepend new
+                arr.unshift(obj);
+                // keep up to 200 entries to avoid unbounded growth
+                if (arr.length > 200) arr.length = 200;
+                localStorage.setItem(key, JSON.stringify(arr));
+            } catch (e) {
+                console.error('Could not save deleted file metadata', e);
+            }
+        }
+
+        function deleteRecord(id, title, type) {
+            fetch(`delete.php?id=${encodeURIComponent(id)}`, { method: 'POST' })
+                .then(r => {
+                    if (!r.ok) throw new Error('Failed to delete');
+                    return r.text();
+                })
+                .then(() => {
+                    const el = document.querySelector(`[data-id="${id}"]`);
+                    if (el) el.remove();
+                    // record deletion metadata so recent_deleted.php can show it
+                    // compute 30-day expiry
+                    const expireDate = new Date();
+                    expireDate.setDate(expireDate.getDate() + 30);
+                    addToDeletedStorage({
+                        id: String(id),
+                        name: title || (`Record ${id}`),
+                        type: type || 'Billing',
+                        category: type || 'Billing',
+                        originalPath: '',
+                        deletedAt: new Date().toISOString(),
+                        expireAt: expireDate.toISOString()
+                    });
+                })
+                .catch(err => {
+                    alert('Could not delete record. Server may not have delete endpoint.');
+                    console.error(err);
+                });
+        }
+
+        // Theme persistence (site-wide)
+        (function(){
+            const root = document.documentElement;
+            const STORAGE_KEY = 'plv-theme';
+            function applyTheme(mode){ if(mode==='dark') root.classList.add('dark'); else root.classList.remove('dark'); }
+            applyTheme(localStorage.getItem(STORAGE_KEY) || 'light');
+            const toggleBtn = document.getElementById('themeToggle');
+            function updateIcons(){ const moon = document.getElementById('moonIcon'), sun = document.getElementById('sunIcon'); if(!moon||!sun) return; if(root.classList.contains('dark')){ moon.classList.remove('hidden'); moon.classList.add('block'); sun.classList.remove('block'); sun.classList.add('hidden'); } else { sun.classList.remove('hidden'); sun.classList.add('block'); moon.classList.remove('block'); moon.classList.add('hidden'); }}
+            updateIcons();
+            toggleBtn?.addEventListener('click', function(e){ e.preventDefault(); const cur = root.classList.contains('dark') ? 'dark' : 'light'; const next = cur==='dark' ? 'light' : 'dark'; applyTheme(next); localStorage.setItem(STORAGE_KEY, next); updateIcons(); document.dispatchEvent(new CustomEvent('themechange',{detail:{mode:next}})); });
+            window.addEventListener('storage', (e)=>{ if(e.key===STORAGE_KEY) applyTheme(e.newValue); updateIcons(); });
+        })();
     </script>
 </body>
 </html>

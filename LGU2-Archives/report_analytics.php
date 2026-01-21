@@ -131,28 +131,79 @@ function format_bytes($bytes) {
         </nav>
     </div>
 
-    
+    <div class="flex h-screen overflow-hidden">
+        <!-- Desktop Sidebar -->
+        <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
+            <div class="p-6 border-b border-red-700 sidebar-logo">
+                <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300">
+                    <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden" style="width:56px; height:56px;">
+                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold">LAS</h1>
+                        <p class="text-xs text-red-200">City of Valenzuela</p>
+                    </div>
+                </a>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4 px-3">
+                <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
+                    <i class="bi bi-speedometer2 mr-3 text-lg"></i>
+                    <span>Dashboard Archives</span>
+                </a>
+                <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
+                    <i class="bi bi-folder mr-3 text-lg"></i>
+                    <span>Main Storage Archives</span>
+                </a>
+                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
+                    <i class="bi bi-trash mr-3 text-lg"></i>
+                    <span>Recently Deleted</span>
+                </a>
+                <div class="mt-4 pt-4 border-t border-red-700/50">
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white bg-red-700 rounded-lg mb-1">
+                        <i class="bi bi-graph-up mr-3 text-lg"></i>
+                        <span>Reports & Analytics</span>
+                    </a>
+                </div>
+                 <!-- ADMINISTRATION Section -->
+            <div class="mt-4 pt-4 border-t border-red-700/50">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                <a href="burgersettings.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-people mr-3 text-lg"></i>
+                    <span>User Management</span>
+                </a>
+                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-shield-check mr-3 text-lg"></i>
+                    <span>Audit Logs</span>
+                </a>
+            </div>
+             <!-- Storage Bar -->
+                <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                    <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-red-100">Storage Usage</span>
+                            <span class="text-xs font-bold text-white">2%</span>
+                        </div>
+                        <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
+                            <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                        </div>
+                        <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                    </div>
+                </div>
+            </nav>
+        </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden md:pl-64">
+        <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
                         <div class="flex items-center">
-                            <button id="sidebar-toggle" class="desktop-toggle items-center justify-center w-10 h-10 rounded-lg text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 hover:text-red-600 dark:hover:text-red-500 focus:outline-none transition-all duration-200 border border-gray-200 dark:border-slate-600" title="Toggle Sidebar">
-                                <i class="bi bi-layout-sidebar-inset text-xl"></i>
-                            </button>
-                            <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
-                                <i class="bi bi-list text-2xl"></i>
-                            </button>
                             <!-- Back to Dashboard + Theme toggle -->
                             <div class="hidden md:flex items-center ml-3 space-x-2">
                                 <a href="archives-landing.php" class="px-3 py-1 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr; Dashboard</a>
-                                <button id="themeToggleReport" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
-                                    <svg id="moonIconReport" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                                    <svg id="sunIconReport" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                                </button>
                             </div>
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
@@ -330,12 +381,17 @@ function format_bytes($bytes) {
         const downloadsCtx = document.getElementById('downloadsTypeChart')?.getContext('2d');
         if (downloadsCtx) new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } });
 
-        // Apply saved theme for this page and wire per-page toggle
+        // Apply saved theme for this page and wire per-site toggle (plv-theme)
         (function(){
-            function applyTheme(t){ if (t==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
-            var saved = localStorage.getItem('theme') || 'light'; applyTheme(saved);
-            var btn = document.getElementById('themeToggleReport');
-            btn?.addEventListener('click', function(){ var cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; applyTheme(cur==='dark'?'light':'dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); });
+            const root = document.documentElement;
+            const STORAGE_KEY = 'plv-theme';
+            function applyTheme(mode){ if(mode==='dark') root.classList.add('dark'); else root.classList.remove('dark'); }
+            applyTheme(localStorage.getItem(STORAGE_KEY) || 'light');
+            const btn = document.getElementById('themeToggle');
+            function updateIcons(){ const moon = document.getElementById('moonIcon'), sun = document.getElementById('sunIcon'); if(!moon||!sun) return; if(root.classList.contains('dark')){ moon.classList.remove('hidden'); moon.classList.add('block'); sun.classList.remove('block'); sun.classList.add('hidden'); } else { sun.classList.remove('hidden'); sun.classList.add('block'); moon.classList.remove('block'); moon.classList.add('hidden'); }}
+            updateIcons();
+            btn?.addEventListener('click', function(){ const cur = root.classList.contains('dark') ? 'dark' : 'light'; const next = cur==='dark' ? 'light' : 'dark'; applyTheme(next); localStorage.setItem(STORAGE_KEY, next); updateIcons(); document.dispatchEvent(new CustomEvent('themechange',{detail:{mode:next}})); });
+            window.addEventListener('storage', function(e){ if(e.key===STORAGE_KEY) applyTheme(e.newValue); updateIcons(); });
         })();
     </script>
 </body>

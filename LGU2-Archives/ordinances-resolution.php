@@ -145,6 +145,11 @@ $conn->close();
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m-3 3V4m0 6V4" />
                                     </svg>
                                 </button>
+                                <button onclick="openDeleteConfirm(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>')" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 ml-1" title="Delete">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7L5 7M10 11v6m4-6v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" />
+                                    </svg>
+                                </button>
                                 <svg class="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
@@ -187,6 +192,56 @@ $conn->close();
         function openDownloadPopup(id, title, type, month, year, author) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
             window.open(url, 'downloadPopup', 'width=500,height=400,scrollbars=yes,resizable=yes');
+        }
+
+        // Delete handling
+        function openDeleteConfirm(id, title, type) {
+            if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+            deleteRecord(id, title, type || 'Ordinance/Resolution');
+        }
+
+        function addToDeletedStorage(obj) {
+            try {
+                const key = 'deletedFiles';
+                const raw = localStorage.getItem(key);
+                let arr = raw ? JSON.parse(raw) : [];
+                // prune expired entries
+                const now = Date.now();
+                arr = arr.filter(it => { try { return !it.expireAt || new Date(it.expireAt).getTime() > now; } catch(e){ return true; } });
+                arr.unshift(obj);
+                if (arr.length > 200) arr.length = 200;
+                localStorage.setItem(key, JSON.stringify(arr));
+            } catch (e) {
+                console.error('Could not save deleted file metadata', e);
+            }
+        }
+
+        function deleteRecord(id, title, type) {
+            fetch(`delete.php?id=${encodeURIComponent(id)}`, { method: 'POST' })
+                .then(r => {
+                    if (!r.ok) throw new Error('Failed to delete');
+                    return r.text();
+                })
+                .then(() => {
+                    const el = document.querySelector(`[data-id="${id}"]`);
+                    if (el) el.remove();
+                    // compute 30-month expiry
+                    const expireDate = new Date();
+                    expireDate.setMonth(expireDate.getMonth() + 30);
+                    addToDeletedStorage({
+                        id: String(id),
+                        name: title || (`Record ${id}`),
+                        type: type || 'Ordinance/Resolution',
+                        category: type || 'Ordinance/Resolution',
+                        originalPath: '',
+                        deletedAt: new Date().toISOString(),
+                        expireAt: expireDate.toISOString()
+                    });
+                })
+                .catch(err => {
+                    alert('Could not delete record. Server may not have delete endpoint.');
+                    console.error(err);
+                });
         }
 
         // Like button handling (client-side, stored in localStorage)
