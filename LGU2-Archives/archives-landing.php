@@ -60,7 +60,7 @@
                         <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
                     </div>
                     <div>
-                        <h1 class="text-lg font-bold tracking-tight">LAMS</h1>
+                        <h1 class="text-lg font-bold tracking-tight">LAS</h1>
                         <p class="text-xs text-red-200">City of Valenzuela</p>
                     </div>
                 </div>
@@ -153,6 +153,11 @@
                     <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-folder mr-3"></i>
                         <span class="sidebar-text">Main Storage Archives</span>
+                    </a>
+
+                    <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-cloud-upload mr-3"></i>
+                        <span class="sidebar-text">Export and Backup</span>
                     </a>
                     
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">

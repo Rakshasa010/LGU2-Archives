@@ -116,6 +116,12 @@ function format_bytes($bytes) {
                 <i class="bi bi-folder mr-3 text-lg"></i>
                 <span>Main Storage Archives</span>
             </a>
+            
+            <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-folder mr-3"></i>
+                <span class="sidebar-text">Export and Backup</span>
+            </a>
+                    
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
@@ -154,6 +160,12 @@ function format_bytes($bytes) {
                     <i class="bi bi-folder mr-3 text-lg"></i>
                     <span>Main Storage Archives</span>
                 </a>
+
+                <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-cloud-upload mr-3"></i>
+                    <span class="sidebar-text">Export and Backup</span>
+                </a>
+
                 <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
                     <i class="bi bi-trash mr-3 text-lg"></i>
                     <span>Recently Deleted</span>
