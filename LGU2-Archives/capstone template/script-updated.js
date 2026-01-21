@@ -388,5 +388,5 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(el);
     });
     
-    console.log('LAMS System initialized successfully!');
+    console.log('LAS System initialized successfully!');
 });

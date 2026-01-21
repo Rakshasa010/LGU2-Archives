@@ -98,7 +98,7 @@ function format_bytes($bytes) {
                         <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
                     </div>
                     <div>
-                        <h1 class="text-lg font-bold tracking-tight">LAMS</h1>
+                        <h1 class="text-lg font-bold tracking-tight">LAS</h1>
                         <p class="text-xs text-red-200">City of Valenzuela</p>
                     </div>
                 </div>

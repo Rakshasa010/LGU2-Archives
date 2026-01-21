@@ -70,7 +70,7 @@
                         <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
                     </div>
                     <div>
-                        <h1 class="text-lg font-bold tracking-tight">LAMS</h1>
+                        <h1 class="text-lg font-bold tracking-tight">LAS</h1>
                         <p class="text-xs text-red-200">City of Valenzuela</p>
                     </div>
                 </div>
@@ -146,7 +146,7 @@
                         <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" style="width: 100%; height: 100%;" class="object-contain">
                     </div>
                     <div class="transform transition-all duration-300 group-hover:translate-x-1 sidebar-text">
-                        <h1 class="text-lg font-bold">LAMS</h1>
+                        <h1 class="text-lg font-bold">LAS</h1>
                         <p class="text-xs text-red-200">City of Valenzuela</p>
                     </div>
                 </a>
@@ -174,7 +174,7 @@
                 <!-- ANALYTICS Section -->
                 <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                    <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-graph-up mr-3"></i>
                         <span class="sidebar-text">Reports & Analytics</span>
                     </a>

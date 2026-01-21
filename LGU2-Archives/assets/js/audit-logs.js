@@ -75,6 +75,30 @@
     updateUnreadCount();
     function applyTheme(t){ if (t==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
     var savedTheme = localStorage.getItem('theme') || 'light'; applyTheme(savedTheme);
-    var themeBtn = document.getElementById('themeToggleAudit');
-    themeBtn?.addEventListener('click', function(){ var cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; var next = (cur==='dark') ? 'light' : 'dark'; applyTheme(next); localStorage.setItem('theme', next); });
+
+    // Update theme icons (moon/sun) to reflect current theme
+    function updateToggleIcon() {
+        var moonIcon = document.getElementById('moonIcon');
+        var sunIcon = document.getElementById('sunIcon');
+        if (!moonIcon || !sunIcon) return;
+        var isDark = document.documentElement.classList.contains('dark');
+        if (isDark) {
+            moonIcon.classList.remove('hidden'); moonIcon.classList.add('block');
+            sunIcon.classList.remove('block'); sunIcon.classList.add('hidden');
+        } else {
+            sunIcon.classList.remove('hidden'); sunIcon.classList.add('block');
+            moonIcon.classList.remove('block'); moonIcon.classList.add('hidden');
+        }
+    }
+    updateToggleIcon();
+
+    // Support both page-specific id and generic id
+    var themeBtn = document.getElementById('themeToggle') || document.getElementById('themeToggleAudit');
+    themeBtn?.addEventListener('click', function(){
+        var cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        var next = (cur==='dark') ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('theme', next);
+        updateToggleIcon();
+    });
 })();

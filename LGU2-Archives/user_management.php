@@ -30,7 +30,7 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management - LAMS</title>
+    <title>User Management - LAS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -59,7 +59,7 @@ $stmt->close();
                 <div class="flex items-center space-x-4">
                     <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
                         <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-10 w-auto object-contain">
-                        <span class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">LAMS</span>
+                        <span class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">LAS</span>
                     </a>
                     <!-- Back + Theme controls (left) -->
                     <div class="flex items-center ml-4 space-x-2">
