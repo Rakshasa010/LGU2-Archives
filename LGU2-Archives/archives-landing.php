@@ -14,51 +14,10 @@
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-  
+    <script src="assets/js/archives-landing-head.js"></script>
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
-    <!-- Prevent dark mode flicker - must run before page renders -->
-    <script>
-        if (localStorage.getItem('theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-        }
-    </script>
-    
-    <style>
-        @media (min-width: 768px) {
-            #sidebar:not(.sidebar-collapsed) {
-                display: flex !important;
-                transform: translateX(0) !important;
-                position: relative !important;
-            }
-            .desktop-toggle {
-                display: flex !important;
-            }
-            .mobile-toggle,
-            .mobile-only {
-                display: none !important;
-            }
-        }
-        @media (max-width: 767px) {
-            #sidebar {
-                display: none !important;
-            }
-            .desktop-toggle {
-                display: none !important;
-            }
-            .mobile-toggle {
-                display: flex !important;
-            }
-            .mobile-only {
-                display: flex !important;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
     <?php
@@ -545,75 +504,6 @@
     </div>
 
     <script src="assets/js/archives.js"></script>
-    
-    <script>
-        // Sidebar toggle functionality
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const sidebar = document.getElementById('sidebar');
-        const mobileSidebar = document.getElementById('mobile-sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
-        
-        // Desktop sidebar toggle
-        sidebarToggle?.addEventListener('click', () => {
-            sidebar?.classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', sidebar?.classList.contains('sidebar-collapsed'));
-        });
-        
-        // Mobile sidebar toggle
-        mobileMenuBtn?.addEventListener('click', () => {
-            mobileSidebar?.classList.remove('-translate-x-full');
-            sidebarOverlay?.classList.remove('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.add('opacity-100', 'pointer-events-auto');
-        });
-        
-        closeMobileSidebar?.addEventListener('click', () => {
-            mobileSidebar?.classList.add('-translate-x-full');
-            sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
-        });
-        
-        sidebarOverlay?.addEventListener('click', () => {
-            mobileSidebar?.classList.add('-translate-x-full');
-            sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
-        });
-        
-        // Profile dropdown
-        const profileBtn = document.getElementById('profile-btn');
-        const profileDropdown = document.getElementById('profile-dropdown');
-        
-        profileBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown?.classList.toggle('hidden');
-        });
-        
-        document.addEventListener('click', () => {
-            profileDropdown?.classList.add('hidden');
-        });
-
-        // Notification dropdown (simple toggle)
-        const notifBtn = document.getElementById('notification-btn');
-        const notifDropdown = document.getElementById('notification-dropdown');
-
-        notifBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            notifDropdown?.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', (e) => {
-            // keep existing profile behavior
-            // hide notification dropdown when clicking outside
-            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
-                notifDropdown?.classList.add('hidden');
-            }
-        });
-        
-        // Restore sidebar state
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            sidebar?.classList.add('sidebar-collapsed');
-        }
-    </script>
+    <script src="assets/js/archives-landing.js"></script>
 </body>
 </html>

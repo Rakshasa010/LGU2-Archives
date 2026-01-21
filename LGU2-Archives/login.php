@@ -5,30 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - PLV Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: '#dc2626',
-                            light: '#f97316',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-image: url('Images/BG-login/backgroundlogin.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        [x-cloak] { display: none !important; }
-    </style>
+    <script src="assets/js/login-head.js"></script>
+    <link rel="stylesheet" href="assets/css/login.css">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <?php
@@ -106,8 +84,6 @@
         </div>
     </div>
 
-    <script>
-        // Theme toggle if needed, but for login page, maybe not necessary
-    </script>
+    <script src="assets/js/login.js"></script>
 </body>
 </html>

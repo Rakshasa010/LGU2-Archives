@@ -1,0 +1,28 @@
+@media (min-width: 768px) {
+    #sidebar:not(.sidebar-collapsed) {
+        display: flex !important;
+        transform: translateX(0) !important;
+        position: relative !important;
+    }
+    .desktop-toggle {
+        display: flex !important;
+    }
+    .mobile-toggle,
+    .mobile-only {
+        display: none !important;
+    }
+}
+@media (max-width: 767px) {
+    #sidebar {
+        display: none !important;
+    }
+    .desktop-toggle {
+        display: none !important;
+    }
+    .mobile-toggle {
+        display: flex !important;
+    }
+    .mobile-only {
+        display: flex !important;
+    }
+}
