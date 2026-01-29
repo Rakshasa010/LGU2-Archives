@@ -76,6 +76,7 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
         <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="assets/js/archives-landing-head.js"></script>
+        <script src="assets/js/theme-head.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <link rel="stylesheet" href="assets/css/archives-landing.css">
         <link rel="stylesheet" href="assets/css/audit-logs.css">
@@ -103,7 +104,7 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                 </div>
             </div>
             <nav class="flex-1 py-4 px-3 overflow-y-auto">
-                <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                     <span>Dashboard Archives</span>
                 </a>
@@ -131,7 +132,7 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                     <i class="bi bi-people mr-3 text-lg"></i>
                     <span>User Management</span>
                 </a>
-                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
                 </a>
@@ -169,9 +170,10 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                         </div>
                     </a>
                 </div>
+                <!-- Navigation Menu (same as archives dashboard) -->
                 <nav class="flex-1 overflow-y-auto py-4">
                     <div class="px-4 space-y-1">
-                        <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                        <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-speedometer2 mr-3"></i>
                             <span class="sidebar-text">Dashboard Archives</span>
                         </a>
@@ -179,10 +181,51 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                             <i class="bi bi-folder mr-3"></i>
                             <span class="sidebar-text">Main Storage Archives</span>
                         </a>
+                        <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                            <i class="bi bi-cloud-upload mr-3"></i>
+                            <span class="sidebar-text">Export and Backup</span>
+                        </a>
                         <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-trash mr-3"></i>
                             <span class="sidebar-text">Recently Deleted</span>
                         </a>
+                    </div>
+
+                    <!-- ANALYTICS Section -->
+                    <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
+                        <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+                        <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                            <i class="bi bi-graph-up mr-3"></i>
+                            <span class="sidebar-text">Reports & Analytics</span>
+                        </a>
+                    </div>
+
+                    <!-- ADMINISTRATION Section -->
+                    <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
+                        <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                        <a href="burgersettings.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                            <i class="bi bi-people mr-3"></i>
+                            <span class="sidebar-text">User Management</span>
+                        </a>
+                        <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                            <i class="bi bi-shield-check mr-3"></i>
+                            <span class="sidebar-text">Audit Logs</span>
+                        </a>
+                    </div>
+
+                    <!-- Storage Bar -->
+                    <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
+                        <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                        <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-red-100">Storage Usage</span>
+                                <span class="text-xs font-bold text-white">2%</span>
+                            </div>
+                            <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
+                                <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                            </div>
+                            <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                        </div>
                     </div>
                 </nav>
             </aside>
@@ -194,12 +237,12 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                     <div class="px-4 sm:px-6 lg:px-8">
                         <div class="flex justify-between items-center h-16">
                             <div class="flex items-center">
-                                <button id="sidebar-toggle" class="desktop-toggle items-center justify-center w-10 h-10 rounded-lg text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 hover:text-red-600 dark:hover:text-red-500 focus:outline-none transition-all duration-200 border border-gray-200 dark:border-slate-600" title="Toggle Sidebar">
-                                    <i class="bi bi-layout-sidebar-inset text-xl"></i>
-                                </button>
                                 <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                     <i class="bi bi-list text-2xl"></i>
                                 </button>
+                                <a href="archives-landing.php" class="ml-2 inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 transition-all duration-200" title="Back to Dashboard" aria-label="Back to Dashboard">
+                                    <span class="text-2xl leading-none">&larr;</span>
+                                </a>
                             </div>
                             <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                                 <div class="ml-2 md:ml-4 min-w-0">
@@ -255,9 +298,6 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                                     <div class="flex items-center space-x-3">
                                         <h1 class="text-2xl font-bold">Audit Logs</h1>
                                     </div>
-                                    <div>
-                                        <a href="archives-landing.php" class="text-sm text-red-600 hover:underline">Back to Dashboard</a>
-                                    </div>
                                 </div>
 
                                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 overflow-x-auto">
@@ -297,7 +337,7 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                                                 </td>
                                                 <td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-2 text-sm">
-                                                    <button class="mark-read-btn px-2 py-1 text-xs rounded bg-gray-100 dark:bg-slate-700">Mark Read</button>
+                                                    <button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors" type="button">Mark Read</button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -314,5 +354,6 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
 
         <script src="assets/js/archives-landing.js"></script>
         <script src="assets/js/audit-logs.js"></script>
+        <script src="assets/js/theme-toggle.js"></script>
     </body>
     </html>

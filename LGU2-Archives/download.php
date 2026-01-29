@@ -2,6 +2,40 @@
 // Include database connection
 include 'authdatabase.php';
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+function log_analytics_event(mysqli $conn, array $event): void {
+    // Best-effort logging. If table doesn't exist / permissions fail, ignore.
+    $sql = "INSERT INTO analytics_events (event_type, user_id, record_id, record_title, record_type, download_format, bytes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return;
+
+    $event_type = (string)($event['event_type'] ?? '');
+    $user_id = isset($event['user_id']) ? (int)$event['user_id'] : null;
+    $record_id = isset($event['record_id']) ? (int)$event['record_id'] : null;
+    $record_title = isset($event['record_title']) ? (string)$event['record_title'] : null;
+    $record_type = isset($event['record_type']) ? (string)$event['record_type'] : null;
+    $download_format = isset($event['download_format']) ? (string)$event['download_format'] : null;
+    $bytes = isset($event['bytes']) ? (int)$event['bytes'] : null;
+
+    // bind_param does not accept null with strict types cleanly; cast to variables
+    $stmt->bind_param(
+        "siisssi",
+        $event_type,
+        $user_id,
+        $record_id,
+        $record_title,
+        $record_type,
+        $download_format,
+        $bytes
+    );
+    $stmt->execute();
+    $stmt->close();
+}
+
 
 
 // Check if it's a GET request (show modal) or POST request (download file)
@@ -33,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         <script>
             tailwind.config = { darkMode: 'class' }
         </script>
+        <script src="assets/js/theme-head.js"></script>
         <style>
             /* Ensure full-height for proper centering and fallback backdrop */
             html, body { height: 100%; }
@@ -98,7 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             </div>
         </div>
 
+        <script id="download-record" type="application/json"><?php echo json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
         <script src="assets/js/download.js"></script>
+        <script src="assets/js/theme-toggle.js"></script>
     </body>
     </html>
     <?php
@@ -121,12 +158,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $format = strtolower($_POST['format']);
 
-    // Update last_accessed timestamp
-    $update_sql = "UPDATE legislative_records SET last_accessed = NOW() WHERE id = ?";
-    $stmt = $conn->prepare($update_sql);
-    $stmt->bind_param("i", $record['id']);
-    $stmt->execute();
-    $stmt->close();
+    // Update last_accessed timestamp only when ID is a real record id (>0)
+    $record_id_int = (int)$record['id'];
+    if ($record_id_int > 0) {
+        $update_sql = "UPDATE legislative_records SET last_accessed = NOW() WHERE id = ?";
+        $stmt = $conn->prepare($update_sql);
+        if ($stmt) {
+            $stmt->bind_param("i", $record_id_int);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    // Log download event for Reports & Analytics (best-effort)
+    log_analytics_event($conn, [
+        'event_type' => 'download',
+        'user_id' => isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+        'record_id' => $record_id_int > 0 ? $record_id_int : null,
+        'record_title' => $record['title'] ?? null,
+        'record_type' => $record['type'] ?? null,
+        'download_format' => $format,
+        'bytes' => null
+    ]);
     
 
     // Generate filename

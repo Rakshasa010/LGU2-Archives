@@ -5,6 +5,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.getElementById('cancelDownload');
     const downloadBtns = document.querySelectorAll('.download-format');
 
+    const recordEl = document.getElementById('download-record');
+    let record = null;
+    try {
+        record = recordEl ? JSON.parse(recordEl.textContent || 'null') : null;
+    } catch (e) {
+        record = null;
+    }
+
     // entrance animation
     requestAnimationFrame(() => {
         setTimeout(() => {
@@ -17,21 +25,26 @@ document.addEventListener('DOMContentLoaded', function() {
         try { window.close(); } catch (e) { window.history.back(); }
     }
 
-    closeX.addEventListener('click', closeWindow);
-    cancelBtn.addEventListener('click', closeWindow);
+    closeX?.addEventListener('click', closeWindow);
+    cancelBtn?.addEventListener('click', closeWindow);
 
     // clicking backdrop closes
-    modal.addEventListener('click', function(e) {
+    modal?.addEventListener('click', function(e) {
+        // Close when clicking outside the card
         if (e.target === modal) closeWindow();
     });
 
     // Handle format selection
     downloadBtns.forEach(btn => {
         btn.addEventListener('click', function() {
+            if (!record) {
+                alert('Download data is missing. Please close and try again.');
+                return;
+            }
             const format = this.getAttribute('data-format');
             btn.disabled = true;
             btn.classList.add('opacity-80');
-            downloadDocument(<?php echo json_encode($record); ?>, format);
+            downloadDocument(record, format);
         });
     });
 

@@ -42,18 +42,45 @@ if ($result) {
     while ($r = $result->fetch_assoc()) $stats['by_type'][$r['type']] = (int)$r['cnt'];
 }
 
-$result = $conn->query("SELECT COUNT(*) as downloads FROM legislative_records WHERE last_accessed IS NOT NULL");
-$stats['downloads'] = ($result && $row = $result->fetch_assoc()) ? (int)$row['downloads'] : 0;
-
-$result = $conn->query("SELECT type, COUNT(*) as cnt FROM legislative_records WHERE last_accessed IS NOT NULL GROUP BY type");
+// Downloads + Activity (prefer analytics_events if available; fallback to legacy last_accessed)
+$stats['downloads'] = 0;
 $stats['downloads_by_type'] = [];
-if ($result) {
-    while ($r = $result->fetch_assoc()) $stats['downloads_by_type'][$r['type']] = (int)$r['cnt'];
-}
+$stats['downloads_by_format'] = [];
+$stats['recent_activity'] = [];
+$stats['recent_downloads'] = []; // legacy fallback table
 
-$result = $conn->query("SELECT id, title, type, author, last_accessed FROM legislative_records WHERE last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT 10");
-$stats['recent_downloads'] = [];
-if ($result) while ($r = $result->fetch_assoc()) $stats['recent_downloads'][] = $r;
+$ae_count = $conn->query("SELECT COUNT(*) AS cnt FROM analytics_events WHERE event_type='download'");
+if ($ae_count && ($row = $ae_count->fetch_assoc())) {
+    $stats['downloads'] = (int)$row['cnt'];
+
+    $ae_by_type = $conn->query("SELECT COALESCE(record_type,'Unknown') AS k, COUNT(*) AS cnt
+                                FROM analytics_events
+                                WHERE event_type='download'
+                                GROUP BY COALESCE(record_type,'Unknown')");
+    if ($ae_by_type) while ($r = $ae_by_type->fetch_assoc()) $stats['downloads_by_type'][$r['k']] = (int)$r['cnt'];
+
+    $ae_by_format = $conn->query("SELECT COALESCE(download_format,'unknown') AS k, COUNT(*) AS cnt
+                                  FROM analytics_events
+                                  WHERE event_type='download'
+                                  GROUP BY COALESCE(download_format,'unknown')");
+    if ($ae_by_format) while ($r = $ae_by_format->fetch_assoc()) $stats['downloads_by_format'][strtoupper($r['k'])] = (int)$r['cnt'];
+
+    $ae_recent = $conn->query("SELECT event_type, record_title, record_type, download_format, bytes, created_at
+                               FROM analytics_events
+                               ORDER BY created_at DESC
+                               LIMIT 15");
+    if ($ae_recent) while ($r = $ae_recent->fetch_assoc()) $stats['recent_activity'][] = $r;
+} else {
+    // Legacy fallback: counts "records that have been accessed at least once"
+    $result = $conn->query("SELECT COUNT(*) as downloads FROM legislative_records WHERE last_accessed IS NOT NULL");
+    $stats['downloads'] = ($result && $row = $result->fetch_assoc()) ? (int)$row['downloads'] : 0;
+
+    $result = $conn->query("SELECT type, COUNT(*) as cnt FROM legislative_records WHERE last_accessed IS NOT NULL GROUP BY type");
+    if ($result) while ($r = $result->fetch_assoc()) $stats['downloads_by_type'][$r['type']] = (int)$r['cnt'];
+
+    $result = $conn->query("SELECT id, title, type, author, last_accessed FROM legislative_records WHERE last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT 10");
+    if ($result) while ($r = $result->fetch_assoc()) $stats['recent_downloads'][] = $r;
+}
 
 $result = $conn->query("SELECT id, title, type, author, created_at FROM legislative_records ORDER BY created_at DESC LIMIT 10");
 $stats['recent_added'] = [];
@@ -78,6 +105,7 @@ function format_bytes($bytes) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Reports & Analytics - Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -215,7 +243,7 @@ function format_bytes($bytes) {
                         <div class="flex items-center">
                             <!-- Back to Dashboard + Theme toggle -->
                             <div class="hidden md:flex items-center ml-3 space-x-2">
-                                <a href="archives-landing.php" class="px-3 py-1 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr; Dashboard</a>
+                                <a href="archives-landing.php" class="px-3 py-1 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr;</a>
                             </div>
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
@@ -302,12 +330,44 @@ function format_bytes($bytes) {
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Downloads by Format</h3>
+                            <canvas id="downloadsFormatChart" height="160"></canvas>
+                        </div>
+                        <div class="lg:col-span-2 card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recent Activity</h3>
+                            <?php if (!empty($stats['recent_activity'])): ?>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="text-xs text-gray-500">
+                                            <tr><th>When</th><th>Event</th><th>Title</th><th>Type</th><th>Format</th></tr>
+                                        </thead>
+                                        <tbody>
+                                        <?php foreach ($stats['recent_activity'] as $a): ?>
+                                            <tr class="border-t">
+                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['created_at']); ?></td>
+                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['event_type']); ?></td>
+                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
+                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
+                                                <td class="py-2 pr-3"><?php echo htmlspecialchars(strtoupper($a['download_format'] ?? '')); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-sm text-gray-500">No tracked activity yet. Downloads will appear here after using the download modal.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                             <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recent Downloads</h3>
                             <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
                                 <?php if (empty($stats['recent_downloads'])): ?>
-                                    <div class="text-gray-500">No downloads recorded yet.</div>
+                                    <div class="text-gray-500">This section is legacy-based. Use "Recent Activity" above for per-download events.</div>
                                 <?php else: ?>
                                     <table class="w-full text-left text-sm">
                                         <thead class="text-xs text-gray-500">
@@ -385,26 +445,19 @@ function format_bytes($bytes) {
         // Charts
         const byType = <?php echo json_encode($stats['by_type']); ?>;
         const downloadsByType = <?php echo json_encode($stats['downloads_by_type']); ?>;
+        const downloadsByFormat = <?php echo json_encode($stats['downloads_by_format']); ?>;
         function labelsAndData(obj) { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; }
         const rt = labelsAndData(byType);
         const dt = labelsAndData(downloadsByType);
+        const df = labelsAndData(downloadsByFormat);
         const recordsCtx = document.getElementById('recordsTypeChart')?.getContext('2d');
         if (recordsCtx) new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
         const downloadsCtx = document.getElementById('downloadsTypeChart')?.getContext('2d');
         if (downloadsCtx) new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } });
+        const downloadsFormatCtx = document.getElementById('downloadsFormatChart')?.getContext('2d');
+        if (downloadsFormatCtx) new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
 
-        // Apply saved theme for this page and wire per-site toggle (plv-theme)
-        (function(){
-            const root = document.documentElement;
-            const STORAGE_KEY = 'plv-theme';
-            function applyTheme(mode){ if(mode==='dark') root.classList.add('dark'); else root.classList.remove('dark'); }
-            applyTheme(localStorage.getItem(STORAGE_KEY) || 'light');
-            const btn = document.getElementById('themeToggle');
-            function updateIcons(){ const moon = document.getElementById('moonIcon'), sun = document.getElementById('sunIcon'); if(!moon||!sun) return; if(root.classList.contains('dark')){ moon.classList.remove('hidden'); moon.classList.add('block'); sun.classList.remove('block'); sun.classList.add('hidden'); } else { sun.classList.remove('hidden'); sun.classList.add('block'); moon.classList.remove('block'); moon.classList.add('hidden'); }}
-            updateIcons();
-            btn?.addEventListener('click', function(){ const cur = root.classList.contains('dark') ? 'dark' : 'light'; const next = cur==='dark' ? 'light' : 'dark'; applyTheme(next); localStorage.setItem(STORAGE_KEY, next); updateIcons(); document.dispatchEvent(new CustomEvent('themechange',{detail:{mode:next}})); });
-            window.addEventListener('storage', function(e){ if(e.key===STORAGE_KEY) applyTheme(e.newValue); updateIcons(); });
-        })();
     </script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

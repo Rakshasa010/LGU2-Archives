@@ -36,6 +36,7 @@ $conn->close();
             }
         }
     </script>
+    <script src="assets/js/theme-head.js"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Header -->
@@ -188,60 +189,34 @@ $conn->close();
         </div>
     </div>
 
+    <script src="assets/js/deleted-files.js"></script>
     <script>
         function openDownloadPopup(id, title, type, month, year, author) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            window.open(url, 'downloadPopup', 'width=500,height=400,scrollbars=yes,resizable=yes');
+            const w = 520;
+            const h = 520;
+            const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
+            const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
+            const width = window.innerWidth || document.documentElement.clientWidth || screen.width;
+            const height = window.innerHeight || document.documentElement.clientHeight || screen.height;
+            const left = Math.round(dualScreenLeft + (width - w) / 2);
+            const top = Math.round(dualScreenTop + (height - h) / 2);
+            window.open(url, 'downloadPopup', `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`);
         }
 
         // Delete handling
         function openDeleteConfirm(id, title, type) {
-            if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
-            deleteRecord(id, title, type || 'Ordinance/Resolution');
-        }
-
-        function addToDeletedStorage(obj) {
-            try {
-                const key = 'deletedFiles';
-                const raw = localStorage.getItem(key);
-                let arr = raw ? JSON.parse(raw) : [];
-                // prune expired entries
-                const now = Date.now();
-                arr = arr.filter(it => { try { return !it.expireAt || new Date(it.expireAt).getTime() > now; } catch(e){ return true; } });
-                arr.unshift(obj);
-                if (arr.length > 200) arr.length = 200;
-                localStorage.setItem(key, JSON.stringify(arr));
-            } catch (e) {
-                console.error('Could not save deleted file metadata', e);
-            }
-        }
-
-        function deleteRecord(id, title, type) {
-            fetch(`delete.php?id=${encodeURIComponent(id)}`, { method: 'POST' })
-                .then(r => {
-                    if (!r.ok) throw new Error('Failed to delete');
-                    return r.text();
-                })
-                .then(() => {
-                    const el = document.querySelector(`[data-id="${id}"]`);
-                    if (el) el.remove();
-                    // compute 30-month expiry
-                    const expireDate = new Date();
-                    expireDate.setMonth(expireDate.getMonth() + 30);
-                    addToDeletedStorage({
-                        id: String(id),
-                        name: title || (`Record ${id}`),
-                        type: type || 'Ordinance/Resolution',
-                        category: type || 'Ordinance/Resolution',
-                        originalPath: '',
-                        deletedAt: new Date().toISOString(),
-                        expireAt: expireDate.toISOString()
-                    });
-                })
-                .catch(err => {
-                    alert('Could not delete record. Server may not have delete endpoint.');
-                    console.error(err);
-                });
+            if (!confirm(`Delete "${title}"?\n\nThis will move the file to Recently Deleted for 30 days.`)) return;
+            // No server delete permissions: remove from UI + track in Recently Deleted (30 days).
+            const el = document.querySelector(`[data-id="${id}"]`);
+            if (el) el.remove();
+            window.DeletedFiles?.add({
+                id: String(id),
+                name: title || (`Record ${id}`),
+                type: type || 'Ordinance/Resolution',
+                category: type || 'Ordinance/Resolution',
+                originalPath: 'Ordinances & Resolutions'
+            });
         }
 
         // Like button handling (client-side, stored in localStorage)
@@ -365,89 +340,6 @@ $conn->close();
             }
         });
 
-        // Dark Mode Toggle - Updated for Tailwind
-        (function() {
-            const root = document.documentElement;
-            const STORAGE_KEY = 'plv-theme';
-            
-            function applyTheme(mode) {
-                if (mode === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
-            }
-            
-            const stored = localStorage.getItem(STORAGE_KEY) || 'light';
-            applyTheme(stored);
-
-            function initDarkMode() {
-                const toggleBtn = document.getElementById('themeToggle');
-                
-                if (toggleBtn) {
-                    updateToggleIcon();
-                    
-                    toggleBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        const currentMode = root.classList.contains('dark') ? 'dark' : 'light';
-                        const newMode = currentMode === 'dark' ? 'light' : 'dark';
-                        
-                        applyTheme(newMode);
-                        localStorage.setItem(STORAGE_KEY, newMode);
-                        updateToggleIcon();
-                        
-                        document.dispatchEvent(new CustomEvent('themechange', { 
-                            detail: { mode: newMode } 
-                        }));
-                    });
-                }
-                
-                function updateToggleIcon() {
-                    const moonIcon = document.getElementById('moonIcon');
-                    const sunIcon = document.getElementById('sunIcon');
-                    const toggleBtn = document.getElementById('themeToggle');
-                    if (!toggleBtn || !moonIcon || !sunIcon) return;
-                    
-                    const isDark = root.classList.contains('dark');
-                    if (isDark) {
-                        moonIcon.classList.remove('hidden');
-                        moonIcon.classList.add('block');
-                        sunIcon.classList.remove('block');
-                        sunIcon.classList.add('hidden');
-                    } else {
-                        sunIcon.classList.remove('hidden');
-                        sunIcon.classList.add('block');
-                        moonIcon.classList.remove('block');
-                        moonIcon.classList.add('hidden');
-                    }
-                    toggleBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-                }
-                
-                window.addEventListener('storage', function(e) {
-                    if (e.key === STORAGE_KEY && e.newValue) {
-                        applyTheme(e.newValue);
-                        updateToggleIcon();
-                    }
-                });
-                
-                window.addEventListener('focus', function() {
-                    const currentStored = localStorage.getItem(STORAGE_KEY) || 'light';
-                    const currentApplied = root.classList.contains('dark') ? 'dark' : 'light';
-                    if (currentStored !== currentApplied) {
-                        applyTheme(currentStored);
-                        updateToggleIcon();
-                    }
-                });
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initDarkMode);
-            } else {
-                initDarkMode();
-            }
-        })();
     </script>
     <!-- Side Viewer Panel -->
     <div id="sideViewer" class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-xl transform translate-x-full transition-transform duration-200 z-50">
@@ -512,5 +404,6 @@ $conn->close();
             document.body.style.overflow = 'auto';
         }
     </script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

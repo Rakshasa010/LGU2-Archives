@@ -23,11 +23,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <!-- Prevent dark mode flicker -->
-    <script>
-        if (localStorage.getItem('plv-theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-        }
-    </script>
+    <script src="assets/js/theme-head.js"></script>
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
     <?php
@@ -335,91 +331,8 @@
     <div id="toast" class="fixed right-6 bottom-6 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold" role="status" aria-live="polite"></div>
 
     <script src="assets/js/archives.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
     <script>
-        // Dark Mode Toggle - Updated for Tailwind
-        (function() {
-            const root = document.documentElement;
-            const STORAGE_KEY = 'plv-theme';
-            
-            function applyTheme(mode) {
-                if (mode === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
-            }
-            
-            const stored = localStorage.getItem(STORAGE_KEY) || 'light';
-            applyTheme(stored);
-
-            function initDarkMode() {
-                const toggleBtn = document.getElementById('themeToggle');
-                
-                if (toggleBtn) {
-                    updateToggleIcon();
-                    
-                    toggleBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        const currentMode = root.classList.contains('dark') ? 'dark' : 'light';
-                        const newMode = currentMode === 'dark' ? 'light' : 'dark';
-                        
-                        applyTheme(newMode);
-                        localStorage.setItem(STORAGE_KEY, newMode);
-                        updateToggleIcon();
-                        
-                        document.dispatchEvent(new CustomEvent('themechange', { 
-                            detail: { mode: newMode } 
-                        }));
-                    });
-                }
-                
-                function updateToggleIcon() {
-                    const moonIcon = document.getElementById('moonIcon');
-                    const sunIcon = document.getElementById('sunIcon');
-                    const toggleBtn = document.getElementById('themeToggle');
-                    if (!toggleBtn || !moonIcon || !sunIcon) return;
-                    
-                    const isDark = root.classList.contains('dark');
-                    if (isDark) {
-                        moonIcon.classList.remove('hidden');
-                        moonIcon.classList.add('block');
-                        sunIcon.classList.remove('block');
-                        sunIcon.classList.add('hidden');
-                    } else {
-                        sunIcon.classList.remove('hidden');
-                        sunIcon.classList.add('block');
-                        moonIcon.classList.remove('block');
-                        moonIcon.classList.add('hidden');
-                    }
-                    toggleBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-                }
-                
-                window.addEventListener('storage', function(e) {
-                    if (e.key === STORAGE_KEY && e.newValue) {
-                        applyTheme(e.newValue);
-                        updateToggleIcon();
-                    }
-                });
-                
-                window.addEventListener('focus', function() {
-                    const currentStored = localStorage.getItem(STORAGE_KEY) || 'light';
-                    const currentApplied = root.classList.contains('dark') ? 'dark' : 'light';
-                    if (currentStored !== currentApplied) {
-                        applyTheme(currentStored);
-                        updateToggleIcon();
-                    }
-                });
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initDarkMode);
-            } else {
-                initDarkMode();
-            }
-        })();
-
         // Load deleted files from localStorage and prune expired entries
         function loadDeletedFiles() {
             const key = 'deletedFiles';
@@ -525,10 +438,15 @@
                                             <span class="inline-block mt-2 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs font-semibold">${file.type}</span>
                                         </div>
                                     </div>
-                                    <button class="restore-btn px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center space-x-2" data-id="${file.id}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                        <span>Restore</span>
-                                    </button>
+                                    <div class="flex items-center gap-3">
+                                        <div class="retention-countdown px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-xs font-semibold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-600" data-expire-at="${file.expireAt || ''}">
+                                            --
+                                        </div>
+                                        <button class="restore-btn px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center space-x-2" data-id="${file.id}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                            <span>Restore</span>
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -596,6 +514,46 @@
         filterSelect.addEventListener('change', () => renderDeleted());
 
         renderDeleted();
+
+        // Countdown beside Restore (updates every second)
+        let countdownTimer = null;
+        function formatRemaining(ms) {
+            if (!Number.isFinite(ms) || ms <= 0) return 'Expired';
+            const totalSeconds = Math.floor(ms / 1000);
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (days > 0) return `${days}d ${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m`;
+            return `${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`;
+        }
+
+        function updateCountdowns() {
+            const els = document.querySelectorAll('.retention-countdown');
+            const now = Date.now();
+            let needsRerender = false;
+            els.forEach(el => {
+                const exp = el.getAttribute('data-expire-at') || '';
+                const expMs = Date.parse(exp);
+                if (!Number.isFinite(expMs)) {
+                    el.textContent = '30d';
+                    return;
+                }
+                const remaining = expMs - now;
+                el.textContent = formatRemaining(remaining);
+                if (remaining <= 0) needsRerender = true;
+            });
+
+            if (needsRerender) {
+                // prune expired and rerender
+                deletedFiles = loadDeletedFiles();
+                renderDeleted();
+            }
+        }
+
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(updateCountdowns, 1000);
+        updateCountdowns();
 
         // Sidebar toggle functionality
         const sidebarToggle = document.getElementById('sidebar-toggle');

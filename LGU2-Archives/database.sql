@@ -19,6 +19,31 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+-- Create legislative_records table
+CREATE TABLE legislative_records (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    month VARCHAR(20) NOT NULL,
+    year YEAR NOT NULL,
+    author VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_accessed TIMESTAMP NULL
+);
+
+-- Create analytics_events table (for Reports & Analytics activity tracking)
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    event_type VARCHAR(32) NOT NULL,
+    user_id INT(11) NULL,
+    record_id INT(11) NULL,
+    record_title VARCHAR(255) NULL,
+    record_type VARCHAR(50) NULL,
+    download_format VARCHAR(16) NULL,
+    bytes BIGINT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 
 -- Insert mock data
 INSERT INTO legislative_records (title, type, month, year, author) VALUES
@@ -85,6 +110,13 @@ CREATE INDEX idx_type ON legislative_records(type);
 CREATE INDEX idx_month_year ON legislative_records(month, year);
 CREATE INDEX idx_author ON legislative_records(author);
 CREATE INDEX idx_created_at ON legislative_records(created_at);
+CREATE INDEX idx_last_accessed ON legislative_records(last_accessed);
+
+-- Indexes for analytics_events
+CREATE INDEX idx_event_type_created ON analytics_events(event_type, created_at);
+CREATE INDEX idx_ae_created_at ON analytics_events(created_at);
+CREATE INDEX idx_ae_record_type ON analytics_events(record_type);
+CREATE INDEX idx_ae_download_format ON analytics_events(download_format);
 
 -- Display completion message
 SELECT 'Database setup completed successfully!' as status;

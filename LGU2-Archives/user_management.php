@@ -47,6 +47,7 @@ $stmt->close();
             }
         }
     </script>
+    <script src="assets/js/theme-head.js"></script>
     <style>
         [x-cloak] { display: none !important; }
     </style>
@@ -273,22 +274,6 @@ $stmt->close();
         </div>
     </div>
 
-    <script>
-        // Theme toggle for this page
-        (function(){
-            function applyTheme(theme){
-                if (theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
-                localStorage.setItem('theme', theme);
-            }
-            var saved = localStorage.getItem('theme') || 'light';
-            applyTheme(saved);
-
-            var btn = document.getElementById('themeToggleUser');
-            btn?.addEventListener('click', function(){
-                var cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-                applyTheme(cur === 'dark' ? 'light' : 'dark');
-            });
-        })();
-    </script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

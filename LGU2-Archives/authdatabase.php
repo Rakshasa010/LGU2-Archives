@@ -61,6 +61,24 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL AFTER role");
 }
 
+// Create analytics_events table (used by report_analytics.php)
+$analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    event_type VARCHAR(32) NOT NULL,
+    user_id INT(11) NULL,
+    record_id INT(11) NULL,
+    record_title VARCHAR(255) NULL,
+    record_type VARCHAR(50) NULL,
+    download_format VARCHAR(16) NULL,
+    bytes BIGINT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_event_type_created (event_type, created_at),
+    INDEX idx_created_at (created_at),
+    INDEX idx_record_type (record_type),
+    INDEX idx_download_format (download_format)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+$conn->query($analytics_sql);
+
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
 

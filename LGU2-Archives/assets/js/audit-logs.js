@@ -20,18 +20,46 @@
     var stored = {};
     try { stored = JSON.parse(localStorage.getItem('audit_read') || '{}'); } catch(e){ stored = {}; }
 
+    function setButtonState(btn, status) {
+        if (!btn) return;
+        // reset
+        btn.classList.remove(
+            'bg-red-600','hover:bg-red-700','text-white','border-red-700',
+            'bg-white','dark:bg-slate-700','text-gray-700','dark:text-gray-200',
+            'border-gray-200','dark:border-slate-600'
+        );
+
+        if (status === 'unread') {
+            btn.classList.add('bg-red-600','hover:bg-red-700','text-white','border-red-700');
+            btn.textContent = 'Mark Read';
+        } else {
+            btn.classList.add('bg-white','dark:bg-slate-700','text-gray-700','dark:text-gray-200','border-gray-200','dark:border-slate-600');
+            btn.textContent = 'Read';
+        }
+    }
+
     function updateRowStatus(id, status) {
         var tr = document.querySelector('[data-id="'+id+'"]');
         if (!tr) return;
         tr.setAttribute('data-status', status);
+        var btn = tr.querySelector('.mark-read-btn');
         if (status === 'read') {
             tr.classList.remove('bg-yellow-50');
-            var btn = tr.querySelector('.mark-read-btn'); if (btn) btn.textContent = 'Mark Read';
+            setButtonState(btn, 'read');
         } else {
             tr.classList.add('bg-yellow-50');
+            setButtonState(btn, 'unread');
         }
     }
 
+    // Initialize UI from current DOM state first
+    document.querySelectorAll('#notesBody tr').forEach(function(tr){
+        var id = tr.getAttribute('data-id');
+        var status = tr.getAttribute('data-status') || 'unread';
+        updateRowStatus(id, status);
+    });
+
+    // Then override with any locally stored read/unread toggles
     Object.keys(stored).forEach(function(k){ var val = stored[k]; updateRowStatus(k, val); });
 
     document.querySelectorAll('.mark-read-btn').forEach(function(btn){
@@ -47,10 +75,10 @@
             if (next === 'read') {
                 tr.classList.remove('highlight');
                 tr.style.opacity = '0.9';
-                btn.textContent = 'Mark Read';
+                setButtonState(btn, 'read');
             } else {
                 tr.classList.add('highlight');
-                btn.textContent = 'Mark Read';
+                setButtonState(btn, 'unread');
             }
             updateUnreadCount();
         });
@@ -73,32 +101,5 @@
     searchInput.addEventListener('input', function(){ var q = (this.value || '').toLowerCase(); document.querySelectorAll('#notesBody tr').forEach(function(r){ var text = r.textContent.toLowerCase(); r.style.display = text.indexOf(q) !== -1 ? '' : 'none'; }); });
 
     updateUnreadCount();
-    function applyTheme(t){ if (t==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
-    var savedTheme = localStorage.getItem('theme') || 'light'; applyTheme(savedTheme);
-
-    // Update theme icons (moon/sun) to reflect current theme
-    function updateToggleIcon() {
-        var moonIcon = document.getElementById('moonIcon');
-        var sunIcon = document.getElementById('sunIcon');
-        if (!moonIcon || !sunIcon) return;
-        var isDark = document.documentElement.classList.contains('dark');
-        if (isDark) {
-            moonIcon.classList.remove('hidden'); moonIcon.classList.add('block');
-            sunIcon.classList.remove('block'); sunIcon.classList.add('hidden');
-        } else {
-            sunIcon.classList.remove('hidden'); sunIcon.classList.add('block');
-            moonIcon.classList.remove('block'); moonIcon.classList.add('hidden');
-        }
-    }
-    updateToggleIcon();
-
-    // Support both page-specific id and generic id
-    var themeBtn = document.getElementById('themeToggle') || document.getElementById('themeToggleAudit');
-    themeBtn?.addEventListener('click', function(){
-        var cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-        var next = (cur==='dark') ? 'light' : 'dark';
-        applyTheme(next);
-        localStorage.setItem('theme', next);
-        updateToggleIcon();
-    });
+    // Dark mode is handled centrally by `assets/js/theme-head.js` + `assets/js/theme-toggle.js`.
 })();

@@ -1,1 +1,4 @@
 .highlight { background: linear-gradient(90deg, rgba(255,238,230,0.6), rgba(255,246,240,0.4)); }
+
+/* Subtle row tint for unread items (JS toggles bg-yellow-50 via Tailwind).
+   Keep this file for audit-specific overrides only. */

@@ -22,6 +22,7 @@ $conn->close();
     <title>Billing - Document Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/billing-head.js"></script>
+    <script src="assets/js/theme-head.js"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Header -->
@@ -162,6 +163,7 @@ $conn->close();
     </div>
 
     <script src="assets/js/billing.js"></script>
+    <script src="assets/js/deleted-files.js"></script>
     <!-- Side Viewer Panel -->
     <div id="sideViewer" class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-xl transform translate-x-full transition-transform duration-200 z-50">
         <div class="p-4 flex items-start justify-between border-b border-gray-100 dark:border-slate-700">
@@ -227,69 +229,20 @@ $conn->close();
 
         // Delete handling
         function openDeleteConfirm(id, title) {
-            if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
-            deleteRecord(id, title, 'Billing');
+            if (!confirm(`Delete "${title}"?\n\nThis will move the file to Recently Deleted for 30 days.`)) return;
+            // No server delete permissions: remove from UI + track in Recently Deleted (30 days).
+            const el = document.querySelector(`[data-id="${id}"]`);
+            if (el) el.remove();
+            window.DeletedFiles?.add({
+                id: String(id),
+                name: title || (`Record ${id}`),
+                type: 'Billing',
+                category: 'Billing',
+                originalPath: 'Billing'
+            });
         }
 
-        function addToDeletedStorage(obj) {
-            try {
-                const key = 'deletedFiles';
-                const raw = localStorage.getItem(key);
-                let arr = raw ? JSON.parse(raw) : [];
-                // prune expired entries
-                const now = Date.now();
-                arr = arr.filter(it => { try { return !it.expireAt || new Date(it.expireAt).getTime() > now; } catch(e){ return true; } });
-                // prepend new
-                arr.unshift(obj);
-                // keep up to 200 entries to avoid unbounded growth
-                if (arr.length > 200) arr.length = 200;
-                localStorage.setItem(key, JSON.stringify(arr));
-            } catch (e) {
-                console.error('Could not save deleted file metadata', e);
-            }
-        }
-
-        function deleteRecord(id, title, type) {
-            fetch(`delete.php?id=${encodeURIComponent(id)}`, { method: 'POST' })
-                .then(r => {
-                    if (!r.ok) throw new Error('Failed to delete');
-                    return r.text();
-                })
-                .then(() => {
-                    const el = document.querySelector(`[data-id="${id}"]`);
-                    if (el) el.remove();
-                    // record deletion metadata so recent_deleted.php can show it
-                    // compute 30-day expiry
-                    const expireDate = new Date();
-                    expireDate.setDate(expireDate.getDate() + 30);
-                    addToDeletedStorage({
-                        id: String(id),
-                        name: title || (`Record ${id}`),
-                        type: type || 'Billing',
-                        category: type || 'Billing',
-                        originalPath: '',
-                        deletedAt: new Date().toISOString(),
-                        expireAt: expireDate.toISOString()
-                    });
-                })
-                .catch(err => {
-                    alert('Could not delete record. Server may not have delete endpoint.');
-                    console.error(err);
-                });
-        }
-
-        // Theme persistence (site-wide)
-        (function(){
-            const root = document.documentElement;
-            const STORAGE_KEY = 'plv-theme';
-            function applyTheme(mode){ if(mode==='dark') root.classList.add('dark'); else root.classList.remove('dark'); }
-            applyTheme(localStorage.getItem(STORAGE_KEY) || 'light');
-            const toggleBtn = document.getElementById('themeToggle');
-            function updateIcons(){ const moon = document.getElementById('moonIcon'), sun = document.getElementById('sunIcon'); if(!moon||!sun) return; if(root.classList.contains('dark')){ moon.classList.remove('hidden'); moon.classList.add('block'); sun.classList.remove('block'); sun.classList.add('hidden'); } else { sun.classList.remove('hidden'); sun.classList.add('block'); moon.classList.remove('block'); moon.classList.add('hidden'); }}
-            updateIcons();
-            toggleBtn?.addEventListener('click', function(e){ e.preventDefault(); const cur = root.classList.contains('dark') ? 'dark' : 'light'; const next = cur==='dark' ? 'light' : 'dark'; applyTheme(next); localStorage.setItem(STORAGE_KEY, next); updateIcons(); document.dispatchEvent(new CustomEvent('themechange',{detail:{mode:next}})); });
-            window.addEventListener('storage', (e)=>{ if(e.key===STORAGE_KEY) applyTheme(e.newValue); updateIcons(); });
-        })();
     </script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

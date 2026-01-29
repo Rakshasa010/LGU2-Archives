@@ -23,11 +23,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <!-- Prevent dark mode flicker -->
-    <script>
-        if (localStorage.getItem('plv-theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-        }
-    </script>
+    <script src="assets/js/theme-head.js"></script>
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
     <?php
@@ -441,90 +437,6 @@
             initStorageDonut();
         }
 
-        // Dark Mode Toggle - Updated for Tailwind
-        (function() {
-            const root = document.documentElement;
-            const STORAGE_KEY = 'plv-theme';
-            
-            function applyTheme(mode) {
-                if (mode === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
-            }
-            
-            const stored = localStorage.getItem(STORAGE_KEY) || 'light';
-            applyTheme(stored);
-
-            function initDarkMode() {
-                const toggleBtn = document.getElementById('themeToggle');
-                
-                if (toggleBtn) {
-                    updateToggleIcon();
-                    
-                    toggleBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        const currentMode = root.classList.contains('dark') ? 'dark' : 'light';
-                        const newMode = currentMode === 'dark' ? 'light' : 'dark';
-                        
-                        applyTheme(newMode);
-                        localStorage.setItem(STORAGE_KEY, newMode);
-                        updateToggleIcon();
-                        
-                        document.dispatchEvent(new CustomEvent('themechange', { 
-                            detail: { mode: newMode } 
-                        }));
-                    });
-                }
-                
-                function updateToggleIcon() {
-                    const moonIcon = document.getElementById('moonIcon');
-                    const sunIcon = document.getElementById('sunIcon');
-                    const toggleBtn = document.getElementById('themeToggle');
-                    if (!toggleBtn || !moonIcon || !sunIcon) return;
-                    
-                    const isDark = root.classList.contains('dark');
-                    if (isDark) {
-                        moonIcon.classList.remove('hidden');
-                        moonIcon.classList.add('block');
-                        sunIcon.classList.remove('block');
-                        sunIcon.classList.add('hidden');
-                    } else {
-                        sunIcon.classList.remove('hidden');
-                        sunIcon.classList.add('block');
-                        moonIcon.classList.remove('block');
-                        moonIcon.classList.add('hidden');
-                    }
-                    toggleBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-                }
-                
-                window.addEventListener('storage', function(e) {
-                    if (e.key === STORAGE_KEY && e.newValue) {
-                        applyTheme(e.newValue);
-                        updateToggleIcon();
-                    }
-                });
-                
-                window.addEventListener('focus', function() {
-                    const currentStored = localStorage.getItem(STORAGE_KEY) || 'light';
-                    const currentApplied = root.classList.contains('dark') ? 'dark' : 'light';
-                    if (currentStored !== currentApplied) {
-                        applyTheme(currentStored);
-                        updateToggleIcon();
-                    }
-                });
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initDarkMode);
-            } else {
-                initDarkMode();
-            }
-        })();
-
         // Sidebar toggle functionality
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -576,5 +488,6 @@
             sidebar?.classList.add('sidebar-collapsed');
         }
     </script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

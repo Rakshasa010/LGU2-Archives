@@ -15,6 +15,7 @@
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/archives-landing-head.js"></script>
+    <script src="assets/js/theme-head.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">
@@ -214,10 +215,7 @@
                         <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
                             <!-- Sidebar Toggle Button (Desktop) -->
-                            <button id="sidebar-toggle" class="desktop-toggle items-center justify-center w-10 h-10 rounded-lg text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 hover:text-red-600 dark:hover:text-red-500 focus:outline-none transition-all duration-200 border border-gray-200 dark:border-slate-600" title="Toggle Sidebar">
-                                <i class="bi bi-layout-sidebar-inset text-xl"></i>
-                            </button>
-                            
+
                             <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
@@ -399,35 +397,6 @@
                             </div>
                         </div>
 
-                        <!-- Enhanced Donut Analytics Widget -->
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <div class="mb-6">
-                                <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200">Document Distribution</h3>
-                                <p class="text-gray-600 dark:text-gray-400">Uploaded Documents by Category</p>
-                            </div>
-                            <div class="flex flex-col lg:flex-row items-center lg:items-start gap-8">
-                                <div class="relative flex-shrink-0">
-                                    <svg id="uploadedDonut" class="donut-chart w-64 h-64" viewBox="0 0 280 280" data-segments='[{"name":"Ordinances","percent":45,"color":"#dc2626"},{"name":"Billing","percent":30,"color":"#f97316"},{"name":"Public Hearings","percent":10,"color":"#3b82f6"},{"name":"Meeting Session","percent":15,"color":"#10b981"}]'>
-                                        <!-- Donut segments will be rendered here -->
-                                    </svg>
-                                    <div class="absolute inset-0 flex items-center justify-center">
-                                        <div class="text-center">
-                                            <div class="text-3xl font-bold text-red-600 dark:text-red-400">100%</div>
-                                            <div class="text-sm text-gray-600 dark:text-gray-400">Total</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex-1 w-full">
-                                    <div class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Categories</div>
-                                    <div id="donutLegend" class="space-y-3">
-                                        <!-- Legend items will be generated here -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="donutTooltip" class="fixed z-50 bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl pointer-events-none opacity-0 transition-opacity"></div>
-
                         <!-- Recent Archives Section -->
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                             <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders</h2>
@@ -510,5 +479,6 @@
 
     <script src="assets/js/archives.js"></script>
     <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

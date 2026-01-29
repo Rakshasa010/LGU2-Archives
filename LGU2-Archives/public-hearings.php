@@ -36,6 +36,8 @@ $conn->close();
             }
         }
     </script>
+    <script src="assets/js/theme-head.js"></script>
+    <script src="assets/js/deleted-files.js"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Header -->
@@ -299,42 +301,37 @@ $conn->close();
             }
 
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            window.open(url, 'downloadPopup', 'width=500,height=400,scrollbars=yes,resizable=yes');
+            const w = 520;
+            const h = 520;
+            const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
+            const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
+            const width = window.innerWidth || document.documentElement.clientWidth || screen.width;
+            const height = window.innerHeight || document.documentElement.clientHeight || screen.height;
+            const left = Math.round(dualScreenLeft + (width - w) / 2);
+            const top = Math.round(dualScreenTop + (height - h) / 2);
+            window.open(url, 'downloadPopup', `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`);
         }
 
         function deleteFile(index, fileName) {
-            if (!confirm(`Are you sure you want to delete "${fileName}"?\n\nThis file will be moved to Recently Deleted and can be restored within 7 days.`)) {
+            if (!confirm(`Are you sure you want to delete "${fileName}"?\n\nThis file will be moved to Recently Deleted for 30 days.`)) {
                 return;
             }
 
             const file = files[index];
             const fileType = file.type.toUpperCase();
-            
-            const deletedFile = {
+
+            window.DeletedFiles?.add({
                 id: `public_${Date.now()}_${index}`,
                 name: fileName,
                 type: fileType,
-                deletedAt: new Date().toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }),
-                originalPath: 'Public Hearings',
                 category: 'Public Hearings',
-                originalIndex: index,
-                originalData: file
-            };
-
-            const deletedFiles = JSON.parse(localStorage.getItem('deletedFiles') || '[]');
-            deletedFiles.push(deletedFile);
-            localStorage.setItem('deletedFiles', JSON.stringify(deletedFiles));
+                originalPath: 'Public Hearings'
+            });
 
             files.splice(index, 1);
             renderFiles();
 
-            alert(`"${fileName}" has been moved to Recently Deleted.\n\nYou can restore it from the Recently Deleted page within 7 days.`);
+            alert(`"${fileName}" has been moved to Recently Deleted.\n\nYou can restore it from the Recently Deleted page within 30 days.`);
         }
 
         window.addEventListener('click', function(event) {
@@ -365,92 +362,17 @@ $conn->close();
 
         function openDownloadPopup(id, title, type, month, year, author) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            window.open(url, 'downloadPopup', 'width=500,height=400,scrollbars=yes,resizable=yes');
+            const w = 520;
+            const h = 520;
+            const dualScreenLeft = window.screenLeft ?? window.screenX ?? 0;
+            const dualScreenTop = window.screenTop ?? window.screenY ?? 0;
+            const width = window.innerWidth || document.documentElement.clientWidth || screen.width;
+            const height = window.innerHeight || document.documentElement.clientHeight || screen.height;
+            const left = Math.round(dualScreenLeft + (width - w) / 2);
+            const top = Math.round(dualScreenTop + (height - h) / 2);
+            window.open(url, 'downloadPopup', `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`);
         }
 
-        // Dark Mode Toggle - Updated for Tailwind
-        (function() {
-            const root = document.documentElement;
-            const STORAGE_KEY = 'plv-theme';
-            
-            function applyTheme(mode) {
-                if (mode === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
-            }
-            
-            const stored = localStorage.getItem(STORAGE_KEY) || 'light';
-            applyTheme(stored);
-
-            function initDarkMode() {
-                const toggleBtn = document.getElementById('themeToggle');
-                
-                if (toggleBtn) {
-                    updateToggleIcon();
-                    
-                    toggleBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        const currentMode = root.classList.contains('dark') ? 'dark' : 'light';
-                        const newMode = currentMode === 'dark' ? 'light' : 'dark';
-                        
-                        applyTheme(newMode);
-                        localStorage.setItem(STORAGE_KEY, newMode);
-                        updateToggleIcon();
-                        
-                        document.dispatchEvent(new CustomEvent('themechange', { 
-                            detail: { mode: newMode } 
-                        }));
-                    });
-                }
-                
-                function updateToggleIcon() {
-                    const moonIcon = document.getElementById('moonIcon');
-                    const sunIcon = document.getElementById('sunIcon');
-                    const toggleBtn = document.getElementById('themeToggle');
-                    if (!toggleBtn || !moonIcon || !sunIcon) return;
-                    
-                    const isDark = root.classList.contains('dark');
-                    if (isDark) {
-                        moonIcon.classList.remove('hidden');
-                        moonIcon.classList.add('block');
-                        sunIcon.classList.remove('block');
-                        sunIcon.classList.add('hidden');
-                    } else {
-                        sunIcon.classList.remove('hidden');
-                        sunIcon.classList.add('block');
-                        moonIcon.classList.remove('block');
-                        moonIcon.classList.add('hidden');
-                    }
-                    toggleBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-                }
-                
-                window.addEventListener('storage', function(e) {
-                    if (e.key === STORAGE_KEY && e.newValue) {
-                        applyTheme(e.newValue);
-                        updateToggleIcon();
-                    }
-                });
-                
-                window.addEventListener('focus', function() {
-                    const currentStored = localStorage.getItem(STORAGE_KEY) || 'light';
-                    const currentApplied = root.classList.contains('dark') ? 'dark' : 'light';
-                    if (currentStored !== currentApplied) {
-                        applyTheme(currentStored);
-                        updateToggleIcon();
-                    }
-                });
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initDarkMode);
-            } else {
-                initDarkMode();
-            }
-        })();
     </script>
     <!-- Side Viewer Panel -->
     <div id="sideViewer" class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-xl transform translate-x-full transition-transform duration-200 z-50">
@@ -515,5 +437,6 @@ $conn->close();
             document.body.style.overflow = 'auto';
         }
     </script>
+    <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>
