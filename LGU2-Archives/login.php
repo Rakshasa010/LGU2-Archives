@@ -60,11 +60,82 @@
                        class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
             </div>
 
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                <input type="password" id="password" name="password" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
+    <div class="mb-4">
+  <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    Password
+  </label>
+
+  <div class="relative">
+    <input
+      type="password"
+      id="password"
+      name="password"
+      required
+      class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg
+             focus:ring-2 focus:ring-red-500 focus:border-transparent
+             bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100
+             placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
+    />
+
+    <button
+      type="button"
+      id="togglePassword"
+      class="absolute right-0 top-0 h-full flex items-center px-3
+             text-gray-500 dark:text-gray-400
+             hover:text-gray-700 dark:hover:text-gray-200
+             focus:outline-none"
+      aria-label="Show password"
+    >
+      <!-- Eye Open -->
+      <svg
+        id="eyeOpen"
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M2.458 12C3.732 7.943 7.523 5 12 5
+             c4.478 0 8.268 2.943 9.542 7
+             -1.274 4.057-5.064 7-9.542 7
+             -4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+
+      <!-- Eye Closed -->
+      <svg
+        id="eyeClosed"
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5 hidden"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 3l18 18" />
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M10.585 10.585A2 2 0 0012 14a2 2 0 001.414-.586" />
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M6.223 6.223A9.956 9.956 0 0112 5
+             c4.478 0 8.268 2.943 9.543 7
+             a9.97 9.97 0 01-4.216 5.568" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+
+
+  <button
+    type="submit"
+    class="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+  >
+    Login
+  </button>
 
             <div class="flex items-center justify-between">
                 <label class="flex items-center">
@@ -84,6 +155,7 @@
         </div>
     </div>
 
+  
     <script src="assets/js/login.js"></script>
 </body>
 </html>

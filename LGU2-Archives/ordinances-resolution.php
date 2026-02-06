@@ -138,18 +138,19 @@ $conn->close();
                             </div>
 
                             <div class="flex items-center space-x-2">
-                                <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1 mr-2" title="View">
-                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="View">
+                                    
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            <span>View</span>
                                 </button>
-                                <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1" title="Download">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m-3 3V4m0 6V4" />
-                                    </svg>
+                                <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <span>Download</span>
                                 </button>
-                                <button onclick="openDeleteConfirm(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>')" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 ml-1" title="Delete">
-                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7L5 7M10 11v6m4-6v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" />
-                                    </svg>
+                                <button onclick="openDeleteConfirm(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Delete">
+                                     <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                                 </button>
                                 <svg class="w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
