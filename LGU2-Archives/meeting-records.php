@@ -272,27 +272,29 @@ $conn->close();
         });
 
         function previewFile(fileName) {
-            // parse filename like YYYY-MM-DD_Title.ext and open side viewer
             const match = fileName.match(/^([\d]{4}-[\d]{2}-[\d]{2})_(.+)\.(\w+)$/);
             let title = fileName;
-            let type = '';
             let month = '';
             let year = '';
             let author = '';
-
+            let fileType = '';
+            let contentType = '';
             if (match) {
                 const dateStr = match[1];
                 title = match[2].replace(/_/g, ' ');
-                type = match[3];
+                fileType = match[3].toLowerCase();
                 const d = new Date(dateStr);
                 if (!isNaN(d)) {
                     month = d.toLocaleString('en-US', { month: 'long' });
                     year = d.getFullYear();
                 }
             }
-
-            const url = `download.php?id=0&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            openSideViewer({ title, type, month, year, author, downloadUrl: url });
+            if (fileType) {
+                const ct = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', txt: 'text/plain' };
+                contentType = ct[fileType] || '';
+            }
+            const url = `download.php?id=0&title=${encodeURIComponent(title)}&type=${encodeURIComponent(fileType)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
+            openSideViewer({ title, type: fileType, month, year, author, fileType, contentType, downloadUrl: url });
         }
 
         function downloadFile(fileName) {
@@ -384,6 +386,13 @@ $conn->close();
             document.getElementById('sv-type').textContent = data.type || '';
             document.getElementById('sv-meta').textContent = `${data.month || ''} ${data.year || ''}`.trim();
             document.getElementById('sv-author').textContent = data.author || '';
+            document.getElementById('sv-d-title').textContent = data.title || '';
+            document.getElementById('sv-d-authors').textContent = data.author || '';
+            document.getElementById('sv-d-size').textContent = data.size ? data.size : 'Unknown';
+            document.getElementById('sv-d-modified').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : 'Unknown';
+            document.getElementById('sv-d-ctype').textContent = data.contentType || 'Unknown';
+            document.getElementById('sv-d-saved').textContent = data.lastSaved ? new Date(data.lastSaved).toLocaleString() : 'Unknown';
+            document.getElementById('sv-d-ftype').textContent = data.fileType || 'Unknown';
             const openBtn = document.getElementById('sv-open-btn');
             const preview = document.getElementById('sv-preview');
 
@@ -429,6 +438,18 @@ $conn->close();
         <div class="p-4 space-y-3">
             <div class="text-sm text-gray-600 dark:text-gray-300"><strong>Type:</strong> <span id="sv-type"></span></div>
             <div class="text-sm text-gray-600 dark:text-gray-300"><strong>Author:</strong> <span id="sv-author"></span></div>
+            <div class="mt-2">
+                <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Details</div>
+                <div class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <div class="flex justify-between"><span>Title</span><span id="sv-d-title"></span></div>
+                    <div class="flex justify-between"><span>Authors</span><span id="sv-d-authors"></span></div>
+                    <div class="flex justify-between"><span>Size</span><span id="sv-d-size"></span></div>
+                    <div class="flex justify-between"><span>Date modified</span><span id="sv-d-modified"></span></div>
+                    <div class="flex justify-between"><span>Content type</span><span id="sv-d-ctype"></span></div>
+                    <div class="flex justify-between"><span>Date last saved</span><span id="sv-d-saved"></span></div>
+                    <div class="flex justify-between"><span>File type</span><span id="sv-d-ftype"></span></div>
+                </div>
+            </div>
             <div id="sv-preview" class="mt-3 text-sm text-gray-500 dark:text-gray-400">Preview not available. Use Open to download or view the file.</div>
         </div>
         <div class="p-4 border-t border-gray-100 dark:border-slate-700">

@@ -137,7 +137,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 return `
-                    <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-slate-600 cursor-pointer search-result-item" data-record-id="${record.id}" onclick="visitFile(${record.id})">
+                    <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-slate-600 cursor-pointer search-result-item"
+                         data-record-id="${record.id}"
+                         data-title="${record.title.replace(/"/g, '&quot;')}"
+                         data-type="${record.type.replace(/"/g, '&quot;')}"
+                         data-month="${record.month.replace(/"/g, '&quot;')}"
+                         data-year="${record.year}"
+                         data-author="${record.author.replace(/"/g, '&quot;')}">
                         <div class="flex items-start space-x-4">
                             <div class="flex-shrink-0">${getTypeIcon(record.type)}</div>
                             <div class="flex-1">
@@ -164,6 +170,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.search-result-item').forEach(item => {
             item.addEventListener('click', function() {
                 const recordId = this.getAttribute('data-record-id');
+                try {
+                    const title = this.getAttribute('data-title') || '';
+                    const type = this.getAttribute('data-type') || '';
+                    const month = this.getAttribute('data-month') || '';
+                    const year = this.getAttribute('data-year') || '';
+                    const author = this.getAttribute('data-author') || '';
+                    if (window.RecentViews && typeof window.RecentViews.add === 'function') {
+                        window.RecentViews.add({ id: recordId, title, type, month, year, author });
+                    }
+                } catch (_) {}
                 visitFile(recordId);
             });
         });

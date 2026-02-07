@@ -256,43 +256,9 @@
                                 <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
-
-                                        <!-- Notification items now link to audit-logs.php with id -->
-                                        <a href="audit-logs.php?id=1" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
-                                            <div class="flex-shrink-0">
-                                                <span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                                                    <i class="bi bi-file-earmark-text text-red-600 dark:text-red-400"></i>
-                                                </span>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">New document uploaded: <span class="font-semibold">Ordinance No. 123</span></p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">2 minutes ago</p>
-                                            </div>
-                                        </a>
-
-                                        <a href="audit-logs.php?id=2" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
-                                            <div class="flex-shrink-0">
-                                                <span class="block w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                                    <i class="bi bi-check-circle text-green-600 dark:text-green-400"></i>
-                                                </span>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">Document approved: <span class="font-semibold">Resolution No. 456</span></p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">1 hour ago</p>
-                                            </div>
-                                        </a>
-
-                                        <a href="audit-logs.php?id=3" class="flex items-center space-x-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
-                                            <div class="flex-shrink-0">
-                                                <span class="block w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                                    <i class="bi bi-info-circle text-blue-600 dark:text-blue-400"></i>
-                                                </span>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">New message from admin</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">3 hours ago</p>
-                                            </div>
-                                        </a>
+                                        <div id="notif-list" class="space-y-2">
+                                            <div class="text-sm text-gray-600 dark:text-gray-400">Loading notifications...</div>
+                                        </div>
                                     </div>
 
                                     <div class="px-4 py-2 border-t border-gray-200 dark:border-slate-700">
@@ -477,6 +443,7 @@
         </div>
     </div>
 
+    <script src="assets/js/recent-views.js"></script>
     <script src="assets/js/archives.js"></script>
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>

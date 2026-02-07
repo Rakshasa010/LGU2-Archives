@@ -28,6 +28,7 @@ $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     month VARCHAR(20) NOT NULL,
     year VARCHAR(4) NOT NULL,
     author VARCHAR(100) NOT NULL,
+    file_path VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP NULL
 )";
@@ -38,6 +39,12 @@ $conn->query($table_sql);
 $check_column = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'last_accessed'");
 if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE legislative_records ADD COLUMN last_accessed TIMESTAMP NULL AFTER created_at");
+}
+
+// Add file_path column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'file_path'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE legislative_records ADD COLUMN file_path VARCHAR(255) NULL AFTER author");
 }
 
 // Create users table

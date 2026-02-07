@@ -105,6 +105,7 @@ function format_bytes($bytes) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Reports & Analytics - Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="assets/js/archives-landing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

@@ -1,23 +1,6 @@
 <?php
 // audit-logs.php
 // Lists recent notifications with time, date, content, and about; supports ?id= to highlight.
-
-$notifications = [
-    ['id'=>1,'time' => '10:00 AM', 'date' => '2026-01-19', 'content' => 'New document uploaded: Ordinance No. 123', 'about' => 'Document Upload', 'status'=>'unread'],
-    ['id'=>2,'time' => '11:00 AM', 'date' => '2026-01-19', 'content' => 'System update completed', 'about' => 'System Maintenance', 'status'=>'read'],
-    ['id'=>3,'time' => '11:30 AM', 'date' => '2026-01-19', 'content' => 'New user registered: Juan Dela Cruz', 'about' => 'User Registration', 'status'=>'unread'],
-    ['id'=>4,'time' => '12:15 PM', 'date' => '2026-01-19', 'content' => 'Document approved: Resolution No. 456', 'about' => 'Approval', 'status'=>'read'],
-    ['id'=>5,'time' => '01:02 PM', 'date' => '2026-01-19', 'content' => 'Profile picture updated for Maria', 'about' => 'Profile Update', 'status'=>'unread'],
-    ['id'=>6,'time' => '02:20 PM', 'date' => '2026-01-18', 'content' => 'User permissions changed for user #34', 'about' => 'Permissions', 'status'=>'read'],
-    ['id'=>7,'time' => '03:45 PM', 'date' => '2026-01-17', 'content' => 'New comment on Ordinance No. 78', 'about' => 'Comment', 'status'=>'read'],
-    ['id'=>8,'time' => '04:10 PM', 'date' => '2026-01-16', 'content' => 'Scheduled backup completed', 'about' => 'Backup', 'status'=>'read'],
-    ['id'=>9,'time' => '08:00 AM', 'date' => '2026-01-15', 'content' => 'Batch import finished (25 records)', 'about' => 'Import', 'status'=>'unread'],
-    ['id'=>10,'time' => '09:30 AM', 'date' => '2026-01-14', 'content' => 'Access revoked for user #12', 'about' => 'Security', 'status'=>'read'],
-    ['id'=>11,'time' => '10:15 AM', 'date' => '2026-01-13', 'content' => 'Tagging updated for 3 documents', 'about' => 'Metadata', 'status'=>'read'],
-    ['id'=>12,'time' => '11:50 AM', 'date' => '2026-01-12', 'content' => 'New message from admin', 'about' => 'Message', 'status'=>'unread']
-];
-
-$selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
 ?>
 <!doctype html>
 <html lang="en">
@@ -44,25 +27,29 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
         $user_data = $result->fetch_assoc();
     }
     $stmt->close();
+    // Ensure notifications table exists (safety in case database.sql not yet applied)
+    $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        time VARCHAR(20) NOT NULL,
+        date DATE NOT NULL,
+        content VARCHAR(255) NOT NULL,
+        about VARCHAR(100) NOT NULL,
+        status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    // Load notifications from DB
+    $notifications = [];
+    if ($res = $conn->query("SELECT id, time, date, content, about, status FROM notifications ORDER BY date DESC, id DESC")) {
+        while ($row = $res->fetch_assoc()) {
+            $notifications[] = $row;
+        }
+    }
+
     $conn->close();
 
     $display_name = $user_data['full_name'] ?? 'User';
     $profile_picture = $user_data['profile_picture'] ?? null;
-
-    $notifications = [
-        ['id'=>1,'time' => '10:00 AM', 'date' => '2026-01-19', 'content' => 'New document uploaded: Ordinance No. 123', 'about' => 'Document Upload', 'status'=>'unread'],
-        ['id'=>2,'time' => '11:00 AM', 'date' => '2026-01-19', 'content' => 'System update completed', 'about' => 'System Maintenance', 'status'=>'read'],
-        ['id'=>3,'time' => '11:30 AM', 'date' => '2026-01-19', 'content' => 'New user registered: Juan Dela Cruz', 'about' => 'User Registration', 'status'=>'unread'],
-        ['id'=>4,'time' => '12:15 PM', 'date' => '2026-01-19', 'content' => 'Document approved: Resolution No. 456', 'about' => 'Approval', 'status'=>'read'],
-        ['id'=>5,'time' => '01:02 PM', 'date' => '2026-01-19', 'content' => 'Profile picture updated for Maria', 'about' => 'Profile Update', 'status'=>'unread'],
-        ['id'=>6,'time' => '02:20 PM', 'date' => '2026-01-18', 'content' => 'User permissions changed for user #34', 'about' => 'Permissions', 'status'=>'read'],
-        ['id'=>7,'time' => '03:45 PM', 'date' => '2026-01-17', 'content' => 'New comment on Ordinance No. 78', 'about' => 'Comment', 'status'=>'read'],
-        ['id'=>8,'time' => '04:10 PM', 'date' => '2026-01-16', 'content' => 'Scheduled backup completed', 'about' => 'Backup', 'status'=>'read'],
-        ['id'=>9,'time' => '08:00 AM', 'date' => '2026-01-15', 'content' => 'Batch import finished (25 records)', 'about' => 'Import', 'status'=>'unread'],
-        ['id'=>10,'time' => '09:30 AM', 'date' => '2026-01-14', 'content' => 'Access revoked for user #12', 'about' => 'Security', 'status'=>'read'],
-        ['id'=>11,'time' => '10:15 AM', 'date' => '2026-01-13', 'content' => 'Tagging updated for 3 documents', 'about' => 'Metadata', 'status'=>'read'],
-        ['id'=>12,'time' => '11:50 AM', 'date' => '2026-01-12', 'content' => 'New message from admin', 'about' => 'Message', 'status'=>'unread']
-    ];
 
     $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
     ?>
@@ -304,12 +291,31 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                                     <div class="flex items-center justify-between mb-4">
                                         <div class="flex items-center space-x-2">
                                             <button id="filter-all" class="px-3 py-1 rounded bg-gray-100 dark:bg-slate-700 text-sm">All</button>
-                                            <button id="filter-unread" class="px-3 py-1 rounded bg-red-50 text-red-600 text-sm">Unread</button>
+                                            <select id="filter-status" class="px-2 py-1 rounded border text-sm">
+                                                <option value="">Status</option>
+                                                <option value="unread">Unread</option>
+                                                <option value="read">Read</option>
+                                            </select>
+                                            <select id="filter-about" class="px-2 py-1 rounded border text-sm">
+                                                <option value="">About</option>
+                                            </select>
+                                            <input id="filter-from" type="date" class="px-2 py-1 rounded border text-sm">
+                                            <input id="filter-to" type="date" class="px-2 py-1 rounded border text-sm">
+                                            <select id="page-size" class="px-2 py-1 rounded border text-sm">
+                                                <option value="10">10</option>
+                                                <option value="25">25</option>
+                                                <option value="50">50</option>
+                                            </select>
                                             <span id="unread-count" class="ml-3 text-sm text-gray-600 dark:text-gray-300"></span>
                                         </div>
                                         <div class="flex items-center space-x-2">
                                             <input id="searchInput" type="search" placeholder="Search notifications" class="px-3 py-1 border rounded bg-gray-50 dark:bg-slate-700 text-sm">
                                             <a href="?" class="text-sm text-gray-500 hover:underline">Reset</a>
+                                            <div id="paginationControls" class="ml-2 flex items-center space-x-2">
+                                                <button id="page-prev" class="px-2 py-1 rounded border text-sm">Prev</button>
+                                                <span id="page-info" class="text-sm text-gray-600 dark:text-gray-300">1</span>
+                                                <button id="page-next" class="px-2 py-1 rounded border text-sm">Next</button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -327,13 +333,17 @@ $selectedId = isset($_GET['id']) ? intval($_GET['id']) : null;
                                         </thead>
                                         <tbody id="notesBody">
                                         <?php foreach ($notifications as $note): ?>
-                                            <?php $isSelected = ($selectedId !== null && $selectedId === $note['id']); ?>
-                                            <tr id="note-<?php echo $note['id']; ?>" data-id="<?php echo $note['id']; ?>" data-status="<?php echo $note['status']; ?>" class="border-t <?php echo $isSelected ? 'highlight' : ''; ?>">
-                                                <td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200"><?php echo $note['id']; ?></td>
-                                                <td class="px-3 py-2 text-sm"><?php echo $note['time']; ?></td>
-                                                <td class="px-3 py-2 text-sm"><?php echo $note['date']; ?></td>
+                                            <?php $isSelected = ($selectedId !== null && $selectedId === (int)$note['id']); ?>
+                                            <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="border-t <?php echo $isSelected ? 'highlight' : ''; ?>">
+                                                <td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200"><?php echo (int)$note['id']; ?></td>
+                                                <td class="px-3 py-2 text-sm"><?php echo htmlspecialchars($note['time']); ?></td>
+                                                <td class="px-3 py-2 text-sm"><?php echo htmlspecialchars($note['date']); ?></td>
                                                 <td class="px-3 py-2 text-sm">
-                                                    <a href="?id=<?php echo $note['id']; ?>" class="text-gray-800 dark:text-gray-100 hover:underline block"><?php echo htmlspecialchars($note['content']); ?></a>
+                                                    <?php if (!empty($note['link'])): ?>
+                                                        <a href="<?php echo htmlspecialchars($note['link']); ?>" class="text-gray-800 dark:text-gray-100 hover:underline block"><?php echo htmlspecialchars($note['content']); ?></a>
+                                                    <?php else: ?>
+                                                        <span class="text-gray-800 dark:text-gray-100 block"><?php echo htmlspecialchars($note['content']); ?></span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-2 text-sm">

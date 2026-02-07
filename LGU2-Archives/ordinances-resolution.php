@@ -3,7 +3,7 @@
 include 'authdatabase.php';
 
 // Fetch ordinances and resolutions
-$sql = "SELECT id, title, type, month, year, author, created_at FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') ORDER BY year DESC, month DESC, created_at DESC";
+$sql = "SELECT id, title, type, month, year, author, created_at, last_accessed FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') ORDER BY year DESC, month DESC, created_at DESC";
 $result = $conn->query($sql);
 $ordinance_resolution_records = [];
 
@@ -138,7 +138,7 @@ $conn->close();
                             </div>
 
                             <div class="flex items-center space-x-2">
-                                <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="View">
+                                <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="View">
                                     
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                             <span>View</span>
@@ -191,6 +191,7 @@ $conn->close();
     </div>
 
     <script src="assets/js/deleted-files.js"></script>
+    <script src="assets/js/recent-views.js"></script>
     <script>
         function openDownloadPopup(id, title, type, month, year, author) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
@@ -356,6 +357,18 @@ $conn->close();
         <div class="p-4 space-y-3">
             <div class="text-sm text-gray-600 dark:text-gray-300"><strong>Type:</strong> <span id="sv-type"></span></div>
             <div class="text-sm text-gray-600 dark:text-gray-300"><strong>Author:</strong> <span id="sv-author"></span></div>
+            <div class="mt-2">
+                <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Details</div>
+                <div class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <div class="flex justify-between"><span>Title</span><span id="sv-d-title"></span></div>
+                    <div class="flex justify-between"><span>Authors</span><span id="sv-d-authors"></span></div>
+                    <div class="flex justify-between"><span>Size</span><span id="sv-d-size"></span></div>
+                    <div class="flex justify-between"><span>Date modified</span><span id="sv-d-modified"></span></div>
+                    <div class="flex justify-between"><span>Content type</span><span id="sv-d-ctype"></span></div>
+                    <div class="flex justify-between"><span>Date last saved</span><span id="sv-d-saved"></span></div>
+                    <div class="flex justify-between"><span>File type</span><span id="sv-d-ftype"></span></div>
+                </div>
+            </div>
             <div id="sv-preview" class="mt-3 text-sm text-gray-500 dark:text-gray-400">Preview not available. Use Open to download or view the file.</div>
         </div>
         <div class="p-4 border-t border-gray-100 dark:border-slate-700">
@@ -364,9 +377,15 @@ $conn->close();
     </div>
 
     <script>
-        function openSideViewerServer(id, title, type, month, year, author) {
+        function openSideViewerServer(id, title, type, month, year, author, createdAt, lastSaved) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            openSideViewer({ title, type, month, year, author, downloadUrl: url });
+            const base = { title, type, month, year, author, createdAt, lastSaved, downloadUrl: url };
+            try { window.RecentViews && window.RecentViews.add({ id: id, title: title, type: type, month: month, year: year, author: author }); } catch(_){}
+            openSideViewer(base);
+            fetch(`get-file-metadata.php?id=${encodeURIComponent(id)}`)
+                .then(r => r.ok ? r.json() : null)
+                .then(meta => { if (meta) openSideViewer(Object.assign({}, base, meta)); })
+                .catch(() => {});
         }
 
         function openSideViewer(data) {
@@ -376,6 +395,13 @@ $conn->close();
             document.getElementById('sv-type').textContent = data.type || '';
             document.getElementById('sv-meta').textContent = `${data.month || ''} ${data.year || ''}`.trim();
             document.getElementById('sv-author').textContent = data.author || '';
+            document.getElementById('sv-d-title').textContent = data.title || '';
+            document.getElementById('sv-d-authors').textContent = data.author || '';
+            document.getElementById('sv-d-size').textContent = data.size ? data.size : 'Unknown';
+            document.getElementById('sv-d-modified').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : 'Unknown';
+            document.getElementById('sv-d-ctype').textContent = data.contentType || 'Unknown';
+            document.getElementById('sv-d-saved').textContent = data.lastSaved ? new Date(data.lastSaved).toLocaleString() : 'Unknown';
+            document.getElementById('sv-d-ftype').textContent = data.fileType || 'Unknown';
             const openBtn = document.getElementById('sv-open-btn');
             const preview = document.getElementById('sv-preview');
 
