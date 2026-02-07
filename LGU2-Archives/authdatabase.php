@@ -91,3 +91,19 @@ $conn->set_charset("utf8mb4");
 
 // Database setup completed - no output when included
 ?>
+<?php
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+$__timeout = 300;
+$__script = basename($_SERVER['PHP_SELF'] ?? '');
+if ($__script !== 'login.php') {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $__timeout)) {
+        session_unset();
+        session_destroy();
+        header("Location: login.php?expired=1");
+        exit();
+    }
+    $_SESSION['last_activity'] = time();
+}
+?>
