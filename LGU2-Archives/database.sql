@@ -6,7 +6,7 @@
 CREATE DATABASE IF NOT EXISTS lgu2_archives;
 
 -- Use the database
-USE lgu2_archives;
+USE las_lgu2_archives;
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
