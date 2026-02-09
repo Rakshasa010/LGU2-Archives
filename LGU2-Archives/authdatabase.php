@@ -3,7 +3,7 @@
 $servername = "localhost";
 $username = "las_adminsql";
 $password = "lasadminsql123";  // Default XAMPP MySQL password is empty
-$dbname = "lgu2_archives";  // Database name
+$dbname = "las_lgu2_archives";  // Database name
 
 // Create connection
 $conn = new mysqli($servername, $username, $password);
