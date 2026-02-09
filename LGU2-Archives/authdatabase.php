@@ -1,8 +1,8 @@
 <?php
 // Database configuration for XAMPP MySQL
 $servername = "localhost";
-$username = "root";
-$password = "";  // Default XAMPP MySQL password is empty
+$username = "las_adminsql";
+$password = "lasadminsql123";  // Default XAMPP MySQL password is empty
 $dbname = "lgu2_archives";  // Database name
 
 // Create connection

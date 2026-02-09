@@ -3,7 +3,7 @@
 -- Date: December 17, 2025
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS lgu2_archives;
+CREATE DATABASE IF NOT EXISTS las_lgu2_archives;
 
 -- Use the database
 USE las_lgu2_archives;
