@@ -92,6 +92,11 @@
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-trash mr-3 text-lg"></i>
+                <span>Export</span>
+            </a>
             
             <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
@@ -163,7 +168,7 @@
 
                     <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-cloud-upload mr-3"></i>
-                        <span class="sidebar-text">Export and Backup</span>
+                        <span class="sidebar-text">Export</span>
                     </a>
                     
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
