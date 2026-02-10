@@ -154,7 +154,7 @@
 
   <button
     type="submit"
-    class="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+    class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
   >
     Login
   </button>
@@ -167,9 +167,7 @@
                 <a href="forgot-password.php" class="text-sm text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300">Forgot password?</a>
             </div>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                Sign In
-            </button>
+            
         </form>
 
 
