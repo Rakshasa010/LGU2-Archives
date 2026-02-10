@@ -247,6 +247,7 @@
                                 <a href="archives-landing.php" class="ml-2 inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 transition-all duration-200" title="Back to Dashboard" aria-label="Back to Dashboard">
                                     <span class="text-2xl leading-none">&larr;</span>
                                 </a>
+                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="ml-3 h-10 w-auto object-contain hidden md:block">
                             </div>
                             <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                                 <div class="ml-2 md:ml-4 min-w-0">

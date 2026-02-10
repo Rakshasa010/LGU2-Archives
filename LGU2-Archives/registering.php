@@ -29,6 +29,8 @@
         }
         [x-cloak] { display: none !important; }
     </style>
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8">

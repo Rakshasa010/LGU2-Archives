@@ -73,6 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             html, body { height: 100%; }
             .backdrop-blur-fallback { background-color: rgba(0,0,0,0.45); }
         </style>
+        <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+        <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
     </head>
     <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200 flex items-center justify-center">
         <!-- Download Modal (improved) -->

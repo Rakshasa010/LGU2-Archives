@@ -24,6 +24,8 @@ $conn->close();
     <script src="assets/js/billing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
     <script src="assets/js/recent-views.js"></script>
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Header -->

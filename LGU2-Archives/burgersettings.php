@@ -36,6 +36,8 @@ $stmt->close();
     <link rel="stylesheet" href="assets/css/archives-landing.css">
     <style>[x-cloak] { display: none !important; }</style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Header -->

@@ -24,6 +24,8 @@
     
     <!-- Prevent dark mode flicker -->
     <script src="assets/js/theme-head.js"></script>
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
     <?php
