@@ -45,9 +45,10 @@
             include 'authdatabase.php';
 
             $username = trim($_POST['username']);
-            $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
             $email = trim($_POST['email']);
             $full_name = trim($_POST['full_name']);
+            $plainPassword = bin2hex(random_bytes(8));
+            $password = password_hash($plainPassword, PASSWORD_DEFAULT);
 
             // Check if username or email already exists
             $check_sql = "SELECT id FROM users WHERE username = ? OR email = ?";
@@ -65,7 +66,19 @@
                 $stmt->bind_param("ssss", $username, $password, $email, $full_name);
 
                 if ($stmt->execute()) {
-                    echo '<div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">Registration successful! <a href="login.php" class="underline">Login here</a></div>';
+                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $from = 'no-reply@' . $host;
+                    $subject = 'Your PLV Archives account credentials';
+                    $message = "Hello {$full_name},\n\nYour account has been created.\n\nUsername: {$username}\nTemporary Password: {$plainPassword}\n\nSign in: http://{$host}/LGU2-Archives/LGU2-Archives/login.php\n\nPlease change your password after signing in.";
+                    $headers = "From: PLV Archives <{$from}>\r\n";
+                    $headers .= "Reply-To: {$from}\r\n";
+                    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+                    $sent = @mail($email, $subject, $message, $headers);
+                    if ($sent) {
+                        echo '<div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">Registration successful! We sent your temporary password to your email. <a href="login.php" class="underline">Login here</a></div>';
+                    } else {
+                        echo '<div class="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">Registration successful, but email could not be sent. Your temporary password is: <strong>' . htmlspecialchars($plainPassword) . '</strong>. <a href="login.php" class="underline">Login here</a></div>';
+                    }
                 } else {
                     echo '<div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">Registration failed. Please try again.</div>';
                 }
@@ -95,11 +108,7 @@
                        class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
             </div>
 
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                <input type="password" id="password" name="password" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">A secure temporary password will be generated and sent to your email after registration.</p>
 
             <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
                 Register
