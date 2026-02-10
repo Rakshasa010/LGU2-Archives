@@ -67,7 +67,6 @@
         <div class="text-center mb-8">
             <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-16 w-auto mx-auto mb-4">
             <h1 class="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Archives</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
         <?php if (isset($error)): ?>
