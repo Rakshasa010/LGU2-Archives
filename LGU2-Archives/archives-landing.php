@@ -426,6 +426,65 @@
         </div>
     </div>
 
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+    <?php
+    require 'authdatabase.php';
+    $notif_data = [];
+    if ($r = $conn->query("SELECT id, content, about, status, time, date FROM notifications WHERE status='unread' ORDER BY date DESC, id DESC LIMIT 5")) {
+        while ($row = $r->fetch_assoc()) {
+            $notif_data[] = $row;
+        }
+    }
+    $conn->close();
+    ?>
+    <script>
+        const initialNotifs = <?php echo json_encode($notif_data); ?> || [];
+        const ctn = document.getElementById('toast-container');
+        function makeToast(n) {
+            const el = document.createElement('div');
+            el.className = 'pointer-events-auto flex items-start gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-4 w-80 animate-[fadeIn_.2s_ease-out]';
+            const icon = document.createElement('div');
+            icon.className = 'flex-none w-10 h-10 rounded-lg bg-gradient-to-br from-red-600 to-orange-500 text-white flex items-center justify-center';
+            icon.innerHTML = '<i class="bi bi-bell-fill"></i>';
+            const body = document.createElement('div');
+            body.className = 'min-w-0';
+            const title = document.createElement('div');
+            title.className = 'text-sm font-semibold text-gray-800 dark:text-gray-100 truncate';
+            title.textContent = n.about || 'Notification';
+            const msg = document.createElement('div');
+            msg.className = 'text-sm text-gray-600 dark:text-gray-300';
+            msg.textContent = n.content || '';
+            const meta = document.createElement('div');
+            meta.className = 'mt-2 text-xs text-gray-500 dark:text-gray-400';
+            meta.textContent = (n.date || '') + (n.time ? ' • ' + n.time : '');
+            const actions = document.createElement('div');
+            actions.className = 'mt-3 flex items-center gap-3';
+            const view = document.createElement('a');
+            view.href = 'audit-logs.php';
+            view.className = 'text-sm font-medium text-red-600 dark:text-red-400 hover:underline';
+            view.textContent = 'View';
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-200';
+            closeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+            closeBtn.onclick = () => el.remove();
+            actions.appendChild(view);
+            actions.appendChild(closeBtn);
+            body.appendChild(title);
+            body.appendChild(msg);
+            body.appendChild(meta);
+            body.appendChild(actions);
+            el.appendChild(icon);
+            el.appendChild(body);
+            ctn.appendChild(el);
+            setTimeout(() => el.remove(), 6000);
+        }
+        let delay = 0;
+        initialNotifs.forEach(n => {
+            setTimeout(() => makeToast(n), delay);
+            delay += 1200;
+        });
+    </script>
     <!-- Modal -->
     <div id="createFolderModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4">
