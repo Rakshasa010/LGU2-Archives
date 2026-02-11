@@ -28,7 +28,9 @@ $stmt->close();
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#b91c1c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Account Settings - LAS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/archives-landing-head.js"></script>
@@ -40,21 +42,27 @@ $stmt->close();
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <!-- Mobile overlay when sidebar open -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
+
     <!-- Header -->
-    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-4">
-                    <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-10 w-auto object-contain">
-                        <span class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">LAS</span>
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm safe-area-inset-top">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-14 sm:h-16">
+                <div class="flex items-center gap-2 sm:gap-4 min-w-0">
+                    <button id="mobile-menu-btn" type="button" class="md:hidden p-2.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors touch-manipulation" aria-label="Open menu">
+                        <i class="bi bi-list text-2xl text-gray-700 dark:text-gray-300"></i>
+                    </button>
+                    <a href="archives-landing.php" class="flex items-center space-x-2 hover:opacity-80 transition-opacity min-w-0">
+                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 object-contain">
+                        <span class="text-lg sm:text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent truncate">LAS</span>
                     </a>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Notifications">
+                <div class="flex items-center space-x-1 sm:space-x-3">
+                    <button class="p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors touch-manipulation" title="Notifications" aria-label="Notifications">
                         <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
                     </button>
-                    <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
+                    <button id="themeToggle" class="p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors touch-manipulation" title="Toggle theme">
                         <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
@@ -145,8 +153,8 @@ $stmt->close();
 
         </div>
 
-        <div class="flex h-screen overflow-hidden">
-            <!-- Desktop Sidebar -->
+        <div class="flex flex-col md:flex-row min-h-screen md:h-screen overflow-hidden">
+            <!-- Desktop Sidebar (hidden on mobile by default; mobile sidebar is separate) -->
             <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
                 <div class="p-6 border-b border-red-700 sidebar-logo">
                     <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
@@ -219,12 +227,13 @@ $stmt->close();
                     </div>
                 </nav>
             </aside>
-    <!-- Main Content -->
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Main Content (scrollable on mobile) -->
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
+    <div class="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div class="space-y-6">
             <!-- Profile Header -->
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                <div class="flex items-center space-x-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <?php if ($user['profile_picture'] && file_exists($user['profile_picture'])): ?>
                         <img src="<?php echo htmlspecialchars($user['profile_picture']); ?>" alt="Profile Picture" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600">
                     <?php else: ?>
@@ -240,7 +249,7 @@ $stmt->close();
             </div>
 
             <!-- Settings Form -->
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
                     <i class="bi bi-gear-fill w-5 h-5 mr-2 text-red-600"></i>
                     Account Settings
@@ -333,19 +342,19 @@ $stmt->close();
                             <i class="bi bi-image mr-2 text-gray-500"></i>
                             Profile Picture
                         </label>
-                        <div class="flex items-center space-x-6">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                             <div class="flex-shrink-0">
                                 <?php if ($user['profile_picture'] && file_exists($user['profile_picture'])): ?>
-                                    <img src="<?php echo htmlspecialchars($user['profile_picture']); ?>" alt="Current Profile Picture" class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600">
+                                    <img src="<?php echo htmlspecialchars($user['profile_picture']); ?>" alt="Current Profile Picture" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600">
                                 <?php else: ?>
-                                    <div class="w-24 h-24 bg-gradient-to-r from-red-600 to-orange-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                                    <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-r from-red-600 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
                                         <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 w-full min-w-0">
                                 <input type="file" id="profile_picture" name="profile_picture" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                                       class="block w-full text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
+                                       class="block w-full text-sm text-gray-500 dark:text-gray-400 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-red-50 file:text-red-700 dark:file:bg-slate-700 dark:file:text-slate-200 cursor-pointer min-h-[44px]">
                                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">JPEG, PNG, GIF, or WebP. Max size: 5MB</p>
                             </div>
                         </div>
@@ -371,12 +380,12 @@ $stmt->close();
                         </div>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                        <button type="submit" class="flex-1 bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-6 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+                        <button type="submit" class="flex-1 min-h-[44px] bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-6 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center touch-manipulation">
                             <i class="bi bi-check2-lg w-5 h-5 mr-2"></i>
                             Save Changes
                         </button>
-                        <a href="archives-landing.php" class="px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors flex items-center justify-center">
+                        <a href="archives-landing.php" class="min-h-[44px] px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors flex items-center justify-center touch-manipulation">
                             <i class="bi bi-arrow-left w-5 h-5 mr-2"></i>
                             Back to Archives
                         </a>
@@ -398,48 +407,41 @@ $stmt->close();
             </div>
         </div>
     </div>
+    </div>
 
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script>
+    (function() {
+        var mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        var mobileSidebar = document.getElementById('mobile-sidebar');
+        var sidebarOverlay = document.getElementById('sidebar-overlay');
+        var closeBtn = document.getElementById('close-mobile-sidebar');
+        function openSidebar() {
+            if (mobileSidebar) mobileSidebar.classList.remove('-translate-x-full');
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.add('opacity-100', 'pointer-events-auto');
+            }
+        }
+        function closeSidebar() {
+            if (mobileSidebar) mobileSidebar.classList.add('-translate-x-full');
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            }
+        }
+        if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openSidebar);
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+    })();
+    </script>
 </body>
 </html>
 <?php
 exit();
 ?>
-    $user = $result->fetch_assoc();
-    $stmt->close();
-    ?>
-    <!-- Header -->
-    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-4">
-                    <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-10 w-auto object-contain">
-                        <span class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">LAS</span>
-                    </a>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Notifications">
-                        <svg class="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                    </button>
-                    <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
-                        <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                        <svg id="sunIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<?php /*
         <div class="space-y-6">
             <!-- Profile Header -->
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
@@ -692,3 +694,4 @@ exit();
     <script src="assets/js/archives.js"></script>
 </body>
 </html>
+*/ ?>

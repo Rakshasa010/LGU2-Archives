@@ -97,12 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-4">
-                    <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-10 w-auto object-contain">
-                        <span class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">LAS</span>
-                    </a>
-                    <!-- Back + Theme controls (left) -->
-
+                    <a href="archives-landing.php" class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity">LAS</a>
+                    <a href="archives-landing.php" class="hidden sm:inline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">← Dashboard</a>
                 </div>
                 <div class="flex items-center space-x-3">
                     <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Notifications">

@@ -68,7 +68,7 @@
         <link rel="stylesheet" href="assets/css/archives-landing.css">
         <link rel="stylesheet" href="assets/css/audit-logs.css">
     </head>
-    <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
+    <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200 min-h-screen">
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
     
@@ -109,10 +109,7 @@
                     <span>Export</span>
                 </a>
 
-                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-trash mr-3 text-lg"></i>
-                    <span>Backup</span>
-                </a>
+
 
                  <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
@@ -182,11 +179,6 @@
                         <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-cloud-upload mr-3"></i>
                             <span class="sidebar-text">Export</span>
-                        </a>
-
-                        <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                            <i class="bi bi-cloud-upload mr-3"></i>
-                            <span class="sidebar-text">Backup</span>
                         </a>
 
                         <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -298,74 +290,74 @@
                 <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         <div class="space-y-6">
-                            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                            <div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600/80 p-4 sm:p-6">
                                 <div class="flex items-center justify-between mb-6">
                                     <div class="flex items-center space-x-3">
-                                        <h1 class="text-2xl font-bold">Audit Logs</h1>
+                                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Audit Logs</h1>
                                     </div>
                                 </div>
 
-                                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 overflow-x-auto">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div class="flex items-center space-x-2">
-                                            <button id="filter-all" class="px-3 py-1 rounded bg-gray-100 dark:bg-slate-700 text-sm">All</button>
-                                            <select id="filter-status" class="px-2 py-1 rounded border text-sm">
+                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none p-4 overflow-x-auto">
+                                    <div class="flex flex-col gap-4 mb-4">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors">All</button>
+                                            <select id="filter-status" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
                                                 <option value="">Status</option>
                                                 <option value="unread">Unread</option>
                                                 <option value="read">Read</option>
                                             </select>
-                                            <select id="filter-about" class="px-2 py-1 rounded border text-sm">
+                                            <select id="filter-about" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
                                                 <option value="">About</option>
                                             </select>
-                                            <input id="filter-from" type="date" class="px-2 py-1 rounded border text-sm">
-                                            <input id="filter-to" type="date" class="px-2 py-1 rounded border text-sm">
-                                            <select id="page-size" class="px-2 py-1 rounded border text-sm">
+                                            <input id="filter-from" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
+                                            <input id="filter-to" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
+                                            <select id="page-size" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
                                                 <option value="10">10</option>
                                                 <option value="25">25</option>
                                                 <option value="50">50</option>
                                             </select>
-                                            <span id="unread-count" class="ml-3 text-sm text-gray-600 dark:text-gray-300"></span>
+                                            <span id="unread-count" class="ml-2 text-sm text-gray-600 dark:text-slate-400"></span>
                                         </div>
-                                        <div class="flex items-center space-x-2">
-                                            <input id="searchInput" type="search" placeholder="Search notifications" class="px-3 py-1 border rounded bg-gray-50 dark:bg-slate-700 text-sm">
-                                            <a href="?" class="text-sm text-gray-500 hover:underline">Reset</a>
-                                            <div id="paginationControls" class="ml-2 flex items-center space-x-2">
-                                                <button id="page-prev" class="px-2 py-1 rounded border text-sm">Prev</button>
-                                                <span id="page-info" class="text-sm text-gray-600 dark:text-gray-300">1</span>
-                                                <button id="page-next" class="px-2 py-1 rounded border text-sm">Next</button>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <input id="searchInput" type="search" placeholder="Search notifications" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 text-sm">
+                                            <a href="?" class="text-sm text-red-600 dark:text-red-400 hover:underline font-medium">Reset</a>
+                                            <div id="paginationControls" class="flex items-center gap-2">
+                                                <button id="page-prev" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">Prev</button>
+                                                <span id="page-info" class="text-sm text-gray-600 dark:text-slate-400 px-2">1</span>
+                                                <button id="page-next" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">Next</button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="overflow-hidden">
+                                    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-600/80">
                                     <table class="w-full text-left table-auto">
                                         <thead>
-                                            <tr class="text-sm text-gray-600 dark:text-gray-300">
-                                                <th class="px-3 py-2">#</th>
-                                                <th class="px-3 py-2">Time</th>
-                                                <th class="px-3 py-2">Date</th>
-                                                <th class="px-3 py-2">Content</th>
-                                                <th class="px-3 py-2">About</th>
-                                                <th class="px-3 py-2">Action</th>
+                                            <tr class="text-sm text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/80 border-b border-gray-200 dark:border-slate-600">
+                                                <th class="px-3 py-3 font-semibold">#</th>
+                                                <th class="px-3 py-3 font-semibold">Time</th>
+                                                <th class="px-3 py-3 font-semibold">Date</th>
+                                                <th class="px-3 py-3 font-semibold">Content</th>
+                                                <th class="px-3 py-3 font-semibold">About</th>
+                                                <th class="px-3 py-3 font-semibold">Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="notesBody">
+                                        <tbody id="notesBody" class="divide-y divide-gray-200 dark:divide-slate-600">
                                         <?php foreach ($notifications as $note): ?>
                                             <?php $isSelected = ($selectedId !== null && $selectedId === (int)$note['id']); ?>
-                                            <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="border-t <?php echo $isSelected ? 'highlight' : ''; ?>">
-                                                <td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200"><?php echo (int)$note['id']; ?></td>
-                                                <td class="px-3 py-2 text-sm"><?php echo htmlspecialchars($note['time']); ?></td>
-                                                <td class="px-3 py-2 text-sm"><?php echo htmlspecialchars($note['date']); ?></td>
-                                                <td class="px-3 py-2 text-sm">
+                                            <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isSelected ? 'highlight' : ''; ?> bg-white dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo (int)$note['id']; ?></td>
+                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo htmlspecialchars($note['time']); ?></td>
+                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo htmlspecialchars($note['date']); ?></td>
+                                                <td class="px-3 py-3 text-sm">
                                                     <?php if (!empty($note['link'])): ?>
-                                                        <a href="<?php echo htmlspecialchars($note['link']); ?>" class="text-gray-800 dark:text-gray-100 hover:underline block"><?php echo htmlspecialchars($note['content']); ?></a>
+                                                        <a href="<?php echo htmlspecialchars($note['link']); ?>" class="text-gray-800 dark:text-slate-100 hover:underline block"><?php echo htmlspecialchars($note['content']); ?></a>
                                                     <?php else: ?>
-                                                        <span class="text-gray-800 dark:text-gray-100 block"><?php echo htmlspecialchars($note['content']); ?></span>
+                                                        <span class="text-gray-800 dark:text-slate-100 block"><?php echo htmlspecialchars($note['content']); ?></span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300"><?php echo htmlspecialchars($note['about']); ?></td>
-                                                <td class="px-3 py-2 text-sm">
-                                                    <button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors" type="button">Mark Read</button>
+                                                <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
+                                                <td class="px-3 py-3 text-sm">
+                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors" type="button">Mark Read</button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
