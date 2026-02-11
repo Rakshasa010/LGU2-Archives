@@ -111,7 +111,20 @@ function format_bytes($bytes) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .card { border-radius: 0.75rem; }
-        /* make main content appear offset when sidebar visible */
+        .skeleton { position: relative; overflow: hidden; }
+        .skeleton::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+            transform: translateX(-100%);
+            animation: shimmer 1.2s infinite;
+        }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        .skeleton-block { height: 160px; border-radius: 0.5rem; background-color: #f3f4f6; }
+        .skeleton-line { height: 12px; border-radius: 0.5rem; background-color: #f3f4f6; }
+        .dark .skeleton-block, body.dark .skeleton-block,
+        .dark .skeleton-line, body.dark .skeleton-line { background-color: rgba(100,116,139,0.35); }
     </style>
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
@@ -247,10 +260,6 @@ function format_bytes($bytes) {
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                            <!-- Back to Dashboard + Theme toggle -->
-                            <div class="hidden md:flex items-center ml-3 space-x-2">
-                                <a href="archives-landing.php" class="px-3 py-1 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr;</a>
-                            </div>
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
@@ -298,65 +307,145 @@ function format_bytes($bytes) {
                 </div>
             </nav>
 
-            <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900 p-6">
+            <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900 p-4 sm:p-6">
                 <div class="max-w-7xl mx-auto space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <div class="text-sm text-gray-500">Total Records</div>
-                            <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $stats['total_records']; ?></div>
+                    <div class="card bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+                        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                            <div>
+                                <h1 class="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Reports & Analytics</h1>
+                                <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Quick overview of records, downloads, and recent activity</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</button>
+                                <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                            </div>
                         </div>
-                        <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <div class="text-sm text-gray-500">Total Downloads</div>
-                            <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $stats['downloads']; ?></div>
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></div>
+                                    <div>
+                                        <div class="text-xs text-gray-500">Total Records</div>
+                                        <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo $stats['total_records']; ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 flex items-center justify-center"><i class="bi bi-download"></i></div>
+                                    <div>
+                                        <div class="text-xs text-gray-500">Total Downloads</div>
+                                        <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo $stats['downloads']; ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300 flex items-center justify-center"><i class="bi bi-hdd"></i></div>
+                                    <div>
+                                        <div class="text-xs text-gray-500">Uploads Folder Size</div>
+                                        <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo format_bytes($uploads_bytes); ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300 flex items-center justify-center"><i class="bi bi-tags"></i></div>
+                                    <div class="min-w-0">
+                                        <div class="text-xs text-gray-500">Types</div>
+                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                                            <?php if (!empty($stats['by_type'])): ?>
+                                                <?php foreach ($stats['by_type'] as $k=>$v) echo '<span class="inline-block mr-2">'.htmlspecialchars($k).': <strong>'.(int)$v.'</strong></span>'; ?>
+                                            <?php else: ?>
+                                                <span class="text-gray-500">No types</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <div class="text-sm text-gray-500">Uploads Folder Size</div>
-                            <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo format_bytes($uploads_bytes); ?></div>
-                        </div>
-                        <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <div class="text-sm text-gray-500">Types</div>
-                            <div class="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                                <?php if (!empty($stats['by_type'])): ?>
-                                    <?php foreach ($stats['by_type'] as $k=>$v) echo '<span class="inline-block mr-2">'.htmlspecialchars($k).': <strong>'.(int)$v.'</strong></span>'; ?>
-                                <?php else: ?>
-                                    <span class="text-gray-500">No types</span>
-                                <?php endif; ?>
+                        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
+                                <input type="date" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
+                                <input type="date" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                            </div>
+                            <div>
+                                <select class="w-full md:w-auto px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <option value="">All Types</option>
+                                    <?php foreach (($stats['by_type'] ?? []) as $k=>$v): ?>
+                                        <option value="<?php echo htmlspecialchars($k); ?>"><?php echo htmlspecialchars($k); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="flex md:justify-end">
+                                <button class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Apply</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div class="col-span-2 card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Records by Type</h3>
-                            <canvas id="recordsTypeChart" height="160"></canvas>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['by_type'] ?? []); ?> types</span>
+                            </div>
+                            <div id="sk-records" class="skeleton mb-2">
+                                <div class="skeleton-block"></div>
+                            </div>
+                            <canvas id="recordsTypeChart" height="180"></canvas>
                         </div>
-                        <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Downloads by Type</h3>
-                            <canvas id="downloadsTypeChart" height="160"></canvas>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads by Type</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo array_sum($stats['downloads_by_type'] ?? []); ?></span>
+                            </div>
+                            <div id="sk-downloads-type" class="skeleton mb-2">
+                                <div class="skeleton-block"></div>
+                            </div>
+                            <canvas id="downloadsTypeChart" height="180"></canvas>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Downloads by Format</h3>
-                            <canvas id="downloadsFormatChart" height="160"></canvas>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads by Format</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo array_sum($stats['downloads_by_format'] ?? []); ?></span>
+                            </div>
+                            <div id="sk-downloads-format" class="skeleton mb-2">
+                                <div class="skeleton-block"></div>
+                            </div>
+                            <canvas id="downloadsFormatChart" height="180"></canvas>
                         </div>
-                        <div class="lg:col-span-2 card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recent Activity</h3>
+                        <div class="lg:col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['recent_activity'] ?? []); ?></span>
+                            </div>
+                            <div id="sk-recent-activity" class="skeleton space-y-2 mb-2">
+                                <div class="skeleton-line w-2/3"></div>
+                                <div class="skeleton-line w-full"></div>
+                                <div class="skeleton-line w-5/6"></div>
+                                <div class="skeleton-line w-full"></div>
+                                <div class="skeleton-line w-4/5"></div>
+                                <div class="skeleton-line w-full"></div>
+                            </div>
                             <?php if (!empty($stats['recent_activity'])): ?>
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-left text-sm">
                                         <thead class="text-xs text-gray-500">
-                                            <tr><th>When</th><th>Event</th><th>Title</th><th>Type</th><th>Format</th></tr>
+                                            <tr><th class="py-2 pr-3">When</th><th class="py-2 pr-3">Event</th><th class="py-2 pr-3">Title</th><th class="py-2 pr-3">Type</th><th class="py-2 pr-3">Format</th></tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                                         <?php foreach ($stats['recent_activity'] as $a): ?>
-                                            <tr class="border-t">
-                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['created_at']); ?></td>
-                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['event_type']); ?></td>
+                                            <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
+                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['created_at']); ?></td>
+                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['event_type']); ?></td>
                                                 <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
-                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
-                                                <td class="py-2 pr-3"><?php echo htmlspecialchars(strtoupper($a['download_format'] ?? '')); ?></td>
+                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
+                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(strtoupper($a['download_format'] ?? '')); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                         </tbody>
@@ -456,12 +545,14 @@ function format_bytes($bytes) {
         const rt = labelsAndData(byType);
         const dt = labelsAndData(downloadsByType);
         const df = labelsAndData(downloadsByFormat);
+        const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const recordsCtx = document.getElementById('recordsTypeChart')?.getContext('2d');
-        if (recordsCtx) new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
+        if (recordsCtx) { new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-records'); }
         const downloadsCtx = document.getElementById('downloadsTypeChart')?.getContext('2d');
-        if (downloadsCtx) new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } });
+        if (downloadsCtx) { new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } }); hideSk('sk-downloads-type'); }
         const downloadsFormatCtx = document.getElementById('downloadsFormatChart')?.getContext('2d');
-        if (downloadsFormatCtx) new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
+        if (downloadsFormatCtx) { new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-downloads-format'); }
+        hideSk('sk-recent-activity');
 
     </script>
     <script src="assets/js/theme-toggle.js"></script>
