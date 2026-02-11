@@ -16,14 +16,51 @@ if (!file_exists($upload_dir)) {
     mkdir($upload_dir, 0755, true);
 }
 
-// Fetch current user data initially
-$sql = "SELECT username, email, full_name, profile_picture FROM users WHERE id = ?";
+// Fetch current user data initially (include must_change_password for reset prompt)
+$sql = "SELECT username, email, full_name, profile_picture, must_change_password FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
+
+$user['must_change_password'] = (int)($user['must_change_password'] ?? 0);
+
+// Handle reset password form (current password + new password)
+$reset_msg = '';
+$reset_success = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
+    $current = $_POST['current_password'] ?? '';
+    $new_pass = $_POST['new_password'] ?? '';
+    $new_confirm = $_POST['new_password_confirm'] ?? '';
+    if ($current === '' || $new_pass === '' || $new_confirm === '') {
+        $reset_msg = 'Please fill in all password fields.';
+    } elseif (strlen($new_pass) < 8) {
+        $reset_msg = 'New password must be at least 8 characters.';
+    } elseif ($new_pass !== $new_confirm) {
+        $reset_msg = 'New password and confirmation do not match.';
+    } else {
+        $check = $conn->prepare("SELECT password FROM users WHERE id = ?");
+        $check->bind_param("i", $user_id);
+        $check->execute();
+        $res = $check->get_result();
+        if ($res && $res->num_rows === 1 && password_verify($current, $res->fetch_assoc()['password'])) {
+            $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+            $upd = $conn->prepare("UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?");
+            $upd->bind_param("si", $hash, $user_id);
+            if ($upd->execute()) {
+                $reset_success = true;
+                $user['must_change_password'] = 0;
+                $reset_msg = 'Password updated successfully. You can now use your new password to sign in.';
+            } else {
+                $reset_msg = 'Failed to update password. Please try again.';
+            }
+        } else {
+            $reset_msg = 'Current password is incorrect.';
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -65,13 +102,7 @@ $stmt->close();
                         <span class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">LAS</span>
                     </a>
                     <!-- Back + Theme controls (left) -->
-                    <div class="flex items-center ml-4 space-x-2">
-                        <a href="archives-landing.php" class="px-3 py-2 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr; Dashboard</a>
-                        <button id="themeToggleUser" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
-                            <svg id="moonIconUser" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                            <svg id="sunIconUser" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                        </button>
-                    </div>
+
                 </div>
                 <div class="flex items-center space-x-3">
                     <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Notifications">
@@ -106,6 +137,46 @@ $stmt->close();
                 </div>
             </div>
 
+            <!-- Reset Password -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    Reset Password
+                </h2>
+                <?php if ($user['must_change_password'] === 1): ?>
+                    <p class="text-amber-600 dark:text-amber-400 mb-4 text-sm">You signed in with a temporary password. Set a new password below to secure your account.</p>
+                <?php else: ?>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4 text-sm">Change your password. You will need your current password.</p>
+                <?php endif; ?>
+                <?php if ($reset_msg !== ''): ?>
+                    <div class="mb-4 p-3 rounded-lg <?php echo $reset_success ? 'bg-green-100 dark:bg-green-900/30 border border-green-400 text-green-700 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-200'; ?>">
+                        <?php echo htmlspecialchars($reset_msg, ENT_QUOTES, 'UTF-8'); ?>
+                    </div>
+                <?php endif; ?>
+                <form action="user_management.php" method="POST" class="space-y-4">
+                    <input type="hidden" name="reset_password" value="1">
+                    <div>
+                        <label for="current_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current password</label>
+                        <input type="password" id="current_password" name="current_password" required autocomplete="current-password"
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New password</label>
+                        <input type="password" id="new_password" name="new_password" required minlength="8" autocomplete="new-password"
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                               placeholder="At least 8 characters">
+                    </div>
+                    <div>
+                        <label for="new_password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm new password</label>
+                        <input type="password" id="new_password_confirm" name="new_password_confirm" required minlength="8" autocomplete="new-password"
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <button type="submit" class="bg-gradient-to-r from-red-600 to-orange-500 text-white py-2 px-5 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        Update password
+                    </button>
+                </form>
+            </div>
+
             <!-- Settings Form -->
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
@@ -117,10 +188,10 @@ $stmt->close();
                 $upload_message = '';
                 $upload_success = false;
 
-                if ($_SERVER["REQUEST_METHOD"] == "POST") {
-                    $full_name = trim($_POST['full_name']);
-                    $email = trim($_POST['email']);
-                    $username = trim($_POST['username']);
+                if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['reset_password'])) {
+                    $full_name = trim($_POST['full_name'] ?? '');
+                    $email = trim($_POST['email'] ?? '');
+                    $username = trim($_POST['username'] ?? '');
                     $profile_picture_path = $user['profile_picture']; // Keep existing picture by default
 
                     // Handle profile picture upload
@@ -135,9 +206,9 @@ $stmt->close();
                         finfo_close($finfo);
 
                         if (!in_array($mime_type, $allowed_types)) {
-                            $upload_message = '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center'>;
+                            $upload_message = '<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg text-red-700 dark:text-red-200 flex items-center">Invalid file type. Use JPEG, PNG, GIF or WebP.</div>';
                         } elseif ($file['size'] > $max_size) {
-                            $upload_message = '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center'>;
+                            $upload_message = '<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg text-red-700 dark:text-red-200 flex items-center">File too large. Max size: 5MB.</div>';
                         } else {
                             // Generate unique filename
                             $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
@@ -154,7 +225,7 @@ $stmt->close();
                                 $profile_picture_path = $target_path;
                                 $upload_success = true;
                             } else {
-                                $upload_message = '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center'>;
+                                $upload_message = '<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg text-red-700 dark:text-red-200 flex items-center">Upload failed. Please try again.</div>';
                             }
                         }
                     }
@@ -167,7 +238,7 @@ $stmt->close();
                     $result = $stmt->get_result();
 
                     if ($result->num_rows > 0) {
-                        echo '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center'>;
+                        echo '<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg text-red-700 dark:text-red-200 flex items-center">Username or email already in use.</div>';
                     } else {
                         // Update user information
                         $update_sql = "UPDATE users SET username = ?, email = ?, full_name = ?, profile_picture = ? WHERE id = ?";
@@ -176,7 +247,7 @@ $stmt->close();
 
                         if ($stmt->execute()) {
                             $success_msg = $upload_success ? 'Profile picture and information updated successfully!' : 'Information updated successfully!';
-                            echo '<div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center'>;
+                            echo '<div class="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 rounded-lg text-green-700 dark:text-green-200 flex items-center">' . htmlspecialchars($success_msg, ENT_QUOTES, 'UTF-8') . '</div>';
                             // Refresh user data
                             $sql = "SELECT username, email, full_name, profile_picture FROM users WHERE id = ?";
                             $stmt = $conn->prepare($sql);
@@ -185,7 +256,7 @@ $stmt->close();
                             $result = $stmt->get_result();
                             $user = $result->fetch_assoc();
                         } else {
-                            echo '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center'>;
+                            echo '<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg text-red-700 dark:text-red-200 flex items-center">Update failed. Please try again.</div>';
                         }
                     }
 

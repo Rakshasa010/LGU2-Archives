@@ -56,6 +56,7 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(100) NOT NULL,
     role VARCHAR(20) DEFAULT 'user',
     profile_picture VARCHAR(255) DEFAULT NULL,
+    must_change_password TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )";
@@ -66,6 +67,12 @@ $conn->query($users_sql);
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
 if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL AFTER role");
+}
+
+// Add must_change_password column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'must_change_password'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_picture");
 }
 
 // Create analytics_events table (used by report_analytics.php)

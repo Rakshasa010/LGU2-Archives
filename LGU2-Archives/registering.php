@@ -33,6 +33,94 @@
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
+<?php
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    include 'authdatabase.php';
+    $full_name = trim($_POST['full_name'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    if ($full_name === '' || $username === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please provide valid information.';
+    } else {
+        $check = $conn->prepare('SELECT id FROM users WHERE username = ? OR email = ?');
+        $check->bind_param('ss', $username, $email);
+        $check->execute();
+        $res = $check->get_result();
+        if ($res && $res->num_rows > 0) {
+            $error = 'Username or email already exists.';
+        } else {
+            $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%+=';
+            $len = 12;
+            $tmp = '';
+            for ($i = 0; $i < $len; $i++) {
+                $idx = random_int(0, strlen($alphabet) - 1);
+                $tmp .= $alphabet[$idx];
+            }
+            $hash = password_hash($tmp, PASSWORD_DEFAULT);
+            $ins = $conn->prepare('INSERT INTO users (username, password, email, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?, ?)');
+            $role = 'user';
+            $must = 1;
+            $ins->bind_param('sssssi', $username, $hash, $email, $full_name, $role, $must);
+            if ($ins->execute()) {
+                $emailSent = false;
+                $cfgFile = __DIR__ . '/mail_config.php';
+                if (file_exists($cfgFile)) {
+                    $cfg = require $cfgFile;
+                    $smtpUser = trim((string)($cfg['username'] ?? ''));
+                    $smtpPass = trim((string)($cfg['password'] ?? ''));
+                    $isPlaceholder = (stripos($smtpUser, 'YOUR_GMAIL') !== false) || (stripos($smtpPass, 'YOUR_16_CHAR') !== false);
+                    if ($smtpUser !== '' && $smtpPass !== '' && !$isPlaceholder) {
+                        try {
+                            require __DIR__ . '/PHPMailer-master/src/Exception.php';
+                            require __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                            require __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                            $mailer = new PHPMailer\PHPMailer\PHPMailer(true);
+                            $smtpHost = $cfg['host'] ?? 'smtp.gmail.com';
+                            $smtpPort = (int)($cfg['port'] ?? 587);
+                            $enc = strtolower(trim($cfg['encryption'] ?? 'tls'));
+                            $fromEmail = $cfg['from_email'] ?? $smtpUser;
+                            $fromName = $cfg['from_name'] ?? 'PLV Archives';
+                            $mailer->isSMTP();
+                            $mailer->Host = $smtpHost;
+                            $mailer->SMTPAuth = true;
+                            $mailer->Username = $smtpUser;
+                            $mailer->Password = $smtpPass;
+                            $mailer->SMTPSecure = ($enc === 'ssl')
+                                ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                                : PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                            $mailer->Port = $smtpPort;
+                            $mailer->CharSet = 'UTF-8';
+                            $mailer->SMTPDebug = 0;
+                            $mailer->setFrom($fromEmail, $fromName);
+                            $mailer->addAddress($email, $full_name);
+                            $mailer->Subject = 'Your temporary password';
+                            $mailer->isHTML(true);
+                            $mailer->Body = '<p>Hello ' . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . ',</p>'
+                                . '<p>Your account has been created. Use the temporary password below to sign in:</p>'
+                                . '<p><strong>' . htmlspecialchars($tmp, ENT_QUOTES, 'UTF-8') . '</strong></p>'
+                                . '<p>After logging in, update your password in your profile settings.</p>'
+                                . '<p>PLV Archives</p>';
+                            $mailer->AltBody = 'Hello ' . $full_name . ', Your temporary password: ' . $tmp . '. Update it after login.';
+                            $mailer->send();
+                            $emailSent = true;
+                        } catch (Throwable $e) {
+                            $emailSent = false;
+                        }
+                    }
+                }
+                $success = $emailSent
+                    ? 'Registered successfully. Check your email for the temporary password.'
+                    : 'Registered successfully. Use <a href="forgot-password.php" class="underline font-medium">Forgot password</a> to set your password and sign in.';
+            } else {
+                $error = 'Registration failed.';
+            }
+            $ins->close();
+        }
+        $check->close();
+        $conn->close();
+    }
+}
+?>
     <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8">
         <div class="text-center mb-8">
             <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-16 w-auto mx-auto mb-4">
@@ -40,54 +128,17 @@
             <p class="text-gray-600 dark:text-gray-400 mt-2">Create your account</p>
         </div>
 
-        <?php
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            include 'authdatabase.php';
+        <?php if (isset($error)): ?>
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                <?php echo $error; ?>
+            </div>
+        <?php endif; ?>
+        <?php if (isset($success)): ?>
+            <div class="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 text-green-700 dark:text-green-200 rounded-lg">
+                <?php echo $success; ?>
+            </div>
+        <?php endif; ?>
 
-            $username = trim($_POST['username']);
-            $email = trim($_POST['email']);
-            $full_name = trim($_POST['full_name']);
-            $plainPassword = bin2hex(random_bytes(8));
-            $password = password_hash($plainPassword, PASSWORD_DEFAULT);
-
-            // Check if username or email already exists
-            $check_sql = "SELECT id FROM users WHERE username = ? OR email = ?";
-            $stmt = $conn->prepare($check_sql);
-            $stmt->bind_param("ss", $username, $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            if ($result->num_rows > 0) {
-                echo '<div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">Username or email already exists.</div>';
-            } else {
-                // Insert new user
-                $insert_sql = "INSERT INTO users (username, password, email, full_name) VALUES (?, ?, ?, ?)";
-                $stmt = $conn->prepare($insert_sql);
-                $stmt->bind_param("ssss", $username, $password, $email, $full_name);
-
-                if ($stmt->execute()) {
-                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                    $from = 'no-reply@' . $host;
-                    $subject = 'Your PLV Archives account credentials';
-                    $message = "Hello {$full_name},\n\nYour account has been created.\n\nUsername: {$username}\nTemporary Password: {$plainPassword}\n\nSign in: http://{$host}/LGU2-Archives/LGU2-Archives/login.php\n\nPlease change your password after signing in.";
-                    $headers = "From: PLV Archives <{$from}>\r\n";
-                    $headers .= "Reply-To: {$from}\r\n";
-                    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-                    $sent = @mail($email, $subject, $message, $headers);
-                    if ($sent) {
-                        echo '<div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">Registration successful! We sent your temporary password to your email. <a href="login.php" class="underline">Login here</a></div>';
-                    } else {
-                        echo '<div class="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">Registration successful, but email could not be sent. Your temporary password is: <strong>' . htmlspecialchars($plainPassword) . '</strong>. <a href="login.php" class="underline">Login here</a></div>';
-                    }
-                } else {
-                    echo '<div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">Registration failed. Please try again.</div>';
-                }
-            }
-
-            $stmt->close();
-            $conn->close();
-        }
-        ?>
 
         <form action="registering.php" method="POST" class="space-y-6">
             <div>
@@ -108,7 +159,7 @@
                        class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
             </div>
 
-            <p class="text-sm text-gray-600 dark:text-gray-400">A secure temporary password will be generated and sent to your email after registration.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">After registering, you can sign in using the password sent to your email (if configured), or use <strong>Forgot password</strong> to set one.</p>
 
             <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
                 Register

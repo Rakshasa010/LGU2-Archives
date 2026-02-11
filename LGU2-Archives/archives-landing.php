@@ -426,7 +426,8 @@
         </div>
     </div>
 
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+    <!-- Toast container: same style as recent_deleted.php, stacked; only unseen notifications shown once -->
+    <div id="toast-container" class="fixed right-6 bottom-6 z-50 space-y-2 flex flex-col items-end pointer-events-none"></div>
 
     <?php
     require 'authdatabase.php';
@@ -439,51 +440,58 @@
     $conn->close();
     ?>
     <script>
-        const initialNotifs = <?php echo json_encode($notif_data); ?> || [];
-        const ctn = document.getElementById('toast-container');
-        function makeToast(n) {
-            const el = document.createElement('div');
-            el.className = 'pointer-events-auto flex items-start gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-4 w-80 animate-[fadeIn_.2s_ease-out]';
-            const icon = document.createElement('div');
-            icon.className = 'flex-none w-10 h-10 rounded-lg bg-gradient-to-br from-red-600 to-orange-500 text-white flex items-center justify-center';
-            icon.innerHTML = '<i class="bi bi-bell-fill"></i>';
-            const body = document.createElement('div');
-            body.className = 'min-w-0';
-            const title = document.createElement('div');
-            title.className = 'text-sm font-semibold text-gray-800 dark:text-gray-100 truncate';
-            title.textContent = n.about || 'Notification';
-            const msg = document.createElement('div');
-            msg.className = 'text-sm text-gray-600 dark:text-gray-300';
-            msg.textContent = n.content || '';
-            const meta = document.createElement('div');
-            meta.className = 'mt-2 text-xs text-gray-500 dark:text-gray-400';
-            meta.textContent = (n.date || '') + (n.time ? ' • ' + n.time : '');
-            const actions = document.createElement('div');
-            actions.className = 'mt-3 flex items-center gap-3';
-            const view = document.createElement('a');
-            view.href = 'audit-logs.php';
-            view.className = 'text-sm font-medium text-red-600 dark:text-red-400 hover:underline';
-            view.textContent = 'View';
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'ml-auto text-gray-500 hover:text-gray-700 dark:hover:text-gray-200';
-            closeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
-            closeBtn.onclick = () => el.remove();
-            actions.appendChild(view);
-            actions.appendChild(closeBtn);
-            body.appendChild(title);
-            body.appendChild(msg);
-            body.appendChild(meta);
-            body.appendChild(actions);
-            el.appendChild(icon);
-            el.appendChild(body);
-            ctn.appendChild(el);
-            setTimeout(() => el.remove(), 6000);
-        }
-        let delay = 0;
-        initialNotifs.forEach(n => {
-            setTimeout(() => makeToast(n), delay);
-            delay += 1200;
-        });
+        (function() {
+            const STORAGE_KEY = 'archives_shown_notif_ids';
+            const MAX_STORED_IDS = 100;
+            const initialNotifs = <?php echo json_encode($notif_data); ?> || [];
+
+            function getShownIds() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    return raw ? JSON.parse(raw) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+            function markAsShown(id) {
+                const ids = getShownIds();
+                if (ids.indexOf(id) !== -1) return;
+                ids.push(id);
+                if (ids.length > MAX_STORED_IDS) ids.splice(0, ids.length - MAX_STORED_IDS);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+            }
+
+            const notifsToShow = initialNotifs.filter(function(n) {
+                return n.id && getShownIds().indexOf(String(n.id)) === -1;
+            });
+
+            const ctn = document.getElementById('toast-container');
+            function showToast(n) {
+                const el = document.createElement('div');
+                el.setAttribute('role', 'status');
+                el.setAttribute('aria-live', 'polite');
+                el.className = 'pointer-events-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all duration-300 ease-out font-semibold max-w-sm';
+                const text = (n.about || 'Notification') + (n.content ? ': ' + (n.content.length > 60 ? n.content.slice(0, 60) + '…' : n.content) : '');
+                el.textContent = text;
+                ctn.appendChild(el);
+                requestAnimationFrame(function() {
+                    el.classList.remove('opacity-0', 'translate-y-4');
+                    el.classList.add('opacity-100', 'translate-y-0');
+                });
+                markAsShown(n.id);
+                setTimeout(function() {
+                    el.classList.remove('opacity-100', 'translate-y-0');
+                    el.classList.add('opacity-0', 'translate-y-4');
+                    setTimeout(function() { el.remove(); }, 300);
+                }, 2800);
+            }
+
+            var delay = 0;
+            notifsToShow.forEach(function(n) {
+                setTimeout(function() { showToast(n); }, delay);
+                delay += 1400;
+            });
+        })();
     </script>
     <!-- Modal -->
     <div id="createFolderModal" class="hidden fixed inset-0 z-50 overflow-y-auto">

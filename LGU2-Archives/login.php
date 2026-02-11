@@ -40,7 +40,7 @@
         $username = trim($_POST['username']);
         $password = $_POST['password'];
 
-        $sql = "SELECT id, password FROM users WHERE username = ?";
+        $sql = "SELECT id, password, must_change_password FROM users WHERE username = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $username);
         $stmt->execute();
@@ -50,6 +50,10 @@
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
                 $_SESSION['user_id'] = $user['id'];
+                if ((int)($user['must_change_password'] ?? 0) === 1) {
+                    header("Location: user_management.php");
+                    exit();
+                }
                 header("Location: archives-landing.php");
                 exit();
             } else {
