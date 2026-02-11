@@ -46,6 +46,23 @@
     
     $display_name = $user_data['full_name'] ?? 'User';
     $profile_picture = $user_data['profile_picture'] ?? null;
+
+    // Normalize profile picture (DB may store either filename or a relative path).
+    $profile_picture_url = null;
+    if (is_string($profile_picture) && $profile_picture !== '') {
+        $candidatePath = $profile_picture;
+        $candidateUrl = $profile_picture;
+
+        // If DB stores only the filename, prepend the uploads folder.
+        if (strpos($profile_picture, 'uploads/') !== 0) {
+            $candidatePath = 'uploads/profile_pictures/' . $profile_picture;
+            $candidateUrl = 'uploads/profile_pictures/' . $profile_picture;
+        }
+
+        if (file_exists($candidatePath)) {
+            $profile_picture_url = $candidateUrl;
+        }
+    }
     ?>
     
     <!-- Mobile Sidebar Overlay -->
@@ -278,10 +295,16 @@
                             <!-- User Profile Dropdown (moved right of notification) -->
                             <div class="relative">
                                 <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
-                                    <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
-                                        <img src="uploads/profile_pictures/<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                    <?php if ($profile_picture_url): ?>
+                                        <img
+                                            src="<?php echo htmlspecialchars($profile_picture_url, ENT_QUOTES, 'UTF-8'); ?>"
+                                            alt="Profile"
+                                            class="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-gray-300 dark:border-gray-600 flex-shrink-0"
+                                            loading="lazy"
+                                            decoding="async"
+                                        >
                                     <?php else: ?>
-                                        <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <div class="bg-red-600 rounded-full w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white flex-shrink-0">
                                             <i class="bi bi-person-fill"></i>
                                         </div>
                                     <?php endif; ?>

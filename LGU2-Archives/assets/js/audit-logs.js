@@ -42,12 +42,22 @@
         if (!tr) return;
         tr.setAttribute('data-status', status);
         var btn = tr.querySelector('.mark-read-btn');
+        var contentEl = tr.querySelector('td:nth-child(4) a, td:nth-child(4) span');
         if (status === 'read') {
-            tr.classList.remove('bg-yellow-50');
+            tr.classList.remove('highlight');
+            // Remove red highlight - CSS will handle default styling via data-status="read"
             setButtonState(btn, 'read');
+            if (contentEl) {
+                contentEl.classList.remove('font-semibold');
+                contentEl.classList.add('font-medium');
+            }
         } else {
-            tr.classList.add('bg-yellow-50');
+            // Unread status - CSS will apply red highlight via data-status="unread"
             setButtonState(btn, 'unread');
+            if (contentEl) {
+                contentEl.classList.remove('font-medium');
+                contentEl.classList.add('font-semibold');
+            }
         }
     }
 
@@ -68,6 +78,8 @@
                    '</tr>';
         }).join('');
         tbody.innerHTML = html;
+        // apply initial styles per item status
+        items.forEach(function(note){ updateRowStatus(note.id, note.status || 'unread'); });
         attachRowHandlers();
         updateUnreadCount();
         logShown();
@@ -77,6 +89,51 @@
         var status = tr.getAttribute('data-status') || 'unread';
         updateRowStatus(id, status);
     });
+    attachRowHandlers();
+
+    // Mark read on row click (excluding the explicit toggle button)
+    if (notesBody) {
+        notesBody.addEventListener('click', function(e){
+            var btn = e.target.closest('.mark-read-btn');
+            if (btn) {
+                var trBtn = btn.closest('tr');
+                if (!trBtn) return;
+                var idBtn = trBtn.getAttribute('data-id');
+                var curBtn = trBtn.getAttribute('data-status') || 'unread';
+                var nextBtn = (curBtn === 'unread') ? 'read' : 'unread';
+                try {
+                    fetch('notifications_update.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id='+encodeURIComponent(idBtn)+'&status='+encodeURIComponent(nextBtn)
+                    }).then(function(){});
+                } catch(e){}
+                updateRowStatus(idBtn, nextBtn);
+                updateUnreadCount();
+                return;
+            }
+            var anchor = e.target.closest('a');
+            var tr = e.target.closest('tr');
+            if (!tr) return;
+            var id = tr.getAttribute('data-id');
+            var cur = tr.getAttribute('data-status') || 'unread';
+            if (cur === 'unread' && id) {
+                try {
+                    fetch('notifications_update.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id='+encodeURIComponent(id)+'&status=read'
+                    }).then(function(){});
+                } catch(e){}
+                updateRowStatus(id, 'read');
+                updateUnreadCount();
+            }
+            // if content link clicked, allow navigation normally after updating
+            if (anchor) {
+                // no preventDefault; update already performed
+            }
+        });
+    }
 
     function fetchNotifications(){
         var status = document.getElementById('filter-status')?.value || '';
@@ -100,8 +157,8 @@
             if (pageInfo) pageInfo.textContent = String(data.page)+' / '+Math.max(1, Math.ceil((data.total||0)/(data.page_size||10)));
             var maxPage = Math.max(1, Math.ceil((data.total||0)/(data.page_size||10)));
             var cur = data.page||1;
-            if (pagePrev) { pagePrev.disabled = cur<=1; pagePrev.onclick = function(){ fetchNotifications.page = Math.max(1, cur-1); fetchNotifications(); }; }
-            if (pageNext) { pageNext.disabled = cur>=maxPage; pageNext.onclick = function(){ fetchNotifications.page = Math.min(maxPage, cur+1); fetchNotifications(); }; }
+            if (pagePrev) { pagePrev.disabled = cur<=1; pagePrev.onclick = function(){ fetchNotifications.page = Math.max(1, cur-1); fetchNotifications(); updateUrlParams(); }; }
+            if (pageNext) { pageNext.disabled = cur>=maxPage; pageNext.onclick = function(){ fetchNotifications.page = Math.min(maxPage, cur+1); fetchNotifications(); updateUrlParams(); }; }
         }).catch(function(){});
     }
     fetchNotifications.page = 1;
@@ -142,15 +199,107 @@
         unreadCountEl.textContent = unread + ' unread';
     }
 
-    filterAll.addEventListener('click', function(){ document.querySelectorAll('#notesBody tr').forEach(function(r){ r.style.display = ''; }); });
-    filterUnread.addEventListener('click', function(){ document.querySelectorAll('#notesBody tr').forEach(function(r){ r.style.display = (r.getAttribute('data-status') === 'unread') ? '' : 'none'; }); });
-    searchInput.addEventListener('input', function(){ var q = (this.value || '').toLowerCase(); document.querySelectorAll('#notesBody tr').forEach(function(r){ var text = r.textContent.toLowerCase(); r.style.display = text.indexOf(q) !== -1 ? '' : 'none'; }); });
+    function updateUrlParams() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var s = document.getElementById('filter-status')?.value || '';
+            var a = document.getElementById('filter-about')?.value || '';
+            var f = document.getElementById('filter-from')?.value || '';
+            var t = document.getElementById('filter-to')?.value || '';
+            var ps = document.getElementById('page-size')?.value || '10';
+            var p = String(fetchNotifications.page || 1);
+            if (s) params.set('status', s); else params.delete('status');
+            if (a) params.set('about', a); else params.delete('about');
+            if (f) params.set('from', f); else params.delete('from');
+            if (t) params.set('to', t); else params.delete('to');
+            if (ps) params.set('page_size', ps);
+            if (p) params.set('page', p);
+            var u = window.location.pathname + '?' + params.toString();
+            history.replaceState(null, '', u);
+        } catch(e){}
+    }
+    function restoreFromUrl() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var s = params.get('status') || '';
+            var a = params.get('about') || '';
+            var f = params.get('from') || '';
+            var t = params.get('to') || '';
+            var ps = params.get('page_size') || '';
+            var p = parseInt(params.get('page') || '1', 10);
+            var selS = document.getElementById('filter-status'); if (selS) selS.value = s;
+            var selA = document.getElementById('filter-about'); if (selA) selA.value = a;
+            var inpF = document.getElementById('filter-from'); if (inpF) inpF.value = f;
+            var inpT = document.getElementById('filter-to'); if (inpT) inpT.value = t;
+            var selPS = document.getElementById('page-size'); if (selPS && ps) selPS.value = ps;
+            if (!isNaN(p)) fetchNotifications.page = p;
+        } catch(e){}
+    }
+    restoreFromUrl();
+    if (filterAll) filterAll.addEventListener('click', function(){
+        var sel = document.getElementById('filter-status'); if (sel) sel.value = '';
+        fetchNotifications.page = 1; fetchNotifications(); updateUrlParams();
+    });
+    if (filterUnread) filterUnread.addEventListener('click', function(){
+        var sel = document.getElementById('filter-status'); if (sel) sel.value = 'unread';
+        fetchNotifications.page = 1; fetchNotifications(); updateUrlParams();
+    });
+    if (searchInput) searchInput.addEventListener('input', function(){ var q = (this.value || '').toLowerCase(); document.querySelectorAll('#notesBody tr').forEach(function(r){ var text = r.textContent.toLowerCase(); r.style.display = text.indexOf(q) !== -1 ? '' : 'none'; }); });
 
-    document.getElementById('filter-status')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); });
-    document.getElementById('filter-about')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); });
-    document.getElementById('filter-from')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); });
-    document.getElementById('filter-to')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); });
-    document.getElementById('page-size')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); });
+    // Date range preset functions
+    function setDateRange(fromDate, toDate) {
+        var fromInput = document.getElementById('filter-from');
+        var toInput = document.getElementById('filter-to');
+        if (fromInput) fromInput.value = fromDate;
+        if (toInput) toInput.value = toDate;
+        fetchNotifications.page = 1;
+        fetchNotifications();
+        updateUrlParams();
+    }
+
+    function getTodayDate() {
+        var today = new Date();
+        return today.toISOString().split('T')[0];
+    }
+
+    function getWeekStartDate() {
+        var today = new Date();
+        var day = today.getDay();
+        // Adjust so Monday is the start of the week (day 0 = Sunday, so Monday = 1)
+        var diff = today.getDate() - (day === 0 ? 6 : day - 1);
+        var weekStart = new Date(today);
+        weekStart.setDate(diff);
+        return weekStart.toISOString().split('T')[0];
+    }
+
+    function getMonthStartDate() {
+        var today = new Date();
+        return new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    }
+
+    // Date preset button handlers
+    document.getElementById('date-preset-today')?.addEventListener('click', function(){
+        var today = getTodayDate();
+        setDateRange(today, today);
+    });
+
+    document.getElementById('date-preset-week')?.addEventListener('click', function(){
+        var weekStart = getWeekStartDate();
+        var today = getTodayDate();
+        setDateRange(weekStart, today);
+    });
+
+    document.getElementById('date-preset-month')?.addEventListener('click', function(){
+        var monthStart = getMonthStartDate();
+        var today = getTodayDate();
+        setDateRange(monthStart, today);
+    });
+
+    document.getElementById('filter-status')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); updateUrlParams(); });
+    document.getElementById('filter-about')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); updateUrlParams(); });
+    document.getElementById('filter-from')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); updateUrlParams(); });
+    document.getElementById('filter-to')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); updateUrlParams(); });
+    document.getElementById('page-size')?.addEventListener('change', function(){ fetchNotifications.page = 1; fetchNotifications(); updateUrlParams(); });
     updateUnreadCount();
     function logEvent(type, ids){
         try {
@@ -165,6 +314,25 @@
         var ids = Array.from(document.querySelectorAll('#notesBody tr')).map(function(r){ return r.getAttribute('data-id'); });
         logEvent('alert_shown', ids);
     }
+    var markAll = document.getElementById('mark-all-read');
+    if (markAll) markAll.addEventListener('click', function(){
+        var rows = Array.from(document.querySelectorAll('#notesBody tr')).filter(function(r){
+            var st = r.getAttribute('data-status') || 'unread';
+            var hidden = r.style.display === 'none';
+            return st === 'unread' && !hidden;
+        });
+        var ids = rows.map(function(r){ return r.getAttribute('data-id'); }).filter(Boolean);
+        if (ids.length === 0) return;
+        Promise.all(ids.map(function(id){
+            return fetch('notifications_update.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id='+encodeURIComponent(id)+'&status=read'
+            }).then(function(){ updateRowStatus(id, 'read'); });
+        })).then(function(){
+            updateUnreadCount();
+        }).catch(function(){});
+    });
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function(){ fetchNotifications(); });
     } else {

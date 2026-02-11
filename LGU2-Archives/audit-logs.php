@@ -301,6 +301,7 @@
                                     <div class="flex flex-col gap-4 mb-4">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
+                                            <button id="filter-unread" class="px-3 py-2 rounded-lg bg-red-50 dark:bg-slate-700 text-red-700 dark:text-red-300 text-sm font-semibold hover:bg-red-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Unread</button>
                                             <select id="filter-status" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="">Status</option>
                                                 <option value="unread">Unread</option>
@@ -309,6 +310,11 @@
                                             <select id="filter-about" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="">About</option>
                                             </select>
+                                            <div class="flex items-center gap-1 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-700 p-1">
+                                                <button type="button" id="date-preset-today" class="px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Today</button>
+                                                <button type="button" id="date-preset-week" class="px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Week</button>
+                                                <button type="button" id="date-preset-month" class="px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Month</button>
+                                            </div>
                                             <input id="filter-from" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                             <input id="filter-to" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                             <select id="page-size" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
@@ -326,6 +332,7 @@
                                                 <span id="page-info" class="text-sm text-gray-600 dark:text-slate-400 px-2">1</span>
                                                 <button id="page-next" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Next</button>
                                             </div>
+                                            <button id="mark-all-read" class="ml-auto px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Mark all as read</button>
                                         </div>
                                     </div>
 

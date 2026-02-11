@@ -104,16 +104,32 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
         var html = items.map(function(n){
             var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
             var badge = '';
+            var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
             if (n.status === 'unread') badge = ' ring-2 ring-red-200';
             return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
                    '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
                    '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
                    '<div class="flex-1 min-w-0">'+
-                   '<p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                   '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
                    '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
                    '</div></a>';
         }).join('');
         container.innerHTML = html;
+        container.querySelectorAll('a[data-id]').forEach(function(a){
+            a.addEventListener('click', function(){
+                var id = a.getAttribute('data-id');
+                try {
+                    fetch('notifications_update.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id='+encodeURIComponent(id)+'&status=read'
+                    }).then(function(){});
+                } catch(e){}
+                a.classList.remove('ring-2','ring-red-200');
+                var p = a.querySelector('p.text-sm');
+                if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+            });
+        });
     }
     function escapeHtml(s){
         if (typeof s !== 'string') return '';
