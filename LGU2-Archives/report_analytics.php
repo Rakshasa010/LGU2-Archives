@@ -182,7 +182,7 @@ function format_bytes($bytes) {
                     </div>
                 </a>
             </div>
-            <nav class="flex-1 overflow-y-auto py-4 px-3">
+            <nav class="flex-1 overflow-y-hidden py-4 px-3">
                 <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
                     <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                     <span>Dashboard Archives</span>
@@ -244,6 +244,9 @@ function format_bytes($bytes) {
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
                         <div class="flex items-center">
+                            <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
+                                <i class="bi bi-list text-2xl"></i>
+                            </button>
                             <!-- Back to Dashboard + Theme toggle -->
                             <div class="hidden md:flex items-center ml-3 space-x-2">
                                 <a href="archives-landing.php" class="px-3 py-1 bg-gray-100 dark:bg-slate-700 rounded text-sm text-gray-700 dark:text-gray-200 hover:opacity-90">&larr;</a>

@@ -156,7 +156,7 @@
             </div>
             
             <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-y-auto py-4">
+            <nav class="flex-1 overflow-y-hidden py-4">
                 <div class="px-4 space-y-1">
                     <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
@@ -226,6 +226,9 @@
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side -->
                         <div class="flex items-center">
+                            <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
+                                <i class="bi bi-list text-2xl"></i>
+                            </button>
                         </div>
                         
                         <!-- Page Title -->

@@ -290,28 +290,28 @@
                 <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         <div class="space-y-6">
-                            <div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600/80 p-4 sm:p-6">
+                            <div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600/80 ring-1 ring-gray-200 dark:ring-slate-700 transition-all p-4 sm:p-6">
                                 <div class="flex items-center justify-between mb-6">
                                     <div class="flex items-center space-x-3">
-                                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Audit Logs</h1>
+                                        <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-500 dark:from-red-400 dark:to-orange-300 bg-clip-text text-transparent">Audit Logs</h1>
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none p-4 overflow-x-auto">
+                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4 overflow-x-auto">
                                     <div class="flex flex-col gap-4 mb-4">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors">All</button>
-                                            <select id="filter-status" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
+                                            <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
+                                            <select id="filter-status" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="">Status</option>
                                                 <option value="unread">Unread</option>
                                                 <option value="read">Read</option>
                                             </select>
-                                            <select id="filter-about" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
+                                            <select id="filter-about" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="">About</option>
                                             </select>
-                                            <input id="filter-from" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
-                                            <input id="filter-to" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
-                                            <select id="page-size" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm">
+                                            <input id="filter-from" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <input id="filter-to" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <select id="page-size" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="10">10</option>
                                                 <option value="25">25</option>
                                                 <option value="50">50</option>
@@ -319,12 +319,12 @@
                                             <span id="unread-count" class="ml-2 text-sm text-gray-600 dark:text-slate-400"></span>
                                         </div>
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <input id="searchInput" type="search" placeholder="Search notifications" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 text-sm">
+                                            <input id="searchInput" type="search" placeholder="Search notifications" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                             <a href="?" class="text-sm text-red-600 dark:text-red-400 hover:underline font-medium">Reset</a>
                                             <div id="paginationControls" class="flex items-center gap-2">
-                                                <button id="page-prev" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">Prev</button>
+                                                <button id="page-prev" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Prev</button>
                                                 <span id="page-info" class="text-sm text-gray-600 dark:text-slate-400 px-2">1</span>
-                                                <button id="page-next" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">Next</button>
+                                                <button id="page-next" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Next</button>
                                             </div>
                                         </div>
                                     </div>
@@ -357,7 +357,7 @@
                                                 </td>
                                                 <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-3 text-sm">
-                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors" type="button">Mark Read</button>
+                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button">Mark Read</button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>

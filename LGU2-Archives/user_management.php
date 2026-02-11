@@ -88,16 +88,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
     <style>
         [x-cloak] { display: none !important; }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+<body class="h-screen overflow-hidden flex flex-col dark:bg-slate-900 text-slate-900 dark:text-white">
+    <!-- Main Container -->
+    <div class="flex flex-col flex-1 overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden">
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-4">
-                    <a href="archives-landing.php" class="text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity">LAS</a>
+                    <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
+                        <i class="bi bi-list text-2xl"></i>
+                    </button>
                     <a href="archives-landing.php" class="hidden sm:inline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">← Dashboard</a>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -342,7 +348,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
             </div>
         </div>
     </div>
+        </div>
+    </div>
 
+    <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

@@ -315,10 +315,6 @@
                 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                     <div class="flex items-center justify-between">
                         <h1 class="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Document Archives</h1>
-                        <div class="flex space-x-3">
-                            <div class="bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 p-3 hover:shadow-lg transition-all cursor-pointer group">
-                            </div>
-                        </div>
                     </div>
                 </div>
 
