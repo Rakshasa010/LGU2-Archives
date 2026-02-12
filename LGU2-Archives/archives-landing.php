@@ -293,30 +293,26 @@
                             </div>
 
                             <!-- User Profile Dropdown (moved right of notification) -->
-                            <div class="relative">
+                             <div class="relative">
                                 <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
-                                    <?php if ($profile_picture_url): ?>
-                                        <img
-                                            src="<?php echo htmlspecialchars($profile_picture_url, ENT_QUOTES, 'UTF-8'); ?>"
-                                            alt="Profile"
-                                            class="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-gray-300 dark:border-gray-600 flex-shrink-0"
-                                            loading="lazy"
-                                            decoding="async"
-                                        >
-                                    <?php else: ?>
-                                        <div class="bg-red-600 rounded-full w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-white flex-shrink-0">
-                                            <i class="bi bi-person-fill"></i>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="hidden sm:block text-left">
-                                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($display_name); ?></p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                                <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
+                                    <img src="uploads/profile_pictures/<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                <?php elseif ($profile_picture && file_exists($profile_picture)): ?>
+                                    <img src="<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                <?php else: ?>
+                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <i class="bi bi-person-fill"></i>
                                     </div>
-                                    <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
-                                </button>
-
+                                <?php endif; ?>
+                                <div class="hidden sm:block text-left">
+                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($display_name); ?></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                                </div>
+                                <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
+                            </button>
+                            
                                 <!-- Profile Dropdown -->
-                                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
+                                <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Settings

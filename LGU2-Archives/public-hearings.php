@@ -39,15 +39,90 @@ $conn->close();
     <script src="assets/js/theme-head.js"></script>
     <script src="assets/js/deleted-files.js"></script>
     <script src="assets/js/recent-views.js"></script>
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
+<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
+    <!-- Mobile Sidebar -->
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
+        <div class="p-4 border-b border-red-700/50 sidebar-header">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3 sidebar-logo">
+                    <div class="bg-white rounded-full p-1.5 shadow-lg">
+                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight">LAS</h1>
+                        <p class="text-xs text-red-200">City of Valenzuela</p>
+                    </div>
+                </div>
+                <button id="close-mobile-sidebar" class="text-white/80 p-2 hover:bg-red-700/50 hover:text-white rounded-lg transition-all duration-200 hover:rotate-90" aria-label="Close sidebar">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <nav class="flex-1 py-4 px-3 overflow-y-auto">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-speedometer2 mr-3 text-lg"></i>
+                <span>Dashboard Archives</span>
+            </a>
+            <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-folder mr-3 text-lg"></i>
+                <span>Main Storage Archives</span>
+            </a>
+            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-cloud-upload mr-3 text-lg"></i>
+                <span>Export</span>
+            </a>
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-trash mr-3 text-lg"></i>
+                <span>Recently Deleted</span>
+            </a>
+            <div class="mt-4 pt-4 border-t border-red-700/50">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-graph-up mr-3 text-lg"></i>
+                    <span>Reports & Analytics</span>
+                </a>
+            </div>
+            <div class="mt-4 pt-4 border-t border-red-700/50">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-people mr-3 text-lg"></i>
+                    <span>User Management</span>
+                </a>
+                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-shield-check mr-3 text-lg"></i>
+                    <span>Audit Logs</span>
+                </a>
+            </div>
+            <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-red-100">Storage Usage</span>
+                        <span class="text-xs font-bold text-white">2%</span>
+                    </div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
+                        <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                    </div>
+                    <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                </div>
+            </div>
+        </nav>
+    </div>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-4">
+                    <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200" aria-label="Open sidebar">
+                        <i class="bi bi-list text-2xl"></i>
+                    </button>
                     <a href="archives-landing.php" class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                         <span class="text-xl">←</span>
                         <span class="font-semibold">Back to Archives</span>
