@@ -5,7 +5,7 @@
 // ...any id starting with "themeToggle" will be handled.
 (function () {
   const KEY = 'theme';
-  const LEGACY_KEY = 'plv-theme';
+  const LEGACY_KEY = 'archive-theme';
   const root = document.documentElement;
 
   function normalizeMode(value) {

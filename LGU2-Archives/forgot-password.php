@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - PLV Archives</title>
+    <title>Forgot Password - Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ins->bind_param("iss", $userId, $codeHash, $expires);
             $ins->execute();
 
-            $subject = 'PLV Archives password reset code';
+            $subject = 'Archives password reset code';
             $messagePlain = "Hello {$fullName},\n\nYour password reset code is: {$code}\nThis code expires in 10 minutes.\n\nIf you did not request this, ignore this email.";
             $sent = false;
             $cfgFile = __DIR__ . '/mail_config.php';
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!empty($cfg['smtp_options']) && is_array($cfg['smtp_options'])) {
                             $mailer->SMTPOptions = $cfg['smtp_options'];
                         }
-                        $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'PLV Archives');
+                        $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'Archives');
                         $mailer->addAddress($email, $fullName);
                         $mailer->Subject = $subject;
                         $mailer->isHTML(true);

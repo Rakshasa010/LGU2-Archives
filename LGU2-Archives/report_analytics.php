@@ -161,8 +161,8 @@ function format_bytes($bytes) {
                 <span>Main Storage Archives</span>
             </a>
             
-            <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-folder mr-3"></i>
+            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-cloud-upload mr-3"></i>
                 <span class="sidebar-text">Export</span>
             </a>
                     
@@ -224,7 +224,7 @@ function format_bytes($bytes) {
                  <!-- ADMINISTRATION Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                <a href="burgersettings.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-people mr-3 text-lg"></i>
                     <span>User Management</span>
                 </a>
@@ -293,7 +293,7 @@ function format_bytes($bytes) {
                                 </button>
                                 <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
-                                        <a href="burgersettings.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
+                                        <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">

@@ -15,7 +15,7 @@ return [
     'username'   => 'johnpauldeluna06@gmail.com',
     'password'   => 'brztabzekgoefrix',
     'from_email' => 'johnpauldeluna06@gmail.com',
-    'from_name'  => 'PLV Archives',
+    'from_name'  => 'Archives',
     'encryption' => 'tls',
     'debug'      => 0,
     // If you get "Failed to connect", uncomment below (local dev only):

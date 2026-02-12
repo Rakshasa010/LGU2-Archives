@@ -47,11 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['send'])) {
         $mailer->SMTPDebug = (int)($cfg['debug'] ?? 0);
         // Optional: on some Windows/XAMPP setups TLS verification fails; uncomment only if needed for local dev
         // $mailer->SMTPOptions = ['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]];
-        $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'PLV Archives');
+        $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'Archives');
         $mailer->addAddress($to);
-        $mailer->Subject = 'PLV Archives – Test email';
-        $mailer->Body = '<p>This is a test email from <strong>PLV Archives</strong>.</p><p>If you received this, PHPMailer + Gmail are working.</p>';
-        $mailer->AltBody = 'This is a test email from PLV Archives. If you received this, PHPMailer + Gmail are working.';
+        $mailer->Subject = 'Archives – Test email';
+        $mailer->Body = '<p>This is a test email from <strong>Archives</strong>.</p><p>If you received this, PHPMailer + Gmail are working.</p>';
+        $mailer->AltBody = 'This is a test email from Archives. If you received this, PHPMailer + Gmail are working.';
         $mailer->send();
 
         $result = ['ok' => true, 'message' => 'Test email sent to ' . $to . '.'];
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['send'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test email – PLV Archives</title>
+    <title>Test email – Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>

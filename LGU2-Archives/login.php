@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - PLV Archives</title>
+    <title>Login - Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/login-head.js"></script>
     <link rel="stylesheet" href="assets/css/login.css">
@@ -51,7 +51,7 @@
             if (password_verify($password, $user['password'])) {
                 $_SESSION['user_id'] = $user['id'];
                 if ((int)($user['must_change_password'] ?? 0) === 1) {
-                    header("Location: user_management.php");
+                    header("Location: profile.php");
                     exit();
                 }
                 header("Location: archives-landing.php");

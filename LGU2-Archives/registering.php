@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - PLV Archives</title>
+    <title>Register - Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $smtpPort = (int)($cfg['port'] ?? 587);
                             $enc = strtolower(trim($cfg['encryption'] ?? 'tls'));
                             $fromEmail = $cfg['from_email'] ?? $smtpUser;
-                            $fromName = $cfg['from_name'] ?? 'PLV Archives';
+                            $fromName = $cfg['from_name'] ?? 'Archives';
                             $mailer->isSMTP();
                             $mailer->Host = $smtpHost;
                             $mailer->SMTPAuth = true;
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 . '<p>Your account has been created. Use the temporary password below to sign in:</p>'
                                 . '<p><strong>' . htmlspecialchars($tmp, ENT_QUOTES, 'UTF-8') . '</strong></p>'
                                 . '<p>After logging in, update your password in your profile settings.</p>'
-                                . '<p>PLV Archives</p>';
+                                . '<p>Archives</p>';
                             $mailer->AltBody = 'Hello ' . $full_name . ', Your temporary password: ' . $tmp . '. Update it after login.';
                             $mailer->send();
                             $emailSent = true;
@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8">
         <div class="text-center mb-8">
             <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-16 w-auto mx-auto mb-4">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">PLV Archives</h1>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Archives</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">Create your account</p>
         </div>
 
