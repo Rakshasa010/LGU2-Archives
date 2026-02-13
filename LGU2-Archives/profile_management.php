@@ -40,6 +40,14 @@ $stmt->close();
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+    <style>
+        /* Hide scrollbars but keep scrolling */
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Ensure the desktop sidebar is fixed to the very top */
+        #sidebar { top: 0; left: 0; }
+    </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Mobile overlay when sidebar open -->
@@ -155,7 +163,7 @@ $stmt->close();
 
         <div class="flex flex-col md:flex-row min-h-screen md:h-screen overflow-hidden">
             <!-- Desktop Sidebar (hidden on mobile by default; mobile sidebar is separate) -->
-            <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
+            <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0 top-0 left-0">
                 <div class="p-6 border-b border-red-700 sidebar-logo">
                     <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
                         <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
@@ -178,7 +186,7 @@ $stmt->close();
                             <i class="bi bi-folder mr-3"></i>
                             <span class="sidebar-text">Main Storage Archives</span>
                         </a>
-                        <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-cloud-upload mr-3"></i>
                             <span class="sidebar-text">Export</span>
                         </a>
@@ -228,7 +236,7 @@ $stmt->close();
                 </nav>
             </aside>
     <!-- Main Content (scrollable on mobile) -->
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full hide-scrollbar">
     <div class="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div class="space-y-6">
             <!-- Profile Header -->
