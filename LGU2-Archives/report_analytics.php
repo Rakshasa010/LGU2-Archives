@@ -594,6 +594,15 @@ function format_bytes($bytes) {
         profileBtn?.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown?.classList.toggle('hidden'); });
         document.addEventListener('click', () => profileDropdown?.classList.add('hidden'));
 
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => notifDropdown?.classList.add('hidden'));
+
         if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar?.classList.add('sidebar-collapsed');
 
         // Charts

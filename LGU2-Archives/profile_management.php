@@ -542,6 +542,27 @@ $profile_picture = $user['profile_picture'] ?? null;
     </div>
     </div>
 
+    <script>
+        const profileBtn = document.getElementById('profile-btn');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        profileBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => {
+            profileDropdown?.classList.add('hidden');
+        });
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.toggle('hidden');
+        });
+        document.addEventListener('click', () => {
+            notifDropdown?.classList.add('hidden');
+        });
+    </script>
     <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/archives.js"></script>
 </body>
