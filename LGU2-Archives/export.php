@@ -279,9 +279,9 @@ $mock_notifications = [
 									<input id="export-search" type="text" class="peer w-56 sm:w-64 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Search requests">
 									<i class="bi bi-search absolute right-3 top-2.5 text-gray-400 dark:text-gray-300"></i>
 								</div>
-								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600" aria-pressed="false">Unread</button>
-								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600" aria-pressed="false">Today</button>
-								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600" aria-pressed="false">This Week</button>
+								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">Unread</button>
+								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">Today</button>
+								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">This Week</button>
 							</div>
 						</div>
 						<div class="mt-6 divide-y divide-gray-200 dark:divide-slate-700" id="export-list">
@@ -303,8 +303,8 @@ $mock_notifications = [
 										<div class="mt-1.5 flex items-center justify-between">
 											<div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($n['about']); ?> • <?php echo htmlspecialchars($n['date']); ?></div>
 											<div class="flex items-center gap-2">
-												<button class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600">View</button>
-												<button class="send-to-btn px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-1" data-content="<?php echo htmlspecialchars($n['content']); ?>">
+												<button class="px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent">View</button>
+												<button class="send-to-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent flex items-center gap-1" data-content="<?php echo htmlspecialchars($n['content']); ?>">
 													<i class="bi bi-send"></i>
 													<span>Send To</span>
 												</button>
@@ -386,12 +386,8 @@ $mock_notifications = [
 				return document.documentElement.classList.contains('dark');
 			}
 			function updateUnreadBtnStyle() {
-				unreadBtn.classList.remove('bg-gray-100', 'dark:bg-slate-600', 'bg-red-700', 'text-white', 'border-red-700', 'hover:bg-red-800');
-				if (onlyUnread && isDark()) {
-					unreadBtn.classList.add('bg-red-700', 'text-white', 'border-red-700', 'hover:bg-red-800');
-				} else {
-					if (onlyUnread) unreadBtn.classList.add('bg-gray-100');
-				}
+				unreadBtn.classList.remove('bg-red-600','bg-red-700');
+				unreadBtn.classList.add(onlyUnread ? 'bg-red-700' : 'bg-red-600');
 			}
 			function isToday(dateStr) {
 				const d = new Date(dateStr + 'T00:00:00');
@@ -431,18 +427,20 @@ $mock_notifications = [
 				this.setAttribute('aria-pressed', String(onlyUnread));
 				apply();
 			});
+			function updateToggle(btn, active) {
+				btn.classList.remove('bg-red-600','bg-red-700');
+				btn.classList.add(active ? 'bg-red-700' : 'bg-red-600');
+			}
 			todayBtn.addEventListener('click', function () {
 				onlyToday = !onlyToday;
 				this.setAttribute('aria-pressed', String(onlyToday));
-				this.classList.toggle('bg-gray-100', onlyToday);
-				this.classList.toggle('dark:bg-slate-600', onlyToday);
+				updateToggle(this, onlyToday);
 				apply();
 			});
 			weekBtn.addEventListener('click', function () {
 				onlyWeek = !onlyWeek;
 				this.setAttribute('aria-pressed', String(onlyWeek));
-				this.classList.toggle('bg-gray-100', onlyWeek);
-				this.classList.toggle('dark:bg-slate-600', onlyWeek);
+				updateToggle(this, onlyWeek);
 				apply();
 			});
 			const mo = new MutationObserver(() => updateUnreadBtnStyle());
