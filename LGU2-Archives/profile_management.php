@@ -42,6 +42,14 @@ $profile_picture = $user['profile_picture'] ?? null;
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+    <style>
+        /* Hide scrollbars but keep scrolling */
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Ensure the desktop sidebar is fixed to the very top */
+        #sidebar { top: 0; left: 0; }
+    </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Mobile overlay when sidebar open -->
@@ -127,7 +135,7 @@ $profile_picture = $user['profile_picture'] ?? null;
 
         <div class="flex flex-col md:flex-row min-h-screen md:h-screen overflow-hidden">
             <!-- Desktop Sidebar (hidden on mobile by default; mobile sidebar is separate) -->
-            <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
+            <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0 top-0 left-0">
                 <div class="p-6 border-b border-red-700 sidebar-logo">
                     <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
                         <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
@@ -150,7 +158,7 @@ $profile_picture = $user['profile_picture'] ?? null;
                             <i class="bi bi-folder mr-3"></i>
                             <span class="sidebar-text">Main Storage Archives</span>
                         </a>
-                        <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-cloud-upload mr-3"></i>
                             <span class="sidebar-text">Export</span>
                         </a>
@@ -201,83 +209,6 @@ $profile_picture = $user['profile_picture'] ?? null;
             </aside>
     <!-- Main Content (scrollable on mobile) -->
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
-        <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
-            <div class="px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center">
-                        <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200" aria-label="Open sidebar">
-                            <i class="bi bi-list text-2xl"></i>
-                        </button>
-                    </div>
-                    <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
-                        <div class="ml-2 md:ml-4 min-w-0">
-                            <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Account Settings</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Manage profile and preferences</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-1 md:space-x-4">
-                        <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
-                            <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                            </svg>
-                            <svg id="sunIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
-                        </button>
-                        <!-- Notification Dropdown (placed beside theme toggle) -->
-                            <div class="relative">
-                                <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
-                                    <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
-                                    <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
-                                </button>
-
-                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
-                                    <div class="p-4">
-                                        <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
-                                        <div id="notif-list" class="space-y-2">
-                                            <div class="text-sm text-gray-600 dark:text-gray-400">Loading notifications...</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="px-4 py-2 border-t border-gray-200 dark:border-slate-700">
-                                        <a href="audit-logs.php" class="block text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                                            View All Notifications
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        <div class="relative">
-                            <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
-                                <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
-                                    <img src="uploads/profile_pictures/<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
-                                <?php elseif ($profile_picture && file_exists($profile_picture)): ?>
-                                    <img src="<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
-                                <?php else: ?>
-                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
-                                        <i class="bi bi-person-fill"></i>
-                                    </div>
-                                <?php endif; ?>
-                                <div class="hidden sm:block text-left">
-                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($display_name); ?></p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
-                                </div>
-                                <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
-                            </button>
-                            <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
-                                <div class="py-2">
-                                    <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                        <i class="bi bi-gear mr-2"></i>Settings
-                                    </a>
-                                    <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
-                                        <i class="bi bi-box-arrow-right mr-2"></i>Logout
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
     <div class="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div class="space-y-6">
             <!-- Profile Header -->
