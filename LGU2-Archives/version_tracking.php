@@ -191,7 +191,6 @@ $conn->close();
                 </a>
                 <div class="mt-4 pt-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-<<<<<<< HEAD
                     <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-graph-up mr-3"></i>
                         <span class="sidebar-text">Reports & Analytics</span>
@@ -214,11 +213,6 @@ $conn->close();
                     <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
                         <span class="sidebar-text">Audit Logs</span>
-=======
-                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white bg-red-700 rounded-lg mb-1">
-                        <i class="bi bi-graph-up mr-3 text-lg"></i>
-                        <span>Reports & Analytics</span>
->>>>>>> refs/remotes/origin/main
                     </a>
                 </div>
                  <!-- ADMINISTRATION Section -->
