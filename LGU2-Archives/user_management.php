@@ -53,6 +53,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nt->execute();
                 $nt->close();
             }
+            // Send email to user on approval only
+            if ($action === 'approve' && !empty($info['email'])) {
+                $cfgFile = __DIR__ . '/mail_config.php';
+                if (file_exists($cfgFile)) {
+                    $cfg = require $cfgFile;
+                    $smtpUser = trim((string)($cfg['username'] ?? ''));
+                    $smtpPass = trim((string)($cfg['password'] ?? ''));
+                    $isPlaceholder = (stripos($smtpUser, 'YOUR_GMAIL') !== false) || (stripos($smtpPass, 'YOUR_16_CHAR') !== false);
+                    if ($smtpUser !== '' && $smtpPass !== '' && !$isPlaceholder) {
+                        try {
+                            require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                            $mailer3 = new PHPMailer\PHPMailer\PHPMailer(true);
+                            $smtpHost = $cfg['host'] ?? 'smtp.gmail.com';
+                            $smtpPort = (int)($cfg['port'] ?? 587);
+                            $enc = strtolower(trim($cfg['encryption'] ?? 'tls'));
+                            $fromEmail = $cfg['from_email'] ?? $smtpUser;
+                            $fromName = $cfg['from_name'] ?? 'Archives';
+                            $mailer3->isSMTP();
+                            $mailer3->Host = $smtpHost;
+                            $mailer3->SMTPAuth = true;
+                            $mailer3->Username = $smtpUser;
+                            $mailer3->Password = $smtpPass;
+                            $mailer3->SMTPSecure = ($enc === 'ssl')
+                                ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                                : PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                            $mailer3->Port = $smtpPort;
+                            $mailer3->CharSet = 'UTF-8';
+                            $mailer3->SMTPDebug = 0;
+                            $mailer3->setFrom($fromEmail, $fromName);
+                            $mailer3->addAddress($info['email'], $info['full_name'] ?? $info['username'] ?? '');
+                            $mailer3->Subject = 'Your Archives account has been approved';
+                            $mailer3->isHTML(true);
+                            $mailer3->Body = '<p>Hello ' . htmlspecialchars($info['full_name'] ?? $info['username'] ?? 'User', ENT_QUOTES, 'UTF-8') . ',</p>'
+                                . '<p>Your account has been <strong>approved</strong>. You can now sign in.</p>'
+                                . '<p><a href="' . htmlspecialchars((isset($_SERVER['HTTP_HOST']) ? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] : ''), ENT_QUOTES, 'UTF-8') . '/LGU2-Archives/login.php">Login</a></p>'
+                                . '<p>Thank you.</p>';
+                            $mailer3->AltBody = 'Your account has been approved. You can now sign in.';
+                            $mailer3->send();
+                        } catch (Throwable $e) {
+                            // Ignore email failures silently
+                        }
+                    }
+                }
+            }
         } else {
             $message = 'Failed to update user.';
         }
