@@ -18,7 +18,7 @@ if (!file_exists($upload_dir)) {
 $extraCols = [];
 $cr = $conn->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('nickname','birthplace','birthdate','address')");
 if ($cr) { while ($r = $cr->fetch_assoc()) { $extraCols[] = $r['COLUMN_NAME']; } }
-$selectCols = "username, email, full_name, profile_picture";
+$selectCols = "username, email, full_name, profile_picture, role";
 if (!empty($extraCols)) { $selectCols .= ", " . implode(", ", $extraCols); }
 $sql = "SELECT $selectCols FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
@@ -29,6 +29,7 @@ $user = $result->fetch_assoc();
 $stmt->close();
 $display_name = $user['full_name'] ?? 'User';
 $profile_picture = $user['profile_picture'] ?? null;
+$is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -189,11 +190,19 @@ $profile_picture = $user['profile_picture'] ?? null;
 
                     <!-- ADMINISTRATION Section -->
                     <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
-                        <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                        <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
-                            <i class="bi bi-people mr-3"></i>
-                            <span class="sidebar-text">User Management</span>
-                        </a>
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                    <?php if ($is_admin): ?>
+                    <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-people mr-3"></i>
+                        <span class="sidebar-text">User Management</span>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-person mr-3"></i>
+                        <span class="sidebar-text">Profile</span>
+                    </a>
+                    
                         <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-shield-check mr-3"></i>
                             <span class="sidebar-text">Audit Logs</span>

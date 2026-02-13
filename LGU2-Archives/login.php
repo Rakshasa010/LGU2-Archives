@@ -40,7 +40,7 @@
         $username = trim($_POST['username']);
         $password = $_POST['password'];
 
-        $sql = "SELECT id, password, must_change_password FROM users WHERE username = ?";
+        $sql = "SELECT id, password, must_change_password, status, role FROM users WHERE username = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $username);
         $stmt->execute();
@@ -49,14 +49,24 @@
         if ($result->num_rows == 1) {
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['last_activity'] = time();
-                if (isset($user['must_change_password']) && (int)$user['must_change_password'] === 1) {
-                    header("Location: profile.php?force=1");
+                if (isset($user['status']) && $user['status'] !== 'active') {
+                    if ($user['status'] === 'pending') {
+                        $error = "Your account is pending approval by an administrator.";
+                    } elseif ($user['status'] === 'rejected') {
+                        $error = "Your account was rejected. Please contact support.";
+                    } else {
+                        $error = "Your account is not active.";
+                    }
                 } else {
-                    header("Location: archives-landing.php");
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['last_activity'] = time();
+                    if (isset($user['must_change_password']) && (int)$user['must_change_password'] === 1) {
+                        header("Location: profile.php?force=1");
+                    } else {
+                        header("Location: archives-landing.php");
+                    }
+                    exit();
                 }
-                exit();
             } else {
                 $error = "Invalid password.";
             }

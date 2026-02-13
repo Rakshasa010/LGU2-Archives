@@ -33,7 +33,7 @@
     $user_id = $_SESSION['user_id'];
     $user_data = null;
     
-    $stmt = $conn->prepare("SELECT full_name, profile_picture FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT full_name, profile_picture, role FROM users WHERE id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -46,6 +46,7 @@
     
     $display_name = $user_data['full_name'] ?? 'User';
     $profile_picture = $user_data['profile_picture'] ?? null;
+    $is_admin = isset($user_data['role']) && strtolower($user_data['role']) === 'admin';
 
     // Normalize profile picture (DB may store either filename or a relative path).
     $profile_picture_url = null;
@@ -123,10 +124,12 @@
             <!-- ADMINISTRATION Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <?php if ($is_admin): ?>
+                <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-people mr-3 text-lg"></i>
                     <span>User Management</span>
                 </a>
+                <?php endif; ?>
                 <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
@@ -208,10 +211,18 @@
                 <!-- ADMINISTRATION Section -->
                 <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <?php if ($is_admin): ?>
+                    <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-people mr-3"></i>
                         <span class="sidebar-text">User Management</span>
                     </a>
+                    <?php endif; ?>
+
+                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-person mr-3"></i>
+                        <span class="sidebar-text">Profile</span>
+                    </a>
+
                     <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
                         <span class="sidebar-text">Audit Logs</span>

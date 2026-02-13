@@ -15,6 +15,21 @@ $res = $stmt->get_result();
 if ($res && $res->num_rows > 0) {
 	$user_data = $res->fetch_assoc();
 }
+$is_admin = false;
+if (isset($_SESSION['user_id'])) {
+    $uid = (int)$_SESSION['user_id'];
+    $st = $conn->prepare("SELECT role FROM users WHERE id = ?");
+    if ($st) {
+        $st->bind_param("i", $uid);
+        $st->execute();
+        $rs = $st->get_result();
+        if ($rs && $rs->num_rows === 1) {
+            $r = $rs->fetch_assoc();
+            $is_admin = isset($r['role']) && strtolower($r['role']) === 'admin';
+        }
+        $st->close();
+    }
+}
 $stmt->close();
 $conn->close();
 
@@ -161,11 +176,19 @@ $mock_notifications = [
 				</div>
 
 				<div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
-					<div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-					<a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-						<i class="bi bi-people mr-3"></i>
-						<span class="sidebar-text">User Management</span>
-					</a>
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                    <?php if ($is_admin): ?>
+                    <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-people mr-3"></i>
+                        <span class="sidebar-text">User Management</span>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-person mr-3"></i>
+                        <span class="sidebar-text">Profile</span>
+                    </a>
+
 					<a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
 						<i class="bi bi-shield-check mr-3"></i>
 						<span class="sidebar-text">Audit Logs</span>

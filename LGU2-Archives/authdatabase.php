@@ -55,6 +55,7 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(100) NOT NULL UNIQUE,
     full_name VARCHAR(100) NOT NULL,
     role VARCHAR(20) DEFAULT 'user',
+    status ENUM('pending','active','rejected') NOT NULL DEFAULT 'active',
     profile_picture VARCHAR(255) DEFAULT NULL,
     must_change_password TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -67,6 +68,12 @@ $conn->query($users_sql);
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
 if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL AFTER role");
+}
+
+// Add status column if it doesn't exist (for existing databases)
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'status'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN status ENUM('pending','active','rejected') NOT NULL DEFAULT 'active' AFTER role");
 }
 
 // Add must_change_password column if it doesn't exist

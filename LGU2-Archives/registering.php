@@ -62,10 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tmp .= $alphabet[$idx];
             }
             $hash = password_hash($tmp, PASSWORD_DEFAULT);
-            $ins = $conn->prepare('INSERT INTO users (username, password, email, full_name, role, must_change_password) VALUES (?, ?, ?, ?, ?, ?)');
+            $ins = $conn->prepare('INSERT INTO users (username, password, email, full_name, role, status, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?)');
             $role = 'user';
+            $status = 'pending';
             $must = 1;
-            $ins->bind_param('sssssi', $username, $hash, $email, $full_name, $role, $must);
+            $ins->bind_param('ssssssi', $username, $hash, $email, $full_name, $role, $status, $must);
             if ($ins->execute()) {
                 $newId = $ins->insert_id;
                 $cols = [];
@@ -130,6 +131,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = $emailSent
                     ? 'Registered successfully. Check your email for the temporary password.'
                     : 'Registered successfully. Use <a href="forgot-password.php" class="underline font-medium">Forgot password</a> to set your password and sign in.';
+
+                // Ensure notifications table exists
+                $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    time VARCHAR(20) NOT NULL,
+                    date DATE NOT NULL,
+                    content VARCHAR(255) NOT NULL,
+                    about VARCHAR(100) NOT NULL,
+                    status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+                // Add notification for admins
+                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                if ($nt) {
+                    $ntime = date('h:i A');
+                    $ndate = date('Y-m-d');
+                    $ncontent = 'New registration: ' . $full_name . ' (' . $username . ') — awaiting approval';
+                    $nabout = 'User Registration';
+                    $nstatus = 'unread';
+                    $nt->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                    $nt->execute();
+                    $nt->close();
+                }
+                // Email admins if SMTP configured
+                if (file_exists($cfgFile)) {
+                    $cfg = require $cfgFile;
+                    $smtpUser = trim((string)($cfg['username'] ?? ''));
+                    $smtpPass = trim((string)($cfg['password'] ?? ''));
+                    $isPlaceholder = (stripos($smtpUser, 'YOUR_GMAIL') !== false) || (stripos($smtpPass, 'YOUR_16_CHAR') !== false);
+                    if ($smtpUser !== '' && $smtpPass !== '' && !$isPlaceholder) {
+                        try {
+                            require __DIR__ . '/PHPMailer-master/src/Exception.php';
+                            require __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                            require __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                            $mailer2 = new PHPMailer\PHPMailer\PHPMailer(true);
+                            $smtpHost = $cfg['host'] ?? 'smtp.gmail.com';
+                            $smtpPort = (int)($cfg['port'] ?? 587);
+                            $enc = strtolower(trim($cfg['encryption'] ?? 'tls'));
+                            $fromEmail = $cfg['from_email'] ?? $smtpUser;
+                            $fromName = $cfg['from_name'] ?? 'Archives';
+                            $mailer2->isSMTP();
+                            $mailer2->Host = $smtpHost;
+                            $mailer2->SMTPAuth = true;
+                            $mailer2->Username = $smtpUser;
+                            $mailer2->Password = $smtpPass;
+                            $mailer2->SMTPSecure = ($enc === 'ssl')
+                                ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                                : PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                            $mailer2->Port = $smtpPort;
+                            $mailer2->CharSet = 'UTF-8';
+                            $mailer2->SMTPDebug = 0;
+                            $mailer2->setFrom($fromEmail, $fromName);
+                            $adminsRes = $conn->query("SELECT email, full_name FROM users WHERE role = 'admin'");
+                            if ($adminsRes) {
+                                while ($a = $adminsRes->fetch_assoc()) {
+                                    if (!empty($a['email'])) {
+                                        $mailer2->addAddress($a['email'], $a['full_name'] ?? 'Admin');
+                                    }
+                                }
+                            }
+                            if (count($mailer2->getToAddresses()) > 0) {
+                                $mailer2->Subject = 'New user registration pending approval';
+                                $mailer2->isHTML(true);
+                                $mailer2->Body = '<p>A new user has registered and is pending approval.</p>'
+                                    . '<p><strong>Name:</strong> ' . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . '<br>'
+                                    . '<strong>Username:</strong> ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '<br>'
+                                    . '<strong>Email:</strong> ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '</p>'
+                                    . '<p>Approve or reject in the User Management page.</p>';
+                                $mailer2->AltBody = 'New user registered and pending approval. Name: ' . $full_name . ', Username: ' . $username . ', Email: ' . $email;
+                                $mailer2->send();
+                            }
+                        } catch (Throwable $e) {
+                            // silently ignore admin email failures
+                        }
+                    }
+                }
             } else {
                 $error = 'Registration failed.';
             }
