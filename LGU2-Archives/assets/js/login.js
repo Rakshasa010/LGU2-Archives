@@ -1,8 +1,18 @@
 // Placeholder for login page scripts (kept intentionally minimal)
 document.addEventListener('DOMContentLoaded', function(){
-    // currently no page-specific JS
-
-    
+  var form = document.getElementById('loginForm');
+  var submitBtn = document.getElementById('loginSubmit');
+  var submitting = false;
+  if (form) {
+    form.addEventListener('submit', function(e){
+      if (submitting) {
+        e.preventDefault();
+        return false;
+      }
+      submitting = true;
+      if (submitBtn) submitBtn.disabled = true;
+    });
+  }
 });
 
     // Password visibility toggle feature

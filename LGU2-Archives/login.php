@@ -34,6 +34,10 @@
     </div>
     <?php
     session_start();
+    if (isset($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: archives-landing.php');
+        exit();
+    }
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         include 'authdatabase.php';
 
@@ -79,7 +83,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="login.php" method="POST" class="space-y-6">
+        <form action="login.php" method="POST" class="space-y-6" id="loginForm" autocomplete="off">
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
                 <input type="text" id="username" name="username" required
@@ -158,7 +162,8 @@
 
   <button
     type="submit"
-    class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+    id="loginSubmit"
+    class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
   >
     Login
   </button>

@@ -23,6 +23,8 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
+$display_name = $user['full_name'] ?? 'User';
+$profile_picture = $user['profile_picture'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -52,36 +54,6 @@ $stmt->close();
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <!-- Mobile overlay when sidebar open -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
-
-    <!-- Header -->
-    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm safe-area-inset-top">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-14 sm:h-16">
-                <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-                    <button id="mobile-menu-btn" type="button" class="md:hidden p-2.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors touch-manipulation" aria-label="Open menu">
-                        <i class="bi bi-list text-2xl text-gray-700 dark:text-gray-300"></i>
-                    </button>
-                    <a href="archives-landing.php" class="flex items-center space-x-2 hover:opacity-80 transition-opacity min-w-0">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 object-contain">
-                        <span class="text-lg sm:text-xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent truncate">LAS</span>
-                    </a>
-                </div>
-                <div class="flex items-center space-x-1 sm:space-x-3">
-                    <button class="p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors touch-manipulation" title="Notifications" aria-label="Notifications">
-                        <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
-                    </button>
-                    <button id="themeToggle" class="p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors touch-manipulation" title="Toggle theme">
-                        <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                        <svg id="sunIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
 
     <!-- Mobile Sidebar -->
         <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
@@ -236,7 +208,7 @@ $stmt->close();
                 </nav>
             </aside>
     <!-- Main Content (scrollable on mobile) -->
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full hide-scrollbar">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
     <div class="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div class="space-y-6">
             <!-- Profile Header -->
@@ -451,7 +423,8 @@ $stmt->close();
     </div>
     </div>
 
+    <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/archives.js"></script>
 </body>
 </html>
-*/ ?>
+ 
