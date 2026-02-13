@@ -91,9 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $isPlaceholder = (stripos($smtpUser, 'YOUR_GMAIL') !== false) || (stripos($smtpPass, 'YOUR_16_CHAR') !== false);
                     if ($smtpUser !== '' && $smtpPass !== '' && !$isPlaceholder) {
                         try {
-                            require __DIR__ . '/PHPMailer-master/src/Exception.php';
-                            require __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
-                            require __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
                             $mailer = new PHPMailer\PHPMailer\PHPMailer(true);
                             $smtpHost = $cfg['host'] ?? 'smtp.gmail.com';
                             $smtpPort = (int)($cfg['port'] ?? 587);
@@ -162,9 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $isPlaceholder = (stripos($smtpUser, 'YOUR_GMAIL') !== false) || (stripos($smtpPass, 'YOUR_16_CHAR') !== false);
                     if ($smtpUser !== '' && $smtpPass !== '' && !$isPlaceholder) {
                         try {
-                            require __DIR__ . '/PHPMailer-master/src/Exception.php';
-                            require __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
-                            require __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                            require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
                             $mailer2 = new PHPMailer\PHPMailer\PHPMailer(true);
                             $smtpHost = $cfg['host'] ?? 'smtp.gmail.com';
                             $smtpPort = (int)($cfg['port'] ?? 587);
@@ -185,13 +185,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $mailer2->setFrom($fromEmail, $fromName);
                             $adminsRes = $conn->query("SELECT email, full_name FROM users WHERE role = 'admin'");
                             if ($adminsRes) {
+                                $hasRecipients = false;
                                 while ($a = $adminsRes->fetch_assoc()) {
                                     if (!empty($a['email'])) {
                                         $mailer2->addAddress($a['email'], $a['full_name'] ?? 'Admin');
+                                        $hasRecipients = true;
                                     }
                                 }
                             }
-                            if (count($mailer2->getToAddresses()) > 0) {
+                            if (!empty($hasRecipients)) {
                                 $mailer2->Subject = 'New user registration pending approval';
                                 $mailer2->isHTML(true);
                                 $mailer2->Body = '<p>A new user has registered and is pending approval.</p>'

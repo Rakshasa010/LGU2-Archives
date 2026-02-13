@@ -49,9 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $smtpPass = trim((string)($cfg['password'] ?? ''));
                 if ($smtpUser !== '' && $smtpPass !== '') {
                     try {
-                        require __DIR__ . '/PHPMailer-master/src/Exception.php';
-                        require __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
-                        require __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                        require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
+                        require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                        require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
                         $mailer = new PHPMailer\PHPMailer\PHPMailer(true);
                         $mailer->isSMTP();
                         $mailer->Host = trim($cfg['host'] ?? 'smtp.gmail.com');

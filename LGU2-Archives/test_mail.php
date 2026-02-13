@@ -10,9 +10,9 @@ $cfg = file_exists(__DIR__ . '/mail_config.php') ? (require __DIR__ . '/mail_con
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['send'])) {
     try {
-        require __DIR__ . '/PHPMailer-master/src/Exception.php';
-        require __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
-        require __DIR__ . '/PHPMailer-master/src/SMTP.php';
+        require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
+        require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+        require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
 
         if (empty($cfg)) {
             throw new RuntimeException('mail_config.php not found or invalid.');
