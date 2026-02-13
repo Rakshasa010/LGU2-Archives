@@ -177,6 +177,11 @@
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+
+                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-book mr-3"></i>
+                        <span class="sidebar-text">Version Tracking</span>
+                    </a>
                 </div>
                 
                 <!-- ANALYTICS Section -->
