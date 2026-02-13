@@ -64,7 +64,7 @@ $mock_notifications = [
 				</button>
 			</div>
 		</div>
-		<nav class="flex-1 py-4 px-3 overflow-y-auto">
+		<nav class="flex-1 py-4 px-3 overflow-hidden">
 			<a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
 				<i class="bi bi-speedometer2 mr-3 text-lg"></i>
 				<span>Dashboard Archives</span>
@@ -128,7 +128,7 @@ $mock_notifications = [
 					</div>
 				</a>
 			</div>
-			<nav class="flex-1 overflow-y-auto py-4">
+			<nav class="flex-1 overflow-hidden py-4">
 				<div class="px-4 space-y-1">
 					<a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
 						<i class="bi bi-speedometer2 mr-3"></i>
@@ -283,9 +283,9 @@ $mock_notifications = [
 									<input id="export-search" type="text" class="peer w-56 sm:w-64 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Search requests">
 									<i class="bi bi-search absolute right-3 top-2.5 text-gray-400 dark:text-gray-300"></i>
 								</div>
-								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600" aria-pressed="false">Unread</button>
-								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600" aria-pressed="false">Today</button>
-								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600" aria-pressed="false">This Week</button>
+								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">Unread</button>
+								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">Today</button>
+								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">This Week</button>
 							</div>
 						</div>
 						<div class="mt-6 divide-y divide-gray-200 dark:divide-slate-700" id="export-list">
@@ -307,7 +307,11 @@ $mock_notifications = [
 										<div class="mt-1.5 flex items-center justify-between">
 											<div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($n['about']); ?> • <?php echo htmlspecialchars($n['date']); ?></div>
 											<div class="flex items-center gap-2">
-												<button class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600">View</button>
+												<button class="px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent">View</button>
+												<button class="send-to-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent flex items-center gap-1" data-content="<?php echo htmlspecialchars($n['content']); ?>">
+													<i class="bi bi-send"></i>
+													<span>Send To</span>
+												</button>
 											</div>
 										</div>
 									</div>
@@ -326,11 +330,53 @@ $mock_notifications = [
 		</div>
 		</div>
 
+		<div id="send-to-modal" class="fixed inset-0 z-50 hidden">
+			<div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+			<div class="relative max-w-md mx-auto mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-md bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300">
+						<i class="bi bi-send"></i>
+					</div>
+					<div>
+						<div class="text-base font-semibold text-gray-900 dark:text-gray-100">Send To</div>
+						<div id="send-to-file" class="text-xs text-gray-500 dark:text-gray-400"></div>
+					</div>
+				</div>
+				<div class="space-y-2">
+					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
+						<input type="radio" name="sendToDest" value="Sessions" class="accent-red-600">
+						<span class="text-sm text-gray-800 dark:text-gray-200">Sessions</span>
+					</label>
+					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
+						<input type="radio" name="sendToDest" value="Records" class="accent-red-600">
+						<span class="text-sm text-gray-800 dark:text-gray-200">Records</span>
+					</label>
+					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
+						<input type="radio" name="sendToDest" value="Meetings" class="accent-red-600">
+						<span class="text-sm text-gray-800 dark:text-gray-200">Meetings</span>
+					</label>
+					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
+						<input type="radio" name="sendToDest" value="Others" class="accent-red-600">
+						<span class="text-sm text-gray-800 dark:text-gray-200">Others</span>
+					</label>
+				</div>
+				<div class="mt-6 flex justify-end gap-2">
+					<button id="send-to-cancel" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600">Cancel</button>
+					<button id="send-to-confirm" class="px-4 py-2 text-sm rounded-lg bg-red-700 hover:bg-red-800 text-white">Send</button>
+				</div>
+			</div>
+		</div>
+
 	<script src="assets/js/archives-landing.js"></script>
 	<script src="assets/js/theme-toggle.js"></script>
 	<script>
 		(function () {
 			const list = document.getElementById('export-list');
+			const sendToModal = document.getElementById('send-to-modal');
+			const sendToFile = document.getElementById('send-to-file');
+			const sendToCancel = document.getElementById('send-to-cancel');
+			const sendToConfirm = document.getElementById('send-to-confirm');
+			let sendFile = '';
 			const search = document.getElementById('export-search');
 			const unreadBtn = document.getElementById('filter-unread');
 			const todayBtn = document.getElementById('filter-today');
@@ -344,12 +390,8 @@ $mock_notifications = [
 				return document.documentElement.classList.contains('dark');
 			}
 			function updateUnreadBtnStyle() {
-				unreadBtn.classList.remove('bg-gray-100', 'dark:bg-slate-600', 'bg-red-700', 'text-white', 'border-red-700', 'hover:bg-red-800');
-				if (onlyUnread && isDark()) {
-					unreadBtn.classList.add('bg-red-700', 'text-white', 'border-red-700', 'hover:bg-red-800');
-				} else {
-					if (onlyUnread) unreadBtn.classList.add('bg-gray-100');
-				}
+				unreadBtn.classList.remove('bg-red-600','bg-red-700');
+				unreadBtn.classList.add(onlyUnread ? 'bg-red-700' : 'bg-red-600');
 			}
 			function isToday(dateStr) {
 				const d = new Date(dateStr + 'T00:00:00');
@@ -389,23 +431,44 @@ $mock_notifications = [
 				this.setAttribute('aria-pressed', String(onlyUnread));
 				apply();
 			});
+			function updateToggle(btn, active) {
+				btn.classList.remove('bg-red-600','bg-red-700');
+				btn.classList.add(active ? 'bg-red-700' : 'bg-red-600');
+			}
 			todayBtn.addEventListener('click', function () {
 				onlyToday = !onlyToday;
 				this.setAttribute('aria-pressed', String(onlyToday));
-				this.classList.toggle('bg-gray-100', onlyToday);
-				this.classList.toggle('dark:bg-slate-600', onlyToday);
+				updateToggle(this, onlyToday);
 				apply();
 			});
 			weekBtn.addEventListener('click', function () {
 				onlyWeek = !onlyWeek;
 				this.setAttribute('aria-pressed', String(onlyWeek));
-				this.classList.toggle('bg-gray-100', onlyWeek);
-				this.classList.toggle('dark:bg-slate-600', onlyWeek);
+				updateToggle(this, onlyWeek);
 				apply();
 			});
 			const mo = new MutationObserver(() => updateUnreadBtnStyle());
 			mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 			apply();
+			list.addEventListener('click', function (e) {
+				const btn = e.target.closest('.send-to-btn');
+				if (!btn) return;
+				sendFile = btn.getAttribute('data-content') || '';
+				sendToFile.textContent = sendFile;
+				sendToModal.classList.remove('hidden');
+				document.body.style.overflow = 'hidden';
+			});
+			sendToCancel.addEventListener('click', function () {
+				sendToModal.classList.add('hidden');
+				document.body.style.overflow = '';
+			});
+			sendToConfirm.addEventListener('click', function () {
+				const chosen = document.querySelector('input[name="sendToDest"]:checked');
+				if (!chosen) return;
+				sendToModal.classList.add('hidden');
+				document.body.style.overflow = '';
+				alert('Sent "' + sendFile + '" to ' + chosen.value);
+			});
 		})();
 	</script>
 </body>

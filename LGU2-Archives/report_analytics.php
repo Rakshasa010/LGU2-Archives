@@ -42,6 +42,37 @@ if ($result) {
     while ($r = $result->fetch_assoc()) $stats['by_type'][$r['type']] = (int)$r['cnt'];
 }
 
+// Filters
+$q_start = isset($_GET['start']) ? $_GET['start'] : null;
+$q_end = isset($_GET['end']) ? $_GET['end'] : null;
+$q_type = isset($_GET['type']) ? $_GET['type'] : null;
+$q_format = isset($_GET['format']) ? $_GET['format'] : null;
+$q_event = isset($_GET['event']) ? $_GET['event'] : null;
+$f_start = null;
+$f_end = null;
+if ($q_start) {
+    $d = DateTime::createFromFormat('Y-m-d', $q_start);
+    if ($d) $f_start = $d->format('Y-m-d');
+}
+if ($q_end) {
+    $d = DateTime::createFromFormat('Y-m-d', $q_end);
+    if ($d) $f_end = $d->format('Y-m-d');
+}
+$safe_type = $q_type ? $conn->real_escape_string($q_type) : null;
+$safe_format = $q_format ? $conn->real_escape_string(strtolower($q_format)) : null;
+$safe_event = $q_event ? $conn->real_escape_string(strtolower($q_event)) : null;
+$dl_where = "event_type='download'";
+if ($f_start) $dl_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
+if ($f_end) $dl_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
+if ($safe_type) $dl_where .= " AND record_type = '".$safe_type."'";
+if ($safe_format) $dl_where .= " AND download_format = '".$safe_format."'";
+$act_where = "1=1";
+if ($safe_event) $act_where .= " AND event_type = '".$safe_event."'";
+if ($f_start) $act_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
+if ($f_end) $act_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
+if ($safe_type) $act_where .= " AND record_type = '".$safe_type."'";
+if ($safe_format) $act_where .= " AND download_format = '".$safe_format."'";
+
 // Downloads + Activity (prefer analytics_events if available; fallback to legacy last_accessed)
 $stats['downloads'] = 0;
 $stats['downloads_by_type'] = [];
@@ -49,24 +80,25 @@ $stats['downloads_by_format'] = [];
 $stats['recent_activity'] = [];
 $stats['recent_downloads'] = []; // legacy fallback table
 
-$ae_count = $conn->query("SELECT COUNT(*) AS cnt FROM analytics_events WHERE event_type='download'");
+$ae_count = $conn->query("SELECT COUNT(*) AS cnt FROM analytics_events WHERE $dl_where");
 if ($ae_count && ($row = $ae_count->fetch_assoc())) {
     $stats['downloads'] = (int)$row['cnt'];
 
     $ae_by_type = $conn->query("SELECT COALESCE(record_type,'Unknown') AS k, COUNT(*) AS cnt
                                 FROM analytics_events
-                                WHERE event_type='download'
+                                WHERE $dl_where
                                 GROUP BY COALESCE(record_type,'Unknown')");
     if ($ae_by_type) while ($r = $ae_by_type->fetch_assoc()) $stats['downloads_by_type'][$r['k']] = (int)$r['cnt'];
 
     $ae_by_format = $conn->query("SELECT COALESCE(download_format,'unknown') AS k, COUNT(*) AS cnt
                                   FROM analytics_events
-                                  WHERE event_type='download'
+                                  WHERE $dl_where
                                   GROUP BY COALESCE(download_format,'unknown')");
     if ($ae_by_format) while ($r = $ae_by_format->fetch_assoc()) $stats['downloads_by_format'][strtoupper($r['k'])] = (int)$r['cnt'];
 
     $ae_recent = $conn->query("SELECT event_type, record_title, record_type, download_format, bytes, created_at
                                FROM analytics_events
+                               WHERE $act_where
                                ORDER BY created_at DESC
                                LIMIT 15");
     if ($ae_recent) while ($r = $ae_recent->fetch_assoc()) $stats['recent_activity'][] = $r;
@@ -393,23 +425,21 @@ function format_bytes($bytes) {
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div class="flex items-center gap-2">
+                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
-                                <input type="date" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <input id="filter-from" type="date" value="<?php echo htmlspecialchars($f_start ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                 <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
-                                <input type="date" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                            </div>
-                            <div>
-                                <select class="w-full md:w-auto px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <input id="filter-to" type="date" value="<?php echo htmlspecialchars($f_end ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <select id="filter-type" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                     <option value="">All Types</option>
                                     <?php foreach (($stats['by_type'] ?? []) as $k=>$v): ?>
-                                        <option value="<?php echo htmlspecialchars($k); ?>"><?php echo htmlspecialchars($k); ?></option>
+                                        <option value="<?php echo htmlspecialchars($k); ?>" <?php echo ($safe_type === $k ? 'selected' : ''); ?>><?php echo htmlspecialchars($k); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="flex md:justify-end">
-                                <button class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Apply</button>
+                                <button id="apply-filters" aria-pressed="false" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
                             </div>
                         </div>
                     </div>
@@ -582,6 +612,35 @@ function format_bytes($bytes) {
         const downloadsFormatCtx = document.getElementById('downloadsFormatChart')?.getContext('2d');
         if (downloadsFormatCtx) { new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-downloads-format'); }
         hideSk('sk-recent-activity');
+        const applyBtn = document.getElementById('apply-filters');
+        let filtersApplied = false;
+        function updateApplyBtn() {
+            if (!applyBtn) return;
+            applyBtn.classList.remove('bg-red-600','bg-red-700');
+            applyBtn.classList.add(filtersApplied ? 'bg-red-700' : 'bg-red-600');
+            applyBtn.setAttribute('aria-pressed', String(filtersApplied));
+        }
+        function currentFilters() {
+            const from = document.getElementById('filter-from')?.value || '';
+            const to = document.getElementById('filter-to')?.value || '';
+            const type = document.getElementById('filter-type')?.value || '';
+            const params = new URLSearchParams();
+            if (from) params.set('start', from);
+            if (to) params.set('end', to);
+            if (type) params.set('type', type);
+            return params;
+        }
+        function initFiltersApplied() {
+            const qs = new URLSearchParams(window.location.search);
+            filtersApplied = qs.has('start') || qs.has('end') || qs.has('type') || qs.has('format') || qs.has('event');
+            updateApplyBtn();
+        }
+        applyBtn?.addEventListener('click', () => {
+            const params = currentFilters();
+            const url = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
+            window.location.assign(url);
+        });
+        initFiltersApplied();
 
     </script>
     <script src="assets/js/theme-toggle.js"></script>

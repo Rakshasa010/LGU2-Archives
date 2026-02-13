@@ -39,7 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name'] ?? '');
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    if ($full_name === '' || $username === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $nickname = trim($_POST['nickname'] ?? '');
+    $birthplace = trim($_POST['birthplace'] ?? '');
+    $birthdate = trim($_POST['birthdate'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $birthdateValid = ($birthdate !== '' && strtotime($birthdate) !== false);
+    if ($full_name === '' || $username === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $birthplace === '' || !$birthdateValid || $address === '') {
         $error = 'Please provide valid information.';
     } else {
         $check = $conn->prepare('SELECT id FROM users WHERE username = ? OR email = ?');
@@ -62,6 +67,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $must = 1;
             $ins->bind_param('sssssi', $username, $hash, $email, $full_name, $role, $must);
             if ($ins->execute()) {
+                $newId = $ins->insert_id;
+                $cols = [];
+                $colRes = $conn->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('nickname','age','birthplace','birthdate','address')");
+                if ($colRes) {
+                    while ($r = $colRes->fetch_assoc()) { $cols[] = $r['COLUMN_NAME']; }
+                }
+                $upd = [];
+                if (in_array('nickname', $cols)) $upd[] = "nickname = '".$conn->real_escape_string($nickname)."'";
+                if (in_array('birthplace', $cols)) $upd[] = "birthplace = '".$conn->real_escape_string($birthplace)."'";
+                if (in_array('birthdate', $cols)) $upd[] = "birthdate = '".$conn->real_escape_string(date('Y-m-d', strtotime($birthdate)))."'";
+                if (in_array('address', $cols)) $upd[] = "address = '".$conn->real_escape_string($address)."'";
+                if (!empty($upd)) {
+                    $conn->query("UPDATE users SET ".implode(', ', $upd)." WHERE id = ".(int)$newId);
+                }
                 $emailSent = false;
                 $cfgFile = __DIR__ . '/mail_config.php';
                 if (file_exists($cfgFile)) {
@@ -156,6 +175,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
                 <input type="email" id="email" name="email" required
+                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+            </div>
+            <div>
+                <label for="nickname" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nickname (optional)</label>
+                <input type="text" id="nickname" name="nickname"
+                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+            </div>
+            <div>
+                <label for="birthdate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birthdate</label>
+                <input type="date" id="birthdate" name="birthdate" required
+                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+            </div>
+            <div>
+                <label for="birthplace" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birthplace</label>
+                <input type="text" id="birthplace" name="birthplace" required
+                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+            </div>
+            <div>
+                <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Complete Address</label>
+                <input type="text" id="address" name="address" required
                        class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
             </div>
 

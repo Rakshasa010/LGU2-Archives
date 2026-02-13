@@ -15,8 +15,12 @@ if (!file_exists($upload_dir)) {
     mkdir($upload_dir, 0755, true);
 }
 
-// Fetch current user data initially
-$sql = "SELECT username, email, full_name, profile_picture FROM users WHERE id = ?";
+$extraCols = [];
+$cr = $conn->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('nickname','birthplace','birthdate','address')");
+if ($cr) { while ($r = $cr->fetch_assoc()) { $extraCols[] = $r['COLUMN_NAME']; } }
+$selectCols = "username, email, full_name, profile_picture";
+if (!empty($extraCols)) { $selectCols .= ", " . implode(", ", $extraCols); }
+$sql = "SELECT $selectCols FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -214,24 +218,88 @@ $profile_picture = $user['profile_picture'] ?? null;
             </aside>
     <!-- Main Content (scrollable on mobile) -->
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
-    <div class="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div class="space-y-6">
-            <!-- Profile Header -->
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <?php if ($user['profile_picture'] && file_exists($user['profile_picture'])): ?>
-                        <img src="<?php echo htmlspecialchars($user['profile_picture']); ?>" alt="Profile Picture" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600">
-                    <?php else: ?>
-                        <div class="w-16 h-16 bg-gradient-to-r from-red-600 to-orange-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                            <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
+
+     <!-- Header / Navbar -->
+            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
+                <div class="px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <div class="flex items-center">
+                            <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
+                                <i class="bi bi-list text-2xl"></i>
+                            </button>
                         </div>
-                    <?php endif; ?>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($user['full_name']); ?></h1>
-                        <p class="text-gray-600 dark:text-gray-400"><?php echo htmlspecialchars($user['username']); ?></p>
+                        <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
+                            <div class="ml-2 md:ml-4 min-w-0">
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Reports & Analytics</h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Overview of archive activity</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1 md:space-x-4">
+                            <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
+                                <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>
+                                <svg id="sunIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </button>
+                            <!-- Notification Dropdown (placed beside theme toggle) -->
+                            <div class="relative">
+                                <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
+                                    <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
+                                    <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
+                                </button>
+
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                    <div class="p-4">
+                                        <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
+                                        <div id="notif-list" class="space-y-2">
+                                            <div class="text-sm text-gray-600 dark:text-gray-400">Loading notifications...</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="px-4 py-2 border-t border-gray-200 dark:border-slate-700">
+                                        <a href="audit-logs.php" class="block text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                            View All Notifications
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
+                                <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
+                                    <img src="uploads/profile_pictures/<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                <?php elseif ($profile_picture && file_exists($profile_picture)): ?>
+                                    <img src="<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                <?php else: ?>
+                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="hidden sm:block text-left">
+                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($display_name); ?></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                                </div>
+                                <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
+                            </button>
+                                <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
+                                    <div class="py-2">
+                                        <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
+                                            <i class="bi bi-gear mr-2"></i>Settings
+                                        </a>
+                                        <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
+                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </nav>
+    <div class="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div class="space-y-6">
+            
 
             <!-- Settings Form -->
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
@@ -249,7 +317,11 @@ $profile_picture = $user['profile_picture'] ?? null;
                     $full_name = trim($_POST['full_name']);
                     $email = trim($_POST['email']);
                     $username = trim($_POST['username']);
-                    $profile_picture_path = $user['profile_picture']; // Keep existing picture by default
+                    $profile_picture_path = $user['profile_picture'];
+                    $nickname = trim($_POST['nickname'] ?? '');
+                    $birthplace = trim($_POST['birthplace'] ?? '');
+                    $birthdate = trim($_POST['birthdate'] ?? '');
+                    $address = trim($_POST['address'] ?? '');
 
                     // Handle profile picture upload
                     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == UPLOAD_ERR_OK) {
@@ -298,10 +370,19 @@ $profile_picture = $user['profile_picture'] ?? null;
                         $stmt->bind_param("ssssi", $username, $email, $full_name, $profile_picture_path, $user_id);
 
                         if ($stmt->execute()) {
+                            $cols = [];
+                            $colRes = $conn->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('nickname','birthplace','birthdate','address')");
+                            if ($colRes) { while ($r = $colRes->fetch_assoc()) { $cols[] = $r['COLUMN_NAME']; } }
+                            $upd = [];
+                            if (in_array('nickname', $cols)) $upd[] = "nickname = '".$conn->real_escape_string($nickname)."'";
+                            if (in_array('birthplace', $cols)) $upd[] = "birthplace = '".$conn->real_escape_string($birthplace)."'";
+                            if (in_array('birthdate', $cols)) { $bd = $birthdate !== '' && strtotime($birthdate) !== false ? date('Y-m-d', strtotime($birthdate)) : null; if ($bd !== null) $upd[] = "birthdate = '".$conn->real_escape_string($bd)."'"; }
+                            if (in_array('address', $cols)) $upd[] = "address = '".$conn->real_escape_string($address)."'";
+                            if (!empty($upd)) { $conn->query("UPDATE users SET ".implode(', ', $upd)." WHERE id = ".(int)$user_id); }
                             $success_msg = $upload_success ? 'Profile picture and information updated successfully!' : 'Information updated successfully!';
                             echo '<div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">' . htmlspecialchars($success_msg) . '</div>';
                             // Refresh user data
-                            $sql = "SELECT username, email, full_name, profile_picture FROM users WHERE id = ?";
+                            $sql = "SELECT $selectCols FROM users WHERE id = ?";
                             $stmt = $conn->prepare($sql);
                             $stmt->bind_param("i", $user_id);
                             $stmt->execute();
@@ -387,6 +468,39 @@ $profile_picture = $user['profile_picture'] ?? null;
                                 Email Address
                             </label>
                             <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required
+                                   class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                        <div>
+                            <label for="nickname" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nickname</label>
+                            <input type="text" id="nickname" name="nickname" value="<?php echo htmlspecialchars($user['nickname'] ?? ''); ?>"
+                                   class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
+                        </div>
+                        <div>
+                            <label for="birthplace" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birthplace</label>
+                            <input type="text" id="birthplace" name="birthplace" value="<?php echo htmlspecialchars($user['birthplace'] ?? ''); ?>"
+                                   class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
+                        </div>
+                        <div>
+                            <label for="birthdate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birthdate</label>
+                            <input type="date" id="birthdate" name="birthdate" value="<?php echo htmlspecialchars(isset($user['birthdate']) && $user['birthdate'] ? date('Y-m-d', strtotime($user['birthdate'])) : ''); ?>"
+                                   class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
+                            <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                <?php
+                                $ageTxt = '';
+                                if (!empty($user['birthdate']) && strtotime($user['birthdate']) !== false) {
+                                    $d1 = new DateTime(date('Y-m-d', strtotime($user['birthdate'])));
+                                    $d2 = new DateTime('today');
+                                    $ageTxt = $d1->diff($d2)->y . ' years old';
+                                }
+                                echo htmlspecialchars($ageTxt);
+                                ?>
+                            </p>
+                        </div>
+                        <div>
+                            <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Complete Address</label>
+                            <input type="text" id="address" name="address" value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>"
                                    class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
                         </div>
                     </div>
