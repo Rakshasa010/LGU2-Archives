@@ -36,8 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
     $new_confirm = $_POST['new_password_confirm'] ?? '';
     if ($current === '' || $new_pass === '' || $new_confirm === '') {
         $reset_msg = 'Please fill in all password fields.';
-    } elseif (strlen($new_pass) < 8) {
-        $reset_msg = 'New password must be at least 8 characters.';
+    } elseif (
+        strlen($new_pass) < 12 ||
+        !preg_match('/[A-Z]/', $new_pass) ||
+        !preg_match('/[a-z]/', $new_pass) ||
+        !preg_match('/[0-9]/', $new_pass) ||
+        !preg_match('/[^A-Za-z0-9]/', $new_pass)
+    ) {
+        $reset_msg = 'Password must be 12+ chars with upper, lower, number, and special.';
     } elseif ($new_pass !== $new_confirm) {
         $reset_msg = 'New password and confirmation do not match.';
     } else {
@@ -145,7 +151,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
                 </div>
             </div>
 
-            <!-- Rest of profile content goes here (same as previous user_management.php) -->
+            <div id="pwdModal" class="fixed inset-0 z-50 <?php echo ($user['must_change_password'] === 1 || (isset($_GET['force']) && $_GET['force'] == '1')) ? '' : 'hidden'; ?>">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                <div class="relative max-w-md mx-auto mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
+                    <button type="button" onclick="window.location.href='logout.php'" class="absolute top-3 right-3 p-2 rounded-lg text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-red-600 to-orange-500 flex items-center justify-center text-white mr-3">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Your Password</h2>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Update your temporary password to continue.</p>
+                        </div>
+                    </div>
+                    <?php if ($reset_msg !== ''): ?>
+                        <div class="mb-4 p-3 <?php echo $reset_success ? 'bg-green-100 border border-green-400 text-green-700 dark:bg-green-900/30 dark:text-green-200' : 'bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/30 dark:text-red-200'; ?> rounded">
+                            <?php echo $reset_msg; ?>
+                        </div>
+                    <?php endif; ?>
+                    <form action="profile.php<?php echo isset($_GET['force']) ? '?force=1' : ''; ?>" method="POST" class="space-y-4">
+                        <input type="hidden" name="reset_password" value="1">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Password</label>
+                            <div class="relative">
+                                <input type="password" id="pwdCurrent" name="current_password" required class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
+                                <button type="button" id="togglePwdCurrent" class="absolute right-0 top-0 h-full flex items-center px-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none" aria-label="Show password">
+                                    <svg id="eyeOpenCurrent" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    <svg id="eyeClosedCurrent" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.585 10.585A2 2 0 0012 14a2 2 0 001.414-.586" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.223 6.223A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.543 7a9.97 9.97 0 01-4.216 5.568" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Password</label>
+                            <div class="relative">
+                                <input type="password" id="pwdNew" name="new_password" required class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
+                                <button type="button" id="togglePwdNew" class="absolute right-0 top-0 h-full flex items-center px-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none" aria-label="Show password">
+                                    <svg id="eyeOpenNew" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    <svg id="eyeClosedNew" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.585 10.585A2 2 0 0012 14a2 2 0 001.414-.586" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.223 6.223A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.543 7a9.97 9.97 0 01-4.216 5.568" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Must be 12+ chars with upper, lower, number, special.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New Password</label>
+                            <div class="relative">
+                                <input type="password" id="pwdConfirm" name="new_password_confirm" required class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
+                                <button type="button" id="togglePwdConfirm" class="absolute right-0 top-0 h-full flex items-center px-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none" aria-label="Show password">
+                                    <svg id="eyeOpenConfirm" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    <svg id="eyeClosedConfirm" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.585 10.585A2 2 0 0012 14a2 2 0 001.414-.586" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.223 6.223A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.543 7a9.97 9.97 0 01-4.216 5.568" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                            Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Rest of profile content -->
 
         </div>
         </div>
@@ -155,5 +242,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
 
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        <?php if ($reset_success): ?>
+            setTimeout(function(){ window.location.href = 'archives-landing.php'; }, 1200);
+        <?php endif; ?>
+        (function(){
+            function bindToggle(inputId, btnId, openId, closedId){
+                var input = document.getElementById(inputId);
+                var btn = document.getElementById(btnId);
+                var open = document.getElementById(openId);
+                var closed = document.getElementById(closedId);
+                if (!input || !btn || !open || !closed) return;
+                btn.addEventListener('click', function(){
+                    var hidden = input.type === 'password';
+                    input.type = hidden ? 'text' : 'password';
+                    open.classList.toggle('hidden', hidden);
+                    closed.classList.toggle('hidden', !hidden);
+                    btn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
+                });
+            }
+            bindToggle('pwdCurrent', 'togglePwdCurrent', 'eyeOpenCurrent', 'eyeClosedCurrent');
+            bindToggle('pwdNew', 'togglePwdNew', 'eyeOpenNew', 'eyeClosedNew');
+            bindToggle('pwdConfirm', 'togglePwdConfirm', 'eyeOpenConfirm', 'eyeClosedConfirm');
+        })();
+    </script>
 </body>
 </html>

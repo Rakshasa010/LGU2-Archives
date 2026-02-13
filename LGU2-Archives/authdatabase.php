@@ -113,4 +113,27 @@ if ($__script !== 'login.php') {
     }
     $_SESSION['last_activity'] = time();
 }
+// Enforce mandatory password change across the app
+if (isset($_SESSION['user_id'])) {
+    $allowScripts = ['login.php', 'profile.php', 'forgot-password.php'];
+    if (!in_array($__script, $allowScripts, true)) {
+        $uid = (int)$_SESSION['user_id'];
+        if ($uid > 0) {
+            $chk = $conn->prepare("SELECT must_change_password FROM users WHERE id = ?");
+            if ($chk) {
+                $chk->bind_param("i", $uid);
+                $chk->execute();
+                $res = $chk->get_result();
+                if ($res && $res->num_rows === 1) {
+                    $row = $res->fetch_assoc();
+                    if ((int)$row['must_change_password'] === 1) {
+                        header("Location: profile.php?force=1");
+                        exit();
+                    }
+                }
+                $chk->close();
+            }
+        }
+    }
+}
 ?>

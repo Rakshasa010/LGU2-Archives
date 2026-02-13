@@ -34,10 +34,6 @@
     </div>
     <?php
     session_start();
-    if (isset($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header('Location: archives-landing.php');
-        exit();
-    }
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         include 'authdatabase.php';
 
@@ -54,11 +50,12 @@
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
                 $_SESSION['user_id'] = $user['id'];
-                if ((int)($user['must_change_password'] ?? 0) === 1) {
-                    header("Location: profile.php");
-                    exit();
+                $_SESSION['last_activity'] = time();
+                if (isset($user['must_change_password']) && (int)$user['must_change_password'] === 1) {
+                    header("Location: profile.php?force=1");
+                } else {
+                    header("Location: archives-landing.php");
                 }
-                header("Location: archives-landing.php");
                 exit();
             } else {
                 $error = "Invalid password.";
@@ -83,7 +80,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="login.php" method="POST" class="space-y-6" id="loginForm" autocomplete="off">
+        <form action="login.php" method="POST" class="space-y-6">
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
                 <input type="text" id="username" name="username" required
@@ -162,8 +159,7 @@
 
   <button
     type="submit"
-    id="loginSubmit"
-    class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+    class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
   >
     Login
   </button>
