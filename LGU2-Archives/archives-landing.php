@@ -68,7 +68,9 @@
     
     <!-- Mobile Sidebar -->
     <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
-        <!-- Mobile sidebar header -->
+       
+    
+    <!-- Mobile sidebar header -->
         <div class="p-4 border-b border-red-700/50 sidebar-header">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3 sidebar-logo">
@@ -87,7 +89,7 @@
         </div>
         
         <!-- Mobile Navigation Menu -->
-        <nav class="flex-1 py-4 px-3 overflow-y-auto">
+        <nav class="flex-1 py-4 px-3 overflow-hidden">
             <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
@@ -165,7 +167,7 @@
             </div>
             
             <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-y-auto py-4">
+            <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
                     <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-speedometer2 mr-3"></i>
@@ -247,6 +249,7 @@
                                 <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
                             </div>
                         </div>
+                        
                         
                         <!-- Page Title & Breadcrumb -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">

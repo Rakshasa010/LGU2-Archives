@@ -388,15 +388,13 @@ function format_bytes($bytes) {
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div class="flex items-center gap-2">
+                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
                                 <input type="date" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                 <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
                                 <input type="date" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                            </div>
-                            <div>
-                                <select class="w-full md:w-auto px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <select class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                     <option value="">All Types</option>
                                     <?php foreach (($stats['by_type'] ?? []) as $k=>$v): ?>
                                         <option value="<?php echo htmlspecialchars($k); ?>"><?php echo htmlspecialchars($k); ?></option>
