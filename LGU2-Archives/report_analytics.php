@@ -143,6 +143,71 @@ function format_bytes($bytes) {
     return round($bytes / pow(1024, $e), 2) . ' ' . $units[$e];
 }
 
+$exportQuery = $_GET;
+$exportQuery['export'] = 'csv';
+$exportUrl = 'report_analytics.php?' . http_build_query($exportQuery);
+
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    $filename = 'report_analytics_' . date('Ymd_His') . '.csv';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Report', 'Generated At']);
+    fputcsv($out, ['Reports & Analytics', date('Y-m-d H:i:s')]);
+    fputcsv($out, []);
+    fputcsv($out, ['Summary']);
+    fputcsv($out, ['Total Records', (string)($stats['total_records'] ?? 0)]);
+    fputcsv($out, ['Total Downloads', (string)($stats['downloads'] ?? 0)]);
+    fputcsv($out, ['Uploads Folder Size', format_bytes($uploads_bytes)]);
+    fputcsv($out, []);
+    fputcsv($out, ['Downloads by Type']);
+    fputcsv($out, ['Type', 'Count']);
+    if (!empty($stats['downloads_by_type'])) {
+        foreach ($stats['downloads_by_type'] as $type => $count) {
+            fputcsv($out, [$type, (string)$count]);
+        }
+    }
+    fputcsv($out, []);
+    fputcsv($out, ['Downloads by Format']);
+    fputcsv($out, ['Format', 'Count']);
+    if (!empty($stats['downloads_by_format'])) {
+        foreach ($stats['downloads_by_format'] as $format => $count) {
+            fputcsv($out, [$format, (string)$count]);
+        }
+    }
+    fputcsv($out, []);
+    fputcsv($out, ['Recent Activity']);
+    if (!empty($stats['recent_activity'])) {
+        fputcsv($out, ['Event', 'Title', 'Type', 'Format', 'Bytes', 'Date']);
+        foreach ($stats['recent_activity'] as $row) {
+            fputcsv($out, [
+                $row['event_type'] ?? '',
+                $row['record_title'] ?? '',
+                $row['record_type'] ?? '',
+                $row['download_format'] ?? '',
+                isset($row['bytes']) ? (string)$row['bytes'] : '',
+                $row['created_at'] ?? '',
+            ]);
+        }
+    } elseif (!empty($stats['recent_downloads'])) {
+        fputcsv($out, ['Title', 'Type', 'Author', 'Date']);
+        foreach ($stats['recent_downloads'] as $row) {
+            fputcsv($out, [
+                $row['title'] ?? '',
+                $row['type'] ?? '',
+                $row['author'] ?? '',
+                $row['last_accessed'] ?? '',
+            ]);
+        }
+    } else {
+        fputcsv($out, ['No recent activity available']);
+    }
+    fclose($out);
+    exit();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -176,11 +241,10 @@ function format_bytes($bytes) {
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
-
-    <!-- Mobile Sidebar -->
     <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
+       
+    
+    <!-- Mobile sidebar header -->
         <div class="p-4 border-b border-red-700/50 sidebar-header">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3 sidebar-logo">
@@ -197,83 +261,128 @@ function format_bytes($bytes) {
                 </button>
             </div>
         </div>
-        <nav class="flex-1 py-4 px-3 overflow-y-auto">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+        
+        <!-- Mobile Navigation Menu -->
+        <nav class="flex-1 py-4 px-3 overflow-hidden">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
+            
             <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-folder mr-3 text-lg"></i>
                 <span>Main Storage Archives</span>
             </a>
             
-            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-cloud-upload mr-3"></i>
-                <span class="sidebar-text">Export</span>
-            </a>
-                    
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
 
+            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-cloud-upload mr-3 text-lg"></i>
+                <span>Export</span>
+            </a>
+
+           
+            <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white bg-red-700 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-graph-up mr-3 text-lg"></i>
                     <span>Reports & Analytics</span>
                 </a>
             </div>
+            
+            <!-- ADMINISTRATION Section -->
+            <div class="mt-4 pt-4 border-t border-red-700/50">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                <?php if ($is_admin): ?>
+                <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-people mr-3 text-lg"></i>
+                    <span>User Management</span>
+                </a>
+                <?php endif; ?>
+                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-shield-check mr-3 text-lg"></i>
+                    <span>Audit Logs</span>
+                </a>
+            </div>
+            
+            <!-- Storage Bar -->
+            <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-red-100">Storage Usage</span>
+                        <span class="text-xs font-bold text-white">2%</span>
+                    </div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
+                        <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                    </div>
+                    <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                </div>
+            </div>
         </nav>
     </div>
-
+    
     <div class="flex h-screen overflow-hidden">
         <!-- Desktop Sidebar -->
         <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
+            <!-- Logo Section -->
             <div class="p-6 border-b border-red-700 sidebar-logo">
-                <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300">
-                    <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden" style="width:56px; height:56px;">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="object-contain">
+                <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
+                    <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
+                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" style="width: 100%; height: 100%;" class="object-contain">
                     </div>
-                    <div>
+                    <div class="transform transition-all duration-300 group-hover:translate-x-1 sidebar-text">
                         <h1 class="text-lg font-bold">LAS</h1>
                         <p class="text-xs text-red-200">City of Valenzuela</p>
                     </div>
                 </a>
             </div>
-            <nav class="flex-1 overflow-y-hidden py-4 px-3">
-                <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
-                    <i class="bi bi-speedometer2 mr-3 text-lg"></i>
-                    <span>Dashboard Archives</span>
-                </a>
-                <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
-                    <i class="bi bi-folder mr-3 text-lg"></i>
-                    <span>Main Storage Archives</span>
-                </a>
+            
+            <!-- Navigation Menu -->
+            <nav class="flex-1 overflow-hidden py-4">
+                <div class="px-4 space-y-1">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                        <i class="bi bi-speedometer2 mr-3"></i>
+                        <span class="sidebar-text">Dashboard Archives</span>
+                    </a>
+                    
+                    <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-folder mr-3"></i>
+                        <span class="sidebar-text">Main Storage Archives</span>
+                    </a>
 
-                <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-cloud-upload mr-3"></i>
-                    <span class="sidebar-text">Export</span>
-                </a>
+                    <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-cloud-upload mr-3"></i>
+                        <span class="sidebar-text">Export</span>
+                    </a>
 
-                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1">
-                    <i class="bi bi-trash mr-3 text-lg"></i>
-                    <span>Recently Deleted</span>
-                </a>
-                
-                <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-book mr-3"></i>
-                    <span class="sidebar-text">Version Tracking</span>
-                </a>
-                <div class="mt-4 pt-4 border-t border-red-700/50">
-                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white bg-red-700 rounded-lg mb-1">
-                        <i class="bi bi-graph-up mr-3 text-lg"></i>
-                        <span>Reports & Analytics</span>
+                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-trash mr-3"></i>
+                        <span class="sidebar-text">Recently Deleted</span>
+                    </a>
+
+                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-book mr-3"></i>
+                        <span class="sidebar-text">Version Tracking</span>
                     </a>
                 </div>
-                 <!-- ADMINISTRATION Section -->
-            <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
+                
+                
+                <!-- ANALYTICS Section -->
+                <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-graph-up mr-3"></i>
+                        <span class="sidebar-text">Reports & Analytics</span>
+                    </a>
+                </div>
+                
+                <!-- ADMINISTRATION Section -->
+                <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
                     <?php if ($is_admin): ?>
                     <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -281,17 +390,19 @@ function format_bytes($bytes) {
                         <span class="sidebar-text">User Management</span>
                     </a>
                     <?php endif; ?>
-                    
+
                     <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-person mr-3"></i>
                         <span class="sidebar-text">Profile</span>
                     </a>
-                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-shield-check mr-3 text-lg"></i>
-                    <span>Audit Logs</span>
-                </a>
-            </div>
-             <!-- Storage Bar -->
+
+                    <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-shield-check mr-3"></i>
+                        <span class="sidebar-text">Audit Logs</span>
+                    </a>
+                </div>
+                
+                <!-- Storage Bar -->
                 <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
                     <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
@@ -314,18 +425,32 @@ function format_bytes($bytes) {
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
+                        <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
+                            <!-- Sidebar Toggle Button (Desktop) -->
+
+                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                        </div>
-                        <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
-                            <div class="ml-2 md:ml-4 min-w-0">
-                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Reports & Analytics</h2>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Overview of archive activity</p>
+                            
+                            <!-- Logo (Mobile) -->
+                            <div class="mobile-only flex items-center ml-2">
+                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
                             </div>
                         </div>
+                        
+                        
+                        <!-- Page Title & Breadcrumb -->
+                        <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
+                            <div class="ml-2 md:ml-4 min-w-0">
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Report & Analytics</h2>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side Actions -->
                         <div class="flex items-center space-x-1 md:space-x-4">
+                            <!-- Dark Mode Toggle -->
                             <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
                                 <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
@@ -334,6 +459,7 @@ function format_bytes($bytes) {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                                 </svg>
                             </button>
+                        
                             <!-- Notification Dropdown (placed beside theme toggle) -->
                             <div class="relative">
                                 <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
@@ -341,7 +467,7 @@ function format_bytes($bytes) {
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -356,7 +482,9 @@ function format_bytes($bytes) {
                                     </div>
                                 </div>
                             </div>
-                            <div class="relative">
+
+                            <!-- User Profile Dropdown (moved right of notification) -->
+                             <div class="relative">
                                 <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
                                 <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
                                     <img src="uploads/profile_pictures/<?php echo htmlspecialchars($profile_picture); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
@@ -369,10 +497,12 @@ function format_bytes($bytes) {
                                 <?php endif; ?>
                                 <div class="hidden sm:block text-left">
                                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($display_name); ?></p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo $is_admin ? 'Administrator' : 'User'; ?></p>
                                 </div>
                                 <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
                             </button>
+                            
+                                <!-- Profile Dropdown -->
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
@@ -397,9 +527,12 @@ function format_bytes($bytes) {
                                 <h1 class="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Reports & Analytics</h1>
                                 <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Quick overview of records, downloads, and recent activity</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</button>
-                                <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                            <div class="flex flex-col items-end gap-1">
+                                <div class="flex items-center gap-2">
+                                    <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</a>
+                                    <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                                </div>
+                                <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browser’s default Downloads folder.</div>
                             </div>
                         </div>
                         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
