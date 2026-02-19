@@ -324,7 +324,7 @@
                                 <?php endif; ?>
                                 <div class="hidden sm:block text-left">
                                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($display_name); ?></p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo $is_admin ? 'Administrator' : 'User'; ?></p>
                                 </div>
                                 <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
                             </button>
