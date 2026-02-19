@@ -31,17 +31,27 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 $stmt->close();
-$conn->close();
 
 $display_name = $user_data['full_name'] ?? 'User';
 $profile_picture = $user_data['profile_picture'] ?? null;
-
-// Mock notifications about export requests for already stored documents
-$mock_notifications = [
-	['time' => '09:12 AM', 'date' => date('Y-m-d'), 'content' => 'Export requested for "Ordinance 2021-05" — file already stored. Generated export queued.', 'about' => 'Export Request', 'status' => 'unread'],
-	['time' => '08:45 AM', 'date' => date('Y-m-d', strtotime('-1 day')), 'content' => 'Export requested for "Public Hearing Minutes - Jan 2020" — existing file used.', 'about' => 'Export Request', 'status' => 'read'],
-	['time' => 'Yesterday', 'date' => date('Y-m-d', strtotime('-2 day')), 'content' => 'Export requested for "Building Permits 2019" — document found in archive.', 'about' => 'Export Request', 'status' => 'read'],
-];
+// Centralized notifications: load recent Export Request items
+$conn->query("CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    time VARCHAR(20) NOT NULL,
+    date DATE NOT NULL,
+    content TEXT NOT NULL,
+    about VARCHAR(80) NOT NULL,
+    status ENUM('unread','read') NOT NULL DEFAULT 'unread'
+)");
+$mock_notifications = [];
+$unread_count = 0;
+$resN = $conn->query("SELECT time, date, content, about, status FROM notifications WHERE about = 'Export Request' ORDER BY date DESC, id DESC LIMIT 50");
+if ($resN) {
+    while ($rowN = $resN->fetch_assoc()) {
+        $mock_notifications[] = $rowN;
+        if (isset($rowN['status']) && $rowN['status'] === 'unread') $unread_count++;
+    }
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -240,7 +250,7 @@ $mock_notifications = [
                             <div class="relative">
                                 <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
                                     <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
-                                    <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
+                                    <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full"><?php echo (int)$unread_count; ?></span>
                                 </button>
 
                                 <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
@@ -330,12 +340,16 @@ $mock_notifications = [
 										<div class="mt-1.5 flex items-center justify-between">
 											<div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($n['about']); ?> • <?php echo htmlspecialchars($n['date']); ?></div>
 											<div class="flex items-center gap-2">
-												<button class="px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent">View</button>
+												<button class="view-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent">View</button>
 												<button class="send-to-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent flex items-center gap-1" data-content="<?php echo htmlspecialchars($n['content']); ?>">
 													<i class="bi bi-send"></i>
 													<span>Send To</span>
 												</button>
 											</div>
+										</div>
+										<div class="export-details hidden mt-3 rounded-lg border border-gray-200 dark:border-slate-700 p-3 bg-gray-50 dark:bg-slate-700/40">
+											<div class="text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($n['content']); ?></div>
+											<div class="mt-2 text-xs text-gray-600 dark:text-gray-400">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?> • Time: <?php echo htmlspecialchars($n['time']); ?> • Date: <?php echo htmlspecialchars($n['date']); ?></div>
 										</div>
 									</div>
 								</div>
@@ -474,6 +488,17 @@ $mock_notifications = [
 			mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 			apply();
 			list.addEventListener('click', function (e) {
+				const vb = e.target.closest('.view-btn');
+				if (vb) {
+					const item = vb.closest('.export-item');
+					if (!item) return;
+					const det = item.querySelector('.export-details');
+					if (!det) return;
+					const hidden = det.classList.contains('hidden');
+					det.classList.toggle('hidden');
+					vb.textContent = hidden ? 'Hide' : 'View';
+					return;
+				}
 				const btn = e.target.closest('.send-to-btn');
 				if (!btn) return;
 				sendFile = btn.getAttribute('data-content') || '';
