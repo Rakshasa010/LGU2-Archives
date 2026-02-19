@@ -406,41 +406,41 @@
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                             <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders</h2>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <a href="ordinances-resolution.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                                <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                                     <div class="mb-3 group-hover:scale-110 transition-transform">
                                         <svg class="w-12 h-12 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                         </svg>
                                     </div>
                                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Ordinances & Resolutions</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 2 days ago</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="ordinances-resolution">Last opened: Not yet opened</div>
                                 </a>
-                                <a href="billing.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                                <a href="billing.php" data-archive="billing" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                                     <div class="mb-3 group-hover:scale-110 transition-transform">
                                         <svg class="w-12 h-12 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                         </svg>
                                     </div>
                                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Billing</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 1 week ago</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="billing">Last opened: Not yet opened</div>
                                 </a>
-                                <a href="public-hearings.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                                <a href="public-hearings.php" data-archive="public-hearings" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                                     <div class="mb-3 group-hover:scale-110 transition-transform">
                                         <svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                         </svg>
                                     </div>
                                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Public Hearings</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 2 weeks ago</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="public-hearings">Last opened: Not yet opened</div>
                                 </a>
-                                <a href="meeting-records.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                                <a href="meeting-records.php" data-archive="meeting-records" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                                     <div class="mb-3 group-hover:scale-110 transition-transform">
                                         <svg class="w-12 h-12 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                         </svg>
                                     </div>
                                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Meeting/Sessions Records</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 3 weeks ago</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                                 </a>
                             </div>
                         </div>

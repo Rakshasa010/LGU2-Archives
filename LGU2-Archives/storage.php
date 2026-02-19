@@ -390,41 +390,41 @@ if (isset($_SESSION['user_id'])) {
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
             <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <a href="ordinances-resolution.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                     </div>
                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Ordinances & Resolutions</div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 2 days ago</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="ordinances-resolution">Last opened: Not yet opened</div>
                 </a>
-                <a href="billing.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                <a href="billing.php" data-archive="billing" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                     </div>
                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Billing</div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 1 week ago</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="billing">Last opened: Not yet opened</div>
                 </a>
-                <a href="public-hearings.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                <a href="public-hearings.php" data-archive="public-hearings" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                     </div>
                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Public Hearings</div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 2 weeks ago</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="public-hearings">Last opened: Not yet opened</div>
                 </a>
-                <a href="meeting-records.php" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                <a href="meeting-records.php" data-archive="meeting-records" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                     </div>
                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Meeting/Sessions Records</div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">Last modified: 3 weeks ago</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                 </a>
             </div>
         </div>
@@ -550,6 +550,70 @@ if (isset($_SESSION['user_id'])) {
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             sidebar?.classList.add('sidebar-collapsed');
         }
+
+        (function(){
+            var storageKey = 'archive_opened_at';
+            function getMap() {
+                try {
+                    var raw = localStorage.getItem(storageKey);
+                    return raw ? JSON.parse(raw) : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+            function setMap(map) {
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(map));
+                } catch (e) {}
+            }
+            function formatTime(value) {
+                var date = new Date(value);
+                if (Number.isNaN(date.getTime())) return null;
+                var now = Date.now();
+                var diffMs = Math.max(0, now - date.getTime());
+                var seconds = Math.floor(diffMs / 1000);
+                if (seconds < 60) return 'just now';
+                var minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return minutes + (minutes === 1 ? ' minute ago' : ' minutes ago');
+                var hours = Math.floor(minutes / 60);
+                if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+                var days = Math.floor(hours / 24);
+                if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
+                var months = Math.floor(days / 30);
+                if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
+                var years = Math.floor(months / 12);
+                return years + (years === 1 ? ' year ago' : ' years ago');
+            }
+            function updateMeta(map) {
+                document.querySelectorAll('[data-archive-meta]').forEach(function(el){
+                    var id = el.getAttribute('data-archive-meta');
+                    var stored = map[id];
+                    var formatted = stored ? formatTime(stored) : null;
+                    el.textContent = formatted ? ('Last opened: ' + formatted) : 'Last opened: Not yet opened';
+                });
+            }
+            function bindClicks(map) {
+                document.querySelectorAll('a[data-archive]').forEach(function(link){
+                    link.addEventListener('click', function(){
+                        var id = link.getAttribute('data-archive');
+                        if (!id) return;
+                        map[id] = Date.now();
+                        setMap(map);
+                        updateMeta(map);
+                    });
+                });
+            }
+            function init() {
+                var map = getMap();
+                updateMeta(map);
+                bindClicks(map);
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
     <script src="assets/js/theme-toggle.js"></script>
 </body>

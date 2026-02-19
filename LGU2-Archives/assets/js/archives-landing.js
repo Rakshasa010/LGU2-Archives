@@ -92,6 +92,70 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     window.addEventListener('focus', renderRecent);
 })();
 
+(function(){
+    var storageKey = 'archive_opened_at';
+    function getMap() {
+        try {
+            var raw = localStorage.getItem(storageKey);
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function setMap(map) {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(map));
+        } catch (e) {}
+    }
+    function formatTime(value) {
+        var date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        var now = Date.now();
+        var diffMs = Math.max(0, now - date.getTime());
+        var seconds = Math.floor(diffMs / 1000);
+        if (seconds < 60) return 'just now';
+        var minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + (minutes === 1 ? ' minute ago' : ' minutes ago');
+        var hours = Math.floor(minutes / 60);
+        if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+        var days = Math.floor(hours / 24);
+        if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
+        var months = Math.floor(days / 30);
+        if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
+        var years = Math.floor(months / 12);
+        return years + (years === 1 ? ' year ago' : ' years ago');
+    }
+    function updateMeta(map) {
+        document.querySelectorAll('[data-archive-meta]').forEach(function(el){
+            var id = el.getAttribute('data-archive-meta');
+            var stored = map[id];
+            var formatted = stored ? formatTime(stored) : null;
+            el.textContent = formatted ? ('Last opened: ' + formatted) : 'Last opened: Not yet opened';
+        });
+    }
+    function bindClicks(map) {
+        document.querySelectorAll('a[data-archive]').forEach(function(link){
+            link.addEventListener('click', function(){
+                var id = link.getAttribute('data-archive');
+                if (!id) return;
+                map[id] = Date.now();
+                setMap(map);
+                updateMeta(map);
+            });
+        });
+    }
+    function init() {
+        var map = getMap();
+        updateMeta(map);
+        bindClicks(map);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
 // Notifications: fetch latest and unread count
 (function(){
     function renderNotifList(items){
