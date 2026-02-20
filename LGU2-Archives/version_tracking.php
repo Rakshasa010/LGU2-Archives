@@ -320,7 +320,7 @@ $conn->close();
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -618,6 +618,94 @@ $conn->close();
                 sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
             });
         }
+        const profileBtn = document.getElementById('profile-btn');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const notifCount = document.getElementById('notif-count');
+
+        profileBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notifDropdown?.classList.add('hidden');
+            profileDropdown?.classList.toggle('hidden');
+        });
+
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.toggle('hidden');
+            try {
+                var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
+                if (ids.length > 0) {
+                    fetch('notifications_log.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body:'event_type='+encodeURIComponent('alert_shown')+'&ids='+encodeURIComponent(JSON.stringify(ids))
+                    }).then(function(){});
+                }
+            } catch(e){}
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+                profileDropdown?.classList.add('hidden');
+            }
+            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                notifDropdown?.classList.add('hidden');
+            }
+        });
+
+        (function(){
+            function renderNotifList(items){
+                var container = document.getElementById('notif-list');
+                if (!container) return;
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
+                    return;
+                }
+                var html = items.map(function(n){
+                    var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+                    var badge = '';
+                    var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+                    if (n.status === 'unread') badge = ' ring-2 ring-red-200';
+                    return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+                           '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+                           '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+                           '<div class="flex-1 min-w-0">'+
+                           '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                           '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+                           '</div></a>';
+                }).join('');
+                container.innerHTML = html;
+            }
+            function escapeHtml(s){
+                if (typeof s !== 'string') return '';
+                return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+            }
+            function fetchLatest(){
+                fetch('notifications_fetch.php?page_size=5&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (d && d.success) renderNotifList(d.items||[]);
+                }).catch(function(){});
+            }
+            function fetchUnread(){
+                fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (!notifCount) return;
+                    var total = (d && d.success) ? (d.total||0) : 0;
+                    notifCount.textContent = String(total);
+                    notifCount.style.display = total > 0 ? 'inline-flex' : 'none';
+                }).catch(function(){});
+            }
+            function refresh(){
+                fetchLatest();
+                fetchUnread();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+            window.addEventListener('focus', refresh);
+        })();
     </script>
     <script src="assets/js/storage-status.js"></script>
 </body>

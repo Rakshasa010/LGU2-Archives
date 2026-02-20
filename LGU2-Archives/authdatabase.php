@@ -100,6 +100,15 @@ $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 $conn->query($analytics_sql);
 
+$folders_sql = "CREATE TABLE IF NOT EXISTS archive_folders (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    created_by INT(11) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+$conn->query($folders_sql);
+
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
 

@@ -353,7 +353,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -463,44 +463,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
             </a>
         </div>
     </div>
-    <script>
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileSidebar = document.getElementById('mobile-sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
-
-        mobileMenuBtn?.addEventListener('click', () => {
-            mobileSidebar?.classList.remove('-translate-x-full');
-            sidebarOverlay?.classList.remove('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.add('opacity-100', 'pointer-events-auto');
-        });
-
-        closeMobileSidebar?.addEventListener('click', () => {
-            mobileSidebar?.classList.add('-translate-x-full');
-            sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
-        });
-
-        sidebarOverlay?.addEventListener('click', () => {
-            mobileSidebar?.classList.add('-translate-x-full');
-            sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
-        });
-
-        const profileBtn = document.getElementById('profile-btn');
-        const profileDropdown = document.getElementById('profile-dropdown');
-        profileBtn?.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown?.classList.toggle('hidden'); });
-        document.addEventListener('click', () => profileDropdown?.classList.add('hidden'));
-
-        const notifBtn = document.getElementById('notification-btn');
-        const notifDropdown = document.getElementById('notification-dropdown');
-        notifBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown?.classList.add('hidden');
-            notifDropdown?.classList.toggle('hidden');
-        });
-        document.addEventListener('click', () => notifDropdown?.classList.add('hidden'));
-    </script>
+    <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

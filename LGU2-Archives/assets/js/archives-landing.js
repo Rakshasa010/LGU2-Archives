@@ -35,22 +35,20 @@ sidebarOverlay?.addEventListener('click', () => {
 const profileBtn = document.getElementById('profile-btn');
 const profileDropdown = document.getElementById('profile-dropdown');
 
-profileBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    profileDropdown?.classList.toggle('hidden');
-});
-
-document.addEventListener('click', () => {
-    profileDropdown?.classList.add('hidden');
-});
-
 // Notification dropdown (simple toggle)
 const notifBtn = document.getElementById('notification-btn');
 const notifDropdown = document.getElementById('notification-dropdown');
 const notifCount = document.getElementById('notif-count');
 
+profileBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    notifDropdown?.classList.add('hidden');
+    profileDropdown?.classList.toggle('hidden');
+});
+
 notifBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
+    profileDropdown?.classList.add('hidden');
     notifDropdown?.classList.toggle('hidden');
     try {
         var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
@@ -65,8 +63,9 @@ notifBtn?.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-    // keep existing profile behavior
-    // hide notification dropdown when clicking outside
+    if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+        profileDropdown?.classList.add('hidden');
+    }
     if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
         notifDropdown?.classList.add('hidden');
     }
