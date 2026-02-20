@@ -388,8 +388,11 @@ if (isset($_SESSION['user_id'])) {
 
                     <!-- Recent Archives Section -->
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200"> Archives Folders</h2>
+                <button id="create-folder-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Create Folder</button>
+            </div>
+            <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,6 +429,26 @@ if (isset($_SESSION['user_id'])) {
                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Meeting/Sessions Records</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                 </a>
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <div class="flex items-center gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-4 py-2 shadow-sm">
+                <button id="system-backup-btn" type="button" class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold">System Backup</button>
+                <button id="system-restore-btn" type="button" class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold">Restore</button>
+            </div>
+        </div>
+        <div id="create-folder-modal" class="hidden fixed inset-0 z-50">
+            <div id="create-folder-backdrop" class="absolute inset-0 bg-black/50"></div>
+            <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+                <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
+                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Create Folder</div>
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-2" for="new-folder-name">Folder Name</label>
+                    <input id="new-folder-name" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Enter folder name">
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button id="cancel-create-folder" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                        <button id="confirm-create-folder" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Add Folder</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -531,6 +554,54 @@ if (isset($_SESSION['user_id'])) {
             mobileSidebar?.classList.add('-translate-x-full');
             sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
             sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
+        });
+
+        const createFolderBtn = document.getElementById('create-folder-btn');
+        const foldersGrid = document.getElementById('archive-folders-grid');
+        const createModal = document.getElementById('create-folder-modal');
+        const createInput = document.getElementById('new-folder-name');
+        const createBackdrop = document.getElementById('create-folder-backdrop');
+        const cancelCreate = document.getElementById('cancel-create-folder');
+        const confirmCreate = document.getElementById('confirm-create-folder');
+        const closeCreateModal = () => {
+            createModal?.classList.add('hidden');
+            if (createInput) createInput.value = '';
+        };
+        createFolderBtn?.addEventListener('click', () => {
+            createModal?.classList.remove('hidden');
+            setTimeout(() => createInput?.focus(), 0);
+        });
+        cancelCreate?.addEventListener('click', closeCreateModal);
+        createBackdrop?.addEventListener('click', closeCreateModal);
+        confirmCreate?.addEventListener('click', () => {
+            const name = createInput?.value || '';
+            if (!name.trim()) return;
+            const safeName = name.trim();
+            const slug = safeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const card = document.createElement('a');
+            card.href = '#';
+            card.setAttribute('data-archive', slug);
+            card.className = 'block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group';
+            card.innerHTML = `
+                <div class="mb-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                </div>
+                <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">${safeName}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="${slug}">Last opened: Not yet opened</div>
+            `;
+            foldersGrid?.appendChild(card);
+            closeCreateModal();
+        });
+
+        const backupBtn = document.getElementById('system-backup-btn');
+        const restoreBtn = document.getElementById('system-restore-btn');
+        backupBtn?.addEventListener('click', () => {
+            alert('System backup started.');
+        });
+        restoreBtn?.addEventListener('click', () => {
+            alert('System restore started.');
         });
         
         // Profile dropdown

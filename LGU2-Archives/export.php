@@ -69,6 +69,9 @@ if ($resN) {
 	<link rel="stylesheet" href="assets/css/audit-logs.css">
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200 min-h-screen">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
+    
 	<!-- Mobile Sidebar -->
     <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
        
@@ -93,7 +96,7 @@ if ($resN) {
         
         <!-- Mobile Navigation Menu -->
         <nav class="flex-1 py-4 px-3 overflow-hidden">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
@@ -108,7 +111,7 @@ if ($resN) {
                 <span>Recently Deleted</span>
             </a>
 
-            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-cloud-upload mr-3 text-lg"></i>
                 <span>Export</span>
             </a>
@@ -174,7 +177,7 @@ if ($resN) {
             <!-- Navigation Menu -->
             <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
                         <span class="sidebar-text">Dashboard Archives</span>
                     </a>
@@ -184,7 +187,7 @@ if ($resN) {
                         <span class="sidebar-text">Main Storage Archives</span>
                     </a>
 
-                    <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-cloud-upload mr-3"></i>
                         <span class="sidebar-text">Export</span>
                     </a>

@@ -38,6 +38,7 @@
     }
 
     function updateRowStatus(id, status) {
+        status = (status || 'unread').toLowerCase();
         var tr = document.querySelector('[data-id="'+id+'"]');
         if (!tr) return;
         tr.setAttribute('data-status', status);
@@ -86,7 +87,7 @@
     }
     document.querySelectorAll('#notesBody tr').forEach(function(tr){
         var id = tr.getAttribute('data-id');
-        var status = tr.getAttribute('data-status') || 'unread';
+        var status = (tr.getAttribute('data-status') || 'unread').toLowerCase();
         updateRowStatus(id, status);
     });
     attachRowHandlers();
@@ -116,7 +117,7 @@
             var tr = e.target.closest('tr');
             if (!tr) return;
             var id = tr.getAttribute('data-id');
-            var cur = tr.getAttribute('data-status') || 'unread';
+            var cur = (tr.getAttribute('data-status') || 'unread').toLowerCase();
             if (cur === 'unread' && id) {
                 try {
                     fetch('notifications_update.php', {
@@ -170,19 +171,16 @@
                 e.stopPropagation();
                 var tr = btn.closest('tr');
                 var id = tr.getAttribute('data-id');
-                var cur = tr.getAttribute('data-status') || 'unread';
+                var cur = (tr.getAttribute('data-status') || 'unread').toLowerCase();
                 var next = (cur === 'unread') ? 'read' : 'unread';
+                updateRowStatus(id, next);
+                updateUnreadCount();
+                try { logEvent(next==='read'?'alert_dismissed':'notification_mark_unread',[id]); } catch(e){}
                 fetch('notifications_update.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'id='+encodeURIComponent(id)+'&status='+encodeURIComponent(next)
-                }).then(function(r){ return r.json(); }).then(function(d){
-                    if (d && d.success) {
-                        updateRowStatus(id, next);
-                        updateUnreadCount();
-                        logEvent(next==='read'?'alert_dismissed':'notification_mark_unread',[id]);
-                    }
-                }).catch(function(){});
+                }).then(function(){ }).catch(function(){});
             });
         });
     }
@@ -195,7 +193,7 @@
 
     function updateUnreadCount(){
         var unread = 0;
-        document.querySelectorAll('#notesBody tr').forEach(function(r){ if (r.getAttribute('data-status') === 'unread') unread++; });
+        document.querySelectorAll('#notesBody tr').forEach(function(r){ if ((r.getAttribute('data-status') || '').toLowerCase() === 'unread') unread++; });
         unreadCountEl.textContent = unread + ' unread';
     }
 
@@ -317,21 +315,23 @@
     var markAll = document.getElementById('mark-all-read');
     if (markAll) markAll.addEventListener('click', function(){
         var rows = Array.from(document.querySelectorAll('#notesBody tr')).filter(function(r){
-            var st = r.getAttribute('data-status') || 'unread';
-            var hidden = r.style.display === 'none';
+            var st = (r.getAttribute('data-status') || 'unread').toLowerCase();
+            var hidden = false;
+            try { hidden = window.getComputedStyle(r).display === 'none'; } catch(e){}
             return st === 'unread' && !hidden;
         });
         var ids = rows.map(function(r){ return r.getAttribute('data-id'); }).filter(Boolean);
         if (ids.length === 0) return;
+        ids.forEach(function(id){ updateRowStatus(id, 'read'); });
+        updateUnreadCount();
+        try { logEvent('alert_dismissed', ids); } catch(e){}
         Promise.all(ids.map(function(id){
             return fetch('notifications_update.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'id='+encodeURIComponent(id)+'&status=read'
-            }).then(function(){ updateRowStatus(id, 'read'); });
-        })).then(function(){
-            updateUnreadCount();
-        }).catch(function(){});
+            }).then(function(){});
+        })).catch(function(){});
     });
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function(){ fetchNotifications(); });

@@ -123,7 +123,7 @@ $conn->close();
         
         <!-- Mobile Navigation Menu -->
         <nav class="flex-1 py-4 px-3 overflow-hidden">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
@@ -204,7 +204,7 @@ $conn->close();
             <!-- Navigation Menu -->
             <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
                         <span class="sidebar-text">Dashboard Archives</span>
                     </a>
@@ -224,7 +224,7 @@ $conn->close();
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
 
-                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-book mr-3"></i>
                         <span class="sidebar-text">Version Tracking</span>
                     </a>
@@ -288,15 +288,9 @@ $conn->close();
                         <div class="flex items-center">
                             <!-- Sidebar Toggle Button (Desktop) -->
 
-                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                            
-                            <!-- Logo (Mobile) -->
-                            <div class="mobile-only flex items-center ml-2">
-                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
-                            </div>
                         </div>
                         
                         

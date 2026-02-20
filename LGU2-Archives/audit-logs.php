@@ -248,10 +248,19 @@
                 <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
+                        <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
+                            <!-- Sidebar Toggle Button (Desktop) -->
+
+                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
+                            
+                            <!-- Logo (Mobile) -->
+                            <div class="mobile-only flex items-center ml-2">
+                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                            </div>
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
@@ -402,7 +411,8 @@
                                                 </td>
                                                 <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-3 text-sm">
-                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button">Mark Read</button>
+                                                    <?php $isReadBtn = strtolower($note['status']) === 'read'; ?>
+                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border <?php echo $isReadBtn ? 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?> transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>

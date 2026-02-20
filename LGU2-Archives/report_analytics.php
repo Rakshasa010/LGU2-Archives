@@ -264,7 +264,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         
         <!-- Mobile Navigation Menu -->
         <nav class="flex-1 py-4 px-3 overflow-hidden">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
@@ -288,7 +288,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-graph-up mr-3 text-lg"></i>
                     <span>Reports & Analytics</span>
                 </a>
@@ -345,7 +345,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             <!-- Navigation Menu -->
             <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
                         <span class="sidebar-text">Dashboard Archives</span>
                     </a>
@@ -375,7 +375,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 <!-- ANALYTICS Section -->
                 <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-graph-up mr-3"></i>
                         <span class="sidebar-text">Reports & Analytics</span>
                     </a>
@@ -429,15 +429,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                         <div class="flex items-center">
                             <!-- Sidebar Toggle Button (Desktop) -->
 
-                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                            
-                            <!-- Logo (Mobile) -->
-                            <div class="mobile-only flex items-center ml-2">
-                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
-                            </div>
                         </div>
                         
                         
@@ -528,10 +522,19 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                                 <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Quick overview of records, downloads, and recent activity</p>
                             </div>
                             <div class="flex flex-col items-end gap-1">
-                                <div class="flex items-center gap-2">
-                                    <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</a>
-                                    <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                            <div class="flex items-center gap-2">
+                                <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</a>
+                                <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                                <div class="relative">
+                                    <button id="more-actions-btn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200" title="More options">
+                                        <i class="bi bi-three-dots-vertical text-lg"></i>
+                                    </button>
+                                    <div id="more-actions-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                        <button id="refresh-analytics" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Refresh Data</button>
+                                        <a href="audit-logs.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">View Audit Logs</a>
+                                    </div>
                                 </div>
+                            </div>
                                 <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browser’s default Downloads folder.</div>
                             </div>
                         </div>
@@ -756,6 +759,21 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             notifDropdown?.classList.toggle('hidden');
         });
         document.addEventListener('click', () => notifDropdown?.classList.add('hidden'));
+
+        const moreBtn = document.getElementById('more-actions-btn');
+        const moreDropdown = document.getElementById('more-actions-dropdown');
+        const refreshBtn = document.getElementById('refresh-analytics');
+        moreBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.add('hidden');
+            moreDropdown?.classList.toggle('hidden');
+        });
+        refreshBtn?.addEventListener('click', () => {
+            moreDropdown?.classList.add('hidden');
+            location.reload();
+        });
+        document.addEventListener('click', () => moreDropdown?.classList.add('hidden'));
 
         if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar?.classList.add('sidebar-collapsed');
 
