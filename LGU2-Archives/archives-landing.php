@@ -42,6 +42,13 @@
         $user_data = $result->fetch_assoc();
     }
     $stmt->close();
+    $archive_folders = [];
+    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+    if ($folders_result && $folders_result->num_rows > 0) {
+        while ($row = $folders_result->fetch_assoc()) {
+            $archive_folders[] = $row;
+        }
+    }
     $conn->close();
     
     $display_name = $user_data['full_name'] ?? 'User';
@@ -442,6 +449,17 @@
                                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Meeting/Sessions Records</div>
                                     <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                                 </a>
+                                <?php foreach ($archive_folders as $folder): ?>
+                                <a href="ordinances-resolution.php?folder=<?php echo urlencode($folder['slug'] ?? ''); ?>&name=<?php echo urlencode($folder['name'] ?? ''); ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                                    <div class="mb-3 group-hover:scale-110 transition-transform">
+                                        <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">Last opened: Not yet opened</div>
+                                </a>
+                                <?php endforeach; ?>
                             </div>
                         </div>
 
