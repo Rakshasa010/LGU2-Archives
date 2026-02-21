@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Securely download a copy of the document below.</p>
                             </div>
                         </div>
-                        <button id="closeX" aria-label="Close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <button id="closeX" aria-label="Close" onclick="window.close();" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -141,22 +141,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         </div>
 
                         <div class="flex gap-3">
-                            <button class="download-format flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:from-red-600 hover:to-pink-600 transition" data-format="pdf">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-3-3m3 3l3-3M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7"></path></svg>
-                                PDF
-                            </button>
-                            <button class="download-format flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow hover:from-blue-600 hover:to-cyan-600 transition" data-format="docx">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path></svg>
-                                DOCX
-                            </button>
-                            <button class="download-format flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 transition" data-format="xml">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7L9 18l-5-5"></path></svg>
-                                XML
-                            </button>
+                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
+                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
+                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
+                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
+                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
+                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
+                                <input type="hidden" name="format" value="pdf">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:from-red-600 hover:to-pink-600 transition">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-3-3m3 3l3-3M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7"></path></svg>
+                                    PDF
+                                </button>
+                            </form>
+                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
+                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
+                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
+                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
+                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
+                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
+                                <input type="hidden" name="format" value="docx">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow hover:from-blue-600 hover:to-cyan-600 transition">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path></svg>
+                                    DOCX
+                                </button>
+                            </form>
+                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
+                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
+                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
+                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
+                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
+                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
+                                <input type="hidden" name="format" value="xml">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 transition">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7L9 18l-5-5"></path></svg>
+                                    XML
+                                </button>
+                            </form>
                         </div>
 
                         <div class="flex justify-end">
-                            <button id="cancelDownload" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Cancel</button>
+                            <button id="cancelDownload" onclick="window.close();" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -164,7 +191,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         </div>
 
         <script id="download-record" type="application/json"><?php echo json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
-        <script src="assets/js/download.js"></script>
+        <script>
+            // Simple animation
+            document.addEventListener('DOMContentLoaded', () => {
+                const card = document.getElementById('modalCard');
+                if (card) {
+                    setTimeout(() => {
+                        card.classList.remove('scale-95', 'opacity-0');
+                        card.classList.add('scale-100', 'opacity-100');
+                    }, 50);
+                }
+            });
+        </script>
         <?php include 'includes/footer_scripts.php'; ?>
     </body>
     </html>

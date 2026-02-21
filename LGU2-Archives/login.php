@@ -40,35 +40,77 @@
         $username = trim($_POST['username']);
         $password = $_POST['password'];
 
-        $sql = "SELECT id, password, must_change_password, status, role FROM users WHERE username = ?";
-        $stmt = $conn->prepare($sql);
+        // Check for lockout
+        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, failed_attempts, lockout_until FROM users WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result->num_rows == 1) {
             $user = $result->fetch_assoc();
-            if (password_verify($password, $user['password'])) {
-                if (isset($user['status']) && $user['status'] !== 'active') {
-                    if ($user['status'] === 'pending') {
-                        $error = "Your account is pending approval by an administrator.";
-                    } elseif ($user['status'] === 'rejected') {
-                        $error = "Your account was rejected. Please contact support.";
+
+            if ($user['lockout_until'] && strtotime($user['lockout_until']) > time()) {
+                $wait = ceil((strtotime($user['lockout_until']) - time()) / 60);
+                $error = "Account locked due to too many failed attempts. Please try again in " . $wait . " minutes.";
+            } else {
+                if (password_verify($password, $user['password'])) {
+                    // Reset failed attempts
+                    $conn->query("UPDATE users SET failed_attempts = 0, lockout_until = NULL, last_activity = NOW() WHERE id = " . $user['id']);
+                    
+                    if (isset($user['status']) && $user['status'] !== 'active') {
+                        if ($user['status'] === 'pending') {
+                            $error = "Your account is pending approval by an administrator.";
+                        } elseif ($user['status'] === 'rejected') {
+                            $error = "Your account was rejected. Please contact support.";
+                        } else {
+                            $error = "Your account is not active.";
+                        }
                     } else {
-                        $error = "Your account is not active.";
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['last_activity'] = time();
+                        if (isset($user['must_change_password']) && (int)$user['must_change_password'] === 1) {
+                            header("Location: profile.php?force=1");
+                        } else {
+                            header("Location: archives-landing.php");
+                        }
+                        exit();
                     }
                 } else {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['last_activity'] = time();
-                    if (isset($user['must_change_password']) && (int)$user['must_change_password'] === 1) {
-                        header("Location: profile.php?force=1");
+                    // Increment failed attempts
+                    $new_attempts = $user['failed_attempts'] + 1;
+                    if ($new_attempts >= 5) {
+                        $lockout_time = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+                        $stmt = $conn->prepare("UPDATE users SET failed_attempts = ?, lockout_until = ? WHERE id = ?");
+                        $stmt->bind_param("isi", $new_attempts, $lockout_time, $user['id']);
+                        $stmt->execute();
+                        $error = "Account locked for 5 minutes due to multiple failed login attempts.";
+                        
+                        // Log security alert
+                        $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            time VARCHAR(20) NOT NULL,
+                            date DATE NOT NULL,
+                            content VARCHAR(255) NOT NULL,
+                            about VARCHAR(100) NOT NULL,
+                            status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )");
+                        $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                        $ntime = date('h:i A');
+                        $ndate = date('Y-m-d');
+                        $ncontent = "Security Alert: Multiple failed login attempts for user " . $username;
+                        $nabout = "Security";
+                        $nstatus = "unread";
+                        $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                        $nt->execute();
                     } else {
-                        header("Location: archives-landing.php");
+                        $stmt = $conn->prepare("UPDATE users SET failed_attempts = ? WHERE id = ?");
+                        $stmt->bind_param("ii", $new_attempts, $user['id']);
+                        $stmt->execute();
+                        $remaining = 5 - $new_attempts;
+                        $error = "Invalid password. " . $remaining . " attempt(s) remaining.";
                     }
-                    exit();
                 }
-            } else {
-                $error = "Invalid password.";
             }
         } else {
             $error = "Username not found.";

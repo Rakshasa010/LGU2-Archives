@@ -269,6 +269,7 @@ $conn->close();
 
     <script src="assets/js/deleted-files.js"></script>
     <script src="assets/js/recent-views.js"></script>
+    <script src="assets/js/highlight-record.js"></script>
     <script>
         function openDownloadPopup(id, title, type, month, year, author) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;

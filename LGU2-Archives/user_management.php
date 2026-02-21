@@ -24,9 +24,20 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $target = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
-    if ($target > 0 && in_array($action, ['approve','reject'], true)) {
-        $info = null;
-        $gi = $conn->prepare("SELECT full_name, username, email FROM users WHERE id = ?");
+    if ($target > 0 && in_array($action, ['approve','reject','delete'], true)) {
+        if ($action === 'delete') {
+            // Delete user
+            $del = $conn->prepare("DELETE FROM users WHERE id = ?");
+            $del->bind_param("i", $target);
+            if ($del->execute()) {
+                $message = 'User deleted.';
+            } else {
+                $message = 'Failed to delete user.';
+            }
+            $del->close();
+        } else {
+            $info = null;
+            $gi = $conn->prepare("SELECT full_name, username, email FROM users WHERE id = ?");
         if ($gi) { $gi->bind_param("i", $target); $gi->execute(); $r = $gi->get_result(); if ($r) { $info = $r->fetch_assoc(); } $gi->close(); }
         $newStatus = $action === 'approve' ? 'active' : 'rejected';
         $up = $conn->prepare("UPDATE users SET status = ? WHERE id = ?");
@@ -105,12 +116,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Failed to update user.';
         }
         $up->close();
+        }
     }
 }
 
 $pending = [];
 if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM users WHERE status = 'pending' ORDER BY created_at DESC")) {
     while ($row = $q->fetch_assoc()) { $pending[] = $row; }
+}
+
+$all_users = [];
+if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activity, role FROM users ORDER BY full_name ASC")) {
+    while ($row = $q->fetch_assoc()) { $all_users[] = $row; }
 }
 ?>
 <!doctype html>
@@ -457,6 +474,72 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                 </table>
             </div>
         </div>
+        
+        <!-- Active/Inactive Users List -->
+        <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="font-semibold text-gray-800 dark:text-gray-200">User List</div>
+                <span class="text-sm text-gray-600 dark:text-gray-400"><?php echo count($all_users); ?> users</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50 dark:bg-slate-700/50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Active</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                        <?php if (empty($all_users)): ?>
+                            <tr>
+                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No users found</td>
+                            </tr>
+                        <?php else: foreach ($all_users as $u): ?>
+                            <tr>
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                    <?php echo htmlspecialchars($u['full_name']); ?>
+                                    <?php if(isset($u['role']) && $u['role']==='admin') echo '<span class="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Admin</span>'; ?>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
+                                <td class="px-6 py-4 text-sm">
+                                    <span class="px-2 py-1 text-xs rounded-full <?php echo $u['status']==='active'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'; ?>">
+                                        <?php echo ucfirst($u['status']); ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                                    <?php 
+                                    if (!empty($u['last_activity'])) {
+                                        $diff = time() - strtotime($u['last_activity']);
+                                        if ($diff < 60) echo 'Just now';
+                                        elseif ($diff < 3600) echo floor($diff/60) . ' mins ago';
+                                        elseif ($diff < 86400) echo floor($diff/3600) . ' hours ago';
+                                        else echo floor($diff/86400) . ' days ago';
+                                    } else {
+                                        echo 'Never';
+                                    }
+                                    ?>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <?php if ((int)$u['id'] !== $user_id): // Prevent deleting self ?>
+                                    <form method="post" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                        <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="text-red-600 hover:text-red-800 dark:hover:text-red-400" title="Delete User">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="mt-6">
             <a href="archives-landing.php" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700">
                 <span class="mr-2">←</span> Back to Archives

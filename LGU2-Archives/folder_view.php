@@ -270,14 +270,18 @@ $conn->close();
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="download_file.php?id=<?php echo $file['id']; ?>" target="_blank" class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 transition-colors">
-                            View
-                        </a>
-                        <a href="download_file.php?id=<?php echo $file['id']; ?>" class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 transition-colors">
-                            Download
-                        </a>
-                        <button onclick="deleteFile(<?php echo $file['id']; ?>)" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                            <i class="bi bi-trash"></i>
+                        <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>)" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            <span>View</span>
+                        </button>
+                        <button onclick="downloadFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>)" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <span>Download</span>
+                        </button>
+                        <button onclick="deleteFile(<?php echo $file['id']; ?>)" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
+                            <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -306,18 +310,60 @@ $conn->close();
             <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Upload File</h3>
             <form id="uploadForm" onsubmit="handleUpload(event)">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
-                    <input type="file" id="fileInput" required class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Files</label>
+                    <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-8 text-center hover:border-red-500 dark:hover:border-red-400 transition-colors cursor-pointer bg-gray-50 dark:bg-slate-700/50">
+                        <i class="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Drag and drop files here or click to browse</p>
+                        <input type="file" id="fileInput" multiple class="hidden">
+                    </div>
+                    <div id="file-list-preview" class="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto"></div>
                 </div>
-                <div class="flex justify-end gap-3">
-                    <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Upload</button>
+                <div class="flex justify-between items-center">
+                    <div id="upload-progress" class="hidden text-sm text-red-600 dark:text-red-400 font-medium">Uploading...</div>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Upload</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Side Viewer Panel -->
+    <div id="sideViewer" class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-xl transform translate-x-full transition-transform duration-200 z-50">
+        <div class="p-4 flex items-start justify-between border-b border-gray-100 dark:border-slate-700">
+            <div>
+                <div id="sv-title" class="font-semibold text-lg text-gray-900 dark:text-gray-100">Title</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="sv-meta">Meta</div>
+            </div>
+            <div class="text-right">
+                <button onclick="closeSideViewer()" class="text-gray-500 hover:text-gray-700 dark:text-gray-300">&times;</button>
+            </div>
+        </div>
+        <div class="p-4 space-y-3">
+            <div class="text-sm text-gray-600 dark:text-gray-300"><strong>Type:</strong> <span id="sv-type"></span></div>
+            <div class="text-sm text-gray-600 dark:text-gray-300"><strong>Author:</strong> <span id="sv-author"></span></div>
+            <div class="mt-2">
+                <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Details</div>
+                <div class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <div class="flex justify-between"><span>Title</span><span id="sv-d-title"></span></div>
+                    <div class="flex justify-between"><span>Authors</span><span id="sv-d-authors"></span></div>
+                    <div class="flex justify-between"><span>Size</span><span id="sv-d-size"></span></div>
+                    <div class="flex justify-between"><span>Date modified</span><span id="sv-d-modified"></span></div>
+                    <div class="flex justify-between"><span>Content type</span><span id="sv-d-ctype"></span></div>
+                    <div class="flex justify-between"><span>Date last saved</span><span id="sv-d-saved"></span></div>
+                    <div class="flex justify-between"><span>File type</span><span id="sv-d-ftype"></span></div>
+                </div>
+            </div>
+            <div id="sv-preview" class="mt-3 text-sm text-gray-500 dark:text-gray-400">Preview not available. Use Open to download or view the file.</div>
+        </div>
+        <div class="p-4 border-t border-gray-100 dark:border-slate-700">
+            <a id="sv-open-btn" class="inline-block px-4 py-2 bg-red-600 text-white rounded hidden" href="#" target="_blank">Open / Download</a>
+        </div>
+    </div>
+
     <script>
+        // File Upload Functions
         function openCreateFolderModal() {
             document.getElementById('createFolderModal').classList.remove('hidden');
             document.getElementById('newFolderName').focus();
@@ -330,59 +376,55 @@ $conn->close();
 
         function openUploadModal() {
             document.getElementById('uploadFileModal').classList.remove('hidden');
+            setupDragAndDrop();
         }
 
         function closeUploadModal() {
             document.getElementById('uploadFileModal').classList.add('hidden');
             document.getElementById('fileInput').value = '';
+            document.getElementById('file-list-preview').innerHTML = '';
+            document.getElementById('upload-progress').classList.add('hidden');
         }
 
-        async function createFolder() {
-            const name = document.getElementById('newFolderName').value.trim();
-            if (!name) return;
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('fileInput');
 
-            try {
-                const formData = new FormData();
-                formData.append('action', 'create_folder');
-                formData.append('name', name);
+            dropZone.onclick = () => fileInput.click();
 
-                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
+            dropZone.ondragover = (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+            };
 
-                if (data.success) {
-                    const folder = data.folder;
-                    const list = document.getElementById('content-list');
-                    const div = document.createElement('div');
-                    div.className = 'p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group';
-                    div.id = 'folder-' + folder.id;
-                    div.innerHTML = `
-                        <a href="folder_view.php?id=${folder.id}" class="flex items-center flex-1 min-w-0 gap-4">
-                            <i class="bi bi-folder-fill text-2xl text-yellow-500"></i>
-                            <div class="min-w-0">
-                                <div class="font-medium text-gray-800 dark:text-gray-200 truncate">${escapeHtml(folder.name)}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Just now</div>
-                            </div>
-                        </a>
-                        <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onclick="deleteFolder(${folder.id})" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                    // Insert at top of list (after potential empty message)
-                    if (list.querySelector('.text-center')) list.querySelector('.text-center').remove();
-                    list.insertBefore(div, list.firstChild);
-                    closeCreateFolderModal();
-                } else {
-                    alert(data.message || 'Failed to create folder');
+            dropZone.ondragleave = () => {
+                dropZone.classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+            };
+
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    updateFilePreview(fileInput.files);
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Error creating folder');
-            }
+            };
+
+            fileInput.onchange = () => updateFilePreview(fileInput.files);
+        }
+
+        function updateFilePreview(files) {
+            const preview = document.getElementById('file-list-preview');
+            preview.innerHTML = '';
+            Array.from(files).forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between bg-white dark:bg-slate-700 p-2 rounded border border-gray-200 dark:border-slate-600';
+                div.innerHTML = `
+                    <span class="truncate">${escapeHtml(file.name)}</span>
+                    <span class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</span>
+                `;
+                preview.appendChild(div);
+            });
         }
 
         async function handleUpload(e) {
@@ -390,54 +432,68 @@ $conn->close();
             const fileInput = document.getElementById('fileInput');
             if (!fileInput.files.length) return;
 
-            const formData = new FormData();
-            formData.append('action', 'upload_file');
-            formData.append('file', fileInput.files[0]);
+            const progress = document.getElementById('upload-progress');
+            progress.classList.remove('hidden');
+            progress.textContent = `Uploading ${fileInput.files.length} file(s)...`;
 
-            try {
-                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
+            let successCount = 0;
+            const list = document.getElementById('content-list');
 
-                if (data.success) {
-                    const file = data.file;
-                    const list = document.getElementById('content-list');
-                    const div = document.createElement('div');
-                    div.className = 'p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group';
-                    div.id = 'file-' + file.id;
-                    div.innerHTML = `
-                        <div class="flex items-center flex-1 min-w-0 gap-4">
-                            <i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>
-                            <div class="min-w-0">
-                                <div class="font-medium text-gray-800 dark:text-gray-200 truncate">${escapeHtml(file.name)}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Just now</div>
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const formData = new FormData();
+                formData.append('action', 'upload_file');
+                formData.append('file', fileInput.files[i]);
+
+                try {
+                    const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        successCount++;
+                        const file = data.file;
+                        const div = document.createElement('div');
+                        div.className = 'p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group';
+                        div.id = 'file-' + file.id;
+                        div.innerHTML = `
+                            <div class="flex items-center flex-1 min-w-0 gap-4">
+                                <i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>
+                                <div class="min-w-0">
+                                    <div class="font-medium text-gray-800 dark:text-gray-200 truncate">${escapeHtml(file.name)}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Just now</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <a href="download_file.php?id=${file.id}" target="_blank" class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 transition-colors">
-                                View
-                            </a>
-                            <a href="download_file.php?id=${file.id}" class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 transition-colors">
-                                Download
-                            </a>
-                            <button onclick="deleteFile(${file.id})" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                    if (list.querySelector('.text-center')) list.querySelector('.text-center').remove();
-                    list.appendChild(div); // Append files at bottom, or insert after folders? 
-                    // To keep folders first, we might need to find the last folder and insert after it, or just append to end.
-                    // For simplicity, appending to end is fine as folders are usually at top.
-                    closeUploadModal();
-                } else {
-                    alert(data.message || 'Failed to upload file');
+                            <div class="flex items-center gap-2">
+                                <button onclick="previewFile('${escapeHtml(file.name)}', ${file.id})" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    <span>View</span>
+                                </button>
+                                <button onclick="downloadFile('${escapeHtml(file.name)}', ${file.id})" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    <span>Download</span>
+                                </button>
+                                <button onclick="deleteFile(${file.id})" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
+                                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        `;
+                        if (list.querySelector('.text-center')) list.querySelector('.text-center').remove();
+                        list.appendChild(div);
+                    }
+                } catch (e) {
+                    console.error(e);
                 }
-            } catch (e) {
-                console.error(e);
-                alert('Error uploading file');
+            }
+
+            if (successCount > 0) {
+                closeUploadModal();
+            } else {
+                alert('Failed to upload files');
+                progress.classList.add('hidden');
             }
         }
 
@@ -451,10 +507,104 @@ $conn->close();
                 .replace(/'/g, "&#039;");
         }
 
+        function openSideViewer(data) {
+            const panel = document.getElementById('sideViewer');
+            if (!panel) return;
+            document.getElementById('sv-title').textContent = data.title || 'Untitled';
+            document.getElementById('sv-type').textContent = data.type || '';
+            document.getElementById('sv-meta').textContent = `${data.month || ''} ${data.year || ''}`.trim();
+            document.getElementById('sv-author').textContent = data.author || '';
+            document.getElementById('sv-d-title').textContent = data.title || '';
+            document.getElementById('sv-d-authors').textContent = data.author || '';
+            document.getElementById('sv-d-size').textContent = data.size ? data.size : 'Unknown';
+            document.getElementById('sv-d-modified').textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : 'Unknown';
+            document.getElementById('sv-d-ctype').textContent = data.contentType || 'Unknown';
+            document.getElementById('sv-d-saved').textContent = data.lastSaved ? new Date(data.lastSaved).toLocaleString() : 'Unknown';
+            document.getElementById('sv-d-ftype').textContent = data.fileType || 'Unknown';
+            const openBtn = document.getElementById('sv-open-btn');
+            const preview = document.getElementById('sv-preview');
+
+            const pdfUrl = (data.rawUrl && typeof data.rawUrl === 'string') ? data.rawUrl : (data.previewUrl || data.downloadUrl);
+            if (pdfUrl && (pdfUrl.toLowerCase().endsWith('.pdf') || pdfUrl.includes('view=1'))) {
+                preview.innerHTML = `<iframe class="w-full h-[60vh] border" src="${pdfUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
+            } else {
+                preview.textContent = data.previewText || 'Preview not available. Use Open to download or view the file.';
+            }
+
+            if (data.downloadUrl) {
+                openBtn.href = data.downloadUrl;
+                openBtn.classList.remove('hidden');
+            } else {
+                openBtn.classList.add('hidden');
+            }
+            panel.classList.remove('translate-x-full');
+            panel.classList.add('translate-x-0');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSideViewer() {
+            const panel = document.getElementById('sideViewer');
+            if (!panel) return;
+            panel.classList.remove('translate-x-0');
+            panel.classList.add('translate-x-full');
+            document.body.style.overflow = 'auto';
+        }
+
+        function previewFile(fileName, fileId) {
+            // Mock metadata since archive_files table might be simple
+            const data = {
+                title: fileName,
+                type: 'File',
+                month: new Date().toLocaleString('default', { month: 'long' }),
+                year: new Date().getFullYear(),
+                author: 'System',
+                downloadUrl: 'download_file.php?id=' + fileId,
+                previewUrl: 'download_file.php?id=' + fileId + '&view=1', // Assuming download_file.php supports view=1 for inline
+                fileType: fileName.split('.').pop().toUpperCase()
+            };
+            openSideViewer(data);
+        }
+
+        function downloadFile(fileName, fileId) {
+            // Redirect to download.php logic with params
+            const params = new URLSearchParams({
+                id: fileId,
+                title: fileName,
+                type: 'File',
+                month: new Date().toLocaleString('default', { month: 'long' }),
+                year: new Date().getFullYear(),
+                author: 'System'
+            });
+            window.open('download.php?' + params.toString(), '_blank');
+        }
+        
         async function deleteFile(id) {
             if (!confirm('Are you sure you want to delete this file?')) return;
 
             try {
+                // Get file info from DOM before deleting
+                const fileEl = document.getElementById('file-' + id);
+                let fileName = 'Unknown File';
+                if (fileEl) {
+                    const nameEl = fileEl.querySelector('.truncate');
+                    if (nameEl) fileName = nameEl.textContent;
+                }
+
+                // Add to localStorage for recent_deleted.php
+                const deletedItem = {
+                    id: id,
+                    name: fileName,
+                    type: fileName.split('.').pop().toUpperCase(),
+                    category: 'Main Storage',
+                    originalPath: 'Main Storage', // Could be dynamic folder path
+                    deletedAt: new Date().toLocaleString(),
+                    expireAt: new Date(Date.now() + 30*24*60*60*1000).toISOString() // 30 days
+                };
+                
+                const existing = JSON.parse(localStorage.getItem('deletedFiles') || '[]');
+                existing.push(deletedItem);
+                localStorage.setItem('deletedFiles', JSON.stringify(existing));
+
                 const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -463,7 +613,7 @@ $conn->close();
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById('file-' + id).remove();
+                    if (fileEl) fileEl.remove();
                 } else {
                     alert(data.message || 'Failed to delete file');
                 }

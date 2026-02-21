@@ -242,6 +242,7 @@ $conn->close();
     <script src="assets/js/billing.js"></script>
     <script src="assets/js/deleted-files.js"></script>
     <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/highlight-record.js"></script>
     <!-- Side Viewer Panel -->
     <div id="sideViewer" class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-xl transform translate-x-full transition-transform duration-200 z-50">
         <div class="p-4 flex items-start justify-between border-b border-gray-100 dark:border-slate-700">

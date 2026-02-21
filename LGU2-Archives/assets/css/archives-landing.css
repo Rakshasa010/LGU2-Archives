@@ -26,3 +26,14 @@
         display: flex !important;
     }
 }
+
+@keyframes highlightFade {
+    0% { background-color: rgba(255, 235, 59, 0.5); border-color: #f59e0b; }
+    100% { background-color: transparent; border-color: transparent; }
+}
+
+.highlight-record {
+    animation: highlightFade 3s ease-out forwards;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}

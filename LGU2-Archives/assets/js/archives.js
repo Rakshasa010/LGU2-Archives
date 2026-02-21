@@ -137,24 +137,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 return `
-                    <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-slate-600 cursor-pointer search-result-item"
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-lg transition-all border border-gray-200 dark:border-slate-700 cursor-pointer search-result-item group"
                          data-record-id="${record.id}"
                          data-title="${record.title.replace(/"/g, '&quot;')}"
                          data-type="${record.type.replace(/"/g, '&quot;')}"
                          data-month="${record.month.replace(/"/g, '&quot;')}"
                          data-year="${record.year}"
                          data-author="${record.author.replace(/"/g, '&quot;')}">
-                        <div class="flex items-start space-x-4">
-                            <div class="flex-shrink-0">${getTypeIcon(record.type)}</div>
-                            <div class="flex-1">
-                                <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">${highlightedTitle}</div>
-                                <div class="text-sm text-gray-600 dark:text-gray-400">
-                                    <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">${record.type}</span>
-                                    <span class="mx-2">•</span>
-                                    <span>${record.month} ${record.year}</span>
-                                    <span class="mx-2">•</span>
-                                    <span>${record.author}</span>
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4 flex-1">
+                                <div class="flex-shrink-0 p-2 bg-gray-100 dark:bg-slate-700 rounded-lg group-hover:bg-red-50 dark:group-hover:bg-red-900/20 transition-colors">
+                                    ${getTypeIcon(record.type)}
                                 </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-gray-800 dark:text-gray-100 mb-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate pr-4">
+                                        ${highlightedTitle}
+                                    </div>
+                                    <div class="flex flex-wrap items-center text-sm text-gray-600 dark:text-gray-400 gap-y-1">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 mr-2">
+                                            ${record.type}
+                                        </span>
+                                        <span class="flex items-center mr-3">
+                                            <i class="bi bi-calendar3 mr-1.5 text-xs"></i>
+                                            ${record.month} ${record.year}
+                                        </span>
+                                        <span class="flex items-center truncate max-w-[150px]" title="${record.author}">
+                                            <i class="bi bi-person mr-1.5 text-xs"></i>
+                                            ${record.author}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 self-center ml-4">
+                                <button class="p-2 rounded-full text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
+                                    <svg class="w-6 h-6 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>

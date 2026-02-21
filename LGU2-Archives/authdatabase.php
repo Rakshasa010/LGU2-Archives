@@ -82,6 +82,24 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_picture");
 }
 
+// Add last_activity column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'last_activity'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN last_activity DATETIME NULL AFTER updated_at");
+}
+
+// Add failed_attempts column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'failed_attempts'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN failed_attempts INT DEFAULT 0 AFTER last_activity");
+}
+
+// Add lockout_until column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'lockout_until'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN lockout_until DATETIME NULL AFTER failed_attempts");
+}
+
 // Create analytics_events table (used by report_analytics.php)
 $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
