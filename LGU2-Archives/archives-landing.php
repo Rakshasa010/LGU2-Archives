@@ -13,9 +13,7 @@
     <meta name="keywords" content="Archives, Valenzuela, Legislative Records, Document Management">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="assets/js/archives-landing-head.js"></script>
-    <script src="assets/js/theme-head.js"></script>
+    <?php include 'includes/header_scripts.php'; ?>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">
@@ -450,7 +448,7 @@
                                     <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                                 </a>
                                 <?php foreach ($archive_folders as $folder): ?>
-                                <a href="ordinances-resolution.php?folder=<?php echo urlencode($folder['slug'] ?? ''); ?>&name=<?php echo urlencode($folder['name'] ?? ''); ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                                <a href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                                     <div class="mb-3 group-hover:scale-110 transition-transform">
                                         <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -570,6 +568,6 @@
     <script src="assets/js/recent-views.js"></script>
     <script src="assets/js/archives.js"></script>
     <script src="assets/js/archives-landing.js"></script>
-    <script src="assets/js/theme-toggle.js"></script>
+    <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

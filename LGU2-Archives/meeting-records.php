@@ -371,7 +371,8 @@ $conn->close();
                 contentType = ct[fileType] || '';
             }
             const url = `download.php?id=0&title=${encodeURIComponent(title)}&type=${encodeURIComponent(fileType)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            openSideViewer({ title, type: fileType, month, year, author, fileType, contentType, downloadUrl: url });
+            const previewUrl = `download.php?action=view&id=0&title=${encodeURIComponent(title)}&type=${encodeURIComponent(fileType)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
+            openSideViewer({ title, type: fileType, month, year, author, fileType, contentType, downloadUrl: url, previewUrl: previewUrl });
         }
 
         function downloadFile(fileName) {
@@ -474,8 +475,8 @@ $conn->close();
             const preview = document.getElementById('sv-preview');
 
             // Determine PDF URL: prefer rawUrl if provided, otherwise downloadUrl
-            const pdfUrl = (data.rawUrl && typeof data.rawUrl === 'string') ? data.rawUrl : data.downloadUrl;
-            if (pdfUrl && pdfUrl.toLowerCase().endsWith('.pdf')) {
+            const pdfUrl = (data.rawUrl && typeof data.rawUrl === 'string') ? data.rawUrl : (data.previewUrl || data.downloadUrl);
+            if (pdfUrl && (pdfUrl.toLowerCase().endsWith('.pdf') || pdfUrl.includes('action=view'))) {
                 preview.innerHTML = `<iframe class="w-full h-[60vh] border" src="${pdfUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
             } else {
                 preview.textContent = data.previewText || 'Preview not available. Use Open to download or view the file.';

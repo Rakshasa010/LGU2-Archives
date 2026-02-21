@@ -73,26 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Storage - Document Management</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: '#dc2626',
-                            light: '#f97316',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <?php include 'includes/header_scripts.php'; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
-    <!-- Prevent dark mode flicker -->
-    <script src="assets/js/theme-head.js"></script>
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
@@ -506,7 +489,7 @@ if (isset($_SESSION['user_id'])) {
                     <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                 </a>
                 <?php foreach ($archive_folders as $folder): ?>
-                <a href="#" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                <a href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -762,11 +745,11 @@ if (isset($_SESSION['user_id'])) {
                 if (!confirmCreate?.disabled) confirmCreate?.click();
             }
         });
-        const createFolderCard = (name, slug) => {
+        const createFolderCard = (name, slug, id) => {
             const safeName = escapeHtml(name);
             const safeSlug = escapeHtml(slug);
             const card = document.createElement('a');
-            card.href = '#';
+            card.href = 'folder_view.php?id=' + id;
             card.setAttribute('data-archive', slug);
             card.className = 'block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group';
             card.innerHTML = `
@@ -812,9 +795,9 @@ if (isset($_SESSION['user_id'])) {
                     isCreating = false;
                     return;
                 }
-                const folder = data.folder || { name: validation.name, slug: validation.slug };
+                const folder = data.folder || { name: validation.name, slug: validation.slug, id: data.folder.id };
                 existingSlugs.add((folder.slug || '').toLowerCase());
-                const card = createFolderCard(folder.name, folder.slug);
+                const card = createFolderCard(folder.name, folder.slug, folder.id);
                 foldersGrid?.appendChild(card);
                 showToast('Folder created.', 'success');
                 closeCreateModal();
@@ -1031,6 +1014,6 @@ if (isset($_SESSION['user_id'])) {
             }
         })();
     </script>
-    <script src="assets/js/theme-toggle.js"></script>
+    <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

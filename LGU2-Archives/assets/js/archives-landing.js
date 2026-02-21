@@ -76,19 +76,117 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     sidebar?.classList.add('sidebar-collapsed');
 }
 
-// Render Recent Views on landing
+// Render Latest Files (Server-side fetch)
 (function(){
-    function renderRecent() {
-        if (window.RecentViews && typeof window.RecentViews.renderTo === 'function') {
-            window.RecentViews.renderTo('latestFilesList');
-        }
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
+
+    function renderLatest() {
+        const container = document.getElementById('latestFilesList');
+        if (!container) return;
+
+        fetch('fetch_latest_files.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.files.length > 0) {
+                    const html = data.files.map(file => {
+                        let icon = '';
+                        let subtext = '';
+                        let downloadAction = '';
+
+                        if (file.source === 'archive') {
+                            icon = '<i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>';
+                            subtext = `In: ${escapeHtml(file.folder_name)}`;
+                            downloadAction = `<a href="${file.download_url}" target="_blank" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></a>`;
+                            
+                            // Make the whole card clickable for archive files
+                            return `
+                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:border-slate-600 cursor-pointer" onclick="window.location.href='folder_view.php?id=${file.folder_id}'">
+                                <div class="flex items-center space-x-3 min-w-0">
+                                    <div class="flex-shrink-0">${icon}</div>
+                                    <div class="min-w-0">
+                                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">${subtext} • ${file.date}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+                                    ${downloadAction}
+                                </div>
+                            </div>`;
+                        } else {
+                            // Legislative
+                            const typeIcons = {
+                                'Ordinance': 'text-orange-600',
+                                'Resolution': 'text-blue-600',
+                                'Public Hearing': 'text-green-600',
+                                'Meeting': 'text-purple-600',
+                                'Billing': 'text-red-600',
+                                'Legislative Session': 'text-indigo-600'
+                            };
+                            
+                            // Map types to their respective pages/folders
+                            const typeMapping = {
+                                'Ordinance': 'ordinances-resolution.php',
+                                'Resolution': 'ordinances-resolution.php',
+                                'Billing': 'billing.php',
+                                'Public Hearing': 'public-hearings.php',
+                                'Meeting': 'meeting-records.php',
+                                'Legislative Session': 'meeting-records.php'
+                            };
+                            const targetPage = typeMapping[file.type] || 'ordinances-resolution.php';
+                            
+                            const colorClass = typeIcons[file.type] || 'text-gray-600';
+                            icon = `<i class="bi bi-file-text ${colorClass} text-2xl"></i>`;
+                            subtext = `${escapeHtml(file.type)} • ${escapeHtml(file.author)}`;
+                            
+                            // Construct download URL for legislative
+                            const dlUrl = `download.php?${file.download_params}`;
+                            downloadAction = `<button onclick="window.open('${dlUrl}', 'downloadPopup', 'width=520,height=520')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></button>`;
+                            
+                            // Make the whole card clickable for legislative files
+                            return `
+                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:border-slate-600 cursor-pointer" onclick="window.location.href='${targetPage}?highlight=${file.id}'">
+                                <div class="flex items-center space-x-3 min-w-0">
+                                    <div class="flex-shrink-0">${icon}</div>
+                                    <div class="min-w-0">
+                                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">${subtext} • ${file.date}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+                                    ${downloadAction}
+                                </div>
+                            </div>`;
+                        }
+                    }).join('');
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <i class="bi bi-folder2-open text-3xl mb-2 block opacity-50"></i>
+                            <p>No recent files found</p>
+                        </div>`;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                container.innerHTML = '<div class="text-sm text-red-500">Error loading files</div>';
+            });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderRecent);
+        document.addEventListener('DOMContentLoaded', renderLatest);
     } else {
-        renderRecent();
+        renderLatest();
     }
-    window.addEventListener('focus', renderRecent);
+    window.addEventListener('focus', renderLatest);
 })();
 
 (function(){

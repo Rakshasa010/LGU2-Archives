@@ -456,7 +456,8 @@ $conn->close();
     <script>
         function openSideViewerServer(id, title, type, month, year, author, createdAt, lastSaved) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            const base = { title, type, month, year, author, createdAt, lastSaved, downloadUrl: url };
+            const previewUrl = `download.php?action=view&id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
+            const base = { title, type, month, year, author, createdAt, lastSaved, downloadUrl: url, previewUrl: previewUrl };
             try { window.RecentViews && window.RecentViews.add({ id: id, title: title, type: type, month: month, year: year, author: author }); } catch(_){}
             openSideViewer(base);
             fetch(`get-file-metadata.php?id=${encodeURIComponent(id)}`)
@@ -482,8 +483,8 @@ $conn->close();
             const openBtn = document.getElementById('sv-open-btn');
             const preview = document.getElementById('sv-preview');
 
-            const pdfUrl = (data.rawUrl && typeof data.rawUrl === 'string') ? data.rawUrl : data.downloadUrl;
-            if (pdfUrl && pdfUrl.toLowerCase().endsWith('.pdf')) {
+            const pdfUrl = (data.rawUrl && typeof data.rawUrl === 'string') ? data.rawUrl : (data.previewUrl || data.downloadUrl);
+            if (pdfUrl && (pdfUrl.toLowerCase().endsWith('.pdf') || pdfUrl.includes('action=view'))) {
                 preview.innerHTML = `<iframe class="w-full h-[60vh] border" src="${pdfUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
             } else {
                 preview.textContent = data.previewText || 'Preview not available. Use Open to download or view the file.';

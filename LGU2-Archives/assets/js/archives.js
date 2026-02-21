@@ -170,9 +170,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.search-result-item').forEach(item => {
             item.addEventListener('click', function() {
                 const recordId = this.getAttribute('data-record-id');
+                const type = this.getAttribute('data-type');
+                
+                // Map types to their respective pages/folders
+                const typeMapping = {
+                    'Ordinance': 'ordinances-resolution.php',
+                    'Resolution': 'ordinances-resolution.php',
+                    'Billing': 'billing.php',
+                    'Public Hearing': 'public-hearings.php',
+                    'Meeting': 'meeting-records.php',
+                    'Legislative Session': 'meeting-records.php'
+                };
+                
+                const targetPage = typeMapping[type] || 'ordinances-resolution.php';
+                
                 try {
                     const title = this.getAttribute('data-title') || '';
-                    const type = this.getAttribute('data-type') || '';
                     const month = this.getAttribute('data-month') || '';
                     const year = this.getAttribute('data-year') || '';
                     const author = this.getAttribute('data-author') || '';
@@ -180,7 +193,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.RecentViews.add({ id: recordId, title, type, month, year, author });
                     }
                 } catch (_) {}
+                
                 visitFile(recordId);
+                
+                // Redirect to the appropriate page with the record ID
+                window.location.href = `${targetPage}?highlight=${recordId}`;
             });
         });
     }
