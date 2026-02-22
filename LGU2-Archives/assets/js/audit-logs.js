@@ -75,7 +75,7 @@
                    '<td class="px-3 py-2 text-sm">'+note.date+'</td>'+
                    '<td class="px-3 py-2 text-sm">'+linkHtml+'</td>'+
                    '<td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">'+note.about+'</td>'+
-                   '<td class="px-3 py-2 text-sm"><button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors" type="button">Mark Read</button></td>'+
+                   '<td class="px-3 py-2 text-sm"><button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-600 hover:bg-red-700 text-white border-red-700 transition-colors" type="button">Mark Read</button></td>'+
                    '</tr>';
         }).join('');
         tbody.innerHTML = html;

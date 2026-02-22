@@ -127,12 +127,21 @@ $folders_sql = "CREATE TABLE IF NOT EXISTS archive_folders (
 )";
 $conn->query($folders_sql);
 
+$files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    folder_id INT(11) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_folder_id (folder_id)
+)";
+$conn->query($files_sql);
+
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
 
 // Database setup completed - no output when included
-?>
-<?php
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }

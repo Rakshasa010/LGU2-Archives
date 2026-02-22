@@ -130,6 +130,10 @@
                     <span>User Management</span>
                 </a>
                 <?php endif; ?>
+                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-person mr-3 text-lg"></i>
+                    <span>Profile</span>
+                </a>
                 <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
@@ -344,7 +348,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4 overflow-x-auto">
+                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4">
                                     <div class="flex flex-col gap-4 mb-4">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
@@ -383,7 +387,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-600/80">
+                                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-600/80">
                                     <table class="w-full text-left table-auto">
                                         <thead>
                                             <tr class="text-sm text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/80 border-b border-gray-200 dark:border-slate-600">
@@ -412,7 +416,7 @@
                                                 <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-3 text-sm">
                                                     <?php $isReadBtn = strtolower($note['status']) === 'read'; ?>
-                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border <?php echo $isReadBtn ? 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?> transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
+                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border <?php echo $isReadBtn ? 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 border-gray-200 dark:border-slate-600' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?> transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>

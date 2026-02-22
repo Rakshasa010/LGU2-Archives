@@ -110,6 +110,12 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
             <!-- ADMINISTRATION Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                <?php if ($is_admin): ?>
+                <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-people mr-3 text-lg"></i>
+                    <span>User Management</span>
+                </a>
+                <?php endif; ?>
                 <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-person mr-3 text-lg"></i>
                     <span>Profile</span>

@@ -479,10 +479,17 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
         <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
                 <div class="font-semibold text-gray-800 dark:text-gray-200">User List</div>
-                <span class="text-sm text-gray-600 dark:text-gray-400"><?php echo count($all_users); ?> users</span>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600 dark:text-gray-400" id="userCount"><?php echo count($all_users); ?> users</span>
+                    <select id="roleFilter" class="text-sm border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-200 p-2">
+                        <option value="all">All Roles</option>
+                        <option value="admin">Admins</option>
+                        <option value="user">Users</option>
+                    </select>
+                </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full">
+                <table class="min-w-full" id="userTable">
                     <thead class="bg-gray-50 dark:bg-slate-700/50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
@@ -498,7 +505,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                                 <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No users found</td>
                             </tr>
                         <?php else: foreach ($all_users as $u): ?>
-                            <tr>
+                            <tr class="user-row" data-role="<?php echo isset($u['role']) ? strtolower($u['role']) : 'user'; ?>">
                                 <td class="px-6 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200">
                                     <?php echo htmlspecialchars($u['full_name']); ?>
                                     <?php if(isset($u['role']) && $u['role']==='admin') echo '<span class="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Admin</span>'; ?>
@@ -539,6 +546,40 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                 </table>
             </div>
         </div>
+
+        <script>
+        document.getElementById('roleFilter').addEventListener('change', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const role = row.getAttribute('data-role');
+                // If filter is 'all', show everything.
+                // If filter is 'admin', show only 'admin'.
+                // If filter is 'user', show anything NOT 'admin' (assuming default is user).
+                let show = false;
+                if (filter === 'all') {
+                    show = true;
+                } else if (filter === 'admin') {
+                    show = (role === 'admin');
+                } else {
+                    // filter is 'user'
+                    show = (role !== 'admin');
+                }
+
+                if (show) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Update the counter text
+            document.getElementById('userCount').textContent = visibleCount + ' users';
+        });
+        </script>
 
         <div class="mt-6">
             <a href="archives-landing.php" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700">
