@@ -154,7 +154,19 @@ if ($__script !== 'login.php') {
         header("Location: login.php?expired=1");
         exit();
     }
+    
+    // Update session timestamp
     $_SESSION['last_activity'] = time();
+
+    // Update database last_activity timestamp for "Just now" tracking
+    if (isset($_SESSION['user_id'])) {
+        $update_activity = $conn->prepare("UPDATE users SET last_activity = NOW() WHERE id = ?");
+        if ($update_activity) {
+            $update_activity->bind_param("i", $_SESSION['user_id']);
+            $update_activity->execute();
+            $update_activity->close();
+        }
+    }
 }
 // Enforce mandatory password change across the app
 if (isset($_SESSION['user_id'])) {

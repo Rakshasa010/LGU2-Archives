@@ -519,11 +519,18 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                                     <?php 
                                     if (!empty($u['last_activity'])) {
-                                        $diff = time() - strtotime($u['last_activity']);
-                                        if ($diff < 60) echo 'Just now';
-                                        elseif ($diff < 3600) echo floor($diff/60) . ' mins ago';
-                                        elseif ($diff < 86400) echo floor($diff/3600) . ' hours ago';
-                                        else echo floor($diff/86400) . ' days ago';
+                                        $last_activity = strtotime($u['last_activity']);
+                                        $diff = time() - $last_activity;
+                                        
+                                        // If active within last 5 minutes (300 seconds), show "Active Now"
+                                        if ($diff < 300) {
+                                            echo '<span class="flex items-center text-green-600 dark:text-green-400 font-medium"><span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>Active Now</span>';
+                                        } else {
+                                            // Show time elapsed since last activity
+                                            if ($diff < 3600) echo floor($diff/60) . ' mins ago';
+                                            elseif ($diff < 86400) echo floor($diff/3600) . ' hours ago';
+                                            else echo floor($diff/86400) . ' days ago';
+                                        }
                                     } else {
                                         echo 'Never';
                                     }

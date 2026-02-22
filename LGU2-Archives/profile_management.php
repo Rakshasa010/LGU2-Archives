@@ -394,6 +394,32 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                             if (in_array('birthdate', $cols)) { $bd = $birthdate !== '' && strtotime($birthdate) !== false ? date('Y-m-d', strtotime($birthdate)) : null; if ($bd !== null) $upd[] = "birthdate = '".$conn->real_escape_string($bd)."'"; }
                             if (in_array('address', $cols)) $upd[] = "address = '".$conn->real_escape_string($address)."'";
                             if (!empty($upd)) { $conn->query("UPDATE users SET ".implode(', ', $upd)." WHERE id = ".(int)$user_id); }
+                            
+                            // Add Notification for Profile Update
+                            $notif_time = date('h:i A');
+                            $notif_date = date('Y-m-d');
+                            $notif_content = 'Profile updated for user: ' . $username;
+                            $notif_about = 'Profile Update';
+                            $notif_status = 'unread';
+                            
+                            // Ensure notifications table exists
+                            $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                time VARCHAR(20) NOT NULL,
+                                date DATE NOT NULL,
+                                content VARCHAR(255) NOT NULL,
+                                about VARCHAR(100) NOT NULL,
+                                status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )");
+
+                            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                            if ($nt) {
+                                $nt->bind_param("sssss", $notif_time, $notif_date, $notif_content, $notif_about, $notif_status);
+                                $nt->execute();
+                                $nt->close();
+                            }
+
                             $success_msg = $upload_success ? 'Profile picture and information updated successfully!' : 'Information updated successfully!';
                             echo '<div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">' . htmlspecialchars($success_msg) . '</div>';
                             // Refresh user data

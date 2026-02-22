@@ -60,9 +60,14 @@ $items = [];
 while ($res && ($row = $res->fetch_assoc())) $items[] = $row;
 $stmt->close();
 $about_options = [];
-$r = $conn->query('SELECT DISTINCT about FROM notifications ORDER BY about ASC');
+// Select distinct about values, trimming whitespace and ensuring non-empty
+$r = $conn->query("SELECT DISTINCT TRIM(about) as about FROM notifications WHERE about IS NOT NULL AND about != '' ORDER BY about ASC");
 if ($r) {
-    while ($a = $r->fetch_assoc()) $about_options[] = $a['about'];
+    while ($a = $r->fetch_assoc()) {
+        if (!empty($a['about'])) {
+            $about_options[] = $a['about'];
+        }
+    }
 }
 echo json_encode([
     'success' => true,

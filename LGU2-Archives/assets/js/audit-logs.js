@@ -150,10 +150,24 @@
             if (!data || !data.success) return;
             renderRows(data.items||[]);
             var aboutSel = document.getElementById('filter-about');
-            if (aboutSel && (aboutSel.options.length <= 1)) {
+            if (aboutSel) {
+                // Clear existing dynamic options (keep the first "About" option)
+                while (aboutSel.options.length > 1) {
+                    aboutSel.remove(1);
+                }
+                
                 (data.about_options||[]).forEach(function(opt){
-                    var o = document.createElement('option'); o.value = opt; o.textContent = opt; aboutSel.appendChild(o);
+                    if (!opt) return;
+                    var o = document.createElement('option'); 
+                    o.value = opt; 
+                    o.textContent = opt; 
+                    aboutSel.appendChild(o);
                 });
+                
+                // Restore selected value if valid
+                var params = new URLSearchParams(window.location.search);
+                var currentAbout = params.get('about');
+                if (currentAbout) aboutSel.value = currentAbout;
             }
             if (pageInfo) pageInfo.textContent = String(data.page)+' / '+Math.max(1, Math.ceil((data.total||0)/(data.page_size||10)));
             var maxPage = Math.max(1, Math.ceil((data.total||0)/(data.page_size||10)));
