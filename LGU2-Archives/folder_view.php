@@ -195,49 +195,12 @@ $conn->close();
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
-<body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200 overflow-hidden">
-    <!-- Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden opacity-0 transition-opacity duration-300"></div>
-
-    <!-- Mobile Sidebar -->
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
-        <div class="p-4 border-b border-red-700/50 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-white p-1.5 rounded-full"><img src="Images/Val-logo/valenzuela logo.webp" class="w-8 h-8"></div>
-                <div><h1 class="font-bold text-lg">LAS</h1><p class="text-xs text-red-200">City of Valenzuela</p></div>
-            </div>
-            <button id="close-mobile-sidebar" class="text-white/80 hover:text-white"><i class="bi bi-x-lg text-xl"></i></button>
-        </div>
-        <nav class="flex-1 py-4 px-3 overflow-y-auto">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/50 rounded-lg mb-1"><i class="bi bi-speedometer2 mr-3"></i>Dashboard</a>
-            <a href="storage.php" class="flex items-center px-4 py-3 text-white bg-red-700 rounded-lg mb-1"><i class="bi bi-folder mr-3"></i>Main Storage</a>
-            <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/50 rounded-lg mb-1"><i class="bi bi-book mr-3"></i>Version Tracking</a>
-             <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/50 rounded-lg mb-1"><i class="bi bi-graph-up mr-3"></i>Analytics</a>
-        </nav>
-    </div>
-
-    <div class="flex h-screen overflow-hidden">
-        <!-- Desktop Sidebar -->
-        <aside id="sidebar" class="hidden md:flex w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-col flex-shrink-0 transition-all duration-300">
-            <div class="p-6 border-b border-red-700/50 flex items-center gap-3">
-                <div class="bg-white p-2 rounded-full"><img src="Images/Val-logo/valenzuela logo.webp" class="w-10 h-10"></div>
-                <div><h1 class="font-bold text-xl">LAS</h1><p class="text-xs text-red-200">City of Valenzuela</p></div>
-            </div>
-            <nav class="flex-1 overflow-y-auto py-4 px-3">
-                <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/50 rounded-lg mb-1"><i class="bi bi-speedometer2 mr-3"></i>Dashboard</a>
-                <a href="storage.php" class="flex items-center px-4 py-3 text-white bg-red-700 rounded-lg mb-1"><i class="bi bi-folder mr-3"></i>Main Storage</a>
-                <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/50 rounded-lg mb-1"><i class="bi bi-book mr-3"></i>Version Tracking</a>
-                 <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/50 rounded-lg mb-1"><i class="bi bi-graph-up mr-3"></i>Analytics</a>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden relative w-full">
-            <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
-                <div class="w-full px-4 sm:px-6 lg:px-8">
-                    <div class="flex items-center justify-between h-16">
-                        <div class="flex items-center gap-4">
-                            <button id="mobile-menu-btn" class="md:hidden text-gray-600 dark:text-gray-300 hover:text-red-600"><i class="bi bi-list text-2xl"></i></button>
+<body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
                     <a href="<?php echo $parent_folder ? "folder_view.php?id=" . $parent_folder['id'] : "storage.php"; ?>" class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                         <i class="bi bi-arrow-left text-xl"></i>
                         <span class="font-semibold">Back to <?php echo $parent_folder ? htmlspecialchars($parent_folder['name']) : "Main Storage"; ?></span>
