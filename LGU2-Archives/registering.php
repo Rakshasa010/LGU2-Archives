@@ -1,38 +1,3 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Archives</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: '#dc2626',
-                            light: '#f97316',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-image: url('Images/BG-login/backgroundlogin.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        [x-cloak] { display: none !important; }
-    </style>
-    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
-    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
-</head>
-<body class="min-h-screen flex items-center justify-center p-4">
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     include 'authdatabase.php';
@@ -115,12 +80,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $mailer->addAddress($email, $full_name);
                             $mailer->Subject = 'Your temporary password';
                             $mailer->isHTML(true);
-                            $mailer->Body = '<p>Hello ' . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . ',</p>'
-                                . '<p>Your account has been created. Use the temporary password below to sign in:</p>'
-                                . '<p><strong>' . htmlspecialchars($tmp, ENT_QUOTES, 'UTF-8') . '</strong></p>'
-                                . '<p>After logging in, update your password in your profile settings.</p>'
-                                . '<p>Archives</p>';
-                            $mailer->AltBody = 'Hello ' . $full_name . ', Your temporary password: ' . $tmp . '. Update it after login.';
+                            $tzName = isset($cfg['timezone']) && is_string($cfg['timezone']) ? $cfg['timezone'] : 'Asia/Manila';
+                            $nowLocal = new DateTime('now', new DateTimeZone($tzName));
+                            $sentAt = $nowLocal->format('M j, Y h:i A');
+                            $nameSafe = htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8');
+                            $tmpSafe = htmlspecialchars($tmp, ENT_QUOTES, 'UTF-8');
+                            $brand = htmlspecialchars($fromName, ENT_QUOTES, 'UTF-8');
+                            $mailer->Body = '<div style="background:#f7f7f9;padding:24px;font-family:Segoe UI,Arial,sans-serif;color:#111111">'
+                                . '<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px">'
+                                . '<div style="padding:20px 24px;border-bottom:1px solid #e5e7eb">'
+                                . '<h1 style="margin:0;font-size:18px;color:#b91c1c">' . $brand . '</h1>'
+                                . '<div style="margin-top:4px;font-size:12px;color:#6b7280">Welcome</div>'
+                                . '</div>'
+                                . '<div style="padding:24px">'
+                                . '<p style="margin:0 0 12px 0;font-size:14px;color:#111111">Hello ' . $nameSafe . ',</p>'
+                                . '<p style="margin:0 0 16px 0;font-size:14px;color:#374151">Your account has been created. Use the temporary password below to sign in:</p>'
+                                . '<div style="text-align:center;margin:16px 0">'
+                                . '<div style="display:inline-block;font-size:24px;font-weight:700;color:#111111;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:10px 16px">' . $tmpSafe . '</div>'
+                                . '</div>'
+                                . '<p style="margin:0 0 12px 0;font-size:13px;color:#374151">After logging in, go to Account Settings and update your password.</p>'
+                                . '<table style="width:100%;font-size:12px;color:#6b7280;margin-top:8px;border-collapse:collapse">'
+                                . '<tr><td style="padding:6px 0;width:120px">Sent</td><td style="padding:6px 0">' . $sentAt . ' (' . $tzName . ')</td></tr>'
+                                . '</table>'
+                                . '</div>'
+                                . '<div style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#6b7280">© ' . date('Y') . ' ' . $brand . '</div>'
+                                . '</div>'
+                                . '</div>';
+                            $mailer->AltBody = 'Hello ' . $full_name . ', Your temporary password: ' . $tmp . '. Update it after login. Sent: ' . $sentAt . ' (' . $tzName . ').';
                             $mailer->send();
                             $emailSent = true;
                         } catch (Throwable $e) {
@@ -128,10 +114,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
+<<<<<<< HEAD
                 $success = $emailSent
                     ? 'Requesting admin approval. Check your email for the temporary password.'
                     : 'Registered successfully. Use <a href="forgot-password.php" class="underline font-medium">Forgot password</a> to set your password and sign in.';
 
+=======
+                
+>>>>>>> c92e0278091823d014af770d3dafd75bfb56f598
                 // Ensure notifications table exists
                 $conn->query("CREATE TABLE IF NOT EXISTS notifications (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -209,6 +199,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
+                
+                // Redirect on success
+                if ($emailSent) {
+                    header("Location: login.php?registered=email");
+                    exit();
+                } else {
+                    header("Location: login.php?registered=manual");
+                    exit();
+                }
             } else {
                 $error = 'Registration failed.';
             }
@@ -219,6 +218,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Archives</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#dc2626',
+                            light: '#f97316',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .bg-anim{position:fixed;inset:0;z-index:-1;overflow:hidden}
+        .bg-anim .layer1{position:absolute;inset:-20%;background:radial-gradient(1200px 800px at 20% 30%, rgba(220,38,38,.25), transparent 60%),radial-gradient(1000px 700px at 80% 70%, rgba(249,115,22,.25), transparent 60%);filter:blur(40px);animation:drift 18s linear infinite alternate}
+        .bg-anim .layer2{position:absolute;inset:0;background:linear-gradient(135deg, rgba(220,38,38,.15), rgba(249,115,22,.1) 50%, rgba(239,68,68,.15));animation:hue 20s linear infinite alternate}
+        .bg-anim .grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);background-size:24px 24px;mix-blend-mode:overlay;opacity:.6}
+        .bg-anim .blob{position:absolute;width:40vmax;height:40vmax;border-radius:50%;filter:blur(60px);opacity:.2}
+        .bg-anim .b1{background:#dc2626;top:-10vmax;left:-10vmax;animation:move1 24s ease-in-out infinite alternate}
+        .bg-anim .b2{background:#f97316;bottom:-12vmax;right:-8vmax;animation:move2 26s ease-in-out infinite alternate}
+        @keyframes drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(2%,-2%,0)}}
+        @keyframes hue{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(20deg)}}
+        @keyframes move1{from{transform:translate(0,0) scale(1)}to{transform:translate(6vmax,4vmax) scale(1.1)}}
+        @keyframes move2{from{transform:translate(0,0) scale(1)}to{transform:translate(-5vmax,-3vmax) scale(1.08)}}
+        @media (prefers-color-scheme: dark){.bg-anim .grid{background-image:radial-gradient(rgba(148,163,184,.08) 1px, transparent 1px)}}
+    </style>
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-anim">
+        <div class="layer1"></div>
+        <div class="layer2"></div>
+        <div class="grid"></div>
+        <div class="blob b1"></div>
+        <div class="blob b2"></div>
+    </div>
     <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8">
         <div class="text-center mb-8">
             <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-16 w-auto mx-auto mb-4">
@@ -229,11 +276,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (isset($error)): ?>
             <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
                 <?php echo $error; ?>
-            </div>
-        <?php endif; ?>
-        <?php if (isset($success)): ?>
-            <div class="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 text-green-700 dark:text-green-200 rounded-lg">
-                <?php echo $success; ?>
             </div>
         <?php endif; ?>
 

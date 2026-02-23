@@ -37,9 +37,180 @@ function log_analytics_event(mysqli $conn, array $event): void {
 }
 
 
+function get_legislative_file_info(mysqli $conn, int $id): ?array {
+    $stmt = $conn->prepare("SELECT file_path, title, type, month, year, author FROM legislative_records WHERE id = ?");
+    if (!$stmt) return null;
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $stmt->close();
+    return $row ?: null;
+}
+
+function resolve_local_path(string $path): ?string {
+    if ($path === '') return null;
+    if (file_exists($path)) return $path;
+    $absolute = __DIR__ . DIRECTORY_SEPARATOR . $path;
+    if (file_exists($absolute)) return $absolute;
+    return null;
+}
+
+function build_absolute_url(string $relative): string {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+    $base = $scheme . '://' . $host . ($dir ? $dir . '/' : '/');
+    if (strpos($relative, '/') === 0) {
+        return $scheme . '://' . $host . $relative;
+    }
+    return $base . $relative;
+}
+
 
 // Check if it's a GET request (show modal) or POST request (download file)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    // Check for view action
+    if (isset($_GET['action']) && $_GET['action'] === 'view') {
+        if (!isset($_GET['id'], $_GET['title'], $_GET['type'], $_GET['month'], $_GET['year'], $_GET['author'])) {
+            die('Invalid request');
+        }
+
+        $record = [
+            'id' => $_GET['id'],
+            'title' => $_GET['title'],
+            'type' => $_GET['type'],
+            'month' => $_GET['month'],
+            'year' => $_GET['year'],
+            'author' => $_GET['author']
+        ];
+        
+        // Log view event
+        log_analytics_event($conn, [
+            'event_type' => 'view',
+            'user_id' => isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+            'record_id' => (int)$record['id'] > 0 ? (int)$record['id'] : null,
+            'record_title' => $record['title'],
+            'record_type' => $record['type'],
+            'download_format' => 'html',
+            'bytes' => null
+        ]);
+
+        $filename = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $record['title']) . '_' . $record['id'];
+        generatePDF($record, $filename, 'inline');
+        $conn->close();
+        exit;
+    } elseif (isset($_GET['action']) && $_GET['action'] === 'view_json') {
+        if (!isset($_GET['id'], $_GET['title'], $_GET['type'], $_GET['month'], $_GET['year'], $_GET['author'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            $conn->close();
+            exit;
+        }
+        $record = [
+            'id' => $_GET['id'],
+            'title' => $_GET['title'],
+            'type' => $_GET['type'],
+            'month' => $_GET['month'],
+            'year' => $_GET['year'],
+            'author' => $_GET['author']
+        ];
+        log_analytics_event($conn, [
+            'event_type' => 'view_api',
+            'user_id' => isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+            'record_id' => (int)$record['id'] > 0 ? (int)$record['id'] : null,
+            'record_title' => $record['title'],
+            'record_type' => $record['type'],
+            'download_format' => 'json',
+            'bytes' => null
+        ]);
+        $viewerHtml = '';
+        $fileInfo = null;
+        $idInt = (int)$record['id'];
+        if ($idInt > 0) {
+            $fileInfo = get_legislative_file_info($conn, $idInt);
+        }
+        if ($fileInfo && isset($fileInfo['file_path'])) {
+            $path = resolve_local_path($fileInfo['file_path']);
+            if ($path) {
+                $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+                $viewUrl = 'download.php?action=view_file&id=' . urlencode((string)$idInt);
+                $viewUrlAbs = build_absolute_url($viewUrl);
+                if (in_array($ext, ['pdf'])) {
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<iframe src="' . $viewUrl . '" class="w-full h-[70vh] rounded-lg border"></iframe>'
+                                . '</div>';
+                } elseif (in_array($ext, ['jpg','jpeg','png','gif','webp','bmp','svg'])) {
+                    $viewerHtml = '<div class="space-y-4 text-center">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<img src="' . $viewUrl . '" class="max-h-[70vh] w-auto inline-block rounded-lg border" alt="Preview" />'
+                                . '</div>';
+                } elseif (in_array($ext, ['txt','csv','json','xml','md','log'])) {
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<iframe src="' . $viewUrl . '" class="w-full h-[70vh] rounded-lg border bg-white"></iframe>'
+                                . '</div>';
+                } elseif (in_array($ext, ['doc','docx','xls','xlsx','ppt','pptx'])) {
+                    $gview = 'https://docs.google.com/gview?embedded=true&url=' . urlencode($viewUrlAbs);
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<iframe src="' . $gview . '" class="w-full h-[70vh] rounded-lg border bg-white"></iframe>'
+                                . '<div class="text-xs text-gray-500 dark:text-gray-400">If the preview fails, use Open to view in a new tab.</div>'
+                                . '<div class="flex justify-end"><a href="' . $viewUrl . '" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a></div>'
+                                . '</div>';
+                } else {
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<div class="text-sm text-gray-600 dark:text-gray-400">Preview not available for this file type.</div>'
+                                . '<div class="flex justify-end">'
+                                . '<a href="' . $viewUrl . '" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a>'
+                                . '</div>'
+                                . '</div>';
+                }
+            } else {
+                $viewerHtml = '<div class="text-sm text-red-600 dark:text-red-400">File not found on server.</div>';
+            }
+        } else {
+            $viewerHtml = generateDocumentHTML($record);
+        }
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'metadata' => $record,
+            'html' => $viewerHtml
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $conn->close();
+        exit;
+    } elseif (isset($_GET['action']) && $_GET['action'] === 'view_file') {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if ($id <= 0) {
+            http_response_code(400);
+            echo 'Invalid ID';
+            exit;
+        }
+        $info = get_legislative_file_info($conn, $id);
+        if (!$info || !isset($info['file_path'])) {
+            http_response_code(404);
+            echo 'File not found';
+            exit;
+        }
+        $path = resolve_local_path((string)$info['file_path']);
+        if (!$path) {
+            http_response_code(404);
+            echo 'File not found';
+            exit;
+        }
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . basename($path) . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        readfile($path);
+        exit;
+    }
+
     // Show download modal
     if (!isset($_GET['id'], $_GET['title'], $_GET['type'], $_GET['month'], $_GET['year'], $_GET['author'])) {
         die('Invalid request');
@@ -63,11 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Download Document</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = { darkMode: 'class' }
-        </script>
-        <script src="assets/js/theme-head.js"></script>
+        <?php include 'includes/header_scripts.php'; ?>
         <style>
             /* Ensure full-height for proper centering and fallback backdrop */
             html, body { height: 100%; }
@@ -82,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             <div class="absolute inset-0 backdrop-blur-sm bg-black/40 backdrop-blur-fallback"></div>
 
             <div id="modalCard" class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full m-auto mx-4 transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] overflow-auto">
-                <div class="p-6 sm:p-8">
+                <div class="p-6 sm:p-8 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-4">
                             <div class="flex-none bg-gradient-to-tr from-red-500 to-pink-500 text-white rounded-xl p-3 shadow-md">
@@ -92,10 +259,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                             </div>
                             <div>
                                 <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Download Document</h3>
-                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Securely download a copy of the document below.</p>
+                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Securely download a copy of the document below.</p>
                             </div>
                         </div>
-                        <button id="closeX" aria-label="Close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <button id="closeX" aria-label="Close" onclick="window.close();" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -103,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     </div>
 
                     <div class="mt-5 grid grid-cols-1 gap-4">
-                        <div class="rounded-md border border-gray-100 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+                        <div class="rounded-md border border-gray-100 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900/50">
                             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate" id="modalTitle"><?php echo htmlspecialchars($record['title']); ?></h4>
                             <div class="mt-3 text-sm text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-2">
                                 <div><span class="font-semibold text-gray-600 dark:text-gray-300">Type:</span> <?php echo htmlspecialchars($record['type']); ?></div>
@@ -113,22 +280,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         </div>
 
                         <div class="flex gap-3">
-                            <button class="download-format flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:from-red-600 hover:to-pink-600 transition" data-format="pdf">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-3-3m3 3l3-3M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7"></path></svg>
-                                PDF
-                            </button>
-                            <button class="download-format flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow hover:from-blue-600 hover:to-cyan-600 transition" data-format="docx">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path></svg>
-                                DOCX
-                            </button>
-                            <button class="download-format flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 transition" data-format="xml">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7L9 18l-5-5"></path></svg>
-                                XML
-                            </button>
+                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
+                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
+                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
+                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
+                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
+                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
+                                <input type="hidden" name="format" value="pdf">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:from-red-600 hover:to-pink-600 transition dark:shadow-red-900/20">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-3-3m3 3l3-3M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7"></path></svg>
+                                    PDF
+                                </button>
+                            </form>
+                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
+                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
+                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
+                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
+                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
+                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
+                                <input type="hidden" name="format" value="docx">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow hover:from-blue-600 hover:to-cyan-600 transition dark:shadow-blue-900/20">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path></svg>
+                                    DOCX
+                                </button>
+                            </form>
+                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
+                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
+                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
+                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
+                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
+                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
+                                <input type="hidden" name="format" value="xml">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition border border-gray-200 dark:border-slate-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7L9 18l-5-5"></path></svg>
+                                    XML
+                                </button>
+                            </form>
                         </div>
 
-                        <div class="flex justify-end">
-                            <button id="cancelDownload" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Cancel</button>
+                        <div class="flex justify-end pt-2">
+                            <button id="cancelDownload" onclick="window.close();" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -136,8 +330,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         </div>
 
         <script id="download-record" type="application/json"><?php echo json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
-        <script src="assets/js/download.js"></script>
-        <script src="assets/js/theme-toggle.js"></script>
+        <script>
+            // Simple animation
+            document.addEventListener('DOMContentLoaded', () => {
+                const card = document.getElementById('modalCard');
+                if (card) {
+                    setTimeout(() => {
+                        card.classList.remove('scale-95', 'opacity-0');
+                        card.classList.add('scale-100', 'opacity-100');
+                    }, 50);
+                }
+            });
+        </script>
+        <?php include 'includes/footer_scripts.php'; ?>
     </body>
     </html>
     <?php
@@ -207,10 +412,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     die('Invalid request method');
 }
 
-function generatePDF($record, $filename) {
+function generatePDF($record, $filename, $disposition = 'attachment') {
     // Output HTML formatted for PDF printing
     header('Content-Type: text/html');
-    header('Content-Disposition: attachment; filename="' . $filename . '_print.html"');
+    header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '_print.html"');
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
 
@@ -219,12 +424,16 @@ function generatePDF($record, $filename) {
     $html .= '<meta charset="UTF-8">';
     $html .= '<title>' . htmlspecialchars($record['title']) . '</title>';
     $html .= '<style>';
-    $html .= '@media print { body { font-family: "Times New Roman", serif; font-size: 12pt; } }';
-    $html .= '@media screen { body { font-family: Arial, sans-serif; font-size: 14px; } }';
-    $html .= 'body { margin: 1in; line-height: 1.5; }';
+    $html .= '@media print { body { font-family: "Times New Roman", serif; font-size: 12pt; margin: 1in; } }';
+    $html .= '@media screen { body { font-family: Arial, sans-serif; font-size: 14px; margin: 0; padding: 20px; background-color: #fff; } }';
+    $html .= 'body { line-height: 1.5; color: #333; }';
     $html .= 'h1 { text-align: center; margin-bottom: 30pt; text-decoration: underline; font-size: 18pt; }';
-    $html .= '.metadata { margin: 20pt 0; padding: 10pt; background-color: #f9f9f9; border: 1pt solid #ccc; }';
+    $html .= '.metadata { margin: 20pt 0; padding: 15pt; background-color: #f9f9f9; border-left: 5px solid #007acc; border-radius: 4px; }';
     $html .= '.content { margin-top: 30pt; }';
+    $html .= 'table.meta-table { width: 100%; border-collapse: collapse; }';
+    $html .= 'table.meta-table td { padding: 8px 0; vertical-align: top; border-bottom: 1px solid #eee; }';
+    $html .= 'table.meta-table tr:last-child td { border-bottom: none; }';
+    $html .= 'table.meta-table td.label { font-weight: bold; color: #555; width: 140px; }';
     $html .= '</style>';
     $html .= '</head><body>';
 
@@ -296,28 +505,50 @@ function generateXML($record, $filename) {
 }
 
 function generateDocumentHTML($record) {
-    $html = '<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px;">';
+    // Determine container style based on context (this is a simple static HTML generation, so we rely on media queries for outer body, but here we can set max-width)
+    $html = '<div style="font-family: inherit; max-width: 800px; margin: 0 auto;">';
 
     // Header
-    $html .= '<h1 style="color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 30px;">';
+    $html .= '<h1 style="color: #333; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 30px; font-size: 24px; text-align: center;">';
     $html .= htmlspecialchars($record['title']);
     $html .= '</h1>';
 
     // Metadata
-    $html .= '<div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-left: 4px solid #007acc;">';
-    $html .= '<h3 style="margin-top: 0; color: #007acc;">Document Information</h3>';
-    $html .= '<p><strong>Type:</strong> ' . htmlspecialchars($record['type']) . '</p>';
-    $html .= '<p><strong>Month/Year:</strong> ' . htmlspecialchars($record['month'] . ' ' . $record['year']) . '</p>';
-    $html .= '<p><strong>Author:</strong> ' . htmlspecialchars($record['author']) . '</p>';
-    $html .= '<p><strong>Generated on:</strong> ' . date('F j, Y \a\t g:i A') . '</p>';
+    $html .= '<div class="metadata">';
+    $html .= '<h3 style="margin-top: 0; margin-bottom: 15px; color: #007acc; font-size: 18px; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px;">Document Information</h3>';
+    
+    // Use table for precise alignment
+    $html .= '<table class="meta-table">';
+    
+    $html .= '<tr>';
+    $html .= '<td class="label">Type:</td>';
+    $html .= '<td>' . htmlspecialchars($record['type']) . '</td>';
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="label">Month/Year:</td>';
+    $html .= '<td>' . htmlspecialchars($record['month'] . ' ' . $record['year']) . '</td>';
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="label">Author:</td>';
+    $html .= '<td>' . htmlspecialchars($record['author']) . '</td>';
+    $html .= '</tr>';
+
+    $html .= '<tr>';
+    $html .= '<td class="label">Generated on:</td>';
+    $html .= '<td>' . date('F j, Y \a\t g:i A') . '</td>';
+    $html .= '</tr>';
+
+    $html .= '</table>';
     $html .= '</div>';
 
     // Content placeholder
-    $html .= '<div style="line-height: 1.6; margin-top: 40px;">';
-    $html .= '<h2>Document Content</h2>';
-    $html .= '<p>This is a generated document for the ' . htmlspecialchars($record['type']) . ' titled "' . htmlspecialchars($record['title']) . '".</p>';
-    $html .= '<p>In a full implementation, this would contain the actual document content, sections, and detailed information.</p>';
-    $html .= '<p><em>Document ID: ' . htmlspecialchars($record['id']) . '</em></p>';
+    $html .= '<div class="content" style="line-height: 1.8; color: #444;">';
+    $html .= '<h2 style="font-size: 20px; color: #222; margin-bottom: 15px;">Document Content</h2>';
+    $html .= '<p style="margin-bottom: 15px;">This is a generated document for the <strong>' . htmlspecialchars($record['type']) . '</strong> titled "<em>' . htmlspecialchars($record['title']) . '</em>".</p>';
+    $html .= '<p style="margin-bottom: 15px;">In a full implementation, this would contain the actual document content, sections, and detailed information extracted from the source file or database.</p>';
+    $html .= '<p style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 12px; color: #888;">Document ID: ' . htmlspecialchars($record['id']) . ' | System Generated</p>';
     $html .= '</div>';
 
     $html .= '</div>';

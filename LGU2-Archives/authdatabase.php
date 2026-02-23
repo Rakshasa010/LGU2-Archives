@@ -82,6 +82,24 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_picture");
 }
 
+// Add last_activity column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'last_activity'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN last_activity DATETIME NULL AFTER updated_at");
+}
+
+// Add failed_attempts column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'failed_attempts'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN failed_attempts INT DEFAULT 0 AFTER last_activity");
+}
+
+// Add lockout_until column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'lockout_until'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN lockout_until DATETIME NULL AFTER failed_attempts");
+}
+
 // Create analytics_events table (used by report_analytics.php)
 $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -100,12 +118,51 @@ $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 $conn->query($analytics_sql);
 
+$folders_sql = "CREATE TABLE IF NOT EXISTS archive_folders (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    created_by INT(11) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+$conn->query($folders_sql);
+
+$files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    folder_id INT(11) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_folder_id (folder_id)
+)";
+$conn->query($files_sql);
+
+// Create notifications table
+$notif_sql = "CREATE TABLE IF NOT EXISTS notifications (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    user_id INT(11) NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(255) NULL,
+    action VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+$conn->query($notif_sql);
+
+// Add new columns if they don't exist
+$check_cols = $conn->query("SHOW COLUMNS FROM notifications LIKE 'ip_address'");
+if ($check_cols->num_rows == 0) {
+    $conn->query("ALTER TABLE notifications ADD COLUMN ip_address VARCHAR(45) NULL AFTER status");
+    $conn->query("ALTER TABLE notifications ADD COLUMN user_agent VARCHAR(255) NULL AFTER ip_address");
+    $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
+}
+
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
 
 // Database setup completed - no output when included
-?>
-<?php
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
@@ -118,7 +175,19 @@ if ($__script !== 'login.php') {
         header("Location: login.php?expired=1");
         exit();
     }
+    
+    // Update session timestamp
     $_SESSION['last_activity'] = time();
+
+    // Update database last_activity timestamp for "Just now" tracking
+    if (isset($_SESSION['user_id'])) {
+        $update_activity = $conn->prepare("UPDATE users SET last_activity = NOW() WHERE id = ?");
+        if ($update_activity) {
+            $update_activity->bind_param("i", $_SESSION['user_id']);
+            $update_activity->execute();
+            $update_activity->close();
+        }
+    }
 }
 // Enforce mandatory password change across the app
 if (isset($_SESSION['user_id'])) {

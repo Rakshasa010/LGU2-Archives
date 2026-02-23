@@ -26,3 +26,38 @@
         display: flex !important;
     }
 }
+
+@keyframes highlightFade {
+    0% { background-color: rgba(220, 38, 38, 0.4); border-color: #dc2626; box-shadow: 0 0 15px rgba(220, 38, 38, 0.5); transform: scale(1.02); }
+    50% { background-color: rgba(220, 38, 38, 0.2); border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.7); transform: scale(1.02); }
+    100% { background-color: transparent; border-color: transparent; box-shadow: none; transform: scale(1); }
+}
+
+.highlight-record {
+    animation: highlightFade 3s ease-out forwards;
+    transition: all 0.3s ease;
+    border: 2px solid #dc2626; /* Add explicit border for fallback */
+    position: relative;
+    z-index: 10;
+}
+/* Dark variant for highlight */
+.dark .highlight-record {
+    border-color: #f97316 !important;
+    background-color: rgba(249,115,22,0.08);
+}
+
+/* Dark mode global text fixes */
+.dark body,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-black {
+    color: #e5e7eb !important;
+}
+.dark a {
+    color: #e5e7eb !important;
+}
+.dark table th,
+.dark table td {
+    color: #e5e5e5 !important;
+}

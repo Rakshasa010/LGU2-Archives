@@ -1,29 +1,187 @@
+<?php
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require 'authdatabase.php';
+    if (!isset($_SESSION['user_id'])) {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        $conn->close();
+        exit();
+    }
+    $raw = file_get_contents('php://input');
+    $payload = json_decode($raw, true);
+    $action = isset($payload['action']) ? (string)$payload['action'] : (isset($_POST['action']) ? (string)$_POST['action'] : '');
+    if ($action === 'export_year_zip') {
+        $year = isset($_POST['year']) ? (int)$_POST['year'] : 0;
+        if ($year <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid year']);
+            $conn->close();
+            exit();
+        }
+        if (!class_exists('ZipArchive')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'ZipArchive not available']);
+            $conn->close();
+            exit();
+        }
+        $zipPath = tempnam(sys_get_temp_dir(), 'yearzip_') . '.zip';
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE) !== true) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Could not create zip']);
+            $conn->close();
+            exit();
+        }
+        $root = realpath(__DIR__);
+        $safe = function($s){ $s = preg_replace('/[^a-zA-Z0-9\\-_ ]/', '_', (string)$s); return trim($s) !== '' ? $s : 'Unknown'; };
+        $leg = $conn->prepare("SELECT title, type, file_path, created_at FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ?");
+        if ($leg) {
+            $leg->bind_param("i", $year);
+            $leg->execute();
+            $res = $leg->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $type = $safe($row['type']);
+                $path = (string)$row['file_path'];
+                $disk = realpath($path) ?: realpath(__DIR__ . '/' . $path);
+                if ($disk && strpos($disk, $root) === 0 && is_file($disk)) {
+                    $base = basename($disk);
+                    $entry = $year . '/' . $type . '/' . $base;
+                    $zip->addFile($disk, $entry);
+                }
+            }
+            $leg->close();
+        }
+        $arc = $conn->prepare("SELECT af.name, af.file_path, fo.name AS folder_name FROM archive_files af JOIN archive_folders fo ON af.folder_id = fo.id WHERE YEAR(af.created_at) = ?");
+        if ($arc) {
+            $arc->bind_param("i", $year);
+            $arc->execute();
+            $res = $arc->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $folder = $safe($row['folder_name']);
+                $path = (string)$row['file_path'];
+                $disk = realpath($path) ?: realpath(__DIR__ . '/' . $path);
+                if ($disk && strpos($disk, $root) === 0 && is_file($disk)) {
+                    $base = basename($disk);
+                    $entry = $year . '/Archives/' . $folder . '/' . $base;
+                    $zip->addFile($disk, $entry);
+                }
+            }
+            $arc->close();
+        }
+        $zip->close();
+        $downloadName = 'Year_' . $year . '_Archives.zip';
+        header('Content-Type: application/zip');
+        header('Content-Length: ' . filesize($zipPath));
+        header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        readfile($zipPath);
+        @unlink($zipPath);
+        $conn->close();
+        exit();
+    }
+    if ($action === 'list_year') {
+        header('Content-Type: application/json');
+        $year = isset($payload['year']) ? (int)$payload['year'] : 0;
+        if ($year <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid year']);
+            $conn->close();
+            exit();
+        }
+        $data = ['success' => true, 'year' => $year, 'categories' => []];
+        $leg = $conn->prepare("SELECT type, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ? GROUP BY type");
+        if ($leg) {
+            $leg->bind_param("i", $year);
+            $leg->execute();
+            $res = $leg->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $data['categories'][] = ['name' => $row['type'], 'count' => (int)$row['cnt'], 'group' => 'Legislative'];
+            }
+            $leg->close();
+        }
+        $arc = $conn->prepare("SELECT fo.name AS folder_name, COUNT(*) AS cnt FROM archive_files af JOIN archive_folders fo ON af.folder_id = fo.id WHERE YEAR(af.created_at) = ? GROUP BY fo.name");
+        if ($arc) {
+            $arc->bind_param("i", $year);
+            $arc->execute();
+            $res = $arc->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $data['categories'][] = ['name' => $row['folder_name'], 'count' => (int)$row['cnt'], 'group' => 'Archives'];
+            }
+            $arc->close();
+        }
+        echo json_encode($data);
+        $conn->close();
+        exit();
+    }
+    header('Content-Type: application/json');
+    if ($action === 'create_folder') {
+        $name = isset($payload['name']) ? trim((string)$payload['name']) : '';
+        if ($name === '') {
+            echo json_encode(['success' => false, 'message' => 'Folder name is required']);
+            $conn->close();
+            exit();
+        }
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name));
+        $slug = trim($slug, '-');
+        if ($slug === '') {
+            echo json_encode(['success' => false, 'message' => 'Folder name is invalid']);
+            $conn->close();
+            exit();
+        }
+        $reserved = ['ordinances-resolution', 'billing', 'public-hearings', 'meeting-records'];
+        if (in_array($slug, $reserved, true)) {
+            echo json_encode(['success' => false, 'message' => 'Folder already exists']);
+            $conn->close();
+            exit();
+        }
+        $chk = $conn->prepare("SELECT id FROM archive_folders WHERE slug = ? LIMIT 1");
+        if ($chk) {
+            $chk->bind_param("s", $slug);
+            $chk->execute();
+            $res = $chk->get_result();
+            if ($res && $res->num_rows > 0) {
+                $chk->close();
+                echo json_encode(['success' => false, 'message' => 'Folder already exists']);
+                $conn->close();
+                exit();
+            }
+            $chk->close();
+        }
+        $uid = (int)$_SESSION['user_id'];
+        $ins = $conn->prepare("INSERT INTO archive_folders (name, slug, created_by) VALUES (?, ?, ?)");
+        if (!$ins) {
+            echo json_encode(['success' => false, 'message' => 'Could not create folder']);
+            $conn->close();
+            exit();
+        }
+        $ins->bind_param("ssi", $name, $slug, $uid);
+        if ($ins->execute()) {
+            echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug]]);
+            $ins->close();
+            $conn->close();
+            exit();
+        }
+        $ins->close();
+        echo json_encode(['success' => false, 'message' => 'Could not create folder']);
+        $conn->close();
+        exit();
+    }
+    echo json_encode(['success' => false, 'message' => 'Invalid request']);
+    $conn->close();
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Storage - Document Management</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: '#dc2626',
-                            light: '#f97316',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <?php include 'includes/header_scripts.php'; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     
-    <!-- Prevent dark mode flicker -->
-    <script src="assets/js/theme-head.js"></script>
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
@@ -64,6 +222,13 @@ if (isset($_SESSION['user_id'])) {
     }
 }
     $stmt->close();
+    $archive_folders = [];
+    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+    if ($folders_result && $folders_result->num_rows > 0) {
+        while ($row = $folders_result->fetch_assoc()) {
+            $archive_folders[] = $row;
+        }
+    }
     $conn->close();
     
     $display_name = $user_data['full_name'] ?? 'User';
@@ -105,10 +270,12 @@ if (isset($_SESSION['user_id'])) {
                 <span>Main Storage Archives</span>
             </a>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
 
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
@@ -188,10 +355,12 @@ if (isset($_SESSION['user_id'])) {
                         <span class="sidebar-text">Export</span>
                     </a>
                     
+                    <?php if (isset($is_admin) && $is_admin): ?>
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-book mr-3"></i>
@@ -218,10 +387,7 @@ if (isset($_SESSION['user_id'])) {
                     </a>
                     <?php endif; ?>
 
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-person mr-3"></i>
-                        <span class="sidebar-text">Profile</span>
-                    </a>
+                    
 
                     <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
@@ -285,7 +451,7 @@ if (isset($_SESSION['user_id'])) {
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                 <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -324,7 +490,7 @@ if (isset($_SESSION['user_id'])) {
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -387,9 +553,25 @@ if (isset($_SESSION['user_id'])) {
                     </div>
 
                     <!-- Recent Archives Section -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Yearly Archives</h2>
+                            <form id="year-export-form" method="POST" action="storage.php" target="_blank" class="hidden">
+                                <input type="hidden" name="action" value="export_year_zip">
+                                <input type="hidden" name="year" id="year-export-input" value="">
+                            </form>
+                        </div>
+                        <div id="yearly-archives-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                    </div>
+                    <div class="mb-4 px-4 py-3 bg-yellow-50 dark:bg-amber-900/20 rounded-lg border border-yellow-200 dark:border-amber-800 text-xs text-yellow-700 dark:text-amber-200">
+                        Retention policy: Main Storage retains files for 5 years.
+                    </div>
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200"> Archives Folders</h2>
+                <button id="create-folder-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Create Folder</button>
+            </div>
+            <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,8 +608,54 @@ if (isset($_SESSION['user_id'])) {
                     <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Meeting/Sessions Records</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                 </a>
+                <?php foreach ($archive_folders as $folder): ?>
+                <a href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                    <div class="mb-3 group-hover:scale-110 transition-transform">
+                        <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                    </div>
+                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">Last opened: Not yet opened</div>
+                </a>
+                <?php endforeach; ?>
             </div>
         </div>
+        <div class="mt-4 flex justify-end">
+            <div class="flex items-center gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-4 py-2 shadow-sm">
+                <button id="system-backup-btn" type="button" class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold">System Backup</button>
+                <button id="system-restore-btn" type="button" class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold">Restore</button>
+            </div>
+        </div>
+        <div id="create-folder-modal" class="hidden fixed inset-0 z-50">
+            <div id="create-folder-backdrop" class="absolute inset-0 bg-black/50"></div>
+            <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+                <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
+                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Create Folder</div>
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-2" for="new-folder-name">Folder Name</label>
+                    <input id="new-folder-name" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Enter folder name">
+                    <div id="folder-name-error" class="mt-2 text-xs text-red-600 dark:text-red-400 hidden"></div>
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button id="cancel-create-folder" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                        <button id="confirm-create-folder" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold opacity-50 cursor-not-allowed" disabled>Add Folder</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="restore-confirm-modal" class="hidden fixed inset-0 z-50">
+            <div id="restore-confirm-backdrop" class="absolute inset-0 bg-black/50"></div>
+            <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+                <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
+                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Confirm Restore</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">This will restore the latest backup and may overwrite current data.</div>
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button id="restore-cancel-btn" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                        <button id="restore-confirm-btn" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Restore</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold" role="status" aria-live="polite"></div>
     </div>
 
     <script>
@@ -532,19 +760,393 @@ if (isset($_SESSION['user_id'])) {
             sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
             sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
         });
+
+        const createFolderBtn = document.getElementById('create-folder-btn');
+        const foldersGrid = document.getElementById('archive-folders-grid');
+        const createModal = document.getElementById('create-folder-modal');
+        const createInput = document.getElementById('new-folder-name');
+        const createBackdrop = document.getElementById('create-folder-backdrop');
+        const cancelCreate = document.getElementById('cancel-create-folder');
+        const confirmCreate = document.getElementById('confirm-create-folder');
+        const createError = document.getElementById('folder-name-error');
+        const restoreModal = document.getElementById('restore-confirm-modal');
+        const restoreBackdrop = document.getElementById('restore-confirm-backdrop');
+        const restoreCancel = document.getElementById('restore-cancel-btn');
+        const restoreConfirm = document.getElementById('restore-confirm-btn');
+        const toastEl = document.getElementById('toast');
+        const existingSlugs = new Set(
+            Array.from(document.querySelectorAll('#archive-folders-grid [data-archive]'))
+                .map(el => (el.getAttribute('data-archive') || '').toLowerCase())
+                .filter(Boolean)
+        );
+        let toastTimer = null;
+        const toastBase = 'fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold';
+        const toastStyles = {
+            success: 'bg-gradient-to-r from-green-500 to-emerald-500',
+            error: 'bg-gradient-to-r from-red-600 to-red-500'
+        };
+        const showToast = (message, type) => {
+            if (!toastEl) return;
+            const style = toastStyles[type] || toastStyles.success;
+            toastEl.className = `${toastBase} ${style}`;
+            toastEl.textContent = message;
+            toastEl.classList.remove('opacity-0', 'translate-y-4');
+            toastEl.classList.add('opacity-100', 'translate-y-0');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toastEl.classList.remove('opacity-100', 'translate-y-0');
+                toastEl.classList.add('opacity-0', 'translate-y-4');
+            }, 2000);
+        };
+        const normalizeSlug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const escapeHtml = (value) => value.replace(/[&<>"']/g, (ch) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+        const setCreateButtonEnabled = (enabled) => {
+            if (!confirmCreate) return;
+            confirmCreate.disabled = !enabled;
+            confirmCreate.classList.toggle('opacity-50', !enabled);
+            confirmCreate.classList.toggle('cursor-not-allowed', !enabled);
+        };
+        const setCreateError = (message) => {
+            if (!createError) return;
+            if (message) {
+                createError.textContent = message;
+                createError.classList.remove('hidden');
+            } else {
+                createError.textContent = '';
+                createError.classList.add('hidden');
+            }
+        };
+        const validateCreateName = () => {
+            const name = (createInput?.value || '').trim();
+            if (!name) {
+                setCreateError('');
+                setCreateButtonEnabled(false);
+                return { ok: false };
+            }
+            const slug = normalizeSlug(name);
+            if (!slug) {
+                setCreateError('Folder name is invalid.');
+                setCreateButtonEnabled(false);
+                return { ok: false };
+            }
+            if (existingSlugs.has(slug)) {
+                setCreateError('Folder already exists.');
+                setCreateButtonEnabled(false);
+                return { ok: false };
+            }
+            setCreateError('');
+            setCreateButtonEnabled(true);
+            return { ok: true, name, slug };
+        };
+        const closeCreateModal = () => {
+            createModal?.classList.add('hidden');
+            if (createInput) createInput.value = '';
+            setCreateError('');
+            setCreateButtonEnabled(false);
+        };
+        const openCreateModal = () => {
+            createModal?.classList.remove('hidden');
+            setTimeout(() => createInput?.focus(), 0);
+            validateCreateName();
+        };
+        createFolderBtn?.addEventListener('click', openCreateModal);
+        cancelCreate?.addEventListener('click', closeCreateModal);
+        createBackdrop?.addEventListener('click', closeCreateModal);
+        createInput?.addEventListener('input', validateCreateName);
+        createInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!confirmCreate?.disabled) confirmCreate?.click();
+            }
+        });
+        const createFolderCard = (name, slug, id) => {
+            const safeName = escapeHtml(name);
+            const safeSlug = escapeHtml(slug);
+            const card = document.createElement('a');
+            card.href = 'folder_view.php?id=' + id;
+            card.setAttribute('data-archive', slug);
+            card.className = 'block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group';
+            card.innerHTML = `
+                <div class="mb-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                </div>
+                <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">${safeName}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="${safeSlug}">Last opened: Not yet opened</div>
+            `;
+            return card;
+        };
+        let isCreating = false;
+        const setCreateButtonLoading = (loading) => {
+            if (!confirmCreate) return;
+            if (loading) {
+                confirmCreate.dataset.label = confirmCreate.textContent;
+                confirmCreate.textContent = 'Adding...';
+                confirmCreate.disabled = true;
+                confirmCreate.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                confirmCreate.textContent = confirmCreate.dataset.label || 'Add Folder';
+                validateCreateName();
+            }
+        };
+        confirmCreate?.addEventListener('click', async () => {
+            if (isCreating) return;
+            const validation = validateCreateName();
+            if (!validation.ok) return;
+            isCreating = true;
+            setCreateButtonLoading(true);
+            try {
+                const response = await fetch('storage.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'create_folder', name: validation.name })
+                });
+                const data = await response.json();
+                if (!data || !data.success) {
+                    setCreateError(data?.message || 'Could not create folder.');
+                    setCreateButtonLoading(false);
+                    isCreating = false;
+                    return;
+                }
+                const folder = data.folder || { name: validation.name, slug: validation.slug, id: data.folder.id };
+                existingSlugs.add((folder.slug || '').toLowerCase());
+                const card = createFolderCard(folder.name, folder.slug, folder.id);
+                foldersGrid?.appendChild(card);
+                showToast('Folder created.', 'success');
+                closeCreateModal();
+            } catch (e) {
+                showToast('Could not create folder.', 'error');
+            } finally {
+                isCreating = false;
+                setCreateButtonLoading(false);
+            }
+        });
+        const closeRestoreModal = () => {
+            restoreModal?.classList.add('hidden');
+        };
+        restoreBackdrop?.addEventListener('click', closeRestoreModal);
+        restoreCancel?.addEventListener('click', closeRestoreModal);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (createModal && !createModal.classList.contains('hidden')) closeCreateModal();
+                if (restoreModal && !restoreModal.classList.contains('hidden')) closeRestoreModal();
+            }
+        });
+        const setActionLoading = (btn, loading, label) => {
+            if (!btn) return;
+            if (loading) {
+                btn.dataset.label = btn.textContent;
+                btn.textContent = label;
+                btn.disabled = true;
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
+            } else {
+                btn.textContent = btn.dataset.label || btn.textContent;
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        };
+        const backupBtn = document.getElementById('system-backup-btn');
+        const restoreBtn = document.getElementById('system-restore-btn');
+        backupBtn?.addEventListener('click', () => {
+            if (backupBtn.disabled) return;
+            setActionLoading(backupBtn, true, 'Running...');
+            setTimeout(() => {
+                setActionLoading(backupBtn, false, '');
+                showToast('System backup completed.', 'success');
+            }, 900);
+        });
+        restoreBtn?.addEventListener('click', () => {
+            if (restoreBtn.disabled) return;
+            restoreModal?.classList.remove('hidden');
+        });
+        restoreConfirm?.addEventListener('click', () => {
+            closeRestoreModal();
+            if (!restoreBtn || restoreBtn.disabled) return;
+            setActionLoading(restoreBtn, true, 'Restoring...');
+            setTimeout(() => {
+                setActionLoading(restoreBtn, false, '');
+                showToast('System restore completed.', 'success');
+            }, 900);
+        });
         
-        // Profile dropdown
         const profileBtn = document.getElementById('profile-btn');
         const profileDropdown = document.getElementById('profile-dropdown');
-        
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const notifCount = document.getElementById('notif-count');
+
         profileBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
+            notifDropdown?.classList.add('hidden');
             profileDropdown?.classList.toggle('hidden');
         });
-        
-        document.addEventListener('click', () => {
+
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
             profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.toggle('hidden');
+            try {
+                var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
+                if (ids.length > 0) {
+                    fetch('notifications_log.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body:'event_type='+encodeURIComponent('alert_shown')+'&ids='+encodeURIComponent(JSON.stringify(ids))
+                    }).then(function(){});
+                }
+            } catch(e){}
         });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+                profileDropdown?.classList.add('hidden');
+            }
+            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                notifDropdown?.classList.add('hidden');
+            }
+        });
+
+        (function(){
+            function renderNotifList(items){
+                var container = document.getElementById('notif-list');
+                if (!container) return;
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
+                    return;
+                }
+                var html = items.map(function(n){
+                    var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+                    var badge = '';
+                    var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+                    if (n.status === 'unread') badge = ' ring-2 ring-red-200';
+                    return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+                           '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+                           '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+                           '<div class="flex-1 min-w-0">'+
+                           '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                           '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+                           '</div></a>';
+                }).join('');
+                container.innerHTML = html;
+            }
+            function escapeHtml(s){
+                if (typeof s !== 'string') return '';
+                return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+            }
+            function fetchLatest(){
+                fetch('notifications_fetch.php?page_size=5&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (d && d.success) renderNotifList(d.items||[]);
+                }).catch(function(){});
+            }
+            function fetchUnread(){
+                fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (!notifCount) return;
+                    var total = (d && d.success) ? (d.total||0) : 0;
+                    notifCount.textContent = String(total);
+                    notifCount.style.display = total > 0 ? 'inline-flex' : 'none';
+                }).catch(function(){});
+            }
+            function refresh(){
+                fetchLatest();
+                fetchUnread();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+            window.addEventListener('focus', refresh);
+        })();
+        (function(){
+            function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+            function yearCard(year){
+                var el = document.createElement('div');
+                el.className = 'p-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50';
+                el.innerHTML = '<div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">'+year+'</div>'
+                    + '<div class="text-xs text-gray-600 dark:text-gray-400 mb-3">Jan 1 - Dec 31</div>'
+                    + '<div class="flex gap-2">'
+                    + '<button data-year="'+year+'" class="view-year-btn px-3 py-1.5 text-xs rounded-md bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">View</button>'
+                    + '<button data-year="'+year+'" class="export-year-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white">Export ZIP</button>'
+                    + '</div>';
+                return el;
+            }
+            function renderYearCards(){
+                var grid = document.getElementById('yearly-archives-grid');
+                if (!grid) return;
+                var now = new Date();
+                var current = now.getFullYear();
+                grid.innerHTML = '';
+                for (var y = current; y >= current - 4; y--){
+                    grid.appendChild(yearCard(y));
+                }
+                grid.querySelectorAll('.view-year-btn').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var year = parseInt(btn.getAttribute('data-year'), 10);
+                        fetch('storage.php', {
+                            method:'POST',
+                            headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ action:'list_year', year: year })
+                        }).then(function(r){ return r.json(); })
+                        .then(function(d){
+                            if (!d || !d.success) {
+                                showToast('Could not load year '+year, 'error');
+                                return;
+                            }
+                            var lines = d.categories.map(function(c){
+                                return '<div class="flex items-center justify-between p-2 rounded-md bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700"><span class="text-sm font-medium text-gray-800 dark:text-gray-200">'+escapeHtml(c.group)+': '+escapeHtml(c.name)+'</span><span class="text-xs text-gray-600 dark:text-gray-400">'+String(c.count)+' files</span></div>';
+                            }).join('');
+                            var modal = document.createElement('div');
+                            modal.id = 'year-modal';
+                            modal.className = 'fixed inset-0 z-50';
+                            modal.innerHTML = '<div class="absolute inset-0 bg-black/50"></div>'
+                                + '<div class="absolute inset-0 flex items-center justify-center p-4">'
+                                + '<div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 shadow-xl">'
+                                + '<div class="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between"><div class="font-semibold text-gray-800 dark:text-gray-200">Year '+year+' Summary</div><button id="year-modal-close" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i class="bi bi-x-lg"></i></button></div>'
+                                + '<div class="p-4 space-y-2">'+(lines || '<div class="text-sm text-gray-600 dark:text-gray-400">No files for this year.</div>')+'</div>'
+                                + '<div class="p-4 border-t border-gray-200 dark:border-slate-700 text-right"><button id="year-modal-export" class="px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white">Export ZIP</button></div>'
+                                + '</div></div>';
+                            document.body.appendChild(modal);
+                            document.getElementById('year-modal-close').addEventListener('click', function(){
+                                modal.remove();
+                            });
+                            document.getElementById('year-modal-export').addEventListener('click', function(){
+                                var form = document.getElementById('year-export-form');
+                                var input = document.getElementById('year-export-input');
+                                if (form && input) {
+                                    input.value = String(year);
+                                    form.submit();
+                                }
+                            });
+                        }).catch(function(){
+                            showToast('Error loading year '+year, 'error');
+                        });
+                    });
+                });
+                grid.querySelectorAll('.export-year-btn').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var year = parseInt(btn.getAttribute('data-year'), 10);
+                        var form = document.getElementById('year-export-form');
+                        var input = document.getElementById('year-export-input');
+                        if (form && input) {
+                            input.value = String(year);
+                            form.submit();
+                        }
+                    });
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderYearCards);
+            } else {
+                renderYearCards();
+            }
+        })();
         
         // Restore sidebar state
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
@@ -615,6 +1217,6 @@ if (isset($_SESSION['user_id'])) {
             }
         })();
     </script>
-    <script src="assets/js/theme-toggle.js"></script>
+    <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

@@ -100,10 +100,12 @@
                     <i class="bi bi-folder mr-3 text-lg"></i>
                     <span>Main Storage Archives</span>
                 </a>
-                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-trash mr-3 text-lg"></i>
-                    <span>Recently Deleted</span>
-                </a>
+                <?php if (isset($user_data['role']) && strtolower($user_data['role']) === 'admin'): ?>
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-trash mr-3 text-lg"></i>
+                <span>Recently Deleted</span>
+            </a>
+            <?php endif; ?>
 
                 <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-cloud-upload mr-3 text-lg"></i>
@@ -130,6 +132,10 @@
                     <span>User Management</span>
                 </a>
                 <?php endif; ?>
+                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-person mr-3 text-lg"></i>
+                    <span>Profile</span>
+                </a>
                 <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
@@ -179,15 +185,17 @@
                             <i class="bi bi-folder mr-3"></i>
                             <span class="sidebar-text">Main Storage Archives</span>
                         </a>
-                        <a href="" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-cloud-upload mr-3"></i>
                             <span class="sidebar-text">Export</span>
                         </a>
 
-                        <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                            <i class="bi bi-trash mr-3"></i>
-                            <span class="sidebar-text">Recently Deleted</span>
-                        </a>
+                        <?php if (isset($user_data['role']) && strtolower($user_data['role']) === 'admin'): ?>
+                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-trash mr-3"></i>
+                        <span class="sidebar-text">Recently Deleted</span>
+                    </a>
+                    <?php endif; ?>
 
                         <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-book mr-3"></i>
@@ -248,10 +256,19 @@
                 <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
+                        <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
+                            <!-- Sidebar Toggle Button (Desktop) -->
+
+                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
+                            
+                            <!-- Logo (Mobile) -->
+                            <div class="mobile-only flex items-center ml-2">
+                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                            </div>
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
@@ -275,7 +292,7 @@
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -311,7 +328,7 @@
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -335,7 +352,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4 overflow-x-auto">
+                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4">
                                     <div class="flex flex-col gap-4 mb-4">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
@@ -374,7 +391,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-600/80">
+                                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-600/80">
                                     <table class="w-full text-left table-auto">
                                         <thead>
                                             <tr class="text-sm text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/80 border-b border-gray-200 dark:border-slate-600">
@@ -402,7 +419,8 @@
                                                 </td>
                                                 <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-3 text-sm">
-                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button">Mark Read</button>
+                                                    <?php $isReadBtn = strtolower($note['status']) === 'read'; ?>
+                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border <?php echo $isReadBtn ? 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 border-gray-200 dark:border-slate-600' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?> transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>

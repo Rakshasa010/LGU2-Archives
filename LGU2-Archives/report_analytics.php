@@ -219,6 +219,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     <script src="assets/js/archives-landing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .card { border-radius: 0.75rem; }
@@ -264,7 +265,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         
         <!-- Mobile Navigation Menu -->
         <nav class="flex-1 py-4 px-3 overflow-hidden">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
@@ -274,10 +275,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 <span>Main Storage Archives</span>
             </a>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-cloud-upload mr-3 text-lg"></i>
@@ -288,7 +291,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-graph-up mr-3 text-lg"></i>
                     <span>Reports & Analytics</span>
                 </a>
@@ -345,7 +348,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             <!-- Navigation Menu -->
             <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
                         <span class="sidebar-text">Dashboard Archives</span>
                     </a>
@@ -360,10 +363,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                         <span class="sidebar-text">Export</span>
                     </a>
 
+                    <?php if (isset($is_admin) && $is_admin): ?>
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-book mr-3"></i>
@@ -375,7 +380,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 <!-- ANALYTICS Section -->
                 <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-graph-up mr-3"></i>
                         <span class="sidebar-text">Reports & Analytics</span>
                     </a>
@@ -391,10 +396,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                     </a>
                     <?php endif; ?>
 
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-person mr-3"></i>
-                        <span class="sidebar-text">Profile</span>
-                    </a>
+                    
 
                     <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
@@ -429,15 +431,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                         <div class="flex items-center">
                             <!-- Sidebar Toggle Button (Desktop) -->
 
-                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                            
-                            <!-- Logo (Mobile) -->
-                            <div class="mobile-only flex items-center ml-2">
-                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
-                            </div>
                         </div>
                         
                         
@@ -467,7 +463,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -506,7 +502,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -528,10 +524,19 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                                 <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Quick overview of records, downloads, and recent activity</p>
                             </div>
                             <div class="flex flex-col items-end gap-1">
-                                <div class="flex items-center gap-2">
-                                    <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</a>
-                                    <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                            <div class="flex items-center gap-2">
+                                <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</a>
+                                <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                                <div class="relative">
+                                    <button id="more-actions-btn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200" title="More options">
+                                        <i class="bi bi-three-dots-vertical text-lg"></i>
+                                    </button>
+                                    <div id="more-actions-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                        <button id="refresh-analytics" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Refresh Data</button>
+                                        <a href="audit-logs.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">View Audit Logs</a>
+                                    </div>
                                 </div>
+                            </div>
                                 <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browser’s default Downloads folder.</div>
                             </div>
                         </div>
@@ -745,17 +750,112 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 
         const profileBtn = document.getElementById('profile-btn');
         const profileDropdown = document.getElementById('profile-dropdown');
-        profileBtn?.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown?.classList.toggle('hidden'); });
-        document.addEventListener('click', () => profileDropdown?.classList.add('hidden'));
-
         const notifBtn = document.getElementById('notification-btn');
         const notifDropdown = document.getElementById('notification-dropdown');
+        const notifCount = document.getElementById('notif-count');
+        const moreBtn = document.getElementById('more-actions-btn');
+        const moreDropdown = document.getElementById('more-actions-dropdown');
+        const refreshBtn = document.getElementById('refresh-analytics');
+
+        profileBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notifDropdown?.classList.add('hidden');
+            moreDropdown?.classList.add('hidden');
+            profileDropdown?.classList.toggle('hidden');
+        });
+
         notifBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
             profileDropdown?.classList.add('hidden');
+            moreDropdown?.classList.add('hidden');
             notifDropdown?.classList.toggle('hidden');
+            try {
+                var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
+                if (ids.length > 0) {
+                    fetch('notifications_log.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body:'event_type='+encodeURIComponent('alert_shown')+'&ids='+encodeURIComponent(JSON.stringify(ids))
+                    }).then(function(){});
+                }
+            } catch(e){}
         });
-        document.addEventListener('click', () => notifDropdown?.classList.add('hidden'));
+
+        moreBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.add('hidden');
+            moreDropdown?.classList.toggle('hidden');
+        });
+
+        refreshBtn?.addEventListener('click', () => {
+            moreDropdown?.classList.add('hidden');
+            location.reload();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+                profileDropdown?.classList.add('hidden');
+            }
+            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                notifDropdown?.classList.add('hidden');
+            }
+            if (!e.target.closest || !e.target.closest('#more-actions-dropdown')) {
+                moreDropdown?.classList.add('hidden');
+            }
+        });
+
+        (function(){
+            function renderNotifList(items){
+                var container = document.getElementById('notif-list');
+                if (!container) return;
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
+                    return;
+                }
+                var html = items.map(function(n){
+                    var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+                    var badge = '';
+                    var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+                    if (n.status === 'unread') badge = ' ring-2 ring-red-200';
+                    return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+                           '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+                           '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+                           '<div class="flex-1 min-w-0">'+
+                           '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                           '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+                           '</div></a>';
+                }).join('');
+                container.innerHTML = html;
+            }
+            function escapeHtml(s){
+                if (typeof s !== 'string') return '';
+                return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+            }
+            function fetchLatest(){
+                fetch('notifications_fetch.php?page_size=5&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (d && d.success) renderNotifList(d.items||[]);
+                }).catch(function(){});
+            }
+            function fetchUnread(){
+                fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (!notifCount) return;
+                    var total = (d && d.success) ? (d.total||0) : 0;
+                    notifCount.textContent = String(total);
+                    notifCount.style.display = total > 0 ? 'inline-flex' : 'none';
+                }).catch(function(){});
+            }
+            function refresh(){
+                fetchLatest();
+                fetchUnread();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+            window.addEventListener('focus', refresh);
+        })();
 
         if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar?.classList.add('sidebar-collapsed');
 

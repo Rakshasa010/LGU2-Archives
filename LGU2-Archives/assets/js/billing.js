@@ -25,23 +25,17 @@ document.getElementById('uploadForm')?.addEventListener('submit', function(e) {
     const fileName = document.getElementById('fileName').value.trim();
 
     if (fileInput && fileInput.files.length > 0 && fileName) {
-        const dateMatch = fileName.match(/^(\d{4}-\d{2}-\d{2})_/);
-        if (dateMatch) {
-            const date = dateMatch[1];
-            const fileType = fileName.split('.').pop().toLowerCase();
+        const fileType = fileName.split('.').pop().toLowerCase();
 
-            try {
-                if (!window.files) window.files = [];
-                window.files.push({ name: fileName, date: date, type: fileType });
-                if (typeof renderFiles === 'function') renderFiles();
-            } catch(e){}
+        try {
+            if (!window.files) window.files = [];
+            window.files.push({ name: fileName, date: new Date().toISOString().split('T')[0], type: fileType });
+            if (typeof renderFiles === 'function') renderFiles();
+        } catch(e){}
 
-            this.reset();
-            closeModal('uploadModal');
-            alert('File uploaded successfully!');
-        } else {
-            alert('File name must start with YYYY-MM-DD_ format');
-        }
+        this.reset();
+        closeModal('uploadModal');
+        alert('File uploaded successfully!');
     }
 });
 

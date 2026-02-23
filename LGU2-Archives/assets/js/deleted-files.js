@@ -49,7 +49,8 @@
 
   function add(entry) {
     const t = nowMs();
-    const expMs = t + RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    // No expiration date set
+    const expMs = null; 
 
     const item = {
       id: String(entry?.id ?? `${t}`),
@@ -58,10 +59,10 @@
       category: String(entry?.category ?? entry?.type ?? 'Other'),
       originalPath: String(entry?.originalPath ?? ''),
       deletedAt: String(entry?.deletedAt ?? toIso(t)),
-      expireAt: String(entry?.expireAt ?? toIso(expMs)),
+      // expireAt: String(entry?.expireAt ?? toIso(expMs)), // Removed expiration
     };
 
-    const items = prune(load(), t);
+    const items = load(); // No pruning
     items.unshift(item);
     if (items.length > MAX_ITEMS) items.length = MAX_ITEMS;
     save(items);

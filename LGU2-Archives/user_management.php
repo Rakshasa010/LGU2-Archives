@@ -24,9 +24,20 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $target = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
-    if ($target > 0 && in_array($action, ['approve','reject'], true)) {
-        $info = null;
-        $gi = $conn->prepare("SELECT full_name, username, email FROM users WHERE id = ?");
+    if ($target > 0 && in_array($action, ['approve','reject','delete'], true)) {
+        if ($action === 'delete') {
+            // Delete user
+            $del = $conn->prepare("DELETE FROM users WHERE id = ?");
+            $del->bind_param("i", $target);
+            if ($del->execute()) {
+                $message = 'User deleted.';
+            } else {
+                $message = 'Failed to delete user.';
+            }
+            $del->close();
+        } else {
+            $info = null;
+            $gi = $conn->prepare("SELECT full_name, username, email FROM users WHERE id = ?");
         if ($gi) { $gi->bind_param("i", $target); $gi->execute(); $r = $gi->get_result(); if ($r) { $info = $r->fetch_assoc(); } $gi->close(); }
         $newStatus = $action === 'approve' ? 'active' : 'rejected';
         $up = $conn->prepare("UPDATE users SET status = ? WHERE id = ?");
@@ -105,12 +116,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Failed to update user.';
         }
         $up->close();
+        }
     }
 }
 
 $pending = [];
 if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM users WHERE status = 'pending' ORDER BY created_at DESC")) {
     while ($row = $q->fetch_assoc()) { $pending[] = $row; }
+}
+
+$all_users = [];
+if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activity, role FROM users ORDER BY full_name ASC")) {
+    while ($row = $q->fetch_assoc()) { $all_users[] = $row; }
 }
 ?>
 <!doctype html>
@@ -150,7 +167,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
         
         <!-- Mobile Navigation Menu -->
         <nav class="flex-1 py-4 px-3 overflow-hidden">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
@@ -160,10 +177,12 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                 <span>Main Storage Archives</span>
             </a>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-cloud-upload mr-3 text-lg"></i>
@@ -184,7 +203,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
                 <?php if ($is_admin): ?>
-                <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-people mr-3 text-lg"></i>
                     <span>User Management</span>
                 </a>
@@ -231,7 +250,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
             <!-- Navigation Menu -->
             <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
                         <span class="sidebar-text">Dashboard Archives</span>
                     </a>
@@ -246,10 +265,12 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                         <span class="sidebar-text">Export</span>
                     </a>
 
+                    <?php if (isset($is_admin) && $is_admin): ?>
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-book mr-3"></i>
@@ -271,7 +292,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                 <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
                     <?php if ($is_admin): ?>
-                    <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-people mr-3"></i>
                         <span class="sidebar-text">User Management</span>
                     </a>
@@ -353,7 +374,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -392,7 +413,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -457,50 +478,127 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
                 </table>
             </div>
         </div>
+        
+        <!-- Active/Inactive Users List -->
+        <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="font-semibold text-gray-800 dark:text-gray-200">User List</div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600 dark:text-gray-400" id="userCount"><?php echo count($all_users); ?> users</span>
+                    <select id="roleFilter" class="text-sm border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-200 p-2">
+                        <option value="all">All Roles</option>
+                        <option value="admin">Admins</option>
+                        <option value="user">Users</option>
+                    </select>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full" id="userTable">
+                    <thead class="bg-gray-50 dark:bg-slate-700/50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Active</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                        <?php if (empty($all_users)): ?>
+                            <tr>
+                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No users found</td>
+                            </tr>
+                        <?php else: foreach ($all_users as $u): ?>
+                            <tr class="user-row" data-role="<?php echo isset($u['role']) ? strtolower($u['role']) : 'user'; ?>">
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                    <?php echo htmlspecialchars($u['full_name']); ?>
+                                    <?php if(isset($u['role']) && $u['role']==='admin') echo '<span class="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Admin</span>'; ?>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
+                                <td class="px-6 py-4 text-sm">
+                                    <span class="px-2 py-1 text-xs rounded-full <?php echo $u['status']==='active'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'; ?>">
+                                        <?php echo ucfirst($u['status']); ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                                    <?php 
+                                    if (!empty($u['last_activity'])) {
+                                        $last_activity = strtotime($u['last_activity']);
+                                        $diff = time() - $last_activity;
+                                        
+                                        // If active within last 5 minutes (300 seconds), show "Active Now"
+                                        if ($diff < 300) {
+                                            echo '<span class="flex items-center text-green-600 dark:text-green-400 font-medium"><span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>Active Now</span>';
+                                        } else {
+                                            // Show time elapsed since last activity
+                                            if ($diff < 3600) echo floor($diff/60) . ' mins ago';
+                                            elseif ($diff < 86400) echo floor($diff/3600) . ' hours ago';
+                                            else echo floor($diff/86400) . ' days ago';
+                                        }
+                                    } else {
+                                        echo 'Never';
+                                    }
+                                    ?>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <?php if ((int)$u['id'] !== $user_id): // Prevent deleting self ?>
+                                    <form method="post" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                        <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="text-red-600 hover:text-red-800 dark:hover:text-red-400" title="Delete User">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+        document.getElementById('roleFilter').addEventListener('change', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const role = row.getAttribute('data-role');
+                // If filter is 'all', show everything.
+                // If filter is 'admin', show only 'admin'.
+                // If filter is 'user', show anything NOT 'admin' (assuming default is user).
+                let show = false;
+                if (filter === 'all') {
+                    show = true;
+                } else if (filter === 'admin') {
+                    show = (role === 'admin');
+                } else {
+                    // filter is 'user'
+                    show = (role !== 'admin');
+                }
+
+                if (show) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Update the counter text
+            document.getElementById('userCount').textContent = visibleCount + ' users';
+        });
+        </script>
+
         <div class="mt-6">
             <a href="archives-landing.php" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700">
                 <span class="mr-2">←</span> Back to Archives
             </a>
         </div>
     </div>
-    <script>
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileSidebar = document.getElementById('mobile-sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
-
-        mobileMenuBtn?.addEventListener('click', () => {
-            mobileSidebar?.classList.remove('-translate-x-full');
-            sidebarOverlay?.classList.remove('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.add('opacity-100', 'pointer-events-auto');
-        });
-
-        closeMobileSidebar?.addEventListener('click', () => {
-            mobileSidebar?.classList.add('-translate-x-full');
-            sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
-        });
-
-        sidebarOverlay?.addEventListener('click', () => {
-            mobileSidebar?.classList.add('-translate-x-full');
-            sidebarOverlay?.classList.add('opacity-0', 'pointer-events-none');
-            sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
-        });
-
-        const profileBtn = document.getElementById('profile-btn');
-        const profileDropdown = document.getElementById('profile-dropdown');
-        profileBtn?.addEventListener('click', (e) => { e.stopPropagation(); profileDropdown?.classList.toggle('hidden'); });
-        document.addEventListener('click', () => profileDropdown?.classList.add('hidden'));
-
-        const notifBtn = document.getElementById('notification-btn');
-        const notifDropdown = document.getElementById('notification-dropdown');
-        notifBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown?.classList.add('hidden');
-            notifDropdown?.classList.toggle('hidden');
-        });
-        document.addEventListener('click', () => notifDropdown?.classList.add('hidden'));
-    </script>
+    <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
 </body>
 </html>

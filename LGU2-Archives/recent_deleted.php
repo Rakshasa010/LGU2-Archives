@@ -63,6 +63,13 @@
             $st->close();
         }
     }
+    
+    // Admin check: Redirect if not admin
+    if (!$is_admin) {
+        header("Location: archives-landing.php");
+        exit();
+    }
+    
     $stmt->close();
     $conn->close();
     
@@ -105,15 +112,19 @@
                 <span>Main Storage Archives</span>
             </a>
             
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <?php if (isset($is_admin) && $is_admin): ?>
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
              <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Export</span>
             </a>
+            <?php endif; ?>
             
             <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
@@ -188,10 +199,12 @@
                         <span class="sidebar-text">Export</span>
                     </a>
 
-                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <?php if (isset($is_admin) && $is_admin): ?>
+                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-book mr-3"></i>
                         <span class="sidebar-text">Version Tracking</span>
@@ -321,7 +334,7 @@
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -351,7 +364,7 @@
                     </div>
                     <div class="px-4 py-2 bg-gray-100 dark:bg-slate-700 rounded-lg">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Retention</span>
-                        <span class="ml-2 font-semibold text-gray-800 dark:text-gray-200">30 Days</span>
+                        <span class="ml-2 font-semibold text-gray-800 dark:text-gray-200">Indefinite</span>
                     </div>
                 </div>
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -389,6 +402,33 @@
     </div>
 
     <div id="toast" class="fixed right-6 bottom-6 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold" role="status" aria-live="polite"></div>
+
+    <div id="restoreModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('restoreModal')"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700 transform transition-all scale-100 opacity-100 duration-300">
+                <div class="mb-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4 animate-bounce">
+                        <svg class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Restore File?</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Are you sure you want to restore <span id="restoreFileName" class="font-semibold text-gray-800 dark:text-gray-200"></span>?</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">This will return the file to <span id="restoreFileCategory" class="text-green-500 font-medium">its original location</span>.</p>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button type="button" onclick="closeModal('restoreModal')" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="confirmRestore()" class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-lg hover:shadow-green-500/30 transition-all transform hover:-translate-y-0.5 font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        Restore File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="assets/js/archives.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
@@ -499,9 +539,7 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3">
-                                        <div class="retention-countdown px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-xs font-semibold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-600" data-expire-at="${file.expireAt || ''}">
-                                            --
-                                        </div>
+                                        <!-- No countdown -->
                                         <button class="restore-btn px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center space-x-2" data-id="${file.id}">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                             <span>Restore</span>
@@ -535,19 +573,40 @@
             return icons[category] || '<svg class="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>';
         }
 
+        let restoreTargetId = null;
+
         function handleRestore(id) {
             const idx = deletedFiles.findIndex(f => f.id === id);
             if (idx === -1) return;
             const file = deletedFiles[idx];
 
-            const proceed = confirm(`Restore "${file.name}"?\n\nThis will return the file to ${file.category || 'its original location'}.`);
-            if (!proceed) return;
+            restoreTargetId = id;
+            document.getElementById('restoreFileName').textContent = `"${file.name}"`;
+            document.getElementById('restoreFileCategory').textContent = file.category || 'its original location';
+            
+            document.getElementById('restoreModal').classList.remove('hidden');
+        }
 
+        function confirmRestore() {
+            if (!restoreTargetId) return;
+            
+            const idx = deletedFiles.findIndex(f => f.id === restoreTargetId);
+            if (idx === -1) {
+                closeModal('restoreModal');
+                return;
+            }
+            
             const [restored] = deletedFiles.splice(idx, 1);
             saveDeletedFiles(deletedFiles);
 
             showToast(`"${restored.name}" restored successfully`);
             renderDeleted();
+            closeModal('restoreModal');
+            restoreTargetId = null;
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
         }
 
         function getTypeIcon(type) {
@@ -574,46 +633,6 @@
         filterSelect.addEventListener('change', () => renderDeleted());
 
         renderDeleted();
-
-        // Countdown beside Restore (updates every second)
-        let countdownTimer = null;
-        function formatRemaining(ms) {
-            if (!Number.isFinite(ms) || ms <= 0) return 'Expired';
-            const totalSeconds = Math.floor(ms / 1000);
-            const days = Math.floor(totalSeconds / 86400);
-            const hours = Math.floor((totalSeconds % 86400) / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            if (days > 0) return `${days}d ${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m`;
-            return `${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`;
-        }
-
-        function updateCountdowns() {
-            const els = document.querySelectorAll('.retention-countdown');
-            const now = Date.now();
-            let needsRerender = false;
-            els.forEach(el => {
-                const exp = el.getAttribute('data-expire-at') || '';
-                const expMs = Date.parse(exp);
-                if (!Number.isFinite(expMs)) {
-                    el.textContent = '30d';
-                    return;
-                }
-                const remaining = expMs - now;
-                el.textContent = formatRemaining(remaining);
-                if (remaining <= 0) needsRerender = true;
-            });
-
-            if (needsRerender) {
-                // prune expired and rerender
-                deletedFiles = loadDeletedFiles();
-                renderDeleted();
-            }
-        }
-
-        if (countdownTimer) clearInterval(countdownTimer);
-        countdownTimer = setInterval(updateCountdowns, 1000);
-        updateCountdowns();
 
         // Sidebar toggle functionality
         const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -648,18 +667,94 @@
             sidebarOverlay?.classList.remove('opacity-100', 'pointer-events-auto');
         });
         
-        // Profile dropdown
         const profileBtn = document.getElementById('profile-btn');
         const profileDropdown = document.getElementById('profile-dropdown');
-        
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const notifCount = document.getElementById('notif-count');
+
         profileBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
+            notifDropdown?.classList.add('hidden');
             profileDropdown?.classList.toggle('hidden');
         });
-        
-        document.addEventListener('click', () => {
+
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
             profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.toggle('hidden');
+            try {
+                var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
+                if (ids.length > 0) {
+                    fetch('notifications_log.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body:'event_type='+encodeURIComponent('alert_shown')+'&ids='+encodeURIComponent(JSON.stringify(ids))
+                    }).then(function(){});
+                }
+            } catch(e){}
         });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+                profileDropdown?.classList.add('hidden');
+            }
+            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                notifDropdown?.classList.add('hidden');
+            }
+        });
+
+        (function(){
+            function renderNotifList(items){
+                var container = document.getElementById('notif-list');
+                if (!container) return;
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
+                    return;
+                }
+                var html = items.map(function(n){
+                    var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+                    var badge = '';
+                    var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+                    if (n.status === 'unread') badge = ' ring-2 ring-red-200';
+                    return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+                           '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+                           '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+                           '<div class="flex-1 min-w-0">'+
+                           '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                           '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+                           '</div></a>';
+                }).join('');
+                container.innerHTML = html;
+            }
+            function escapeHtml(s){
+                if (typeof s !== 'string') return '';
+                return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+            }
+            function fetchLatest(){
+                fetch('notifications_fetch.php?page_size=5&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (d && d.success) renderNotifList(d.items||[]);
+                }).catch(function(){});
+            }
+            function fetchUnread(){
+                fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (!notifCount) return;
+                    var total = (d && d.success) ? (d.total||0) : 0;
+                    notifCount.textContent = String(total);
+                    notifCount.style.display = total > 0 ? 'inline-flex' : 'none';
+                }).catch(function(){});
+            }
+            function refresh(){
+                fetchLatest();
+                fetchUnread();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+            window.addEventListener('focus', refresh);
+        })();
         
         // Restore sidebar state
         if (localStorage.getItem('sidebarCollapsed') === 'true') {

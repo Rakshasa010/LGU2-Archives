@@ -25,27 +25,6 @@ if ($stmt) {
     $stmt->close();
 }
 
-$sql = "SELECT id, title, type, month, year, author, created_at, last_accessed 
-        FROM legislative_records 
-        WHERE type IN ('Ordinance','Resolution','Billing','Public Hearing','Meeting')
-        ORDER BY year DESC, month DESC, created_at DESC";
-$result = $conn->query($sql);
-
-$records_by_type = [
-    'Ordinance' => [],
-    'Resolution' => [],
-    'Billing' => [],
-    'Public Hearing' => [],
-    'Meeting' => []
-];
-
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        if (isset($records_by_type[$row['type']])) {
-            $records_by_type[$row['type']][] = $row;
-        }
-    }
-}
 $is_admin = false;
 if (isset($_SESSION['user_id'])) {
     $uid = (int)$_SESSION['user_id'];
@@ -123,7 +102,7 @@ $conn->close();
         
         <!-- Mobile Navigation Menu -->
         <nav class="flex-1 py-4 px-3 overflow-hidden">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
             </a>
@@ -133,10 +112,12 @@ $conn->close();
                 <span>Main Storage Archives</span>
             </a>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-cloud-upload mr-3 text-lg"></i>
@@ -204,7 +185,7 @@ $conn->close();
             <!-- Navigation Menu -->
             <nav class="flex-1 overflow-hidden py-4">
                 <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
                         <span class="sidebar-text">Dashboard Archives</span>
                     </a>
@@ -219,12 +200,14 @@ $conn->close();
                         <span class="sidebar-text">Export</span>
                     </a>
 
+                    <?php if (isset($is_admin) && $is_admin): ?>
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
 
-                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-book mr-3"></i>
                         <span class="sidebar-text">Version Tracking</span>
                     </a>
@@ -288,15 +271,9 @@ $conn->close();
                         <div class="flex items-center">
                             <!-- Sidebar Toggle Button (Desktop) -->
 
-                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                            
-                            <!-- Logo (Mobile) -->
-                            <div class="mobile-only flex items-center ml-2">
-                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
-                            </div>
                         </div>
                         
                         
@@ -326,7 +303,7 @@ $conn->close();
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -365,7 +342,7 @@ $conn->close();
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -460,67 +437,78 @@ $conn->close();
     </div>
 
     <script>
-        var recordsData = <?php
-            $ordRes = array_merge($records_by_type['Ordinance'], $records_by_type['Resolution']);
-            echo json_encode([
-                'ordRes' => $ordRes,
-                'billing' => $records_by_type['Billing'],
-                'publicHearing' => $records_by_type['Public Hearing'],
-                'meeting' => $records_by_type['Meeting']
-            ]);
-        ?>;
         function viewFolder(key, label) {
-            var arr = recordsData[key] || [];
             var panel = document.getElementById('filesPanel');
             var title = document.getElementById('filesPanelTitle');
             var meta = document.getElementById('filesPanelMeta');
             var list = document.getElementById('filesPanelList');
             title.textContent = label;
-            meta.textContent = (arr.length ? arr.length + ' files' : 'No files');
-            list.innerHTML = '';
-            if (!arr.length) {
-                var empty = document.createElement('div');
-                empty.className = 'text-sm text-gray-500 dark:text-gray-400';
-                empty.textContent = 'No files found';
-                list.appendChild(empty);
-            } else {
-                arr.forEach(function(record){
-                    var row = document.createElement('div');
-                    row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
-                    var left = document.createElement('div');
-                    left.className = 'min-w-0';
-                    var titleEl = document.createElement('div');
-                    titleEl.className = 'font-medium text-gray-800 dark:text-gray-200 truncate';
-                    titleEl.textContent = record.title;
-                    var metaEl = document.createElement('div');
-                    metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
-                    var badge = document.createElement('span');
-                    badge.className = 'px-2 py-0.5 rounded text-[11px]';
-                    var type = String(record.type||'');
-                    var cls = type === 'Billing' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
-                              type === 'Public Hearing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-                              type === 'Meeting' ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300' :
-                              'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
-                    badge.className += ' ' + cls;
-                    badge.textContent = type;
-                    var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
-                    var dateEl = document.createElement('span'); dateEl.textContent = String(record.month||'') + ' ' + String(record.year||'');
-                    var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
-                    var authEl = document.createElement('span'); authEl.textContent = record.author || '';
-                    metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(authEl);
-                    left.appendChild(titleEl); left.appendChild(metaEl);
-                    var btn = document.createElement('button');
-                    btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600';
-                    btn.textContent = 'History';
-                    btn.addEventListener('click', function(){
-                        openVersionHistory(record.id, record.title, record.created_at);
-                    });
-                    row.appendChild(left);
-                    row.appendChild(btn);
-                    list.appendChild(row);
-                });
-            }
+            list.innerHTML = '<div class="text-center py-4 text-gray-500">Loading files...</div>';
             panel.classList.remove('hidden');
+
+            var typesToFetch = [];
+            if (key === 'ordRes') typesToFetch = ['Ordinance', 'Resolution'];
+            else if (key === 'billing') typesToFetch = ['Billing'];
+            else if (key === 'publicHearing') typesToFetch = ['Public Hearing'];
+            else if (key === 'meeting') typesToFetch = ['Meeting'];
+
+            var promises = typesToFetch.map(function(t) {
+                return fetch('legislative_api.php?action=get_files&type=' + encodeURIComponent(t))
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){ return d.success ? d.files : []; });
+            });
+
+            Promise.all(promises).then(function(results) {
+                var allFiles = results.flat().sort(function(a, b) {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                meta.textContent = (allFiles.length ? allFiles.length + ' files' : 'No files');
+                list.innerHTML = '';
+                
+                if (!allFiles.length) {
+                    var empty = document.createElement('div');
+                    empty.className = 'text-sm text-gray-500 dark:text-gray-400 text-center py-4';
+                    empty.textContent = 'No files found';
+                    list.appendChild(empty);
+                } else {
+                    allFiles.forEach(function(record){
+                        var row = document.createElement('div');
+                        row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
+                        var left = document.createElement('div');
+                        left.className = 'min-w-0';
+                        var titleEl = document.createElement('div');
+                        titleEl.className = 'font-medium text-gray-800 dark:text-white truncate';
+                        titleEl.textContent = record.title;
+                        var metaEl = document.createElement('div');
+                        metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
+                        var badge = document.createElement('span');
+                        badge.className = 'px-2 py-0.5 rounded text-[11px]';
+                        var type = String(record.type||'');
+                        var cls = type === 'Billing' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
+                                  type === 'Public Hearing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                                  type === 'Meeting' ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300' :
+                                  'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+                        badge.className += ' ' + cls;
+                        badge.textContent = type;
+                        var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
+                        var dateEl = document.createElement('span'); dateEl.textContent = String(record.month||'') + ' ' + String(record.year||'');
+                        var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
+                        var authEl = document.createElement('span'); authEl.textContent = record.author || 'Unknown';
+                        metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(authEl);
+                        left.appendChild(titleEl); left.appendChild(metaEl);
+                        var btn = document.createElement('button');
+                        btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
+                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span><span class="ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">' + (record.version || 1) + '</span>';
+                        btn.addEventListener('click', function(){
+                            openVersionHistory(record);
+                        });
+                        row.appendChild(left);
+                        row.appendChild(btn);
+                        list.appendChild(row);
+                    });
+                }
+            });
         }
         function clearFolder() {
             var panel = document.getElementById('filesPanel');
@@ -528,30 +516,43 @@ $conn->close();
             list.innerHTML = '';
             panel.classList.add('hidden');
         }
-        function openVersionHistory(id, title, createdAt) {
+        function openVersionHistory(record) {
             var list = document.getElementById('vm-list');
             var header = document.getElementById('vm-title');
-            header.textContent = 'Version History — ' + (title || 'File');
-            list.innerHTML = '';
-
-            var base = new Date(createdAt || Date.now());
-            var versions = [
-                { v: '1.0.2', date: new Date(base.getTime() + 1000*60*60*24*30), note: 'Minor fixes and metadata update' },
-                { v: '1.0.1', date: new Date(base.getTime() + 1000*60*60*24*15), note: 'Text corrections' },
-                { v: '1.0.0', date: base, note: 'Initial upload' }
-            ];
-
-            versions.forEach(function(item){
-                var row = document.createElement('div');
-                row.className = 'flex items-start justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600';
-                var left = document.createElement('div');
-                left.innerHTML = '<div class="font-semibold text-gray-800 dark:text-gray-200">Version ' + item.v + '</div>' +
-                                 '<div class="text-xs text-gray-500 dark:text-gray-400">' + item.date.toLocaleDateString() + ' • ' + item.note + '</div>';
-                var right = document.createElement('div');
-                right.innerHTML = '<button class="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600">View</button>';
-                row.appendChild(left);
-                row.appendChild(right);
-                list.appendChild(row);
+            header.textContent = 'Version History — ' + (record && record.title ? record.title : 'File');
+            list.innerHTML = '<div class="text-center py-4">Loading...</div>';
+            
+            fetch('legislative_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
+            .then(r => r.json())
+            .then(d => {
+                if(d.success) {
+                    if(d.versions.length === 0) {
+                        list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
+                    } else {
+                        list.innerHTML = d.versions.map(v => `
+                            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">
+                                <div>
+                                    <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        ${v.created_at} • ${v.author}
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="download.php?${new URLSearchParams({
+                                        id: v.id,
+                                        title: (record && record.title) ? record.title : (v.title || 'Document'),
+                                        type: (record && record.type) ? record.type : '',
+                                        month: (record && record.month) ? record.month : '',
+                                        year: (record && record.year) ? record.year : '',
+                                        author: (record && record.author) ? record.author : ''
+                                    }).toString()}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                }
             });
 
             document.getElementById('versionModal').classList.remove('hidden');
@@ -624,6 +625,94 @@ $conn->close();
                 sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
             });
         }
+        const profileBtn = document.getElementById('profile-btn');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        const notifBtn = document.getElementById('notification-btn');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const notifCount = document.getElementById('notif-count');
+
+        profileBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notifDropdown?.classList.add('hidden');
+            profileDropdown?.classList.toggle('hidden');
+        });
+
+        notifBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.add('hidden');
+            notifDropdown?.classList.toggle('hidden');
+            try {
+                var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
+                if (ids.length > 0) {
+                    fetch('notifications_log.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body:'event_type='+encodeURIComponent('alert_shown')+'&ids='+encodeURIComponent(JSON.stringify(ids))
+                    }).then(function(){});
+                }
+            } catch(e){}
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+                profileDropdown?.classList.add('hidden');
+            }
+            if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                notifDropdown?.classList.add('hidden');
+            }
+        });
+
+        (function(){
+            function renderNotifList(items){
+                var container = document.getElementById('notif-list');
+                if (!container) return;
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
+                    return;
+                }
+                var html = items.map(function(n){
+                    var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+                    var badge = '';
+                    var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+                    if (n.status === 'unread') badge = ' ring-2 ring-red-200';
+                    return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+                           '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+                           '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+                           '<div class="flex-1 min-w-0">'+
+                           '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                           '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+                           '</div></a>';
+                }).join('');
+                container.innerHTML = html;
+            }
+            function escapeHtml(s){
+                if (typeof s !== 'string') return '';
+                return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+            }
+            function fetchLatest(){
+                fetch('notifications_fetch.php?page_size=5&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (d && d.success) renderNotifList(d.items||[]);
+                }).catch(function(){});
+            }
+            function fetchUnread(){
+                fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (!notifCount) return;
+                    var total = (d && d.success) ? (d.total||0) : 0;
+                    notifCount.textContent = String(total);
+                    notifCount.style.display = total > 0 ? 'inline-flex' : 'none';
+                }).catch(function(){});
+            }
+            function refresh(){
+                fetchLatest();
+                fetchUnread();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+            window.addEventListener('focus', refresh);
+        })();
     </script>
     <script src="assets/js/storage-status.js"></script>
 </body>

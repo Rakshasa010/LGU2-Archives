@@ -47,7 +47,7 @@ $total = 0;
 if ($res && ($row = $res->fetch_assoc())) $total = intval($row['cnt']);
 $stmt->close();
 $offset = ($page - 1) * $page_size;
-$sql_items = 'SELECT id, time, date, content, about, status FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
+$sql_items = 'SELECT id, time, date, content, about, status, created_at, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
 $params_items = $params;
 $types_items = $types . 'ii';
 $params_items[] = $offset;
@@ -60,9 +60,14 @@ $items = [];
 while ($res && ($row = $res->fetch_assoc())) $items[] = $row;
 $stmt->close();
 $about_options = [];
-$r = $conn->query('SELECT DISTINCT about FROM notifications ORDER BY about ASC');
+// Select distinct about values, trimming whitespace and ensuring non-empty
+$r = $conn->query("SELECT DISTINCT TRIM(about) as about FROM notifications WHERE about IS NOT NULL AND about != '' ORDER BY about ASC");
 if ($r) {
-    while ($a = $r->fetch_assoc()) $about_options[] = $a['about'];
+    while ($a = $r->fetch_assoc()) {
+        if (!empty($a['about'])) {
+            $about_options[] = $a['about'];
+        }
+    }
 }
 echo json_encode([
     'success' => true,

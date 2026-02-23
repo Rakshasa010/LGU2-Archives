@@ -87,13 +87,15 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                     <i class="bi bi-folder mr-3 text-lg"></i>
                     <span>Main Storage Archives</span>
                 </a>
-                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-trash mr-3 text-lg"></i>
-                    <span>Recently Deleted</span>
-                </a>
+                <?php if (isset($is_admin) && $is_admin): ?>
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-trash mr-3 text-lg"></i>
+                <span>Recently Deleted</span>
+            </a>
+            <?php endif; ?>
 
-                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-trash mr-3 text-lg"></i>
+                <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                    <i class="bi bi-cloud-upload mr-3 text-lg"></i>
                     <span>Export</span>
                 </a>
 
@@ -110,9 +112,15 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
             <!-- ADMINISTRATION Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                <?php if ($is_admin): ?>
+                <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-people mr-3 text-lg"></i>
                     <span>User Management</span>
+                </a>
+                <?php endif; ?>
+                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <i class="bi bi-person mr-3 text-lg"></i>
+                    <span>Profile</span>
                 </a>
                 <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
@@ -168,10 +176,12 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                             <span class="sidebar-text">Export</span>
                         </a>
 
-                        <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                            <i class="bi bi-trash mr-3"></i>
-                            <span class="sidebar-text">Recently Deleted</span>
-                        </a>
+                        <?php if (isset($is_admin) && $is_admin): ?>
+                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-trash mr-3"></i>
+                        <span class="sidebar-text">Recently Deleted</span>
+                    </a>
+                    <?php endif; ?>
 
                         <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-book mr-3"></i>
@@ -197,12 +207,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                         <span class="sidebar-text">User Management</span>
                     </a>
                     <?php endif; ?>
-                    
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-person mr-3"></i>
-                        <span class="sidebar-text">Profile</span>
-                    </a>
-                    
+                    <!-- Removed Profile link from sidebar to keep access via Account Settings only -->
                         <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-shield-check mr-3"></i>
                             <span class="sidebar-text">Audit Logs</span>
@@ -294,7 +299,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -388,6 +393,32 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                             if (in_array('birthdate', $cols)) { $bd = $birthdate !== '' && strtotime($birthdate) !== false ? date('Y-m-d', strtotime($birthdate)) : null; if ($bd !== null) $upd[] = "birthdate = '".$conn->real_escape_string($bd)."'"; }
                             if (in_array('address', $cols)) $upd[] = "address = '".$conn->real_escape_string($address)."'";
                             if (!empty($upd)) { $conn->query("UPDATE users SET ".implode(', ', $upd)." WHERE id = ".(int)$user_id); }
+                            
+                            // Add Notification for Profile Update
+                            $notif_time = date('h:i A');
+                            $notif_date = date('Y-m-d');
+                            $notif_content = ($is_admin ? 'Admin profile updated: ' : 'User profile updated: ') . $username;
+                            $notif_about = 'Profile Update';
+                            $notif_status = 'unread';
+                            
+                            // Ensure notifications table exists
+                            $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                time VARCHAR(20) NOT NULL,
+                                date DATE NOT NULL,
+                                content VARCHAR(255) NOT NULL,
+                                about VARCHAR(100) NOT NULL,
+                                status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )");
+
+                            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                            if ($nt) {
+                                $nt->bind_param("sssss", $notif_time, $notif_date, $notif_content, $notif_about, $notif_status);
+                                $nt->execute();
+                                $nt->close();
+                            }
+
                             $success_msg = $upload_success ? 'Profile picture and information updated successfully!' : 'Information updated successfully!';
                             echo '<div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">' . htmlspecialchars($success_msg) . '</div>';
                             // Refresh user data
@@ -397,6 +428,10 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                             $stmt->execute();
                             $result = $stmt->get_result();
                             $user = $result->fetch_assoc();
+                            // Refresh header bindings with latest data
+                            $display_name = $user['full_name'] ?? $display_name;
+                            $profile_picture = $user['profile_picture'] ?? $profile_picture;
+                            $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                         } else {
                             echo '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">Update failed. Please try again.</div>';
                         }
@@ -551,27 +586,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
     </div>
     </div>
 
-    <script>
-        const profileBtn = document.getElementById('profile-btn');
-        const profileDropdown = document.getElementById('profile-dropdown');
-        profileBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown?.classList.toggle('hidden');
-        });
-        document.addEventListener('click', () => {
-            profileDropdown?.classList.add('hidden');
-        });
-        const notifBtn = document.getElementById('notification-btn');
-        const notifDropdown = document.getElementById('notification-dropdown');
-        notifBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileDropdown?.classList.add('hidden');
-            notifDropdown?.classList.toggle('hidden');
-        });
-        document.addEventListener('click', () => {
-            notifDropdown?.classList.add('hidden');
-        });
-    </script>
+    <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/archives.js"></script>
 </body>

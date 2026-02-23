@@ -19,6 +19,51 @@
     var stored = {};
     try { stored = JSON.parse(localStorage.getItem('audit_read') || '{}'); } catch(e){ stored = {}; }
 
+    var timeTimer = null;
+    function buildTimestamp(dateStr, timeStr) {
+        var ymd = (dateStr || '').split('-');
+        var y = parseInt(ymd[0] || '0', 10);
+        var m = parseInt(ymd[1] || '0', 10);
+        var d = parseInt(ymd[2] || '0', 10);
+        var match = (timeStr || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        var hh = 0, mm = 0, ap = 'AM';
+        if (match) {
+            hh = parseInt(match[1], 10);
+            mm = parseInt(match[2], 10);
+            ap = match[3].toUpperCase();
+        }
+        if (ap === 'PM' && hh !== 12) hh += 12;
+        if (ap === 'AM' && hh === 12) hh = 0;
+        var dt = new Date(y, (m > 0 ? m - 1 : 0), d, hh, mm, 0);
+        return dt.getTime();
+    }
+    function formatRelative(ms) {
+        var now = Date.now();
+        var diff = Math.floor((now - ms) / 1000);
+        if (diff < 0) diff = 0;
+        if (diff < 60) return diff + 's ago';
+        var mins = Math.floor(diff / 60);
+        if (mins < 60) return mins + 'm ago';
+        var hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + 'h ago';
+        var days = Math.floor(hrs / 24);
+        return days + 'd ago';
+    }
+    function updateRelativeTimes() {
+        var nodes = document.querySelectorAll('.note-time');
+        nodes.forEach(function(el){
+            var ms = parseInt(el.dataset.ts || '0', 10);
+            var base = el.dataset.base || '';
+            if (!isNaN(ms) && base) {
+                el.innerHTML = base + ' <span class="text-gray-500">' + formatRelative(ms) + '</span>';
+            }
+        });
+    }
+    function ensureTimer() {
+        if (timeTimer) return;
+        timeTimer = setInterval(updateRelativeTimes, 60000);
+    }
+
     function setButtonState(btn, status) {
         if (!btn) return;
         // reset
@@ -38,26 +83,31 @@
     }
 
     function updateRowStatus(id, status) {
+        status = (status || 'unread').toLowerCase();
         var tr = document.querySelector('[data-id="'+id+'"]');
         if (!tr) return;
         tr.setAttribute('data-status', status);
         var btn = tr.querySelector('.mark-read-btn');
+        var actionCell = tr.querySelector('td:nth-child(6)');
         var contentEl = tr.querySelector('td:nth-child(4) a, td:nth-child(4) span');
         if (status === 'read') {
             tr.classList.remove('highlight');
-            // Remove red highlight - CSS will handle default styling via data-status="read"
-            setButtonState(btn, 'read');
+            if (actionCell) {
+                actionCell.innerHTML = '<span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-600">Read</span>';
+            }
             if (contentEl) {
                 contentEl.classList.remove('font-semibold');
                 contentEl.classList.add('font-medium');
             }
         } else {
-            // Unread status - CSS will apply red highlight via data-status="unread"
-            setButtonState(btn, 'unread');
+            if (actionCell) {
+                actionCell.innerHTML = '<button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-600 hover:bg-red-700 text-white border-red-700 transition-colors" type="button">Mark Read</button>';
+            }
             if (contentEl) {
                 contentEl.classList.remove('font-medium');
                 contentEl.classList.add('font-semibold');
             }
+            attachRowHandlers();
         }
     }
 
@@ -68,13 +118,27 @@
             var linkHtml = '';
             if (note.link) linkHtml = '<a href="'+note.link+'" class="text-gray-800 dark:text-gray-100 hover:underline block">'+note.content+'</a>';
             else linkHtml = '<span class="text-gray-800 dark:text-gray-100 block">'+note.content+'</span>';
+            var baseMs = NaN;
+            if (typeof note.age_seconds === 'number') {
+                baseMs = Date.now() - (note.age_seconds * 1000);
+            } else if (note.created_at) {
+                var iso = String(note.created_at).replace(' ', 'T');
+                var parsed = Date.parse(iso);
+                if (!isNaN(parsed)) baseMs = parsed;
+            }
+            if (isNaN(baseMs)) {
+                baseMs = buildTimestamp(String(note.date||''), String(note.time||''));
+            }
+            var actionHtml = (String((note.status||'unread')).toLowerCase() === 'read')
+                ? '<span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-600">Read</span>'
+                : '<button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-600 hover:bg-red-700 text-white border-red-700 transition-colors" type="button">Mark Read</button>';
             return '<tr id="note-'+note.id+'" data-id="'+note.id+'" data-status="'+note.status+'" class="border-t">'+
                    '<td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">'+note.id+'</td>'+
-                   '<td class="px-3 py-2 text-sm">'+note.time+'</td>'+
+                   '<td class="px-3 py-2 text-sm"><span class="note-time" data-ts="'+baseMs+'" data-base="'+String(note.time||'')+'" title="Created: '+String(note.created_at||note.date)+' • Status: '+String(note.status||'')+'">'+String(note.time||'')+' <span class="text-gray-500">'+formatRelative(baseMs)+'</span></span></td>'+
                    '<td class="px-3 py-2 text-sm">'+note.date+'</td>'+
                    '<td class="px-3 py-2 text-sm">'+linkHtml+'</td>'+
                    '<td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">'+note.about+'</td>'+
-                   '<td class="px-3 py-2 text-sm"><button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors" type="button">Mark Read</button></td>'+
+                   '<td class="px-3 py-2 text-sm">'+actionHtml+'</td>'+
                    '</tr>';
         }).join('');
         tbody.innerHTML = html;
@@ -83,10 +147,12 @@
         attachRowHandlers();
         updateUnreadCount();
         logShown();
+        updateRelativeTimes();
+        ensureTimer();
     }
     document.querySelectorAll('#notesBody tr').forEach(function(tr){
         var id = tr.getAttribute('data-id');
-        var status = tr.getAttribute('data-status') || 'unread';
+        var status = (tr.getAttribute('data-status') || 'unread').toLowerCase();
         updateRowStatus(id, status);
     });
     attachRowHandlers();
@@ -99,8 +165,7 @@
                 var trBtn = btn.closest('tr');
                 if (!trBtn) return;
                 var idBtn = trBtn.getAttribute('data-id');
-                var curBtn = trBtn.getAttribute('data-status') || 'unread';
-                var nextBtn = (curBtn === 'unread') ? 'read' : 'unread';
+                var nextBtn = 'read';
                 try {
                     fetch('notifications_update.php', {
                         method: 'POST',
@@ -116,7 +181,7 @@
             var tr = e.target.closest('tr');
             if (!tr) return;
             var id = tr.getAttribute('data-id');
-            var cur = tr.getAttribute('data-status') || 'unread';
+            var cur = (tr.getAttribute('data-status') || 'unread').toLowerCase();
             if (cur === 'unread' && id) {
                 try {
                     fetch('notifications_update.php', {
@@ -149,10 +214,26 @@
             if (!data || !data.success) return;
             renderRows(data.items||[]);
             var aboutSel = document.getElementById('filter-about');
-            if (aboutSel && (aboutSel.options.length <= 1)) {
-                (data.about_options||[]).forEach(function(opt){
-                    var o = document.createElement('option'); o.value = opt; o.textContent = opt; aboutSel.appendChild(o);
+            if (aboutSel) {
+                // Clear existing dynamic options (keep the first "About" option)
+                while (aboutSel.options.length > 1) {
+                    aboutSel.remove(1);
+                }
+                var staticAbout = ['Approval','Backup','Comment','Document Upload','Import','Message','Metadata','Permissions','Profile Update','Security','System Maintenance','User Management','User Registration'];
+                var combined = Array.from(new Set(staticAbout.concat(data.about_options||[])));
+                combined.sort();
+                combined.forEach(function(opt){
+                    if (!opt) return;
+                    var o = document.createElement('option'); 
+                    o.value = opt; 
+                    o.textContent = opt; 
+                    aboutSel.appendChild(o);
                 });
+                
+                // Restore selected value if valid
+                var params = new URLSearchParams(window.location.search);
+                var currentAbout = params.get('about');
+                if (currentAbout) aboutSel.value = currentAbout;
             }
             if (pageInfo) pageInfo.textContent = String(data.page)+' / '+Math.max(1, Math.ceil((data.total||0)/(data.page_size||10)));
             var maxPage = Math.max(1, Math.ceil((data.total||0)/(data.page_size||10)));
@@ -170,19 +251,15 @@
                 e.stopPropagation();
                 var tr = btn.closest('tr');
                 var id = tr.getAttribute('data-id');
-                var cur = tr.getAttribute('data-status') || 'unread';
-                var next = (cur === 'unread') ? 'read' : 'unread';
+                var next = 'read';
+                updateRowStatus(id, next);
+                updateUnreadCount();
+                try { logEvent('alert_dismissed',[id]); } catch(e){}
                 fetch('notifications_update.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'id='+encodeURIComponent(id)+'&status='+encodeURIComponent(next)
-                }).then(function(r){ return r.json(); }).then(function(d){
-                    if (d && d.success) {
-                        updateRowStatus(id, next);
-                        updateUnreadCount();
-                        logEvent(next==='read'?'alert_dismissed':'notification_mark_unread',[id]);
-                    }
-                }).catch(function(){});
+                }).then(function(){ }).catch(function(){});
             });
         });
     }
@@ -195,7 +272,7 @@
 
     function updateUnreadCount(){
         var unread = 0;
-        document.querySelectorAll('#notesBody tr').forEach(function(r){ if (r.getAttribute('data-status') === 'unread') unread++; });
+        document.querySelectorAll('#notesBody tr').forEach(function(r){ if ((r.getAttribute('data-status') || '').toLowerCase() === 'unread') unread++; });
         unreadCountEl.textContent = unread + ' unread';
     }
 
@@ -317,21 +394,23 @@
     var markAll = document.getElementById('mark-all-read');
     if (markAll) markAll.addEventListener('click', function(){
         var rows = Array.from(document.querySelectorAll('#notesBody tr')).filter(function(r){
-            var st = r.getAttribute('data-status') || 'unread';
-            var hidden = r.style.display === 'none';
+            var st = (r.getAttribute('data-status') || 'unread').toLowerCase();
+            var hidden = false;
+            try { hidden = window.getComputedStyle(r).display === 'none'; } catch(e){}
             return st === 'unread' && !hidden;
         });
         var ids = rows.map(function(r){ return r.getAttribute('data-id'); }).filter(Boolean);
         if (ids.length === 0) return;
+        ids.forEach(function(id){ updateRowStatus(id, 'read'); });
+        updateUnreadCount();
+        try { logEvent('alert_dismissed', ids); } catch(e){}
         Promise.all(ids.map(function(id){
             return fetch('notifications_update.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'id='+encodeURIComponent(id)+'&status=read'
-            }).then(function(){ updateRowStatus(id, 'read'); });
-        })).then(function(){
-            updateUnreadCount();
-        }).catch(function(){});
+            }).then(function(){});
+        })).catch(function(){});
     });
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function(){ fetchNotifications(); });
