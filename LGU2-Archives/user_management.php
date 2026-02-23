@@ -141,6 +141,26 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
     <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="icon" href="Images/Val-logo/valenzuela logo.webp">
+        <style>
+            #mobile-sidebar nav,
+            .sidebar nav {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255,255,255,0.35) transparent;
+            }
+            #mobile-sidebar nav::-webkit-scrollbar,
+            .sidebar nav::-webkit-scrollbar {
+                width: 6px;
+            }
+            #mobile-sidebar nav::-webkit-scrollbar-thumb,
+            .sidebar nav::-webkit-scrollbar-thumb {
+                background-color: rgba(255,255,255,0.35);
+                border-radius: 9999px;
+            }
+            #mobile-sidebar nav::-webkit-scrollbar-track,
+            .sidebar nav::-webkit-scrollbar-track {
+                background: transparent;
+            }
+        </style>
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-white min-h-screen">
     <!-- Mobile Sidebar -->
@@ -166,7 +186,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
         </div>
         
         <!-- Mobile Navigation Menu -->
-        <nav class="flex-1 py-4 px-3 overflow-hidden">
+        <nav class="flex-1 py-4 px-3 overflow-y-auto">
             <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
@@ -231,7 +251,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
         </nav>
     </div>
     
-    <div class="flex min-h-screen overflow-x-hidden">
+    <div class="flex h-screen overflow-hidden">
         <!-- Desktop Sidebar -->
         <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
             <!-- Logo Section -->
@@ -248,7 +268,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
             </div>
             
             <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-hidden py-4">
+            <nav class="flex-1 overflow-y-auto py-4">
                 <div class="px-4 space-y-1">
                     <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
@@ -327,7 +347,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-y-auto">
+        <div class="flex-1 flex flex-col md:ml-64 overflow-y-auto">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
