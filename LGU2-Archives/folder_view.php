@@ -50,12 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $parent_id = $current_folder_id;
         $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $name)) . '-' . time();
-        
+
         $stmt = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by) VALUES (?, ?, ?, ?)");
         $uid = $_SESSION['user_id'];
         $stmt->bind_param("ssii", $name, $slug, $parent_id, $uid);
         if ($stmt->execute()) {
-             echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug]]);
+             $new_id = $conn->insert_id;
+             $folder_path = "uploads/archives/" . $new_id . "/";
+             if (!file_exists($folder_path)) {
+                 @mkdir($folder_path, 0777, true);
+             }
+             echo json_encode(['success' => true, 'folder' => ['id' => $new_id, 'name' => $name, 'slug' => $slug]]);
         } else {
              echo json_encode(['success' => false, 'message' => 'Failed to create folder']);
         }
@@ -67,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['file'];
             $name = $file['name'];
-            $target_dir = "uploads/archives/";
+            $target_dir = "uploads/archives/" . $current_folder_id . "/";
             if (!file_exists($target_dir)) {
                 mkdir($target_dir, 0777, true);
             }
@@ -340,9 +345,11 @@ $conn->close();
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                             <span>View</span>
                         </button>
-                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            <span>Download</span>
+                        <button onclick="openVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Version History">
+                            <i class="bi bi-clock-history"></i><span>History</span>
+                        </button>
+                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
+                            <i class="bi bi-download"></i><span>Download</span>
                         </a>
                         <?php if ($is_admin): ?>
                         <button onclick="openDeleteConfirm(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
@@ -379,24 +386,33 @@ $conn->close();
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeUploadModal()"></div>
         <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
             <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Upload File</h3>
-            <form id="uploadForm" onsubmit="handleUpload(event)">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Files</label>
-                    <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-8 text-center hover:border-red-500 dark:hover:border-red-400 transition-colors cursor-pointer bg-gray-50 dark:bg-slate-700/50">
-                        <i class="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Drag and drop files here or click to browse</p>
-                        <input type="file" id="fileInput" multiple class="hidden">
+           <form id="uploadForm" class="space-y-4">
+                    <input type="hidden" name="folder_id" value="<?php echo $current_folder_id ?? ''; ?>">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Name</label>
+                        <input type="text" id="fileName" name="fileName" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="e.g., Ordinance_No_123.pdf">
                     </div>
-                    <div id="file-list-preview" class="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto"></div>
-                </div>
-                <div class="flex justify-between items-center">
-                    <div id="upload-progress" class="hidden text-sm text-red-600 dark:text-red-400 font-medium">Uploading...</div>
-                    <div class="flex gap-3">
-                        <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancel</button>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Author</label>
+                        <input type="text" id="fileAuthor" name="fileAuthor" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="Enter author name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
+                        <input type="date" id="fileDate" name="fileDate" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unique Number</label>
+                        <input type="text" id="fileUniqueNumber" name="fileUniqueNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="Enter unique number">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
+                        <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Upload</button>
                     </div>
-                </div>
-            </form>
+                </form>
         </div>
     </div>
 
@@ -440,6 +456,20 @@ $conn->close();
             </div>
             <div class="mt-4 flex justify-end">
                 <button onclick="closeNotification()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+    <!-- Version History Modal -->
+    <div id="versionHistoryModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('versionHistoryModal')"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Version History</h2>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeModal('versionHistoryModal')">&times;</button>
+                </div>
+                <div id="versionHistoryTitle" class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4"></div>
+                <div id="versionList" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
             </div>
         </div>
     </div>
@@ -492,6 +522,27 @@ $conn->close();
             document.getElementById('createFolderModal').classList.add('hidden');
             document.getElementById('newFolderName').value = '';
         }
+        async function createFolder() {
+            const nameInput = document.getElementById('newFolderName');
+            const name = (nameInput && nameInput.value || '').trim();
+            if (!name) { return; }
+            try {
+                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'create_folder', name })
+                });
+                const data = await response.json();
+                if (data && data.success && data.folder && data.folder.id) {
+                    closeCreateFolderModal();
+                    window.location.href = 'folder_view.php?id=' + String(data.folder.id);
+                } else {
+                    openNotification((data && data.message) || 'Failed to create folder', 'error');
+                }
+            } catch (e) {
+                openNotification('Failed to create folder', 'error');
+            }
+        }
 
         function openUploadModal() {
             document.getElementById('uploadFileModal').classList.remove('hidden');
@@ -508,27 +559,18 @@ $conn->close();
         function setupDragAndDrop() {
             const dropZone = document.getElementById('drop-zone');
             const fileInput = document.getElementById('fileInput');
-
+            if (!dropZone || !fileInput) return;
             dropZone.onclick = () => fileInput.click();
-
-            dropZone.ondragover = (e) => {
-                e.preventDefault();
-                dropZone.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
-            };
-
-            dropZone.ondragleave = () => {
-                dropZone.classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
-            };
-
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-red-500','bg-red-50','dark:bg-red-900/10'); };
+            dropZone.ondragleave = () => { dropZone.classList.remove('border-red-500','bg-red-50','dark:bg-red-900/10'); };
             dropZone.ondrop = (e) => {
                 e.preventDefault();
-                dropZone.classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+                dropZone.classList.remove('border-red-500','bg-red-50','dark:bg-red-900/10');
                 if (e.dataTransfer.files.length) {
                     fileInput.files = e.dataTransfer.files;
                     updateFilePreview(fileInput.files);
                 }
             };
-
             fileInput.onchange = () => updateFilePreview(fileInput.files);
         }
 
@@ -549,7 +591,11 @@ $conn->close();
         async function handleUpload(e) {
             e.preventDefault();
             const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files.length) return;
+            if (!fileInput.files.length) {
+                openNotification('Please select a file to upload.', 'error');
+                try { fileInput.focus(); fileInput.click(); } catch(_) {}
+                return;
+            }
 
             const progress = document.getElementById('upload-progress');
             progress.classList.remove('hidden');
@@ -616,6 +662,10 @@ $conn->close();
                 progress.classList.add('hidden');
             }
         }
+        (function(){
+            const form = document.getElementById('uploadForm');
+            if (form) { form.addEventListener('submit', handleUpload); }
+        })();
 
         function escapeHtml(text) {
             if (!text) return text;
@@ -802,6 +852,36 @@ $conn->close();
                 icon.innerHTML = '<i class="bi bi-check2-circle text-green-600 dark:text-green-400 text-xl"></i>';
             }
             modal.classList.remove('hidden');
+        }
+        function openVersionHistory(id, title) {
+            const t = document.getElementById('versionHistoryTitle');
+            const list = document.getElementById('versionList');
+            if (!t || !list) return;
+            t.textContent = title || '';
+            list.innerHTML = '<div class="text-center py-4">Loading...</div>';
+            openModal('versionHistoryModal');
+            fetch('legislative_api.php?action=get_versions&id=' + encodeURIComponent(id))
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if (d && d.success) {
+                        if (!Array.isArray(d.versions) || d.versions.length === 0) {
+                            list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
+                        } else {
+                            list.innerHTML = d.versions.map(function(v){
+                                return '<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">'
+                                    + '<div><div class="font-medium text-gray-800 dark:text-gray-200">Version ' + String(v.version) + '</div>'
+                                    + '<div class="text-xs text-gray-500 dark:text-gray-400">' + (v.created_at || '') + ' • ' + (v.author || '') + '</div></div>'
+                                    + '<div class="flex space-x-2"><a href="download.php?id=' + encodeURIComponent(v.id) + '" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a></div>'
+                                    + '</div>';
+                            }).join('');
+                        }
+                    } else {
+                        list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                    }
+                })
+                .catch(function(){
+                    list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                });
         }
         function closeNotification() {
             const modal = document.getElementById('notificationModal');
