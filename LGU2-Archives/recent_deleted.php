@@ -390,6 +390,33 @@
 
     <div id="toast" class="fixed right-6 bottom-6 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold" role="status" aria-live="polite"></div>
 
+    <div id="restoreModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('restoreModal')"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700 transform transition-all scale-100 opacity-100 duration-300">
+                <div class="mb-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4 animate-bounce">
+                        <svg class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Restore File?</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Are you sure you want to restore <span id="restoreFileName" class="font-semibold text-gray-800 dark:text-gray-200"></span>?</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">This will return the file to <span id="restoreFileCategory" class="text-green-500 font-medium">its original location</span>.</p>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button type="button" onclick="closeModal('restoreModal')" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="confirmRestore()" class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-lg hover:shadow-green-500/30 transition-all transform hover:-translate-y-0.5 font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        Restore File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/archives.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <script>
@@ -535,19 +562,40 @@
             return icons[category] || '<svg class="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>';
         }
 
+        let restoreTargetId = null;
+
         function handleRestore(id) {
             const idx = deletedFiles.findIndex(f => f.id === id);
             if (idx === -1) return;
             const file = deletedFiles[idx];
 
-            const proceed = confirm(`Restore "${file.name}"?\n\nThis will return the file to ${file.category || 'its original location'}.`);
-            if (!proceed) return;
+            restoreTargetId = id;
+            document.getElementById('restoreFileName').textContent = `"${file.name}"`;
+            document.getElementById('restoreFileCategory').textContent = file.category || 'its original location';
+            
+            document.getElementById('restoreModal').classList.remove('hidden');
+        }
 
+        function confirmRestore() {
+            if (!restoreTargetId) return;
+            
+            const idx = deletedFiles.findIndex(f => f.id === restoreTargetId);
+            if (idx === -1) {
+                closeModal('restoreModal');
+                return;
+            }
+            
             const [restored] = deletedFiles.splice(idx, 1);
             saveDeletedFiles(deletedFiles);
 
             showToast(`"${restored.name}" restored successfully`);
             renderDeleted();
+            closeModal('restoreModal');
+            restoreTargetId = null;
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
         }
 
         function getTypeIcon(type) {

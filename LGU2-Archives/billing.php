@@ -167,7 +167,7 @@ $conn->close();
                     </div>
                 <?php else: ?>
                     <?php foreach ($billing_records as $record): ?>
-                        <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-slate-600">
+                        <div data-id="<?php echo $record['id']; ?>" class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-slate-600">
                             <div class="flex items-start space-x-4">
                                 <div class="flex-shrink-0">
                                     <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,6 +235,34 @@ $conn->close();
                         <button type="submit" class="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 text-white rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all">Upload</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('deleteModal')"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700 transform transition-all scale-100 opacity-100 duration-300">
+                <div class="mb-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4 animate-bounce">
+                        <svg class="h-8 w-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Delete File?</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Are you sure you want to delete <span id="deleteFileName" class="font-semibold text-gray-800 dark:text-gray-200"></span>?</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">This action will move the file to <span class="text-red-500 font-medium">Recently Deleted</span> for 30 days.</p>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button type="button" onclick="closeModal('deleteModal')" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="confirmDelete()" class="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-lg hover:shadow-red-500/30 transition-all transform hover:-translate-y-0.5 font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Delete File
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -333,18 +361,43 @@ $conn->close();
         }
 
         // Delete handling
+        let deleteTargetId = null;
+        let deleteTargetTitle = null;
+
         function openDeleteConfirm(id, title) {
-            if (!confirm(`Delete "${title}"?\n\nThis will move the file to Recently Deleted for 30 days.`)) return;
-            // No server delete permissions: remove from UI + track in Recently Deleted (30 days).
-            const el = document.querySelector(`[data-id="${id}"]`);
-            if (el) el.remove();
+            deleteTargetId = id;
+            deleteTargetTitle = title;
+            
+            document.getElementById('deleteFileName').textContent = `"${title}"`;
+            openModal('deleteModal');
+        }
+
+        function confirmDelete() {
+            if (deleteTargetId === null) return;
+
+            // Remove from UI
+            const el = document.querySelector(`[data-id="${deleteTargetId}"]`);
+            if (el) {
+                el.style.transition = 'all 0.3s ease';
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                setTimeout(() => el.remove(), 300);
+            }
+
+            // Add to DeletedFiles (simulated backend)
             window.DeletedFiles?.add({
-                id: String(id),
-                name: title || (`Record ${id}`),
+                id: String(deleteTargetId),
+                name: deleteTargetTitle || (`Record ${deleteTargetId}`),
                 type: 'Billing',
                 category: 'Billing',
                 originalPath: 'Billing'
             });
+
+            closeModal('deleteModal');
+            
+            // Reset targets
+            deleteTargetId = null;
+            deleteTargetTitle = null;
         }
 
     </script>
