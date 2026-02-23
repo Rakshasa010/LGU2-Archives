@@ -212,7 +212,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
         </nav>
     </div>
     
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex min-h-screen overflow-x-hidden">
         <!-- Desktop Sidebar -->
         <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
             <!-- Logo Section -->
@@ -306,7 +306,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-y-auto">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">

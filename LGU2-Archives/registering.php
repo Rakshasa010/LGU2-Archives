@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 $success = $emailSent
-                    ? 'Registered successfully. Check your email for the temporary password.'
+                    ? 'Requesting admin approval. Check your email for the temporary password.'
                     : 'Registered successfully. Use <a href="forgot-password.php" class="underline font-medium">Forgot password</a> to set your password and sign in.';
 
                 // Ensure notifications table exists
