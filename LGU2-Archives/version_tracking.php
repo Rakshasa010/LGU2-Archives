@@ -25,27 +25,6 @@ if ($stmt) {
     $stmt->close();
 }
 
-$sql = "SELECT id, title, type, month, year, author, created_at, last_accessed 
-        FROM legislative_records 
-        WHERE type IN ('Ordinance','Resolution','Billing','Public Hearing','Meeting')
-        ORDER BY year DESC, month DESC, created_at DESC";
-$result = $conn->query($sql);
-
-$records_by_type = [
-    'Ordinance' => [],
-    'Resolution' => [],
-    'Billing' => [],
-    'Public Hearing' => [],
-    'Meeting' => []
-];
-
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        if (isset($records_by_type[$row['type']])) {
-            $records_by_type[$row['type']][] = $row;
-        }
-    }
-}
 $is_admin = false;
 if (isset($_SESSION['user_id'])) {
     $uid = (int)$_SESSION['user_id'];
@@ -133,10 +112,12 @@ $conn->close();
                 <span>Main Storage Archives</span>
             </a>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
             <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-cloud-upload mr-3 text-lg"></i>
@@ -219,10 +200,12 @@ $conn->close();
                         <span class="sidebar-text">Export</span>
                     </a>
 
+                    <?php if (isset($is_admin) && $is_admin): ?>
                     <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-book mr-3"></i>
@@ -454,67 +437,78 @@ $conn->close();
     </div>
 
     <script>
-        var recordsData = <?php
-            $ordRes = array_merge($records_by_type['Ordinance'], $records_by_type['Resolution']);
-            echo json_encode([
-                'ordRes' => $ordRes,
-                'billing' => $records_by_type['Billing'],
-                'publicHearing' => $records_by_type['Public Hearing'],
-                'meeting' => $records_by_type['Meeting']
-            ]);
-        ?>;
         function viewFolder(key, label) {
-            var arr = recordsData[key] || [];
             var panel = document.getElementById('filesPanel');
             var title = document.getElementById('filesPanelTitle');
             var meta = document.getElementById('filesPanelMeta');
             var list = document.getElementById('filesPanelList');
             title.textContent = label;
-            meta.textContent = (arr.length ? arr.length + ' files' : 'No files');
-            list.innerHTML = '';
-            if (!arr.length) {
-                var empty = document.createElement('div');
-                empty.className = 'text-sm text-gray-500 dark:text-gray-400';
-                empty.textContent = 'No files found';
-                list.appendChild(empty);
-            } else {
-                arr.forEach(function(record){
-                    var row = document.createElement('div');
-                    row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
-                    var left = document.createElement('div');
-                    left.className = 'min-w-0';
-                    var titleEl = document.createElement('div');
-                    titleEl.className = 'font-medium text-gray-800 dark:text-gray-200 truncate';
-                    titleEl.textContent = record.title;
-                    var metaEl = document.createElement('div');
-                    metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
-                    var badge = document.createElement('span');
-                    badge.className = 'px-2 py-0.5 rounded text-[11px]';
-                    var type = String(record.type||'');
-                    var cls = type === 'Billing' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
-                              type === 'Public Hearing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-                              type === 'Meeting' ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300' :
-                              'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
-                    badge.className += ' ' + cls;
-                    badge.textContent = type;
-                    var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
-                    var dateEl = document.createElement('span'); dateEl.textContent = String(record.month||'') + ' ' + String(record.year||'');
-                    var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
-                    var authEl = document.createElement('span'); authEl.textContent = record.author || '';
-                    metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(authEl);
-                    left.appendChild(titleEl); left.appendChild(metaEl);
-                    var btn = document.createElement('button');
-                    btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600';
-                    btn.textContent = 'History';
-                    btn.addEventListener('click', function(){
-                        openVersionHistory(record.id, record.title, record.created_at);
-                    });
-                    row.appendChild(left);
-                    row.appendChild(btn);
-                    list.appendChild(row);
-                });
-            }
+            list.innerHTML = '<div class="text-center py-4 text-gray-500">Loading files...</div>';
             panel.classList.remove('hidden');
+
+            var typesToFetch = [];
+            if (key === 'ordRes') typesToFetch = ['Ordinance', 'Resolution'];
+            else if (key === 'billing') typesToFetch = ['Billing'];
+            else if (key === 'publicHearing') typesToFetch = ['Public Hearing'];
+            else if (key === 'meeting') typesToFetch = ['Meeting'];
+
+            var promises = typesToFetch.map(function(t) {
+                return fetch('legislative_api.php?action=get_files&type=' + encodeURIComponent(t))
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){ return d.success ? d.files : []; });
+            });
+
+            Promise.all(promises).then(function(results) {
+                var allFiles = results.flat().sort(function(a, b) {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                meta.textContent = (allFiles.length ? allFiles.length + ' files' : 'No files');
+                list.innerHTML = '';
+                
+                if (!allFiles.length) {
+                    var empty = document.createElement('div');
+                    empty.className = 'text-sm text-gray-500 dark:text-gray-400 text-center py-4';
+                    empty.textContent = 'No files found';
+                    list.appendChild(empty);
+                } else {
+                    allFiles.forEach(function(record){
+                        var row = document.createElement('div');
+                        row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
+                        var left = document.createElement('div');
+                        left.className = 'min-w-0';
+                        var titleEl = document.createElement('div');
+                        titleEl.className = 'font-medium text-gray-800 dark:text-gray-200 truncate';
+                        titleEl.textContent = record.title;
+                        var metaEl = document.createElement('div');
+                        metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
+                        var badge = document.createElement('span');
+                        badge.className = 'px-2 py-0.5 rounded text-[11px]';
+                        var type = String(record.type||'');
+                        var cls = type === 'Billing' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
+                                  type === 'Public Hearing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                                  type === 'Meeting' ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300' :
+                                  'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+                        badge.className += ' ' + cls;
+                        badge.textContent = type;
+                        var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
+                        var dateEl = document.createElement('span'); dateEl.textContent = String(record.month||'') + ' ' + String(record.year||'');
+                        var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
+                        var authEl = document.createElement('span'); authEl.textContent = record.author || 'Unknown';
+                        metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(authEl);
+                        left.appendChild(titleEl); left.appendChild(metaEl);
+                        var btn = document.createElement('button');
+                        btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
+                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span><span class="ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">' + (record.version || 1) + '</span>';
+                        btn.addEventListener('click', function(){
+                            openVersionHistory(record.id, record.title);
+                        });
+                        row.appendChild(left);
+                        row.appendChild(btn);
+                        list.appendChild(row);
+                    });
+                }
+            });
         }
         function clearFolder() {
             var panel = document.getElementById('filesPanel');
@@ -522,30 +516,36 @@ $conn->close();
             list.innerHTML = '';
             panel.classList.add('hidden');
         }
-        function openVersionHistory(id, title, createdAt) {
+        function openVersionHistory(id, title) {
             var list = document.getElementById('vm-list');
             var header = document.getElementById('vm-title');
             header.textContent = 'Version History — ' + (title || 'File');
-            list.innerHTML = '';
-
-            var base = new Date(createdAt || Date.now());
-            var versions = [
-                { v: '1.0.2', date: new Date(base.getTime() + 1000*60*60*24*30), note: 'Minor fixes and metadata update' },
-                { v: '1.0.1', date: new Date(base.getTime() + 1000*60*60*24*15), note: 'Text corrections' },
-                { v: '1.0.0', date: base, note: 'Initial upload' }
-            ];
-
-            versions.forEach(function(item){
-                var row = document.createElement('div');
-                row.className = 'flex items-start justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600';
-                var left = document.createElement('div');
-                left.innerHTML = '<div class="font-semibold text-gray-800 dark:text-gray-200">Version ' + item.v + '</div>' +
-                                 '<div class="text-xs text-gray-500 dark:text-gray-400">' + item.date.toLocaleDateString() + ' • ' + item.note + '</div>';
-                var right = document.createElement('div');
-                right.innerHTML = '<button class="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600">View</button>';
-                row.appendChild(left);
-                row.appendChild(right);
-                list.appendChild(row);
+            list.innerHTML = '<div class="text-center py-4">Loading...</div>';
+            
+            fetch('legislative_api.php?action=get_versions&id=' + id)
+            .then(r => r.json())
+            .then(d => {
+                if(d.success) {
+                    if(d.versions.length === 0) {
+                        list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
+                    } else {
+                        list.innerHTML = d.versions.map(v => `
+                            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">
+                                <div>
+                                    <div class="font-medium text-gray-800 dark:text-gray-200">Version ${v.version}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        ${v.created_at} • ${v.author}
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="download.php?id=${v.id}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                }
             });
 
             document.getElementById('versionModal').classList.remove('hidden');

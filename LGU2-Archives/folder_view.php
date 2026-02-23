@@ -158,6 +158,19 @@ $stmt->execute();
 $res = $stmt->get_result();
 while ($row = $res->fetch_assoc()) $files[] = $row;
 
+// Check if user is admin
+$is_admin = false;
+if (isset($_SESSION['user_id'])) {
+    $stmt_role = $conn->prepare("SELECT role FROM users WHERE id = ?");
+    $stmt_role->bind_param("i", $_SESSION['user_id']);
+    $stmt_role->execute();
+    $res_role = $stmt_role->get_result();
+    if ($row_role = $res_role->fetch_assoc()) {
+        $is_admin = (isset($row_role['role']) && strtolower($row_role['role']) === 'admin');
+    }
+    $stmt_role->close();
+}
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -251,16 +264,22 @@ $conn->close();
                             <div class="text-xs text-gray-500 dark:text-gray-400"><?php echo date('M d, Y', strtotime($folder['created_at'])); ?></div>
                         </div>
                     </a>
+                    <?php if ($is_admin): ?>
                     <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                          <button onclick="deleteFolder(<?php echo $folder['id']; ?>)" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
 
                 <!-- Files -->
-                <?php foreach ($files as $file): ?>
+                <?php foreach ($files as $file): 
+                    $fileUrl = $file['file_path'];
+                    $fileSize = file_exists($file['file_path']) ? filesize($file['file_path']) : 0;
+                    $fileExt = pathinfo($file['name'], PATHINFO_EXTENSION);
+                ?>
                 <div class="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group" id="file-<?php echo $file['id']; ?>">
                     <div class="flex items-center flex-1 min-w-0 gap-4">
                         <i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>
@@ -270,19 +289,21 @@ $conn->close();
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>)" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                        <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                             <span>View</span>
                         </button>
-                        <button onclick="downloadFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>)" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             <span>Download</span>
-                        </button>
+                        </a>
+                        <?php if ($is_admin): ?>
                         <button onclick="deleteFile(<?php echo $file['id']; ?>)" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
                             <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -363,6 +384,8 @@ $conn->close();
     </div>
 
     <script>
+        const isAdmin = <?php echo $is_admin ? 'true' : 'false'; ?>;
+
         // File Upload Functions
         function openCreateFolderModal() {
             document.getElementById('createFolderModal').classList.remove('hidden');
@@ -474,11 +497,11 @@ $conn->close();
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                     <span>Download</span>
                                 </button>
-                                <button onclick="deleteFile(${file.id})" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
+                                ${isAdmin ? `<button onclick="deleteFile(${file.id})" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
                                     <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
-                                </button>
+                                </button>` : ''}
                             </div>
                         `;
                         if (list.querySelector('.text-center')) list.querySelector('.text-center').remove();
@@ -524,11 +547,28 @@ $conn->close();
             const openBtn = document.getElementById('sv-open-btn');
             const preview = document.getElementById('sv-preview');
 
-            const pdfUrl = (data.rawUrl && typeof data.rawUrl === 'string') ? data.rawUrl : (data.previewUrl || data.downloadUrl);
-            if (pdfUrl && (pdfUrl.toLowerCase().endsWith('.pdf') || pdfUrl.includes('view=1'))) {
-                preview.innerHTML = `<iframe class="w-full h-[60vh] border" src="${pdfUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
+            const fileUrl = data.previewUrl || data.downloadUrl;
+            const ext = data.title.split('.').pop().toLowerCase();
+
+            if (ext === 'pdf') {
+                preview.innerHTML = `<iframe class="w-full h-[60vh] border rounded" src="${fileUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                preview.innerHTML = `<img src="${fileUrl}" class="max-w-full h-auto rounded border" alt="Preview">`;
+            } else if (['txt', 'log', 'md', 'csv'].includes(ext)) {
+                 fetch(fileUrl)
+                    .then(r => r.text())
+                    .then(text => {
+                        preview.innerHTML = `<pre class="w-full h-[60vh] overflow-auto p-3 bg-gray-50 dark:bg-slate-800 border rounded text-xs font-mono whitespace-pre-wrap">${text.replace(/</g, '&lt;')}</pre>`;
+                    })
+                    .catch(() => preview.textContent = 'Preview failed to load.');
             } else {
-                preview.textContent = data.previewText || 'Preview not available. Use Open to download or view the file.';
+                preview.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-48 bg-gray-50 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">
+                        <i class="bi bi-file-earmark-text text-4xl text-gray-400 mb-2"></i>
+                        <span class="text-sm text-gray-500">Preview not available for this file type</span>
+                        <a href="${data.downloadUrl}" target="_blank" class="mt-2 text-sm text-blue-600 hover:underline">Download to view</a>
+                    </div>
+                `;
             }
 
             if (data.downloadUrl) {
@@ -550,32 +590,26 @@ $conn->close();
             document.body.style.overflow = 'auto';
         }
 
-        function previewFile(fileName, fileId) {
-            // Mock metadata since archive_files table might be simple
+        function previewFile(fileName, fileId, fileUrl, fileSize, createdAt) {
+            const ext = fileName.split('.').pop().toUpperCase();
             const data = {
                 title: fileName,
                 type: 'File',
-                month: new Date().toLocaleString('default', { month: 'long' }),
-                year: new Date().getFullYear(),
-                author: 'System',
-                downloadUrl: 'download_file.php?id=' + fileId,
-                previewUrl: 'download_file.php?id=' + fileId + '&view=1', // Assuming download_file.php supports view=1 for inline
-                fileType: fileName.split('.').pop().toUpperCase()
+                month: new Date(createdAt).toLocaleString('default', { month: 'long' }),
+                year: new Date(createdAt).getFullYear(),
+                author: 'System', 
+                downloadUrl: fileUrl,
+                previewUrl: fileUrl,
+                fileType: ext,
+                size: (fileSize / 1024).toFixed(2) + ' KB',
+                createdAt: createdAt,
+                contentType: 'Document' 
             };
             openSideViewer(data);
         }
 
         function downloadFile(fileName, fileId) {
-            // Redirect to download.php logic with params
-            const params = new URLSearchParams({
-                id: fileId,
-                title: fileName,
-                type: 'File',
-                month: new Date().toLocaleString('default', { month: 'long' }),
-                year: new Date().getFullYear(),
-                author: 'System'
-            });
-            window.open('download.php?' + params.toString(), '_blank');
+             // ... existing downloadFile logic is mostly redundant with direct link, but kept if needed
         }
         
         async function deleteFile(id) {
@@ -597,8 +631,8 @@ $conn->close();
                     type: fileName.split('.').pop().toUpperCase(),
                     category: 'Main Storage',
                     originalPath: 'Main Storage', // Could be dynamic folder path
-                    deletedAt: new Date().toLocaleString(),
-                    expireAt: new Date(Date.now() + 30*24*60*60*1000).toISOString() // 30 days
+                    deletedAt: new Date().toLocaleString()
+                    // No expiration (expireAt removed)
                 };
                 
                 const existing = JSON.parse(localStorage.getItem('deletedFiles') || '[]');

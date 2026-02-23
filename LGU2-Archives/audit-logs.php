@@ -100,10 +100,12 @@
                     <i class="bi bi-folder mr-3 text-lg"></i>
                     <span>Main Storage Archives</span>
                 </a>
-                <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-trash mr-3 text-lg"></i>
-                    <span>Recently Deleted</span>
-                </a>
+                <?php if (isset($user_data['role']) && strtolower($user_data['role']) === 'admin'): ?>
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                <i class="bi bi-trash mr-3 text-lg"></i>
+                <span>Recently Deleted</span>
+            </a>
+            <?php endif; ?>
 
                 <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-cloud-upload mr-3 text-lg"></i>
@@ -188,10 +190,12 @@
                             <span class="sidebar-text">Export</span>
                         </a>
 
-                        <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                            <i class="bi bi-trash mr-3"></i>
-                            <span class="sidebar-text">Recently Deleted</span>
-                        </a>
+                        <?php if (isset($user_data['role']) && strtolower($user_data['role']) === 'admin'): ?>
+                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
+                        <i class="bi bi-trash mr-3"></i>
+                        <span class="sidebar-text">Recently Deleted</span>
+                    </a>
+                    <?php endif; ?>
 
                         <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                             <i class="bi bi-book mr-3"></i>

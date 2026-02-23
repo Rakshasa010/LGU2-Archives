@@ -63,6 +63,13 @@
             $st->close();
         }
     }
+    
+    // Admin check: Redirect if not admin
+    if (!$is_admin) {
+        header("Location: archives-landing.php");
+        exit();
+    }
+    
     $stmt->close();
     $conn->close();
     
@@ -105,15 +112,19 @@
                 <span>Main Storage Archives</span>
             </a>
             
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+            <?php if (isset($is_admin) && $is_admin): ?>
+            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Recently Deleted</span>
             </a>
+            <?php endif; ?>
             
+            <?php if (isset($is_admin) && $is_admin): ?>
              <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-trash mr-3 text-lg"></i>
                 <span>Export</span>
             </a>
+            <?php endif; ?>
             
             <!-- ANALYTICS Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
@@ -188,10 +199,12 @@
                         <span class="sidebar-text">Export</span>
                     </a>
 
-                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
+                    <?php if (isset($is_admin) && $is_admin): ?>
+                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-trash mr-3"></i>
                         <span class="sidebar-text">Recently Deleted</span>
                     </a>
+                    <?php endif; ?>
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-book mr-3"></i>
                         <span class="sidebar-text">Version Tracking</span>
@@ -351,7 +364,7 @@
                     </div>
                     <div class="px-4 py-2 bg-gray-100 dark:bg-slate-700 rounded-lg">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Retention</span>
-                        <span class="ml-2 font-semibold text-gray-800 dark:text-gray-200">30 Days</span>
+                        <span class="ml-2 font-semibold text-gray-800 dark:text-gray-200">Indefinite</span>
                     </div>
                 </div>
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -526,9 +539,7 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3">
-                                        <div class="retention-countdown px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-xs font-semibold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-600" data-expire-at="${file.expireAt || ''}">
-                                            --
-                                        </div>
+                                        <!-- No countdown -->
                                         <button class="restore-btn px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center space-x-2" data-id="${file.id}">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                             <span>Restore</span>
@@ -622,46 +633,6 @@
         filterSelect.addEventListener('change', () => renderDeleted());
 
         renderDeleted();
-
-        // Countdown beside Restore (updates every second)
-        let countdownTimer = null;
-        function formatRemaining(ms) {
-            if (!Number.isFinite(ms) || ms <= 0) return 'Expired';
-            const totalSeconds = Math.floor(ms / 1000);
-            const days = Math.floor(totalSeconds / 86400);
-            const hours = Math.floor((totalSeconds % 86400) / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            if (days > 0) return `${days}d ${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m`;
-            return `${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`;
-        }
-
-        function updateCountdowns() {
-            const els = document.querySelectorAll('.retention-countdown');
-            const now = Date.now();
-            let needsRerender = false;
-            els.forEach(el => {
-                const exp = el.getAttribute('data-expire-at') || '';
-                const expMs = Date.parse(exp);
-                if (!Number.isFinite(expMs)) {
-                    el.textContent = '30d';
-                    return;
-                }
-                const remaining = expMs - now;
-                el.textContent = formatRemaining(remaining);
-                if (remaining <= 0) needsRerender = true;
-            });
-
-            if (needsRerender) {
-                // prune expired and rerender
-                deletedFiles = loadDeletedFiles();
-                renderDeleted();
-            }
-        }
-
-        if (countdownTimer) clearInterval(countdownTimer);
-        countdownTimer = setInterval(updateCountdowns, 1000);
-        updateCountdowns();
 
         // Sidebar toggle functionality
         const sidebarToggle = document.getElementById('sidebar-toggle');
