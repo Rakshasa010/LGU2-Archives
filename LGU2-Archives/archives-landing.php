@@ -95,7 +95,7 @@
         </div>
         
         <!-- Mobile Navigation Menu -->
-        <nav class="flex-1 py-4 px-3 overflow-hidden">
+        <nav class="flex-1 py-4 px-3 overflow-y-auto">
             <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
@@ -177,7 +177,7 @@
             </div>
             
             <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-hidden py-4">
+            <nav class="flex-1 overflow-y-auto py-4">
                 <div class="px-4 space-y-1">
                     <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-speedometer2 mr-3"></i>

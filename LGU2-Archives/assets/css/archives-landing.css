@@ -61,3 +61,23 @@
 .dark table td {
     color: #e5e5e5 !important;
 }
+
+/* Sidebar scrollbars (desktop + mobile) */
+#mobile-sidebar nav,
+.sidebar nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.35) transparent;
+}
+#mobile-sidebar nav::-webkit-scrollbar,
+.sidebar nav::-webkit-scrollbar {
+    width: 6px;
+}
+#mobile-sidebar nav::-webkit-scrollbar-thumb,
+.sidebar nav::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.35);
+    border-radius: 9999px;
+}
+#mobile-sidebar nav::-webkit-scrollbar-track,
+.sidebar nav::-webkit-scrollbar-track {
+    background: transparent;
+}
