@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             <div class="absolute inset-0 backdrop-blur-sm bg-black/40 backdrop-blur-fallback"></div>
 
             <div id="modalCard" class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full m-auto mx-4 transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] overflow-auto">
-                <div class="p-6 sm:p-8">
+                <div class="p-6 sm:p-8 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-4">
                             <div class="flex-none bg-gradient-to-tr from-red-500 to-pink-500 text-white rounded-xl p-3 shadow-md">
@@ -120,10 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                             </div>
                             <div>
                                 <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Download Document</h3>
-                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Securely download a copy of the document below.</p>
+                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Securely download a copy of the document below.</p>
                             </div>
                         </div>
-                        <button id="closeX" aria-label="Close" onclick="window.close();" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <button id="closeX" aria-label="Close" onclick="window.close();" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     </div>
 
                     <div class="mt-5 grid grid-cols-1 gap-4">
-                        <div class="rounded-md border border-gray-100 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+                        <div class="rounded-md border border-gray-100 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900/50">
                             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-200 truncate" id="modalTitle"><?php echo htmlspecialchars($record['title']); ?></h4>
                             <div class="mt-3 text-sm text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-2">
                                 <div><span class="font-semibold text-gray-600 dark:text-gray-300">Type:</span> <?php echo htmlspecialchars($record['type']); ?></div>
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                 <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
                                 <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
                                 <input type="hidden" name="format" value="pdf">
-                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:from-red-600 hover:to-pink-600 transition">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold shadow hover:from-red-600 hover:to-pink-600 transition dark:shadow-red-900/20">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-3-3m3 3l3-3M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7"></path></svg>
                                     PDF
                                 </button>
@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                 <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
                                 <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
                                 <input type="hidden" name="format" value="docx">
-                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow hover:from-blue-600 hover:to-cyan-600 transition">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow hover:from-blue-600 hover:to-cyan-600 transition dark:shadow-blue-900/20">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path></svg>
                                     DOCX
                                 </button>
@@ -175,15 +175,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                 <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
                                 <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
                                 <input type="hidden" name="format" value="xml">
-                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 transition">
+                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition border border-gray-200 dark:border-slate-600">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7L9 18l-5-5"></path></svg>
                                     XML
                                 </button>
                             </form>
                         </div>
 
-                        <div class="flex justify-end">
-                            <button id="cancelDownload" onclick="window.close();" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Cancel</button>
+                        <div class="flex justify-end pt-2">
+                            <button id="cancelDownload" onclick="window.close();" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
                         </div>
                     </div>
                 </div>

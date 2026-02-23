@@ -132,6 +132,18 @@
             </div>
         <?php endif; ?>
 
+        <?php if (isset($_GET['registered'])): ?>
+            <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+                <?php 
+                if ($_GET['registered'] === 'email') {
+                    echo "Registered successfully. Check your email for the temporary password.";
+                } else {
+                    echo "Registered successfully. Use Forgot password to set your password and sign in.";
+                }
+                ?>
+            </div>
+        <?php endif; ?>
+
         <form action="login.php" method="POST" class="space-y-6">
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>

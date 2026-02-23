@@ -135,11 +135,33 @@ switch ($action) {
 
         // Create upload directory
         $target_dir = "uploads/legislative/";
+        
+        // Enhance folder structure: uploads/legislative/{Type}/{Year}/
+        if ($folder_id) {
+            // If inside a specific folder, maybe append folder name or ID to keep it clean?
+            // For now, let's at least organize by Type and Year
+        }
+        
+        // Clean type for folder name
+        $clean_type = preg_replace('/[^a-zA-Z0-9]/', '', $type);
+        $target_dir .= $clean_type . '/';
+        if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
+        
+        $target_dir .= $year . '/';
         if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
 
         // Append version to filename on disk to avoid overwrite
-        $filename = time() . '_v' . $version . '_' . preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $file['name']);
+        $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $file['name']);
+        $filename = 'v' . $version . '_' . $safe_name;
+        
+        // Ensure unique filename if somehow version collision happens (though DB versioning should prevent this)
         $target_path = $target_dir . $filename;
+        $counter = 1;
+        while (file_exists($target_path)) {
+             $filename = 'v' . $version . '_' . $counter . '_' . $safe_name;
+             $target_path = $target_dir . $filename;
+             $counter++;
+        }
 
         if (move_uploaded_file($file['tmp_name'], $target_path)) {
             // Check if columns exist (graceful fallback if DB update failed)

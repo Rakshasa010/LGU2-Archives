@@ -592,6 +592,36 @@ $conn->close();
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
             window.open(url, 'download', 'width=500,height=500');
         }
+
+        // Mobile Sidebar Toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
+
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileSidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.add('opacity-100', 'pointer-events-auto');
+            });
+        }
+
+        if (closeMobileSidebar) {
+            closeMobileSidebar.addEventListener('click', () => {
+                mobileSidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            });
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => {
+                mobileSidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            });
+        }
     </script>
 </body>
 </html>

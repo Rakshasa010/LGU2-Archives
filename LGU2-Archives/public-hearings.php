@@ -560,22 +560,22 @@ $conn->close();
              const ext = title.split('.').pop().toLowerCase();
              
              if (ext === 'pdf') {
-                 preview.innerHTML = `<iframe class="w-full h-[60vh] border rounded" src="${previewUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
+                 preview.innerHTML = `<iframe class="w-full h-[60vh] border rounded bg-white" src="${previewUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
              } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-                 preview.innerHTML = `<img src="${previewUrl}" class="max-w-full h-auto rounded border" alt="Preview">`;
+                 preview.innerHTML = `<img src="${previewUrl}" class="max-w-full h-auto rounded border dark:border-slate-600" alt="Preview">`;
              } else if (['txt', 'log'].includes(ext)) {
                  fetch(previewUrl)
                     .then(r => r.text())
                     .then(text => {
-                        preview.innerHTML = `<pre class="w-full h-[60vh] overflow-auto p-3 bg-gray-50 dark:bg-slate-800 border rounded text-xs font-mono whitespace-pre-wrap">${text}</pre>`;
+                        preview.innerHTML = `<pre class="w-full h-[60vh] overflow-auto p-3 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200 border dark:border-slate-600 rounded text-xs font-mono whitespace-pre-wrap">${text}</pre>`;
                     })
                     .catch(() => preview.textContent = 'Preview failed to load.');
              } else {
                  preview.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-48 bg-gray-50 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">
-                        <i class="bi bi-file-earmark-text text-4xl text-gray-400 mb-2"></i>
-                        <span class="text-sm text-gray-500">Preview not available for this file type</span>
-                        <a href="${url}" target="_blank" class="mt-2 text-sm text-blue-600 hover:underline">Download to view</a>
+                        <i class="bi bi-file-earmark-text text-4xl text-gray-400 dark:text-gray-500 mb-2"></i>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">Preview not available for this file type</span>
+                        <a href="${url}" target="_blank" class="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Download to view</a>
                     </div>
                  `;
              }
@@ -591,6 +591,36 @@ $conn->close();
         function openDownloadPopup(id, title, type, month, year, author) {
             const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
             window.open(url, 'download', 'width=500,height=500');
+        }
+
+        // Mobile Sidebar Toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
+
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileSidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.add('opacity-100', 'pointer-events-auto');
+            });
+        }
+
+        if (closeMobileSidebar) {
+            closeMobileSidebar.addEventListener('click', () => {
+                mobileSidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            });
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => {
+                mobileSidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            });
         }
     </script>
 </body>
