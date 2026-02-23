@@ -342,7 +342,7 @@
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -395,6 +395,10 @@
                                 <div class="flex items-center justify-between mb-4">
                                     <h3 id="searchResultsCount" class="text-lg font-semibold text-gray-800 dark:text-gray-200">0 results found</h3>
                                     <button id="clearSearchBtn" class="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">Clear</button>
+                                </div>
+                                <div id="searchRelated" class="mb-3 hidden">
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Related topics</div>
+                                    <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
                                 </div>
                                 <div id="searchResultsList" class="space-y-3">
                                     <!-- Results will be dynamically inserted here -->
@@ -572,6 +576,7 @@
     <script src="assets/js/recent-views.js"></script>
     <script src="assets/js/archives.js"></script>
     <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

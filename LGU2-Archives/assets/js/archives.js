@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            displaySearchResults(data.results, searchTerm);
+            displaySearchResults(data.results || [], searchTerm, data.related || []);
         })
         .catch(error => {
             console.error('Search error:', error);
@@ -103,9 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function displaySearchResults(results, searchTerm) {
+    function displaySearchResults(results, searchTerm, related) {
         const searchResultsList = document.getElementById('searchResultsList');
         const searchResultsCount = document.getElementById('searchResultsCount');
+        const relatedBox = document.getElementById('searchRelated');
+        const relatedChips = document.getElementById('searchRelatedChips');
 
         // Start with a summary card that always shows what was searched
         let contentHtml = `
@@ -114,6 +116,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="text-lg font-semibold text-gray-900 dark:text-gray-100 break-words">${escapeHtml(searchTerm)}</div>
             </div>
         `;
+
+        if (relatedBox && relatedChips) {
+            if (Array.isArray(related) && related.length > 0) {
+                relatedBox.classList.remove('hidden');
+                relatedChips.innerHTML = related.map(function(r){
+                    var label = (r.category ? r.category + ': ' : '') + (r.label || r.query || '');
+                    var q = (r.query || r.label || '');
+                    return '<button data-q="'+escapeHtml(q)+'" class="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-600">' + escapeHtml(label) + '</button>';
+                }).join('');
+                Array.prototype.forEach.call(relatedChips.querySelectorAll('button'), function(btn){
+                    btn.addEventListener('click', function(){
+                        var q = btn.getAttribute('data-q') || '';
+                        legislativeSearchInput.value = q;
+                        performSearch();
+                    });
+                });
+            } else {
+                relatedBox.classList.add('hidden');
+                relatedChips.innerHTML = '';
+            }
+        }
 
         if (results.length === 0) {
             contentHtml += `
@@ -130,13 +153,40 @@ document.addEventListener('DOMContentLoaded', function() {
             searchResultsCount.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} found`;
 
             const resultsCards = results.map(record => {
-                let highlightedTitle = record.title;
+                var highlightedTitle = record.title;
                 if (searchTerm) {
-                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    var regex = new RegExp('(' + searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
                     highlightedTitle = record.title.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-900">$1</mark>');
                 }
-
-                return `
+                var source = record.source || 'legislative';
+                if (source === 'archive') {
+                    var badgeLabel = record.kind === 'folder' ? 'Archive Folder' : 'Archive File';
+                    var metaRight = (record.month && record.year) ? (record.month + ' ' + record.year) : '';
+                    var subMeta = record.folder_name ? ('In: ' + record.folder_name) : '';
+                    var highlightParam = (record.kind === 'folder') ? ('folder-' + String(record.id)) : String(record.id);
+                    var href = 'folder_view.php?id=' + encodeURIComponent(record.folder_id || record.id) + '&highlight=' + encodeURIComponent(highlightParam);
+                    return '<a href="'+href+'" class="block bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-lg transition-all border border-gray-200 dark:border-slate-700 group">'
+                         +    '<div class="flex items-start justify-between">'
+                         +      '<div class="flex items-start space-x-4 flex-1">'
+                         +        '<div class="flex-shrink-0 p-2 bg-gray-100 dark:bg-slate-700 rounded-lg group-hover:bg-red-50 dark:group-hover:bg-red-900/20 transition-colors">'
+                         +          '<i class="bi '+(record.kind==='folder'?'bi-folder-fill text-yellow-500':'bi-file-earmark-text text-blue-500')+' text-2xl"></i>'
+                         +        '</div>'
+                         +        '<div class="flex-1 min-w-0">'
+                         +          '<div class="font-bold text-gray-800 dark:text-gray-100 mb-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate pr-4">'+highlightedTitle+'</div>'
+                         +          '<div class="flex flex-wrap items-center text-sm text-gray-600 dark:text-gray-400 gap-y-1">'
+                         +            '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-200 mr-2">'+badgeLabel+'</span>'
+                         +            (subMeta ? '<span class="flex items-center mr-3"><i class="bi bi-folder mr-1.5 text-xs"></i>'+escapeHtml(subMeta)+'</span>' : '')
+                         +            (metaRight ? '<span class="flex items-center"><i class="bi bi-calendar3 mr-1.5 text-xs"></i>'+escapeHtml(metaRight)+'</span>' : '')
+                         +          '</div>'
+                         +        '</div>'
+                         +      '</div>'
+                         +      '<div class="flex-shrink-0 self-center ml-4">'
+                         +        '<svg class="w-6 h-6 text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>'
+                         +      '</div>'
+                         +    '</div>'
+                         +  '</a>';
+                } else {
+                    return `
                     <div class="bg-white dark:bg-slate-800 rounded-lg p-4 hover:shadow-lg transition-all border border-gray-200 dark:border-slate-700 cursor-pointer search-result-item group"
                          data-record-id="${record.id}"
                          data-title="${record.title.replace(/"/g, '&quot;')}"
@@ -178,12 +228,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
+                }
             }).join('');
 
             contentHtml += resultsCards;
         }
 
-        searchResultsList.innerHTML = contentHtml;
 
         // Add click handlers for search results
         document.querySelectorAll('.search-result-item').forEach(item => {

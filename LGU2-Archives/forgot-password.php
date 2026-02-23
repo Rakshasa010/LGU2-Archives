@@ -72,10 +72,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $mailer->addAddress($email, $fullName);
                         $mailer->Subject = $subject;
                         $mailer->isHTML(true);
-                        $mailer->Body = '<p>Hello ' . htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') . ',</p>'
-                            . '<p>Your password reset code is: <strong>' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '</strong></p>'
-                            . '<p>This code expires in 10 minutes.</p>'
-                            . '<p>If you did not request this, ignore this email.</p>';
+                        $tzName = isset($cfg['timezone']) && is_string($cfg['timezone']) ? $cfg['timezone'] : 'Asia/Manila';
+                        $nowLocal = new DateTime('now', new DateTimeZone($tzName));
+                        $expiresLocal = (clone $nowLocal)->modify('+10 minutes');
+                        $sentAt = $nowLocal->format('M j, Y h:i A');
+                        $expiresAtTxt = $expiresLocal->format('M j, Y h:i A');
+                        $otp = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+                        $nameSafe = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
+                        $brand = htmlspecialchars($cfg['from_name'] ?? 'Archives', ENT_QUOTES, 'UTF-8');
+                        $mailer->Body = '<div style="background:#f7f7f9;padding:24px;font-family:Segoe UI,Arial,sans-serif;color:#111111">'
+                            . '<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px">'
+                            . '<div style="padding:20px 24px;border-bottom:1px solid #e5e7eb">'
+                            . '<h1 style="margin:0;font-size:18px;color:#b91c1c">' . $brand . '</h1>'
+                            . '<div style="margin-top:4px;font-size:12px;color:#6b7280">Password Reset Code</div>'
+                            . '</div>'
+                            . '<div style="padding:24px">'
+                            . '<p style="margin:0 0 12px 0;font-size:14px;color:#111111">Hello ' . $nameSafe . ',</p>'
+                            . '<p style="margin:0 0 16px 0;font-size:14px;color:#374151">Use the code below to reset your password. Do not share this code.</p>'
+                            . '<div style="text-align:center;margin:16px 0">'
+                            . '<div style="display:inline-block;font-size:28px;letter-spacing:6px;font-weight:700;color:#111111;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:12px 18px">' . $otp . '</div>'
+                            . '</div>'
+                            . '<table style="width:100%;font-size:12px;color:#6b7280;margin-top:8px;border-collapse:collapse">'
+                            . '<tr><td style="padding:6px 0;width:120px">Sent</td><td style="padding:6px 0">' . $sentAt . ' (' . $tzName . ')</td></tr>'
+                            . '<tr><td style="padding:6px 0;width:120px">Expires</td><td style="padding:6px 0">' . $expiresAtTxt . ' (' . $tzName . ')</td></tr>'
+                            . '</table>'
+                            . '<p style="margin:16px 0 0 0;font-size:12px;color:#6b7280">If you did not request this, you can ignore this email.</p>'
+                            . '</div>'
+                            . '<div style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#6b7280">© ' . date('Y') . ' ' . $brand . '</div>'
+                            . '</div>'
+                            . '</div>';
                         $mailer->AltBody = $messagePlain;
                         $mailer->send();
                         $sent = true;

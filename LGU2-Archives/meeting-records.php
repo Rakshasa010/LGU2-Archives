@@ -51,7 +51,7 @@ if ($folder_res) {
 
 // Fetch Files
 $files = [];
-$file_sql = "SELECT id, title, type, month, year, author, created_at, last_accessed, version, parent_version_id FROM legislative_records WHERE type = 'Meeting' AND parent_version_id IS NULL";
+$file_sql = "SELECT id, title, type, month, year, author, created_at, last_accessed, version, parent_version_id FROM legislative_records WHERE type = 'Meeting' AND parent_version_id IS NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)";
 if ($current_folder_id) {
     $file_sql .= " AND folder_id = $current_folder_id";
 } else {
@@ -88,6 +88,20 @@ $conn->close();
             }
         }
     </script>
+    <div id="viewerModal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-md" onclick="closeViewerModal()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 p-4 max-h-[90vh] overflow-auto">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Document Viewer</h3>
+                <button onclick="closeViewerModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="viewerModalContent" class="mt-4"></div>
+        </div>
+    </div>
     <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="assets/css/archives-landing.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -352,6 +366,25 @@ $conn->close();
         </div>
     </div>
 
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeNotification()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-700">
+            <div class="flex items-start gap-3">
+                <div id="notificationIcon" class="flex-none rounded-full p-2 bg-green-100 dark:bg-green-900/30">
+                    <i class="bi bi-check2-circle text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 id="notificationTitle" class="text-lg font-bold text-gray-900 dark:text-gray-100">Deleted</h3>
+                    <p id="notificationMessage" class="mt-1 text-sm text-gray-600 dark:text-gray-400">The file has been deleted.</p>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeNotification()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Version History Modal -->
     <div id="versionHistoryModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4">
@@ -396,7 +429,7 @@ $conn->close();
                     <div class="flex justify-between"><span>File type</span><span id="sv-d-ftype"></span></div>
                 </div>
             </div>
-            <div id="sv-preview" class="mt-3 text-sm text-gray-500 dark:text-gray-400">Preview not available.</div>
+            <div id="sv-preview" class="mt-3"></div>
         </div>
         <div class="p-4 border-t border-gray-100 dark:border-slate-700">
             <a id="sv-open-btn" class="inline-block px-4 py-2 bg-red-600 text-white rounded hidden" href="#" target="_blank">Open / Download</a>
@@ -419,7 +452,46 @@ $conn->close();
         }
         function confirmDelete() {
             closeModal('deleteModal');
-            alert('Delete functionality to be implemented with API');
+            if (!deleteId) return;
+            const fd = new FormData();
+            fd.append('action', 'delete_record');
+            fd.append('id', deleteId);
+            fetch('legislative_api.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(d => {
+                    if (d && d.success) {
+                        const el = document.querySelector(`[data-id="${deleteId}"]`);
+                        if (el) el.remove();
+                        openNotification('The file has been deleted.', 'success');
+                    } else {
+                        openNotification(d.message || 'Failed to delete file.', 'error');
+                    }
+                })
+                .catch(() => openNotification('Failed to delete file.', 'error'));
+            deleteId = null;
+        }
+        function openNotification(message = 'Done', type = 'success') {
+            const modal = document.getElementById('notificationModal');
+            const title = document.getElementById('notificationTitle');
+            const msg = document.getElementById('notificationMessage');
+            const icon = document.getElementById('notificationIcon');
+            if (!modal || !title || !msg || !icon) return;
+            if (type === 'error') {
+                title.textContent = 'Error';
+                msg.textContent = message || 'Something went wrong.';
+                icon.className = 'flex-none rounded-full p-2 bg-red-100 dark:bg-red-900/30';
+                icon.innerHTML = '<i class="bi bi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>';
+            } else {
+                title.textContent = 'Deleted';
+                msg.textContent = message || 'The file has been deleted.';
+                icon.className = 'flex-none rounded-full p-2 bg-green-100 dark:bg-green-900/30';
+                icon.innerHTML = '<i class="bi bi-check2-circle text-green-600 dark:text-green-400 text-xl"></i>';
+            }
+            modal.classList.remove('hidden');
+        }
+        function closeNotification() {
+            const modal = document.getElementById('notificationModal');
+            if (modal) modal.classList.add('hidden');
         }
 
         // Create Folder
@@ -580,8 +652,10 @@ $conn->close();
                  `;
              }
              
-             document.getElementById('sv-open-btn').href = url;
-             document.getElementById('sv-open-btn').classList.remove('hidden');
+             const openBtn = document.getElementById('sv-open-btn');
+             openBtn.href = '#';
+             openBtn.onclick = function(e){ e.preventDefault(); openViewerModal(id, title, type, month, year, author); };
+             openBtn.classList.remove('hidden');
 
              panel.classList.remove('translate-x-full');
         }
@@ -589,8 +663,38 @@ $conn->close();
             document.getElementById('sideViewer').classList.add('translate-x-full');
         }
         function openDownloadPopup(id, title, type, month, year, author) {
-            const url = `download.php?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
-            window.open(url, 'download', 'width=500,height=500');
+            openViewerModal(id, title, type, month, year, author);
+        }
+        function openViewerModal(id, title, type, month, year, author) {
+            const modal = document.getElementById('viewerModal');
+            const content = document.getElementById('viewerModalContent');
+            if (!modal || !content) return;
+            const headerEl = document.querySelector('header');
+            if (headerEl) headerEl.classList.add('hidden');
+            const url = `download.php?action=view_json&id=${encodeURIComponent(id)}&title=${encodeURIComponent(title)}&type=${encodeURIComponent(type)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}&author=${encodeURIComponent(author)}`;
+            content.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400">Loading…</div>';
+            fetch(url)
+                .then(r => r.json())
+                .then(d => {
+                    if (d && d.success && d.html) {
+                        content.innerHTML = d.html + '<div class="mt-4 flex justify-end"><button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button></div>';
+                    } else {
+                        content.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
+                    }
+                })
+                .catch(() => {
+                    content.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
+                });
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeViewerModal() {
+            const modal = document.getElementById('viewerModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            const headerEl = document.querySelector('header');
+            if (headerEl) headerEl.classList.remove('hidden');
         }
 
         // Mobile Sidebar Toggle

@@ -40,3 +40,24 @@
     position: relative;
     z-index: 10;
 }
+/* Dark variant for highlight */
+.dark .highlight-record {
+    border-color: #f97316 !important;
+    background-color: rgba(249,115,22,0.08);
+}
+
+/* Dark mode global text fixes */
+.dark body,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-black {
+    color: #e5e7eb !important;
+}
+.dark a {
+    color: #e5e7eb !important;
+}
+.dark table th,
+.dark table td {
+    color: #e5e5e5 !important;
+}

@@ -47,7 +47,7 @@ $total = 0;
 if ($res && ($row = $res->fetch_assoc())) $total = intval($row['cnt']);
 $stmt->close();
 $offset = ($page - 1) * $page_size;
-$sql_items = 'SELECT id, time, date, content, about, status FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
+$sql_items = 'SELECT id, time, date, content, about, status, created_at, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
 $params_items = $params;
 $types_items = $types . 'ii';
 $params_items[] = $offset;

@@ -151,6 +151,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit();
     }
+    
+    if ($action === 'search_folder') {
+        header('Content-Type: application/json');
+        $term = $_POST['term'] ?? $input['term'] ?? '';
+        $term = trim($term);
+        if ($term === '') {
+            echo json_encode(['success' => true, 'folders' => [], 'files' => []]);
+            exit();
+        }
+        $like = '%' . $conn->real_escape_string($term) . '%';
+        $folders = [];
+        $files = [];
+        // Search subfolders under current folder
+        $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE parent_id = ? AND name LIKE ? ORDER BY created_at DESC LIMIT 20");
+        $stmt->bind_param("is", $current_folder_id, $like);
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $folders[] = $row;
+            }
+        }
+        $stmt->close();
+        // Search files within retention
+        $stmt = $conn->prepare("SELECT id, name, created_at, file_path FROM archive_files WHERE folder_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR) AND (name LIKE ? OR name LIKE ?) ORDER BY created_at DESC LIMIT 50");
+        $stmt->bind_param("iss", $current_folder_id, $like, $like);
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $files[] = $row;
+            }
+        }
+        $stmt->close();
+        echo json_encode(['success' => true, 'folders' => $folders, 'files' => $files]);
+        exit();
+    }
 }
 
 // Fetch subfolders
@@ -163,7 +198,7 @@ while ($row = $res->fetch_assoc()) $subfolders[] = $row;
 
 // Fetch files
 $files = [];
-$stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? ORDER BY created_at DESC");
+$stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR) ORDER BY created_at DESC");
 $stmt->bind_param("i", $current_folder_id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -192,6 +227,7 @@ $conn->close();
     <title><?php echo htmlspecialchars($current_folder['name']); ?> - Document Management</title>
     <?php include 'includes/header_scripts.php'; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
@@ -277,7 +313,7 @@ $conn->close();
                     </a>
                     <?php if ($is_admin): ?>
                     <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button onclick="deleteFolder(<?php echo $folder['id']; ?>)" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                         <button onclick="openDeleteFolderConfirm(<?php echo $folder['id']; ?>, '<?php echo addslashes(htmlspecialchars($folder['name'])); ?>')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -309,7 +345,7 @@ $conn->close();
                             <span>Download</span>
                         </a>
                         <?php if ($is_admin): ?>
-                        <button onclick="deleteFile(<?php echo $file['id']; ?>)" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
+                        <button onclick="openDeleteConfirm(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
                             <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -364,6 +400,50 @@ $conn->close();
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('deleteModal')"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700 transform transition-all scale-100 opacity-100 duration-300">
+                <div class="mb-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                        <i class="bi bi-trash text-3xl text-red-600 dark:text-red-400"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Delete File?</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Are you sure you want to delete <span id="deleteFileName" class="font-semibold text-gray-800 dark:text-gray-200"></span>?</p>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button type="button" onclick="closeModal('deleteModal')" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="confirmDelete()" class="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-lg transition-all font-medium flex items-center">
+                        <i class="bi bi-trash mr-2"></i>
+                        Delete File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeNotification()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-700">
+            <div class="flex items-start gap-3">
+                <div id="notificationIcon" class="flex-none rounded-full p-2 bg-green-100 dark:bg-green-900/30">
+                    <i class="bi bi-check2-circle text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 id="notificationTitle" class="text-lg font-bold text-gray-900 dark:text-gray-100">Uploaded!</h3>
+                    <p id="notificationMessage" class="mt-1 text-sm text-gray-600 dark:text-gray-400">Your file(s) have been uploaded.</p>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeNotification()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Side Viewer Panel -->
     <div id="sideViewer" class="fixed right-0 top-0 h-full w-full sm:w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-xl transform translate-x-full transition-transform duration-200 z-50">
         <div class="p-4 flex items-start justify-between border-b border-gray-100 dark:border-slate-700">
@@ -399,6 +479,8 @@ $conn->close();
 
     <script>
         const isAdmin = <?php echo $is_admin ? 'true' : 'false'; ?>;
+        let deleteId = null;
+        let deleteIsFolder = false;
 
         // File Upload Functions
         function openCreateFolderModal() {
@@ -528,8 +610,9 @@ $conn->close();
 
             if (successCount > 0) {
                 closeUploadModal();
+                openNotification('Your file(s) have been uploaded.', 'success');
             } else {
-                alert('Failed to upload files');
+                openNotification('Failed to upload files', 'error');
                 progress.classList.add('hidden');
             }
         }
@@ -561,32 +644,33 @@ $conn->close();
             const openBtn = document.getElementById('sv-open-btn');
             const preview = document.getElementById('sv-preview');
 
-            const fileUrl = data.previewUrl || data.downloadUrl;
-            const ext = data.title.split('.').pop().toLowerCase();
-
-            if (ext === 'pdf') {
-                preview.innerHTML = `<iframe class="w-full h-[60vh] border rounded" src="${fileUrl}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>`;
-            } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-                preview.innerHTML = `<img src="${fileUrl}" class="max-w-full h-auto rounded border" alt="Preview">`;
-            } else if (['txt', 'log', 'md', 'csv'].includes(ext)) {
-                 fetch(fileUrl)
-                    .then(r => r.text())
-                    .then(text => {
-                        preview.innerHTML = `<pre class="w-full h-[60vh] overflow-auto p-3 bg-gray-50 dark:bg-slate-800 text-gray-800 dark:text-gray-200 border dark:border-slate-600 rounded text-xs font-mono whitespace-pre-wrap">${text.replace(/</g, '&lt;')}</pre>`;
-                    })
-                    .catch(() => preview.textContent = 'Preview failed to load.');
-            } else {
-                preview.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-48 bg-gray-50 dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700">
-                        <i class="bi bi-file-earmark-text text-4xl text-gray-400 mb-2"></i>
-                        <span class="text-sm text-gray-500">Preview not available for this file type</span>
-                        <a href="${data.downloadUrl}" target="_blank" class="mt-2 text-sm text-blue-600 hover:underline">Download to view</a>
-                    </div>
-                `;
-            }
+            const id = data.id ? String(data.id) : '0';
+            const title = encodeURIComponent(data.title || 'Untitled');
+            const type = encodeURIComponent(data.type || 'Archive Document');
+            const month = encodeURIComponent(data.month || (data.createdAt ? new Date(data.createdAt).toLocaleString('default', { month: 'long' }) : ''));
+            const year = encodeURIComponent(data.year || (data.createdAt ? new Date(data.createdAt).getFullYear() : ''));
+            const author = encodeURIComponent(data.author || 'System');
+            const viewerUrl = `download.php?action=view_json&id=${id}&title=${title}&type=${type}&month=${month}&year=${year}&author=${author}`;
+            preview.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400">Loading…</div>';
+            fetch(viewerUrl)
+                .then(r => r.json())
+                .then(d => {
+                    if (d && d.success && d.html) {
+                        preview.innerHTML = d.html;
+                    } else {
+                        preview.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
+                    }
+                })
+                .catch(() => {
+                    preview.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
+                });
 
             if (data.downloadUrl) {
-                openBtn.href = data.downloadUrl;
+                openBtn.href = '#';
+                openBtn.onclick = function(e) {
+                    e.preventDefault();
+                    openViewerModal(data);
+                };
                 openBtn.classList.remove('hidden');
             } else {
                 openBtn.classList.add('hidden');
@@ -607,6 +691,7 @@ $conn->close();
         function previewFile(fileName, fileId, fileUrl, fileSize, createdAt) {
             const ext = fileName.split('.').pop().toUpperCase();
             const data = {
+                id: fileId,
                 title: fileName,
                 type: 'File',
                 month: new Date(createdAt).toLocaleString('default', { month: 'long' }),
@@ -622,53 +707,162 @@ $conn->close();
             openSideViewer(data);
         }
 
+        function openViewerModal(data) {
+            const modal = document.getElementById('viewerModal');
+            const content = document.getElementById('viewerModalContent');
+            if (!modal || !content) return;
+            const headerEl = document.querySelector('header');
+            if (headerEl) headerEl.classList.add('hidden');
+            const id = data.id ? String(data.id) : '0';
+            const title = encodeURIComponent(data.title || 'Untitled');
+            const type = encodeURIComponent(data.type || 'Archive Document');
+            const month = encodeURIComponent(data.month || (data.createdAt ? new Date(data.createdAt).toLocaleString('default', { month: 'long' }) : ''));
+            const year = encodeURIComponent(data.year || (data.createdAt ? new Date(data.createdAt).getFullYear() : ''));
+            const author = encodeURIComponent(data.author || 'System');
+            if (data.previewUrl) {
+                const ext = String(data.previewUrl).split('.').pop().toLowerCase();
+                let viewer = '';
+                if (['pdf'].includes(ext)) {
+                    viewer = `<div class="space-y-4"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><iframe src="${data.previewUrl}" class="w-full h-[70vh] rounded-lg border"></iframe></div>`;
+                } else if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) {
+                    viewer = `<div class="space-y-4 text-center"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><img src="${data.previewUrl}" class="max-h-[70vh] w-auto inline-block rounded-lg border" alt="Preview"/></div>`;
+                } else if (['txt','csv','json','xml','md','log'].includes(ext)) {
+                    viewer = `<div class="space-y-4"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><iframe src="${data.previewUrl}" class="w-full h-[70vh] rounded-lg border bg-white"></iframe></div>`;
+                } else if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) {
+                    const absolute = (location.origin + (data.previewUrl.startsWith('/') ? '' : '/') + data.previewUrl);
+                    const gview = 'https://docs.google.com/gview?embedded=true&url=' + encodeURIComponent(absolute);
+                    viewer = `<div class="space-y-4"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><iframe src="${gview}" class="w-full h-[70vh] rounded-lg border bg-white"></iframe><div class="text-xs text-gray-500 dark:text-gray-400">If the preview fails, use Open to view in a new tab.</div><div class="flex justify-end"><a href="${data.previewUrl}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a></div></div>`;
+                } else {
+                    viewer = `<div class="space-y-4"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><div class="text-sm text-gray-600 dark:text-gray-400">Preview not available for this file type.</div><div class="flex justify-end"><a href="${data.previewUrl}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a></div></div>`;
+                }
+                content.innerHTML = viewer + `<div class="mt-4 flex justify-end"><button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button></div>`;
+            } else {
+                const url = `download.php?action=view_json&id=${id}&title=${title}&type=${type}&month=${month}&year=${year}&author=${author}`;
+                content.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400">Loading…</div>';
+                fetch(url)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d && d.success && d.html) {
+                            content.innerHTML = d.html + `<div class="mt-4 flex justify-end"><button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button></div>`;
+                        } else {
+                            content.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
+                        }
+                    })
+                    .catch(() => {
+                        content.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
+                    });
+            }
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeViewerModal() {
+            const modal = document.getElementById('viewerModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            const headerEl = document.querySelector('header');
+            if (headerEl) headerEl.classList.remove('hidden');
+        }
+
         function downloadFile(fileName, fileId) {
              // ... existing downloadFile logic is mostly redundant with direct link, but kept if needed
         }
         
-        async function deleteFile(id) {
-            if (!confirm('Are you sure you want to delete this file?')) return;
-
-            try {
-                // Get file info from DOM before deleting
-                const fileEl = document.getElementById('file-' + id);
-                let fileName = 'Unknown File';
-                if (fileEl) {
-                    const nameEl = fileEl.querySelector('.truncate');
-                    if (nameEl) fileName = nameEl.textContent;
-                }
-
-                // Add to localStorage for recent_deleted.php
-                const deletedItem = {
-                    id: id,
-                    name: fileName,
-                    type: fileName.split('.').pop().toUpperCase(),
-                    category: 'Main Storage',
-                    originalPath: 'Main Storage', // Could be dynamic folder path
-                    deletedAt: new Date().toLocaleString()
-                    // No expiration (expireAt removed)
-                };
-                
-                const existing = JSON.parse(localStorage.getItem('deletedFiles') || '[]');
-                existing.push(deletedItem);
-                localStorage.setItem('deletedFiles', JSON.stringify(existing));
-
-                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'delete_file', id: id })
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    if (fileEl) fileEl.remove();
-                } else {
-                    alert(data.message || 'Failed to delete file');
-                }
-            } catch (e) {
-                console.error(e);
-                alert('Error deleting file');
+        function openDeleteConfirm(id, name) {
+            deleteId = id;
+            deleteIsFolder = false;
+            const el = document.getElementById('deleteFileName');
+            if (el) el.textContent = name;
+            openModal('deleteModal');
+        }
+        function openDeleteFolderConfirm(id, name) {
+            deleteId = id;
+            deleteIsFolder = true;
+            const el = document.getElementById('deleteFileName');
+            if (el) el.textContent = name;
+            openModal('deleteModal');
+        }
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function openNotification(message = 'Uploaded!', type = 'success') {
+            const modal = document.getElementById('notificationModal');
+            const title = document.getElementById('notificationTitle');
+            const msg = document.getElementById('notificationMessage');
+            const icon = document.getElementById('notificationIcon');
+            if (!modal || !title || !msg || !icon) return;
+            if (type === 'error') {
+                title.textContent = 'Error';
+                msg.textContent = message || 'Something went wrong.';
+                icon.className = 'flex-none rounded-full p-2 bg-red-100 dark:bg-red-900/30';
+                icon.innerHTML = '<i class="bi bi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>';
+            } else {
+                title.textContent = 'Uploaded!';
+                msg.textContent = message || 'Your file(s) have been uploaded.';
+                icon.className = 'flex-none rounded-full p-2 bg-green-100 dark:bg-green-900/30';
+                icon.innerHTML = '<i class="bi bi-check2-circle text-green-600 dark:text-green-400 text-xl"></i>';
             }
+            modal.classList.remove('hidden');
+        }
+        function closeNotification() {
+            const modal = document.getElementById('notificationModal');
+            if (modal) modal.classList.add('hidden');
+        }
+        async function confirmDelete() {
+            closeModal('deleteModal');
+            if (deleteId == null) return;
+            if (deleteIsFolder) {
+                try {
+                    const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_folder', id: deleteId })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        const el = document.getElementById('folder-' + deleteId);
+                        if (el) el.remove();
+                    } else {
+                        alert(data.message || 'Failed to delete folder');
+                    }
+                } catch (e) {
+                    alert('Error deleting folder');
+                }
+            } else {
+                try {
+                    const fileEl = document.getElementById('file-' + deleteId);
+                    let fileName = 'Unknown File';
+                    if (fileEl) {
+                        const nameEl = fileEl.querySelector('.truncate');
+                        if (nameEl) fileName = nameEl.textContent;
+                    }
+                    const deletedItem = {
+                        id: deleteId,
+                        name: fileName,
+                        type: fileName.split('.').pop().toUpperCase(),
+                        category: 'Main Storage',
+                        originalPath: 'Main Storage',
+                        deletedAt: new Date().toLocaleString()
+                    };
+                    const existing = JSON.parse(localStorage.getItem('deletedFiles') || '[]');
+                    existing.push(deletedItem);
+                    localStorage.setItem('deletedFiles', JSON.stringify(existing));
+                    const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_file', id: deleteId })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        if (fileEl) fileEl.remove();
+                    } else {
+                        alert(data.message || 'Failed to delete file');
+                    }
+                } catch (e) {
+                    alert('Error deleting file');
+                }
+            }
+            deleteId = null;
+            deleteIsFolder = false;
         }
 
         async function deleteFolder(id) {
@@ -726,7 +920,103 @@ $conn->close();
         if (sidebarOverlay) {
             sidebarOverlay.addEventListener('click', closeSidebar);
         }
+        
+        (function(){
+            const input = document.getElementById('folderSearchInput');
+            const btn = document.getElementById('folderSearchBtn');
+            const clearBtn = document.getElementById('folderClearBtn');
+            const box = document.getElementById('folderSearchResults');
+            const list = document.getElementById('folderSearchList');
+            const countEl = document.getElementById('folderSearchCount');
+            const termEl = document.getElementById('folderSearchTerm');
+            const contentList = document.getElementById('content-list');
+            function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+            function highlightText(text, term){
+                if (!text || !term) return escapeHtml(text);
+                try {
+                    const re = new RegExp('('+term.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')+')','ig');
+                    return escapeHtml(text).replace(re, '<mark class="px-1 rounded bg-yellow-200 dark:bg-amber-700/50">$1</mark>');
+                } catch(_) { return escapeHtml(text); }
+            }
+            function setVisible(el, show){ if (el) el.classList.toggle('hidden', !show); }
+            function render(items, term){
+                const html = items.map(function(it){
+                    if (it.kind === 'folder') {
+                        return '<a href="folder_view.php?id='+String(it.id)+'" id="folder-'+String(it.id)+'" class="flex items-center justify-between p-3 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/50 highlight-record">'
+                             + '<div class="flex items-center gap-3"><i class="bi bi-folder-fill text-2xl text-yellow-500"></i>'
+                             + '<div><div class="font-medium text-gray-800 dark:text-gray-200">'+highlightText(it.name, term)+'</div>'
+                             + '<div class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(it.created_at)+'</div></div></div></a>';
+                    } else {
+                        return '<a href="folder_view.php?id=<?php echo $current_folder_id; ?>&highlight='+String(it.id)+'" id="file-'+String(it.id)+'" class="flex items-center justify-between p-3 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/50 highlight-record">'
+                             + '<div class="flex items-center gap-3 min-w-0"><i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>'
+                             + '<div class="min-w-0"><div class="font-medium text-gray-800 dark:text-gray-200 truncate">'+highlightText(it.name, term)+'</div>'
+                             + '<div class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(it.created_at)+'</div></div></div>'
+                             + '<div class="flex items-center gap-2"><span class="px-2 py-1 text-xs bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded">Open</span></div>'
+                             + '</a>';
+                    }
+                }).join('');
+                list.innerHTML = html || '<div class="text-sm text-gray-600 dark:text-gray-400">No results</div>';
+            }
+            function doSearch(){
+                const term = (input && input.value || '').trim();
+                if (!term) {
+                    setVisible(box, false);
+                    list.innerHTML = '';
+                    countEl.textContent = '0 results';
+                    termEl.textContent = '';
+                    setVisible(contentList, true);
+                    return;
+                }
+                fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ action:'search_folder', term: term })
+                }).then(function(r){ return r.json(); })
+                .then(function(d){
+                    const folders = (d && d.folders) ? d.folders.map(function(x){ x.kind='folder'; return x; }) : [];
+                    const files = (d && d.files) ? d.files.map(function(x){ x.kind='file'; return x; }) : [];
+                    const items = folders.concat(files);
+                    countEl.textContent = String(items.length)+' results';
+                    termEl.textContent = 'Showing for: '+term;
+                    render(items, term);
+                    setVisible(contentList, false);
+                    setVisible(box, true);
+                }).catch(function(){
+                    list.innerHTML = '<div class="text-sm text-red-500">Search error</div>';
+                    setVisible(contentList, false);
+                    setVisible(box, true);
+                });
+            }
+            btn && btn.addEventListener('click', doSearch);
+            input && input.addEventListener('keydown', function(e){ if (e.key === 'Enter') doSearch(); });
+            clearBtn && clearBtn.addEventListener('click', function(){
+                input && (input.value = '');
+                setVisible(box, false);
+                list.innerHTML = '';
+                countEl.textContent = '0 results';
+                termEl.textContent = '';
+                setVisible(contentList, true);
+            });
+        })();
     </script>
+    <div id="viewerModal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-md" onclick="closeViewerModal()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 p-4 max-h-[90vh] overflow-auto">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Document Viewer</h3>
+                <button onclick="closeViewerModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="viewerModalContent" class="mt-4"></div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

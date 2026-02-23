@@ -137,6 +137,27 @@ $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
 )";
 $conn->query($files_sql);
 
+// Create notifications table
+$notif_sql = "CREATE TABLE IF NOT EXISTS notifications (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    user_id INT(11) NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(255) NULL,
+    action VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+$conn->query($notif_sql);
+
+// Add new columns if they don't exist
+$check_cols = $conn->query("SHOW COLUMNS FROM notifications LIKE 'ip_address'");
+if ($check_cols->num_rows == 0) {
+    $conn->query("ALTER TABLE notifications ADD COLUMN ip_address VARCHAR(45) NULL AFTER status");
+    $conn->query("ALTER TABLE notifications ADD COLUMN user_agent VARCHAR(255) NULL AFTER ip_address");
+    $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
+}
+
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
 

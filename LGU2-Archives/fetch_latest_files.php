@@ -24,6 +24,7 @@ try {
     $sql1 = "SELECT f.id, f.name, f.created_at, 'Archive File' as type, 'archive' as source, f.folder_id, fo.name as folder_name 
              FROM archive_files f 
              JOIN archive_folders fo ON f.folder_id = fo.id
+             WHERE f.created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
              ORDER BY f.created_at DESC LIMIT ?";
     
     if ($stmt1 = $conn->prepare($sql1)) {
@@ -50,6 +51,7 @@ try {
     // 2. Fetch from legislative_records (Ordinances, etc.)
     $sql2 = "SELECT id, title, type, month, year, author, created_at 
              FROM legislative_records 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
              ORDER BY created_at DESC LIMIT ?";
     
     if ($stmt2 = $conn->prepare($sql2)) {

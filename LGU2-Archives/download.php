@@ -37,6 +37,36 @@ function log_analytics_event(mysqli $conn, array $event): void {
 }
 
 
+function get_legislative_file_info(mysqli $conn, int $id): ?array {
+    $stmt = $conn->prepare("SELECT file_path, title, type, month, year, author FROM legislative_records WHERE id = ?");
+    if (!$stmt) return null;
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $stmt->close();
+    return $row ?: null;
+}
+
+function resolve_local_path(string $path): ?string {
+    if ($path === '') return null;
+    if (file_exists($path)) return $path;
+    $absolute = __DIR__ . DIRECTORY_SEPARATOR . $path;
+    if (file_exists($absolute)) return $absolute;
+    return null;
+}
+
+function build_absolute_url(string $relative): string {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+    $base = $scheme . '://' . $host . ($dir ? $dir . '/' : '/');
+    if (strpos($relative, '/') === 0) {
+        return $scheme . '://' . $host . $relative;
+    }
+    return $base . $relative;
+}
+
 
 // Check if it's a GET request (show modal) or POST request (download file)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -69,6 +99,115 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $filename = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $record['title']) . '_' . $record['id'];
         generatePDF($record, $filename, 'inline');
         $conn->close();
+        exit;
+    } elseif (isset($_GET['action']) && $_GET['action'] === 'view_json') {
+        if (!isset($_GET['id'], $_GET['title'], $_GET['type'], $_GET['month'], $_GET['year'], $_GET['author'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            $conn->close();
+            exit;
+        }
+        $record = [
+            'id' => $_GET['id'],
+            'title' => $_GET['title'],
+            'type' => $_GET['type'],
+            'month' => $_GET['month'],
+            'year' => $_GET['year'],
+            'author' => $_GET['author']
+        ];
+        log_analytics_event($conn, [
+            'event_type' => 'view_api',
+            'user_id' => isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+            'record_id' => (int)$record['id'] > 0 ? (int)$record['id'] : null,
+            'record_title' => $record['title'],
+            'record_type' => $record['type'],
+            'download_format' => 'json',
+            'bytes' => null
+        ]);
+        $viewerHtml = '';
+        $fileInfo = null;
+        $idInt = (int)$record['id'];
+        if ($idInt > 0) {
+            $fileInfo = get_legislative_file_info($conn, $idInt);
+        }
+        if ($fileInfo && isset($fileInfo['file_path'])) {
+            $path = resolve_local_path($fileInfo['file_path']);
+            if ($path) {
+                $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+                $viewUrl = 'download.php?action=view_file&id=' . urlencode((string)$idInt);
+                $viewUrlAbs = build_absolute_url($viewUrl);
+                if (in_array($ext, ['pdf'])) {
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<iframe src="' . $viewUrl . '" class="w-full h-[70vh] rounded-lg border"></iframe>'
+                                . '</div>';
+                } elseif (in_array($ext, ['jpg','jpeg','png','gif','webp','bmp','svg'])) {
+                    $viewerHtml = '<div class="space-y-4 text-center">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<img src="' . $viewUrl . '" class="max-h-[70vh] w-auto inline-block rounded-lg border" alt="Preview" />'
+                                . '</div>';
+                } elseif (in_array($ext, ['txt','csv','json','xml','md','log'])) {
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<iframe src="' . $viewUrl . '" class="w-full h-[70vh] rounded-lg border bg-white"></iframe>'
+                                . '</div>';
+                } elseif (in_array($ext, ['doc','docx','xls','xlsx','ppt','pptx'])) {
+                    $gview = 'https://docs.google.com/gview?embedded=true&url=' . urlencode($viewUrlAbs);
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<iframe src="' . $gview . '" class="w-full h-[70vh] rounded-lg border bg-white"></iframe>'
+                                . '<div class="text-xs text-gray-500 dark:text-gray-400">If the preview fails, use Open to view in a new tab.</div>'
+                                . '<div class="flex justify-end"><a href="' . $viewUrl . '" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a></div>'
+                                . '</div>';
+                } else {
+                    $viewerHtml = '<div class="space-y-4">'
+                                . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                . '<div class="text-sm text-gray-600 dark:text-gray-400">Preview not available for this file type.</div>'
+                                . '<div class="flex justify-end">'
+                                . '<a href="' . $viewUrl . '" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a>'
+                                . '</div>'
+                                . '</div>';
+                }
+            } else {
+                $viewerHtml = '<div class="text-sm text-red-600 dark:text-red-400">File not found on server.</div>';
+            }
+        } else {
+            $viewerHtml = generateDocumentHTML($record);
+        }
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'metadata' => $record,
+            'html' => $viewerHtml
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $conn->close();
+        exit;
+    } elseif (isset($_GET['action']) && $_GET['action'] === 'view_file') {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if ($id <= 0) {
+            http_response_code(400);
+            echo 'Invalid ID';
+            exit;
+        }
+        $info = get_legislative_file_info($conn, $id);
+        if (!$info || !isset($info['file_path'])) {
+            http_response_code(404);
+            echo 'File not found';
+            exit;
+        }
+        $path = resolve_local_path((string)$info['file_path']);
+        if (!$path) {
+            http_response_code(404);
+            echo 'File not found';
+            exit;
+        }
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . basename($path) . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        readfile($path);
         exit;
     }
 

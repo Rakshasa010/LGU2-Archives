@@ -342,7 +342,7 @@ $conn->close();
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -478,7 +478,7 @@ $conn->close();
                         var left = document.createElement('div');
                         left.className = 'min-w-0';
                         var titleEl = document.createElement('div');
-                        titleEl.className = 'font-medium text-gray-800 dark:text-gray-200 truncate';
+                        titleEl.className = 'font-medium text-gray-800 dark:text-white truncate';
                         titleEl.textContent = record.title;
                         var metaEl = document.createElement('div');
                         metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
@@ -501,7 +501,7 @@ $conn->close();
                         btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
                         btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span><span class="ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">' + (record.version || 1) + '</span>';
                         btn.addEventListener('click', function(){
-                            openVersionHistory(record.id, record.title);
+                            openVersionHistory(record);
                         });
                         row.appendChild(left);
                         row.appendChild(btn);
@@ -516,13 +516,13 @@ $conn->close();
             list.innerHTML = '';
             panel.classList.add('hidden');
         }
-        function openVersionHistory(id, title) {
+        function openVersionHistory(record) {
             var list = document.getElementById('vm-list');
             var header = document.getElementById('vm-title');
-            header.textContent = 'Version History — ' + (title || 'File');
+            header.textContent = 'Version History — ' + (record && record.title ? record.title : 'File');
             list.innerHTML = '<div class="text-center py-4">Loading...</div>';
             
-            fetch('legislative_api.php?action=get_versions&id=' + id)
+            fetch('legislative_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
             .then(r => r.json())
             .then(d => {
                 if(d.success) {
@@ -532,13 +532,20 @@ $conn->close();
                         list.innerHTML = d.versions.map(v => `
                             <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">
                                 <div>
-                                    <div class="font-medium text-gray-800 dark:text-gray-200">Version ${v.version}</div>
+                                    <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         ${v.created_at} • ${v.author}
                                     </div>
                                 </div>
                                 <div class="flex space-x-2">
-                                    <a href="download.php?id=${v.id}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
+                                    <a href="download.php?${new URLSearchParams({
+                                        id: v.id,
+                                        title: (record && record.title) ? record.title : (v.title || 'Document'),
+                                        type: (record && record.type) ? record.type : '',
+                                        month: (record && record.month) ? record.month : '',
+                                        year: (record && record.year) ? record.year : '',
+                                        author: (record && record.author) ? record.author : ''
+                                    }).toString()}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
                                 </div>
                             </div>
                         `).join('');

@@ -1,15 +1,120 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Content-Type: application/json');
     require 'authdatabase.php';
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
+        header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         $conn->close();
         exit();
     }
-    $payload = json_decode(file_get_contents('php://input'), true);
-    $action = isset($payload['action']) ? (string)$payload['action'] : '';
+    $raw = file_get_contents('php://input');
+    $payload = json_decode($raw, true);
+    $action = isset($payload['action']) ? (string)$payload['action'] : (isset($_POST['action']) ? (string)$_POST['action'] : '');
+    if ($action === 'export_year_zip') {
+        $year = isset($_POST['year']) ? (int)$_POST['year'] : 0;
+        if ($year <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid year']);
+            $conn->close();
+            exit();
+        }
+        if (!class_exists('ZipArchive')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'ZipArchive not available']);
+            $conn->close();
+            exit();
+        }
+        $zipPath = tempnam(sys_get_temp_dir(), 'yearzip_') . '.zip';
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE) !== true) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Could not create zip']);
+            $conn->close();
+            exit();
+        }
+        $root = realpath(__DIR__);
+        $safe = function($s){ $s = preg_replace('/[^a-zA-Z0-9\\-_ ]/', '_', (string)$s); return trim($s) !== '' ? $s : 'Unknown'; };
+        $leg = $conn->prepare("SELECT title, type, file_path, created_at FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ?");
+        if ($leg) {
+            $leg->bind_param("i", $year);
+            $leg->execute();
+            $res = $leg->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $type = $safe($row['type']);
+                $path = (string)$row['file_path'];
+                $disk = realpath($path) ?: realpath(__DIR__ . '/' . $path);
+                if ($disk && strpos($disk, $root) === 0 && is_file($disk)) {
+                    $base = basename($disk);
+                    $entry = $year . '/' . $type . '/' . $base;
+                    $zip->addFile($disk, $entry);
+                }
+            }
+            $leg->close();
+        }
+        $arc = $conn->prepare("SELECT af.name, af.file_path, fo.name AS folder_name FROM archive_files af JOIN archive_folders fo ON af.folder_id = fo.id WHERE YEAR(af.created_at) = ?");
+        if ($arc) {
+            $arc->bind_param("i", $year);
+            $arc->execute();
+            $res = $arc->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $folder = $safe($row['folder_name']);
+                $path = (string)$row['file_path'];
+                $disk = realpath($path) ?: realpath(__DIR__ . '/' . $path);
+                if ($disk && strpos($disk, $root) === 0 && is_file($disk)) {
+                    $base = basename($disk);
+                    $entry = $year . '/Archives/' . $folder . '/' . $base;
+                    $zip->addFile($disk, $entry);
+                }
+            }
+            $arc->close();
+        }
+        $zip->close();
+        $downloadName = 'Year_' . $year . '_Archives.zip';
+        header('Content-Type: application/zip');
+        header('Content-Length: ' . filesize($zipPath));
+        header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        readfile($zipPath);
+        @unlink($zipPath);
+        $conn->close();
+        exit();
+    }
+    if ($action === 'list_year') {
+        header('Content-Type: application/json');
+        $year = isset($payload['year']) ? (int)$payload['year'] : 0;
+        if ($year <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid year']);
+            $conn->close();
+            exit();
+        }
+        $data = ['success' => true, 'year' => $year, 'categories' => []];
+        $leg = $conn->prepare("SELECT type, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ? GROUP BY type");
+        if ($leg) {
+            $leg->bind_param("i", $year);
+            $leg->execute();
+            $res = $leg->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $data['categories'][] = ['name' => $row['type'], 'count' => (int)$row['cnt'], 'group' => 'Legislative'];
+            }
+            $leg->close();
+        }
+        $arc = $conn->prepare("SELECT fo.name AS folder_name, COUNT(*) AS cnt FROM archive_files af JOIN archive_folders fo ON af.folder_id = fo.id WHERE YEAR(af.created_at) = ? GROUP BY fo.name");
+        if ($arc) {
+            $arc->bind_param("i", $year);
+            $arc->execute();
+            $res = $arc->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $data['categories'][] = ['name' => $row['folder_name'], 'count' => (int)$row['cnt'], 'group' => 'Archives'];
+            }
+            $arc->close();
+        }
+        echo json_encode($data);
+        $conn->close();
+        exit();
+    }
+    header('Content-Type: application/json');
     if ($action === 'create_folder') {
         $name = isset($payload['name']) ? trim((string)$payload['name']) : '';
         if ($name === '') {
@@ -75,6 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Storage - Document Management</title>
     <?php include 'includes/header_scripts.php'; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
@@ -281,10 +387,7 @@ if (isset($_SESSION['user_id'])) {
                     </a>
                     <?php endif; ?>
 
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-person mr-3"></i>
-                        <span class="sidebar-text">Profile</span>
-                    </a>
+                    
 
                     <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
@@ -387,7 +490,7 @@ if (isset($_SESSION['user_id'])) {
                                 <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <i class="bi bi-gear mr-2"></i>Settings
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
                                         <a href="logout.php" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">
                                             <i class="bi bi-box-arrow-right mr-2"></i>Logout
@@ -450,6 +553,19 @@ if (isset($_SESSION['user_id'])) {
                     </div>
 
                     <!-- Recent Archives Section -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Yearly Archives</h2>
+                            <form id="year-export-form" method="POST" action="storage.php" target="_blank" class="hidden">
+                                <input type="hidden" name="action" value="export_year_zip">
+                                <input type="hidden" name="year" id="year-export-input" value="">
+                            </form>
+                        </div>
+                        <div id="yearly-archives-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                    </div>
+                    <div class="mb-4 px-4 py-3 bg-yellow-50 dark:bg-amber-900/20 rounded-lg border border-yellow-200 dark:border-amber-800 text-xs text-yellow-700 dark:text-amber-200">
+                        Retention policy: Main Storage retains files for 5 years.
+                    </div>
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200"> Archives Folders</h2>
@@ -947,6 +1063,89 @@ if (isset($_SESSION['user_id'])) {
                 refresh();
             }
             window.addEventListener('focus', refresh);
+        })();
+        (function(){
+            function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+            function yearCard(year){
+                var el = document.createElement('div');
+                el.className = 'p-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50';
+                el.innerHTML = '<div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">'+year+'</div>'
+                    + '<div class="text-xs text-gray-600 dark:text-gray-400 mb-3">Jan 1 - Dec 31</div>'
+                    + '<div class="flex gap-2">'
+                    + '<button data-year="'+year+'" class="view-year-btn px-3 py-1.5 text-xs rounded-md bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">View</button>'
+                    + '<button data-year="'+year+'" class="export-year-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white">Export ZIP</button>'
+                    + '</div>';
+                return el;
+            }
+            function renderYearCards(){
+                var grid = document.getElementById('yearly-archives-grid');
+                if (!grid) return;
+                var now = new Date();
+                var current = now.getFullYear();
+                grid.innerHTML = '';
+                for (var y = current; y >= current - 4; y--){
+                    grid.appendChild(yearCard(y));
+                }
+                grid.querySelectorAll('.view-year-btn').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var year = parseInt(btn.getAttribute('data-year'), 10);
+                        fetch('storage.php', {
+                            method:'POST',
+                            headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ action:'list_year', year: year })
+                        }).then(function(r){ return r.json(); })
+                        .then(function(d){
+                            if (!d || !d.success) {
+                                showToast('Could not load year '+year, 'error');
+                                return;
+                            }
+                            var lines = d.categories.map(function(c){
+                                return '<div class="flex items-center justify-between p-2 rounded-md bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700"><span class="text-sm font-medium text-gray-800 dark:text-gray-200">'+escapeHtml(c.group)+': '+escapeHtml(c.name)+'</span><span class="text-xs text-gray-600 dark:text-gray-400">'+String(c.count)+' files</span></div>';
+                            }).join('');
+                            var modal = document.createElement('div');
+                            modal.id = 'year-modal';
+                            modal.className = 'fixed inset-0 z-50';
+                            modal.innerHTML = '<div class="absolute inset-0 bg-black/50"></div>'
+                                + '<div class="absolute inset-0 flex items-center justify-center p-4">'
+                                + '<div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 shadow-xl">'
+                                + '<div class="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between"><div class="font-semibold text-gray-800 dark:text-gray-200">Year '+year+' Summary</div><button id="year-modal-close" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i class="bi bi-x-lg"></i></button></div>'
+                                + '<div class="p-4 space-y-2">'+(lines || '<div class="text-sm text-gray-600 dark:text-gray-400">No files for this year.</div>')+'</div>'
+                                + '<div class="p-4 border-t border-gray-200 dark:border-slate-700 text-right"><button id="year-modal-export" class="px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white">Export ZIP</button></div>'
+                                + '</div></div>';
+                            document.body.appendChild(modal);
+                            document.getElementById('year-modal-close').addEventListener('click', function(){
+                                modal.remove();
+                            });
+                            document.getElementById('year-modal-export').addEventListener('click', function(){
+                                var form = document.getElementById('year-export-form');
+                                var input = document.getElementById('year-export-input');
+                                if (form && input) {
+                                    input.value = String(year);
+                                    form.submit();
+                                }
+                            });
+                        }).catch(function(){
+                            showToast('Error loading year '+year, 'error');
+                        });
+                    });
+                });
+                grid.querySelectorAll('.export-year-btn').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var year = parseInt(btn.getAttribute('data-year'), 10);
+                        var form = document.getElementById('year-export-form');
+                        var input = document.getElementById('year-export-input');
+                        if (form && input) {
+                            input.value = String(year);
+                            form.submit();
+                        }
+                    });
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderYearCards);
+            } else {
+                renderYearCards();
+            }
         })();
         
         // Restore sidebar state

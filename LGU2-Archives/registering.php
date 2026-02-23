@@ -80,12 +80,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $mailer->addAddress($email, $full_name);
                             $mailer->Subject = 'Your temporary password';
                             $mailer->isHTML(true);
-                            $mailer->Body = '<p>Hello ' . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . ',</p>'
-                                . '<p>Your account has been created. Use the temporary password below to sign in:</p>'
-                                . '<p><strong>' . htmlspecialchars($tmp, ENT_QUOTES, 'UTF-8') . '</strong></p>'
-                                . '<p>After logging in, update your password in your profile settings.</p>'
-                                . '<p>Archives</p>';
-                            $mailer->AltBody = 'Hello ' . $full_name . ', Your temporary password: ' . $tmp . '. Update it after login.';
+                            $tzName = isset($cfg['timezone']) && is_string($cfg['timezone']) ? $cfg['timezone'] : 'Asia/Manila';
+                            $nowLocal = new DateTime('now', new DateTimeZone($tzName));
+                            $sentAt = $nowLocal->format('M j, Y h:i A');
+                            $nameSafe = htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8');
+                            $tmpSafe = htmlspecialchars($tmp, ENT_QUOTES, 'UTF-8');
+                            $brand = htmlspecialchars($fromName, ENT_QUOTES, 'UTF-8');
+                            $mailer->Body = '<div style="background:#f7f7f9;padding:24px;font-family:Segoe UI,Arial,sans-serif;color:#111111">'
+                                . '<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px">'
+                                . '<div style="padding:20px 24px;border-bottom:1px solid #e5e7eb">'
+                                . '<h1 style="margin:0;font-size:18px;color:#b91c1c">' . $brand . '</h1>'
+                                . '<div style="margin-top:4px;font-size:12px;color:#6b7280">Welcome</div>'
+                                . '</div>'
+                                . '<div style="padding:24px">'
+                                . '<p style="margin:0 0 12px 0;font-size:14px;color:#111111">Hello ' . $nameSafe . ',</p>'
+                                . '<p style="margin:0 0 16px 0;font-size:14px;color:#374151">Your account has been created. Use the temporary password below to sign in:</p>'
+                                . '<div style="text-align:center;margin:16px 0">'
+                                . '<div style="display:inline-block;font-size:24px;font-weight:700;color:#111111;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:10px 16px">' . $tmpSafe . '</div>'
+                                . '</div>'
+                                . '<p style="margin:0 0 12px 0;font-size:13px;color:#374151">After logging in, go to Account Settings and update your password.</p>'
+                                . '<table style="width:100%;font-size:12px;color:#6b7280;margin-top:8px;border-collapse:collapse">'
+                                . '<tr><td style="padding:6px 0;width:120px">Sent</td><td style="padding:6px 0">' . $sentAt . ' (' . $tzName . ')</td></tr>'
+                                . '</table>'
+                                . '</div>'
+                                . '<div style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#6b7280">© ' . date('Y') . ' ' . $brand . '</div>'
+                                . '</div>'
+                                . '</div>';
+                            $mailer->AltBody = 'Hello ' . $full_name . ', Your temporary password: ' . $tmp . '. Update it after login. Sent: ' . $sentAt . ' (' . $tzName . ').';
                             $mailer->send();
                             $emailSent = true;
                         } catch (Throwable $e) {

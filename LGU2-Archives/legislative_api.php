@@ -256,6 +256,80 @@ switch ($action) {
     case 'get_contents':
         // For dynamic loading (optional, currently pages fetch via PHP)
         break;
+    
+    case 'delete_record':
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid record ID']);
+            break;
+        }
+        // Fetch all related versions (root family)
+        $find = $conn->prepare("SELECT id, parent_version_id FROM legislative_records WHERE id = ?");
+        $find->bind_param("i", $id);
+        $find->execute();
+        $res = $find->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $find->close();
+        if (!$row) {
+            echo json_encode(['success' => false, 'message' => 'Record not found']);
+            break;
+        }
+        $root_id = $row['parent_version_id'] ? (int)$row['parent_version_id'] : $id;
+        $filesToDelete = [];
+        $stmt = $conn->prepare("SELECT id, file_path FROM legislative_records WHERE id = ? OR parent_version_id = ?");
+        $stmt->bind_param("ii", $root_id, $root_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($r = $result->fetch_assoc()) {
+            $filesToDelete[] = $r;
+        }
+        $stmt->close();
+        // Delete physical files (best-effort)
+        foreach ($filesToDelete as $f) {
+            $path = $f['file_path'] ?? '';
+            if ($path) {
+                $abs = (strpos($path, DIRECTORY_SEPARATOR) === 0) ? $path : (__DIR__ . DIRECTORY_SEPARATOR . $path);
+                if (file_exists($abs)) @unlink($abs);
+            }
+        }
+        // Delete DB rows
+        $del = $conn->prepare("DELETE FROM legislative_records WHERE id = ? OR parent_version_id = ?");
+        $del->bind_param("ii", $root_id, $root_id);
+        if ($del->execute()) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => $conn->error]);
+        }
+        $del->close();
+        break;
+    
+    case 'delete_folder':
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid folder ID']);
+            break;
+        }
+        // Ensure no child folders or records remain
+        $childCount = 0;
+        if ($rs = $conn->query("SELECT COUNT(*) as c FROM legislative_folders WHERE parent_id = " . $id)) {
+            $r = $rs->fetch_assoc(); $childCount += (int)$r['c'];
+        }
+        if ($rs2 = $conn->query("SELECT COUNT(*) as c FROM legislative_records WHERE folder_id = " . $id)) {
+            $r2 = $rs2->fetch_assoc(); $childCount += (int)$r2['c'];
+        }
+        if ($childCount > 0) {
+            echo json_encode(['success' => false, 'message' => 'Folder not empty']);
+            break;
+        }
+        $stmt = $conn->prepare("DELETE FROM legislative_folders WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => $conn->error]);
+        }
+        $stmt->close();
+        break;
 
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
