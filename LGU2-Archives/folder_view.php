@@ -72,10 +72,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['file'];
             $name = $file['name'];
-            $target_dir = "uploads/archives/" . $current_folder_id . "/";
-            if (!file_exists($target_dir)) {
-                mkdir($target_dir, 0777, true);
+            $base = $_POST['fileName'] ?? pathinfo($name, PATHINFO_FILENAME);
+            $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $base));
+            $slug = trim($slug, '-');
+            if ($slug === '') {
+                $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', pathinfo($name, PATHINFO_FILENAME)));
+                $slug = trim($slug, '-');
             }
+            $child_id = null;
+            $find = $conn->prepare("SELECT id FROM archive_folders WHERE parent_id = ? AND slug = ? LIMIT 1");
+            if ($find) {
+                $find->bind_param("is", $current_folder_id, $slug);
+                $find->execute();
+                $res = $find->get_result();
+                if ($res && $res->num_rows === 1) {
+                    $row = $res->fetch_assoc();
+                    $child_id = (int)$row['id'];
+                }
+                $find->close();
+            }
+            if (!$child_id) {
+                $ins = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by) VALUES (?, ?, ?, ?)");
+                $uid = (int)$_SESSION['user_id'];
+                if ($ins) {
+                    $ins->bind_param("ssii", $base, $slug, $current_folder_id, $uid);
+                    if ($ins->execute()) {
+                        $child_id = (int)$conn->insert_id;
+                        $ins->close();
+                    } else {
+                        $ins->close();
+                        echo json_encode(['success' => false, 'message' => 'Could not create subfolder']);
+                        exit();
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Could not create subfolder']);
+                    exit();
+                }
+            }
+            $target_dir = "uploads/archives/" . $current_folder_id . "/";
+            if (!file_exists($target_dir)) { @mkdir($target_dir, 0777, true); }
             // Sanitize filename
             $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $name);
             
@@ -100,7 +135,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'file' => [
                             'id' => $conn->insert_id, 
                             'name' => $name, 
-                            'created_at' => date('Y-m-d H:i:s')
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'folder_id' => $current_folder_id,
+                            'file_path' => $file_path
                         ]
                     ]);
                 } else {
@@ -291,7 +328,7 @@ $conn->close();
 
         <!-- Actions -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <button onclick="openCreateFolderModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
+            <button id="create-subfolder-btn" onclick="openCreateFolderModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
                 <div class="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full group-hover:scale-110 transition-transform">
                     <i class="bi bi-folder-plus text-2xl text-blue-600 dark:text-blue-400"></i>
                 </div>
@@ -300,7 +337,7 @@ $conn->close();
                     <div class="text-xs text-gray-500 dark:text-gray-400">Add a new folder here</div>
                 </div>
             </button>
-            <button onclick="openUploadModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
+            <button id="upload-file-btn" onclick="openUploadModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
                 <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-full group-hover:scale-110 transition-transform">
                     <i class="bi bi-cloud-upload text-2xl text-green-600 dark:text-green-400"></i>
                 </div>
@@ -309,6 +346,7 @@ $conn->close();
                     <div class="text-xs text-gray-500 dark:text-gray-400">Upload documents to this folder</div>
                 </div>
             </button>
+            
         </div>
 
         <!-- Content List -->
@@ -426,14 +464,8 @@ $conn->close();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
-<<<<<<< HEAD
                         <input type="file" id="fileInput" name="file" accept="image/*,.pdf,.doc,.docx,.txt" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
-=======
-                        <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-4 text-center cursor-pointer hover:border-red-500 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
-                            <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt" required class="w-full px-3 py-2 border-0 focus:ring-0 focus:border-transparent bg-transparent text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
-                        </div>
                         <div id="file-list-preview" class="mt-2 space-y-1"></div>
->>>>>>> 6ac230cdd020d443dc601957639d9a593d1eaabc
                     </div>
                     <div id="upload-progress" class="hidden text-sm text-gray-600 dark:text-gray-400 py-1"></div>
                     <div class="flex justify-end space-x-3 pt-4">
@@ -595,13 +627,27 @@ $conn->close();
             document.getElementById('file-list-preview').innerHTML = '';
             document.getElementById('upload-progress').classList.add('hidden');
         }
+        (function(){
+            const createBtn = document.getElementById('create-subfolder-btn');
+            const uploadBtn = document.getElementById('upload-file-btn');
+            createBtn && createBtn.addEventListener('click', function(e){ e.preventDefault(); openCreateFolderModal(); });
+            uploadBtn && uploadBtn.addEventListener('click', function(e){ e.preventDefault(); openUploadModal(); });
+            document.addEventListener('click', function(e){
+                const t = e.target;
+                if (t && t.id === 'create-subfolder-btn') { e.preventDefault(); openCreateFolderModal(); }
+                if (t && t.id === 'upload-file-btn') { e.preventDefault(); openUploadModal(); }
+                const uploadTrigger = t && (t.id === 'uploadBtn' || (t.closest && t.closest('#uploadBtn')));
+                if (uploadTrigger) { e.preventDefault(); handleUpload(e); }
+            });
+            const uploadForm = document.getElementById('uploadForm');
+            uploadForm && uploadForm.addEventListener('submit', function(e){ e.preventDefault(); handleUpload(e); });
+        })();
 
         let pendingDuplicateResolver = null;
         function openDuplicateConfirm() {
             const m = document.getElementById('duplicateConfirmModal');
             m.classList.remove('hidden');
         }
-<<<<<<< HEAD
         function closeDuplicateConfirm() {
             const m = document.getElementById('duplicateConfirmModal');
             m.classList.add('hidden');
@@ -619,7 +665,8 @@ $conn->close();
             return new Promise(function(resolve){
                 pendingDuplicateResolver = resolve;
                 openDuplicateConfirm();
-=======
+            });
+        }
 
         function updateFilePreview(files) {
             const preview = document.getElementById('file-list-preview');
@@ -633,8 +680,49 @@ $conn->close();
                     <span class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</span>
                 `;
                 preview.appendChild(div);
->>>>>>> 6ac230cdd020d443dc601957639d9a593d1eaabc
             });
+        }
+
+        function addSubfolderRow(folder) {
+            const list = document.getElementById('content-list');
+            if (!list || !folder || !folder.id) return;
+            if (document.getElementById('folder-' + String(folder.id))) return;
+            const el = document.createElement('div');
+            el.className = 'p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group';
+            el.id = 'folder-' + String(folder.id);
+            el.innerHTML = `
+                <a href="folder_view.php?id=${folder.id}" class="flex items-center flex-1 min-w-0 gap-4">
+                    <i class="bi bi-folder-fill text-2xl text-yellow-500"></i>
+                    <div class="min-w-0">
+                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate">${escapeHtml(folder.name || 'New Folder')}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Just now</div>
+                    </div>
+                </a>
+                ${isAdmin ? `
+                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="openDeleteFolderConfirm(${folder.id}, '${escapeHtml(folder.name || 'New Folder')}')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>` : ''}
+            `;
+            const emptyState = list.querySelector('.text-center');
+            if (emptyState) emptyState.remove();
+            const filesHeader = Array.from(list.children).find(function(node){
+                return node.id && node.id.startsWith('file-');
+            });
+            if (filesHeader) {
+                list.insertBefore(el, filesHeader);
+            } else {
+                list.appendChild(el);
+            }
+            const badge = document.querySelector('.bg-gray-50.dark\\:bg-slate-800\\/50 + span, .p-4.border-b span');
+            const badgeEl = document.querySelector('.p-4.border-b.border-gray-200.dark\\:border-slate-700.bg-gray-50.dark\\:bg-slate-800\\/50 span.rounded-full');
+            const countEl = badgeEl || badge;
+            if (countEl) {
+                const m = countEl.textContent.match(/\d+/);
+                const old = m ? parseInt(m[0], 10) : 0;
+                countEl.textContent = String(old + 1) + ' items';
+            }
         }
 
         async function handleUpload(e) {
@@ -663,11 +751,13 @@ $conn->close();
                 const formData = new FormData();
                 formData.append('action', 'upload_file');
                 formData.append('file', fileInput.files[i]);
+                const baseName = (document.getElementById('fileName')?.value || '').trim() || fileInput.files[i].name.replace(/\.[^.\s]+$/, '');
+                formData.append('fileName', baseName);
                 try {
                     const pre = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'check_duplicate', name: fileInput.files[i].name })
+                        body: JSON.stringify({ action: 'check_duplicate', name: fileInput.files[i].name, base: baseName })
                     });
                     const preData = await pre.json();
                     if (preData && preData.success && preData.exists) {
@@ -698,14 +788,14 @@ $conn->close();
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="previewFile('${escapeHtml(file.name)}', ${file.id})" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                                <button onclick="previewFile('${escapeHtml(file.name)}', ${file.id}, '${escapeHtml(file.file_path)}', ${fileInput.files[i].size}, '${file.created_at}')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                     <span>View</span>
                                 </button>
-                                <button onclick="downloadFile('${escapeHtml(file.name)}', ${file.id})" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
+                                <a href="${escapeHtml(file.file_path)}" download="${escapeHtml(file.name)}" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                     <span>Download</span>
-                                </button>
+                                </a>
                                 ${isAdmin ? `<button onclick="deleteFile(${file.id})" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
                                     <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -823,12 +913,14 @@ $conn->close();
                 createdAt: createdAt,
                 contentType: 'Document' 
             };
-            openSideViewer(data);
+            lastPreviewData = data;
+            openViewerModal(data);
         }
 
         function openViewerModal(data) {
             const modal = document.getElementById('viewerModal');
             const content = document.getElementById('viewerModalContent');
+            const box = document.getElementById('viewerModalBox');
             if (!modal || !content) return;
             const headerEl = document.querySelector('header');
             if (headerEl) headerEl.classList.add('hidden');
@@ -854,7 +946,7 @@ $conn->close();
                 } else {
                     viewer = `<div class="space-y-4"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><div class="text-sm text-gray-600 dark:text-gray-400">Preview not available for this file type.</div><div class="flex justify-end"><a href="${data.previewUrl}" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a></div></div>`;
                 }
-                content.innerHTML = viewer + `<div class="mt-4 flex justify-end"><button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button></div>`;
+                content.innerHTML = viewer;
             } else {
                 const url = `download.php?action=view_json&id=${id}&title=${title}&type=${type}&month=${month}&year=${year}&author=${author}`;
                 content.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400">Loading…</div>';
@@ -862,7 +954,7 @@ $conn->close();
                     .then(r => r.json())
                     .then(d => {
                         if (d && d.success && d.html) {
-                            content.innerHTML = d.html + `<div class="mt-4 flex justify-end"><button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button></div>`;
+                            content.innerHTML = d.html;
                         } else {
                             content.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
                         }
@@ -871,16 +963,25 @@ $conn->close();
                         content.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Failed to load viewer.</div>';
                     });
             }
+            // Show modal with subtle scale-in animation and dim blur background
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
+            if (box) {
+                box.classList.remove('opacity-0','scale-95');
+                box.classList.add('opacity-100','scale-100');
+            }
         }
         function closeViewerModal() {
             const modal = document.getElementById('viewerModal');
+            const box = document.getElementById('viewerModalBox');
             if (!modal) return;
             modal.classList.add('hidden');
             document.body.style.overflow = 'auto';
-            const headerEl = document.querySelector('header');
-            if (headerEl) headerEl.classList.remove('hidden');
+            if (box) {
+                box.classList.remove('opacity-100','scale-100');
+                box.classList.add('opacity-0','scale-95');
+            }
+            // Side panel preview removed; keeping focus on modal-only viewer
         }
 
         function downloadFile(fileName, fileId) {
@@ -1149,8 +1250,8 @@ $conn->close();
         })();
     </script>
     <div id="viewerModal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-md" onclick="closeViewerModal()"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 p-4 max-h-[90vh] overflow-auto">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeViewerModal()"></div>
+        <div id="viewerModalBox" class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 p-4 max-h-[90vh] overflow-auto transform transition duration-200 ease-out opacity-0 scale-95">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Document Viewer</h3>
                 <button onclick="closeViewerModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700">
@@ -1160,9 +1261,7 @@ $conn->close();
                 </button>
             </div>
             <div id="viewerModalContent" class="mt-4"></div>
-            <div class="mt-4 flex justify-end">
-                <button onclick="closeViewerModal()" class="px-4 py-2 bg-red-600 text-white rounded">Close</button>
-            </div>
+            <!-- Single close button handled in header -->
         </div>
     </div>
     <script src="assets/js/highlight-record.js"></script>
