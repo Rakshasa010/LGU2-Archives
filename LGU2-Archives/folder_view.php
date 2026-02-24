@@ -92,14 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if (move_uploaded_file($file['tmp_name'], $file_path)) {
+                $final_name = basename($file_path);
                 $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
-                $stmt->bind_param("iss", $current_folder_id, $name, $file_path);
+                $stmt->bind_param("iss", $current_folder_id, $final_name, $file_path);
                 if ($stmt->execute()) {
                     echo json_encode([
                         'success' => true, 
                         'file' => [
                             'id' => $conn->insert_id, 
-                            'name' => $name, 
+                            'name' => $final_name, 
                             'created_at' => date('Y-m-d H:i:s')
                         ]
                     ]);
@@ -670,12 +671,7 @@ $conn->close();
                 if (progress) progress.classList.add('hidden');
             }
         }
-        (function(){
-            const form = document.getElementById('uploadForm');
-            const btn = document.getElementById('uploadBtn');
-            if (form) form.addEventListener('submit', function(e) { e.preventDefault(); handleUpload(e); });
-            if (btn) btn.addEventListener('click', function(e) { e.preventDefault(); handleUpload(e); });
-        })();
+        
 
         function escapeHtml(text) {
             if (!text) return text;
