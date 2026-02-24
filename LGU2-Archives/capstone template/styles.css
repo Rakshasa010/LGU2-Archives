@@ -10,7 +10,7 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f1f5f9;
     border-radius: 4px;
 }
 
@@ -33,7 +33,7 @@
 /* Firefox scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #94a3b8 transparent;
+    scrollbar-color: #94a3b8 #f1f5f9;
 }
 
 /* =====================
