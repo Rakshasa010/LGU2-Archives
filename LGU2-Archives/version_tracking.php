@@ -233,10 +233,6 @@ $conn->close();
                     </a>
                     <?php endif; ?>
 
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-person mr-3"></i>
-                        <span class="sidebar-text">Profile</span>
-                    </a>
 
                     <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-shield-check mr-3"></i>
@@ -499,13 +495,27 @@ $conn->close();
                         left.appendChild(titleEl); left.appendChild(metaEl);
                         var btn = document.createElement('button');
                         btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
-                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span><span class="ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full">' + (record.version || 1) + '</span>';
+                        var countSpan = document.createElement('span');
+                        countSpan.className = 'ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full';
+                        countSpan.textContent = '…';
+                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span>';
+                        btn.appendChild(countSpan);
                         btn.addEventListener('click', function(){
                             openVersionHistory(record);
                         });
                         row.appendChild(left);
                         row.appendChild(btn);
                         list.appendChild(row);
+                        fetch('legislative_api.php?action=get_versions&id=' + encodeURIComponent(record.id))
+                            .then(function(r){ return r.json(); })
+                            .then(function(d){
+                                if (d && d.success && Array.isArray(d.versions)) {
+                                    countSpan.textContent = String(d.versions.length);
+                                } else {
+                                    countSpan.textContent = '0';
+                                }
+                            })
+                            .catch(function(){ countSpan.textContent = '0'; });
                     });
                 }
             });

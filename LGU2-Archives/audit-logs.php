@@ -132,10 +132,6 @@
                     <span>User Management</span>
                 </a>
                 <?php endif; ?>
-                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-person mr-3 text-lg"></i>
-                    <span>Profile</span>
-                </a>
                 <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
@@ -222,10 +218,6 @@
                     </a>
                     <?php endif; ?>
                     
-                    <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-person mr-3"></i>
-                        <span class="sidebar-text">Profile</span>
-                    </a>
 
                         <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                             <i class="bi bi-shield-check mr-3"></i>

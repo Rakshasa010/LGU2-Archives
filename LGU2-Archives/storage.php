@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $leg->close();
         }
-        $arc = $conn->prepare("SELECT fo.name AS folder_name, COUNT(*) AS cnt FROM archive_files af JOIN archive_folders fo ON af.folder_id = fo.id WHERE YEAR(af.created_at) = ? GROUP BY fo.name");
+        $arc = $conn->prepare("SELECT fo.id, fo.name AS folder_name, COUNT(af.id) AS cnt FROM archive_folders fo LEFT JOIN archive_files af ON af.folder_id = fo.id AND YEAR(af.created_at) = ? GROUP BY fo.id, fo.name ORDER BY fo.name");
         if ($arc) {
             $arc->bind_param("i", $year);
             $arc->execute();
@@ -164,6 +164,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $ins->close();
         echo json_encode(['success' => false, 'message' => 'Could not create folder']);
+        $conn->close();
+        exit();
+    }
+    if ($action === 'delete_folder') {
+        $folder_id = isset($payload['folder_id']) ? (int)$payload['folder_id'] : (int)($_POST['folder_id'] ?? 0);
+        if ($folder_id <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid folder id']);
+            $conn->close();
+            exit();
+        }
+        $uid = (int)$_SESSION['user_id'];
+        $roleStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+        $isAdmin = false;
+        if ($roleStmt) {
+            $roleStmt->bind_param("i", $uid);
+            $roleStmt->execute();
+            $res = $roleStmt->get_result();
+            if ($res && $res->num_rows === 1) {
+                $row = $res->fetch_assoc();
+                $isAdmin = isset($row['role']) && strtolower($row['role']) === 'admin';
+            }
+            $roleStmt->close();
+        }
+        if (!$isAdmin) {
+            echo json_encode(['success' => false, 'message' => 'Not authorized']);
+            $conn->close();
+            exit();
+        }
+        $fo = $conn->prepare("SELECT id, name FROM archive_folders WHERE id = ?");
+        if (!$fo) {
+            echo json_encode(['success' => false, 'message' => 'Folder not found']);
+            $conn->close();
+            exit();
+        }
+        $fo->bind_param("i", $folder_id);
+        $fo->execute();
+        $fr = $fo->get_result();
+        $folder = $fr ? $fr->fetch_assoc() : null;
+        $fo->close();
+        if (!$folder) {
+            echo json_encode(['success' => false, 'message' => 'Folder not found']);
+            $conn->close();
+            exit();
+        }
+        $conn->begin_transaction();
+        try {
+            $files = [];
+            if ($fs = $conn->prepare("SELECT id, file_path FROM archive_files WHERE folder_id = ?")) {
+                $fs->bind_param("i", $folder_id);
+                $fs->execute();
+                $rs = $fs->get_result();
+                while ($r = $rs->fetch_assoc()) { $files[] = $r; }
+                $fs->close();
+            }
+            foreach ($files as $f) {
+                $p = (string)$f['file_path'];
+                $disk = is_file($p) ? $p : (__DIR__ . '/' . $p);
+                if (is_file($disk)) { @unlink($disk); }
+            }
+            if ($delFiles = $conn->prepare("DELETE FROM archive_files WHERE folder_id = ?")) {
+                $delFiles->bind_param("i", $folder_id);
+                $delFiles->execute();
+                $delFiles->close();
+            }
+            if ($delFolder = $conn->prepare("DELETE FROM archive_folders WHERE id = ?")) {
+                $delFolder->bind_param("i", $folder_id);
+                $delFolder->execute();
+                $delFolder->close();
+            }
+            $dir = __DIR__ . "/uploads/archives/" . $folder_id;
+            if (is_dir($dir)) {
+                $it = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::CHILD_FIRST
+                );
+                foreach ($it as $file) {
+                    $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname());
+                }
+                @rmdir($dir);
+            }
+            $conn->commit();
+            echo json_encode(['success' => true, 'deleted' => ['id' => $folder_id, 'name' => $folder['name']]]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => 'Failed to delete folder']);
+        }
         $conn->close();
         exit();
     }
@@ -294,10 +380,6 @@ if (isset($_SESSION['user_id'])) {
             <!-- ADMINISTRATION Section -->
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                <a href="profile_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-people mr-3 text-lg"></i>
-                    <span>User Management</span>
-                </a>
                 <a href="#" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                     <i class="bi bi-shield-check mr-3 text-lg"></i>
                     <span>Audit Logs</span>
@@ -569,7 +651,12 @@ if (isset($_SESSION['user_id'])) {
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200"> Archives Folders</h2>
-                <button id="create-folder-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Create Folder</button>
+                <div class="flex items-center gap-2">
+                    <button id="create-folder-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Create Folder</button>
+                    <?php if (isset($is_admin) && $is_admin): ?>
+                    <button id="delete-folder-btn" class="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-gray-200 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">Delete Folder</button>
+                    <?php endif; ?>
+                </div>
             </div>
             <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
@@ -609,7 +696,7 @@ if (isset($_SESSION['user_id'])) {
                     <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
                 </a>
                 <?php foreach ($archive_folders as $folder): ?>
-                <a href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
+                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                     <div class="mb-3 group-hover:scale-110 transition-transform">
                         <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -642,6 +729,27 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
         </div>
+<!-- Delete Folder Modal -->
+<div id="delete-folder-modal" class="hidden fixed inset-0 z-50">
+    <div id="delete-folder-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+        <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
+            <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Delete Folder</div>
+            <label class="block text-sm text-gray-600 dark:text-gray-400 mb-2" for="delete-folder-select">Select Folder</label>
+            <select id="delete-folder-select" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <option value="">-- Choose a folder --</option>
+                <?php foreach ($archive_folders as $folder): ?>
+                <option value="<?php echo (int)$folder['id']; ?>"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <div id="delete-folder-error" class="mt-2 text-xs text-red-600 dark:text-red-400 hidden"></div>
+            <div class="mt-6 flex justify-end gap-2">
+                <button id="cancel-delete-folder" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                <button id="confirm-delete-folder" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
         <div id="restore-confirm-modal" class="hidden fixed inset-0 z-50">
             <div id="restore-confirm-backdrop" class="absolute inset-0 bg-black/50"></div>
             <div class="relative z-10 flex min-h-full items-center justify-center p-4">
@@ -763,6 +871,13 @@ if (isset($_SESSION['user_id'])) {
 
         const createFolderBtn = document.getElementById('create-folder-btn');
         const foldersGrid = document.getElementById('archive-folders-grid');
+        const deleteFolderBtn = document.getElementById('delete-folder-btn');
+        const deleteFolderModal = document.getElementById('delete-folder-modal');
+        const deleteFolderBackdrop = document.getElementById('delete-folder-backdrop');
+        const deleteFolderSelect = document.getElementById('delete-folder-select');
+        const deleteFolderError = document.getElementById('delete-folder-error');
+        const cancelDeleteFolder = document.getElementById('cancel-delete-folder');
+        const confirmDeleteFolder = document.getElementById('confirm-delete-folder');
         const createModal = document.getElementById('create-folder-modal');
         const createInput = document.getElementById('new-folder-name');
         const createBackdrop = document.getElementById('create-folder-backdrop');
@@ -806,6 +921,21 @@ if (isset($_SESSION['user_id'])) {
             '"': '&quot;',
             "'": '&#39;'
         }[ch]));
+        const removeFolderCardById = (id) => {
+            const card = document.getElementById('folder-card-' + String(id));
+            if (card) {
+                card.parentNode.removeChild(card);
+                return true;
+            }
+            const links = Array.from(document.querySelectorAll('#archive-folders-grid a[href*="folder_view.php?id="]'));
+            for (const a of links) {
+                if (a.href.includes('folder_view.php?id=' + String(id))) {
+                    a.parentNode.removeChild(a);
+                    return true;
+                }
+            }
+            return false;
+        };
         const setCreateButtonEnabled = (enabled) => {
             if (!confirmCreate) return;
             confirmCreate.disabled = !enabled;
@@ -926,6 +1056,46 @@ if (isset($_SESSION['user_id'])) {
             } finally {
                 isCreating = false;
                 setCreateButtonLoading(false);
+            }
+        });
+        const openDeleteModal = () => {
+            if (!deleteFolderModal) return;
+            deleteFolderError?.classList.add('hidden');
+            deleteFolderSelect?.value && (deleteFolderSelect.value = '');
+            deleteFolderModal.classList.remove('hidden');
+        };
+        const closeDeleteModal = () => {
+            deleteFolderModal?.classList.add('hidden');
+        };
+        deleteFolderBtn?.addEventListener('click', openDeleteModal);
+        deleteFolderBackdrop?.addEventListener('click', closeDeleteModal);
+        cancelDeleteFolder?.addEventListener('click', closeDeleteModal);
+        confirmDeleteFolder?.addEventListener('click', async () => {
+            const val = (deleteFolderSelect?.value || '').trim();
+            if (!val) {
+                deleteFolderError.textContent = 'Please select a folder to delete.';
+                deleteFolderError.classList.remove('hidden');
+                return;
+            }
+            const fid = parseInt(val, 10);
+            try {
+                const response = await fetch('storage.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_folder', folder_id: fid })
+                });
+                const data = await response.json();
+                if (data && data.success) {
+                    removeFolderCardById(fid);
+                    showToast('Folder deleted.', 'success');
+                    closeDeleteModal();
+                } else {
+                    deleteFolderError.textContent = (data && data.message) ? data.message : 'Failed to delete folder.';
+                    deleteFolderError.classList.remove('hidden');
+                }
+            } catch (e) {
+                deleteFolderError.textContent = 'Failed to delete folder.';
+                deleteFolderError.classList.remove('hidden');
             }
         });
         const closeRestoreModal = () => {

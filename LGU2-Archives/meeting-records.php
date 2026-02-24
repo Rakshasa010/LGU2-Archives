@@ -384,6 +384,25 @@ $conn->close();
             </div>
         </div>
     </div>
+    <!-- Version Confirm Modal -->
+    <div id="versionConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('versionConfirmModal')"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-700">
+            <div class="flex items-start gap-3">
+                <div class="flex-none rounded-full p-2 bg-yellow-100 dark:bg-yellow-900/30">
+                    <i class="bi bi-exclamation-triangle text-yellow-700 dark:text-yellow-300 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Create New Version?</h3>
+                    <p id="versionConfirmMessage" class="mt-1 text-sm text-gray-600 dark:text-gray-400">File already exists. Create new version?</p>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+                <button onclick="closeModal('versionConfirmModal')" class="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg">Cancel</button>
+                <button onclick="confirmCreateVersion()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Create Version</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Version History Modal -->
     <div id="versionHistoryModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
@@ -470,19 +489,19 @@ $conn->close();
                 .catch(() => openNotification('Failed to delete file.', 'error'));
             deleteId = null;
         }
-        function openNotification(message = 'Done', type = 'success') {
+        function openNotification(message = 'Done', type = 'success', titleText) {
             const modal = document.getElementById('notificationModal');
             const title = document.getElementById('notificationTitle');
             const msg = document.getElementById('notificationMessage');
             const icon = document.getElementById('notificationIcon');
             if (!modal || !title || !msg || !icon) return;
             if (type === 'error') {
-                title.textContent = 'Error';
+                title.textContent = titleText || 'Error';
                 msg.textContent = message || 'Something went wrong.';
                 icon.className = 'flex-none rounded-full p-2 bg-red-100 dark:bg-red-900/30';
                 icon.innerHTML = '<i class="bi bi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>';
             } else {
-                title.textContent = 'Deleted';
+                title.textContent = titleText || 'Deleted';
                 msg.textContent = message || 'The file has been deleted.';
                 icon.className = 'flex-none rounded-full p-2 bg-green-100 dark:bg-green-900/30';
                 icon.innerHTML = '<i class="bi bi-check2-circle text-green-600 dark:text-green-400 text-xl"></i>';
@@ -491,7 +510,38 @@ $conn->close();
         }
         function closeNotification() {
             const modal = document.getElementById('notificationModal');
-            if (modal) modal.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('hidden');
+                if (window.__reloadAfterNotification) {
+                    window.__reloadAfterNotification = false;
+                    location.reload();
+                }
+            }
+        }
+        function confirmCreateVersion() {
+            const fd = window.__pendingUploadFD;
+            const existingId = window.__pendingUploadExistingId;
+            if (!fd || !existingId) { closeModal('versionConfirmModal'); return; }
+            fd.append('force_version', '1');
+            fd.append('parent_id', existingId);
+            fetch('legislative_api.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(d2 => {
+                    closeModal('versionConfirmModal');
+                    if (d2 && d2.success) {
+                        closeModal('uploadModal');
+                        window.__reloadAfterNotification = true;
+                        openNotification('New version created!', 'success', 'Uploaded');
+                    } else {
+                        openNotification((d2 && d2.message) || 'Upload failed.', 'error', 'Error');
+                    }
+                })
+                .catch(() => {
+                    closeModal('versionConfirmModal');
+                    openNotification('Upload failed.', 'error', 'Error');
+                });
+            window.__pendingUploadFD = null;
+            window.__pendingUploadExistingId = null;
         }
 
         // Create Folder
@@ -524,25 +574,16 @@ $conn->close();
             .then(r => r.json())
             .then(d => {
                 if(d.success) {
-                    alert('Uploaded!');
-                    location.reload();
+                    closeModal('uploadModal');
+                    window.__reloadAfterNotification = true;
+                    openNotification('Your file has been uploaded.', 'success', 'Uploaded');
                 } else if (d.duplicate) {
-                    if (confirm(d.message)) {
-                        formData.append('force_version', '1');
-                        formData.append('parent_id', d.existing_id);
-                        fetch('legislative_api.php', { method: 'POST', body: formData })
-                        .then(r2 => r2.json())
-                        .then(d2 => {
-                            if(d2.success) {
-                                alert('New version created!');
-                                location.reload();
-                            } else {
-                                alert(d2.message);
-                            }
-                        });
-                    }
+                    window.__pendingUploadFD = formData;
+                    window.__pendingUploadExistingId = d.existing_id;
+                    document.getElementById('versionConfirmMessage').textContent = d.message || 'File already exists. Create new version?';
+                    openModal('versionConfirmModal');
                 } else {
-                    alert(d.message);
+                    openNotification(d.message || 'Upload failed.', 'error', 'Error');
                 }
             });
         });
