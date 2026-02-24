@@ -114,14 +114,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
-<<<<<<< HEAD
                 $success = $emailSent
                     ? 'Requesting admin approval. Check your email for the temporary password.'
                     : 'Registered successfully. Use <a href="forgot-password.php" class="underline font-medium">Forgot password</a> to set your password and sign in.';
 
-=======
-                
->>>>>>> c92e0278091823d014af770d3dafd75bfb56f598
                 // Ensure notifications table exists
                 $conn->query("CREATE TABLE IF NOT EXISTS notifications (
                     id INT AUTO_INCREMENT PRIMARY KEY,
