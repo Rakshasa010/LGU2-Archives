@@ -742,6 +742,18 @@ $series_records_values = array_values($series_records);
                                     <div class="text-sm text-gray-500">No tracked activity yet. Downloads will appear here after using the download modal.</div>
                                 <?php endif; ?>
                             </div>
+                        <?php else: ?>
+                            <div class="lg:col-span-2 card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
+                                        <i class="bi bi-lock"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Visible to administrators only.</div>
+                                    </div>
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
 

@@ -290,7 +290,7 @@ $conn->close();
 
         <!-- Actions -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <button id="create-subfolder-btn" onclick="openCreateFolderModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
+            <button id="create-subfolder-btn" type="button" onclick="openCreateFolderModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
                 <div class="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full group-hover:scale-110 transition-transform">
                     <i class="bi bi-folder-plus text-2xl text-blue-600 dark:text-blue-400"></i>
                 </div>
@@ -299,7 +299,7 @@ $conn->close();
                     <div class="text-xs text-gray-500 dark:text-gray-400">Add a new folder here</div>
                 </div>
             </button>
-            <button id="upload-file-btn" onclick="openUploadModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
+            <button id="upload-file-btn" type="button" onclick="openUploadModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
                 <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-full group-hover:scale-110 transition-transform">
                     <i class="bi bi-cloud-upload text-2xl text-green-600 dark:text-green-400"></i>
                 </div>
@@ -547,8 +547,14 @@ $conn->close();
 
         // File Upload Functions
         function openCreateFolderModal() {
-            document.getElementById('createFolderModal').classList.remove('hidden');
-            document.getElementById('newFolderName').focus();
+            const m = document.getElementById('createFolderModal');
+            if (!m) return;
+            if (m.classList.contains('hidden')) {
+                m.classList.remove('hidden');
+                document.getElementById('newFolderName')?.focus();
+            } else {
+                closeCreateFolderModal();
+            }
         }
 
         function closeCreateFolderModal() {
@@ -579,8 +585,14 @@ $conn->close();
 
         function openUploadModal() {
             try { closeSideViewer(); } catch(_) {}
-            document.getElementById('uploadFileModal').classList.remove('hidden');
-            try { document.getElementById('fileInput').focus(); } catch(_) {}
+            const m = document.getElementById('uploadFileModal');
+            if (!m) return;
+            if (m.classList.contains('hidden')) {
+                m.classList.remove('hidden');
+                try { document.getElementById('fileInput').focus(); } catch(_) {}
+            } else {
+                closeUploadModal();
+            }
         }
 
         function closeUploadModal() {
@@ -590,14 +602,36 @@ $conn->close();
             document.getElementById('upload-progress').classList.add('hidden');
         }
         (function(){
-            const createBtn = document.getElementById('create-subfolder-btn');
-            const uploadBtnOpen = document.getElementById('upload-file-btn');
             const uploadForm = document.getElementById('uploadForm');
             const uploadBtn = document.getElementById('uploadBtn');
-            createBtn && createBtn.addEventListener('click', function(e){ e.preventDefault(); openCreateFolderModal(); });
-            uploadBtnOpen && uploadBtnOpen.addEventListener('click', function(e){ e.preventDefault(); openUploadModal(); });
             uploadForm && uploadForm.addEventListener('submit', function(e){ e.preventDefault(); handleUpload(e); });
             uploadBtn && uploadBtn.addEventListener('click', function(e){ e.preventDefault(); handleUpload(e); });
+            const createBtn = document.getElementById('create-subfolder-btn');
+            const uploadToggleBtn = document.getElementById('upload-file-btn');
+            function bindToggles(){
+                if (createBtn && !createBtn.__bound) {
+                    createBtn.addEventListener('click', function(e){ e.preventDefault(); openCreateFolderModal(); });
+                    createBtn.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCreateFolderModal(); } });
+                    createBtn.__bound = true;
+                }
+                if (uploadToggleBtn && !uploadToggleBtn.__bound) {
+                    uploadToggleBtn.addEventListener('click', function(e){ e.preventDefault(); openUploadModal(); });
+                    uploadToggleBtn.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUploadModal(); } });
+                    uploadToggleBtn.__bound = true;
+                }
+            }
+            bindToggles();
+            document.addEventListener('click', function(e){
+                const openCreate = e.target.closest('#create-subfolder-btn');
+                if (openCreate) { e.preventDefault(); openCreateFolderModal(); return; }
+                const openUpload = e.target.closest('#upload-file-btn');
+                if (openUpload) { e.preventDefault(); openUploadModal(); return; }
+            });
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindToggles);
+            } else {
+                bindToggles();
+            }
         })();
 
         let pendingDuplicateResolver = null;
@@ -796,10 +830,6 @@ $conn->close();
             }
             isUploading = false;
         }
-<<<<<<< HEAD
-=======
-        
->>>>>>> 705ec607828489e64b688cb0f6486175fe0aabe0
 
         function escapeHtml(text) {
             if (!text) return text;
