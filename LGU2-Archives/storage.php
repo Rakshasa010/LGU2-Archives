@@ -338,7 +338,7 @@ if (isset($_SESSION['user_id'])) {
             </div>
             
             <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-y-hidden py-4">
+            <nav class="flex-1 overflow-y-auto py-4">
                 <div class="px-4 space-y-1">
                     <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
                         <i class="bi bi-speedometer2 mr-3"></i>
