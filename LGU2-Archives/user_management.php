@@ -139,28 +139,10 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/archives-landing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="icon" href="Images/Val-logo/valenzuela logo.webp">
-        <style>
-            #mobile-sidebar nav,
-            .sidebar nav {
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255,255,255,0.35) transparent;
-            }
-            #mobile-sidebar nav::-webkit-scrollbar,
-            .sidebar nav::-webkit-scrollbar {
-                width: 6px;
-            }
-            #mobile-sidebar nav::-webkit-scrollbar-thumb,
-            .sidebar nav::-webkit-scrollbar-thumb {
-                background-color: rgba(255,255,255,0.35);
-                border-radius: 9999px;
-            }
-            #mobile-sidebar nav::-webkit-scrollbar-track,
-            .sidebar nav::-webkit-scrollbar-track {
-                background: transparent;
-            }
-        </style>
+        
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-white min-h-screen">
     <!-- Mobile Sidebar -->

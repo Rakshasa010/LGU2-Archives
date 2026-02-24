@@ -403,10 +403,10 @@ $conn->close();
 
     <!-- Upload File Modal -->
     <div id="uploadFileModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeUploadModal()"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[101]" onclick="closeUploadModal()"></div>
+        <div class="relative z-[102] bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
             <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Upload File</h3>
-           <form id="uploadForm" class="space-y-4">
+           <form id="uploadForm" class="space-y-4" onsubmit="handleUpload(event); return false;">
                     <input type="hidden" name="folder_id" value="<?php echo $current_folder_id ?? ''; ?>">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Name</label>
@@ -426,11 +426,19 @@ $conn->close();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
+<<<<<<< HEAD
                         <input type="file" id="fileInput" name="file" accept="image/*,.pdf,.doc,.docx,.txt" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+=======
+                        <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-4 text-center cursor-pointer hover:border-red-500 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
+                            <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt" required class="w-full px-3 py-2 border-0 focus:ring-0 focus:border-transparent bg-transparent text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                        </div>
+                        <div id="file-list-preview" class="mt-2 space-y-1"></div>
+>>>>>>> 6ac230cdd020d443dc601957639d9a593d1eaabc
                     </div>
+                    <div id="upload-progress" class="hidden text-sm text-gray-600 dark:text-gray-400 py-1"></div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
-                        <button type="button" id="uploadBtn" onclick="handleUpload(event)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer">Upload</button>
+                        <button type="button" id="uploadBtn" onclick="handleUpload(event)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Upload</button>
                     </div>
                 </form>
         </div>
@@ -593,6 +601,7 @@ $conn->close();
             const m = document.getElementById('duplicateConfirmModal');
             m.classList.remove('hidden');
         }
+<<<<<<< HEAD
         function closeDuplicateConfirm() {
             const m = document.getElementById('duplicateConfirmModal');
             m.classList.add('hidden');
@@ -610,6 +619,21 @@ $conn->close();
             return new Promise(function(resolve){
                 pendingDuplicateResolver = resolve;
                 openDuplicateConfirm();
+=======
+
+        function updateFilePreview(files) {
+            const preview = document.getElementById('file-list-preview');
+            if (!preview) return;
+            preview.innerHTML = '';
+            Array.from(files).forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between bg-white dark:bg-slate-700 p-2 rounded border border-gray-200 dark:border-slate-600';
+                div.innerHTML = `
+                    <span class="truncate">${escapeHtml(file.name)}</span>
+                    <span class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</span>
+                `;
+                preview.appendChild(div);
+>>>>>>> 6ac230cdd020d443dc601957639d9a593d1eaabc
             });
         }
 
@@ -627,8 +651,10 @@ $conn->close();
             }
 
             const progress = document.getElementById('upload-progress');
-            progress.classList.remove('hidden');
-            progress.textContent = `Uploading ${fileInput.files.length} file(s)...`;
+            if (progress) {
+                progress.classList.remove('hidden');
+                progress.textContent = `Uploading ${fileInput.files.length} file(s)...`;
+            }
 
             let successCount = 0;
             const list = document.getElementById('content-list');
@@ -700,20 +726,14 @@ $conn->close();
                 openNotification('Your file(s) have been uploaded.', 'success');
             } else {
                 openNotification('Failed to upload files', 'error');
-                progress.classList.add('hidden');
+                if (progress) progress.classList.add('hidden');
             }
         }
         (function(){
             const form = document.getElementById('uploadForm');
             const btn = document.getElementById('uploadBtn');
-            if (form) { form.addEventListener('submit', handleUpload); }
-            if (btn) { btn.addEventListener('click', handleUpload); }
-            document.addEventListener('click', function(e){
-                const t = e.target;
-                if (t && (t.id === 'uploadBtn' || t.closest && t.closest('#uploadBtn'))) {
-                    handleUpload(e);
-                }
-            });
+            if (form) form.addEventListener('submit', function(e) { e.preventDefault(); handleUpload(e); });
+            if (btn) btn.addEventListener('click', function(e) { e.preventDefault(); handleUpload(e); });
         })();
 
         function escapeHtml(text) {
