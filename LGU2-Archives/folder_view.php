@@ -72,43 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['file'];
             $name = $file['name'];
-            $base = $_POST['fileName'] ?? pathinfo($name, PATHINFO_FILENAME);
-            $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $base));
-            $slug = trim($slug, '-');
-            if ($slug === '') {
-                $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', pathinfo($name, PATHINFO_FILENAME)));
-                $slug = trim($slug, '-');
-            }
-            $child_id = null;
-            $find = $conn->prepare("SELECT id FROM archive_folders WHERE parent_id = ? AND slug = ? LIMIT 1");
-            if ($find) {
-                $find->bind_param("is", $current_folder_id, $slug);
-                $find->execute();
-                $res = $find->get_result();
-                if ($res && $res->num_rows === 1) {
-                    $row = $res->fetch_assoc();
-                    $child_id = (int)$row['id'];
-                }
-                $find->close();
-            }
-            if (!$child_id) {
-                $ins = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by) VALUES (?, ?, ?, ?)");
-                $uid = (int)$_SESSION['user_id'];
-                if ($ins) {
-                    $ins->bind_param("ssii", $base, $slug, $current_folder_id, $uid);
-                    if ($ins->execute()) {
-                        $child_id = (int)$conn->insert_id;
-                        $ins->close();
-                    } else {
-                        $ins->close();
-                        echo json_encode(['success' => false, 'message' => 'Could not create subfolder']);
-                        exit();
-                    }
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Could not create subfolder']);
-                    exit();
-                }
-            }
             $target_dir = "uploads/archives/" . $current_folder_id . "/";
             if (!file_exists($target_dir)) { @mkdir($target_dir, 0777, true); }
             // Sanitize filename
@@ -127,8 +90,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if (move_uploaded_file($file['tmp_name'], $file_path)) {
-                $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
-                $stmt->bind_param("iss", $current_folder_id, $name, $file_path);
+                $conn->query("CREATE TABLE IF NOT EXISTS archive_files (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    folder_id INT NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    file_path VARCHAR(1024) NOT NULL,
+                    version INT DEFAULT 1,
+                    parent_version_id INT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+                $colV = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'version'");
+                if ($colV && $colV->num_rows === 0) { $conn->query("ALTER TABLE archive_files ADD COLUMN version INT DEFAULT 1"); }
+                $colP = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'parent_version_id'");
+                if ($colP && $colP->num_rows === 0) { $conn->query("ALTER TABLE archive_files ADD COLUMN parent_version_id INT NULL"); }
+                $version = 1;
+                $parent_version_id = NULL;
+                if ($st = $conn->prepare("SELECT id, parent_version_id, version FROM archive_files WHERE folder_id = ? AND name = ? ORDER BY id DESC LIMIT 1")) {
+                    $st->bind_param("is", $current_folder_id, $name);
+                    $st->execute();
+                    $r = $st->get_result();
+                    if ($r && $r->num_rows) {
+                        $ex = $r->fetch_assoc();
+                        $root = $ex['parent_version_id'] ? (int)$ex['parent_version_id'] : (int)$ex['id'];
+                        if ($st2 = $conn->prepare("SELECT MAX(version) AS mv FROM archive_files WHERE id = ? OR parent_version_id = ?")) {
+                            $st2->bind_param("ii", $root, $root);
+                            $st2->execute();
+                            $rs2 = $st2->get_result();
+                            $mv = $rs2 && $rs2->num_rows ? (int)($rs2->fetch_assoc()['mv'] ?? 1) : 1;
+                            $st2->close();
+                            $version = $mv + 1;
+                            $parent_version_id = $root;
+                        }
+                    }
+                    $st->close();
+                }
+                $hasVersionCols = ($conn->query("SHOW COLUMNS FROM archive_files LIKE 'version'")->num_rows > 0);
+                if ($hasVersionCols) {
+                    $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, version, parent_version_id) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->bind_param("issii", $current_folder_id, $name, $file_path, $version, $parent_version_id);
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
+                    $stmt->bind_param("iss", $current_folder_id, $name, $file_path);
+                }
                 if ($stmt->execute()) {
                     echo json_encode([
                         'success' => true, 
@@ -137,7 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'name' => $name, 
                             'created_at' => date('Y-m-d H:i:s'),
                             'folder_id' => $current_folder_id,
-                            'file_path' => $file_path
+                            'file_path' => $file_path,
+                            'version' => $version,
+                            'parent_version_id' => $parent_version_id
                         ]
                     ]);
                 } else {
@@ -403,7 +408,7 @@ $conn->close();
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                             <span>View</span>
                         </button>
-                        <button onclick="openVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Version History">
+                        <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-1.5 text-sm font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Version History">
                             <i class="bi bi-clock-history"></i><span>History</span>
                         </button>
                         <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
@@ -792,6 +797,9 @@ $conn->close();
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                     <span>View</span>
                                 </button>
+                                <button onclick="openArchiveVersionHistory(${file.id}, '${escapeHtml(file.name)}')" class="px-3 py-1.5 text-sm font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1">
+                                    <i class="bi bi-clock-history"></i><span>History</span><span class="ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full" id="ver-count-${file.id}">…</span>
+                                </button>
                                 <a href="${escapeHtml(file.file_path)}" download="${escapeHtml(file.name)}" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                     <span>Download</span>
@@ -805,6 +813,17 @@ $conn->close();
                         `;
                         if (list.querySelector('.text-center')) list.querySelector('.text-center').remove();
                         list.appendChild(div);
+                        try {
+                            fetch('archives_api.php?action=get_versions&id=' + encodeURIComponent(file.id))
+                                .then(function(r){ return r.json(); })
+                                .then(function(d){
+                                    var cEl = document.getElementById('ver-count-' + String(file.id));
+                                    if (cEl) cEl.textContent = (d && d.success && Array.isArray(d.versions)) ? String(d.versions.length) : '0';
+                                }).catch(function(){
+                                    var cEl = document.getElementById('ver-count-' + String(file.id));
+                                    if (cEl) cEl.textContent = '0';
+                                });
+                        } catch(_e){}
                     }
                 } catch (e) {
                     console.error(e);
@@ -922,8 +941,6 @@ $conn->close();
             const content = document.getElementById('viewerModalContent');
             const box = document.getElementById('viewerModalBox');
             if (!modal || !content) return;
-            const headerEl = document.querySelector('header');
-            if (headerEl) headerEl.classList.add('hidden');
             const id = data.id ? String(data.id) : '0';
             const title = encodeURIComponent(data.title || 'Untitled');
             const type = encodeURIComponent(data.type || 'Archive Document');
@@ -1041,6 +1058,36 @@ $conn->close();
                                 return '<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">'
                                     + '<div><div class="font-medium text-gray-800 dark:text-gray-200">Version ' + String(v.version) + '</div>'
                                     + '<div class="text-xs text-gray-500 dark:text-gray-400">' + (v.created_at || '') + ' • ' + (v.author || '') + '</div></div>'
+                                    + '<div class="flex space-x-2"><a href="download.php?id=' + encodeURIComponent(v.id) + '" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a></div>'
+                                    + '</div>';
+                            }).join('');
+                        }
+                    } else {
+                        list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                    }
+                })
+                .catch(function(){
+                    list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                });
+        }
+        function openArchiveVersionHistory(id, title) {
+            const t = document.getElementById('versionHistoryTitle');
+            const list = document.getElementById('versionList');
+            if (!t || !list) return;
+            t.textContent = title || '';
+            list.innerHTML = '<div class="text-center py-4">Loading...</div>';
+            openModal('versionHistoryModal');
+            fetch('archives_api.php?action=get_versions&id=' + encodeURIComponent(id))
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if (d && d.success) {
+                        if (!Array.isArray(d.versions) || d.versions.length === 0) {
+                            list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
+                        } else {
+                            list.innerHTML = d.versions.map(function(v){
+                                return '<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">'
+                                    + '<div><div class="font-medium text-gray-800 dark:text-gray-200">Version ' + String(v.version) + '</div>'
+                                    + '<div class="text-xs text-gray-500 dark:text-gray-400">' + (v.created_at || '') + '</div></div>'
                                     + '<div class="flex space-x-2"><a href="download.php?id=' + encodeURIComponent(v.id) + '" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a></div>'
                                     + '</div>';
                             }).join('');
