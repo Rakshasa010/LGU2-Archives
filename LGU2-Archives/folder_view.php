@@ -114,6 +114,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit();
     }
+    if ($action === 'check_duplicate') {
+        header('Content-Type: application/json');
+        $name = $_POST['name'] ?? $input['name'] ?? '';
+        if ($name === '') {
+            echo json_encode(['success' => false, 'exists' => false]);
+            exit();
+        }
+        $stmt = $conn->prepare("SELECT id FROM archive_files WHERE folder_id = ? AND name = ? LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param("is", $current_folder_id, $name);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $exists = ($res && $res->num_rows > 0);
+            $stmt->close();
+            echo json_encode(['success' => true, 'exists' => $exists]);
+            exit();
+        }
+        echo json_encode(['success' => false, 'exists' => false]);
+        exit();
+    }
 
     if ($action === 'delete_file') {
         header('Content-Type: application/json');
@@ -406,13 +426,24 @@ $conn->close();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
-                        <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                        <input type="file" id="fileInput" name="file" accept="image/*,.pdf,.doc,.docx,.txt" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
                         <button type="button" id="uploadBtn" onclick="handleUpload(event)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer">Upload</button>
                     </div>
                 </form>
+        </div>
+    </div>
+    <div id="duplicateConfirmModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDuplicateConfirm()"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-700">
+            <div class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">File already exists</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">Create new version?</div>
+            <div class="flex justify-end gap-2">
+                <button id="duplicateCancelBtn" type="button" class="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Cancel</button>
+                <button id="duplicateOkBtn" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">OK</button>
+            </div>
         </div>
     </div>
 
@@ -547,7 +578,7 @@ $conn->close();
         function openUploadModal() {
             try { closeSideViewer(); } catch(_) {}
             document.getElementById('uploadFileModal').classList.remove('hidden');
-            setupDragAndDrop();
+            try { document.getElementById('fileInput').focus(); } catch(_) {}
         }
 
         function closeUploadModal() {
@@ -557,35 +588,28 @@ $conn->close();
             document.getElementById('upload-progress').classList.add('hidden');
         }
 
-        function setupDragAndDrop() {
-            const dropZone = document.getElementById('drop-zone');
-            const fileInput = document.getElementById('fileInput');
-            if (!dropZone || !fileInput) return;
-            dropZone.onclick = () => fileInput.click();
-            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-red-500','bg-red-50','dark:bg-red-900/10'); };
-            dropZone.ondragleave = () => { dropZone.classList.remove('border-red-500','bg-red-50','dark:bg-red-900/10'); };
-            dropZone.ondrop = (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('border-red-500','bg-red-50','dark:bg-red-900/10');
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    updateFilePreview(fileInput.files);
-                }
-            };
-            fileInput.onchange = () => updateFilePreview(fileInput.files);
+        let pendingDuplicateResolver = null;
+        function openDuplicateConfirm() {
+            const m = document.getElementById('duplicateConfirmModal');
+            m.classList.remove('hidden');
         }
-
-        function updateFilePreview(files) {
-            const preview = document.getElementById('file-list-preview');
-            preview.innerHTML = '';
-            Array.from(files).forEach(file => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center justify-between bg-white dark:bg-slate-700 p-2 rounded border border-gray-200 dark:border-slate-600';
-                div.innerHTML = `
-                    <span class="truncate">${escapeHtml(file.name)}</span>
-                    <span class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</span>
-                `;
-                preview.appendChild(div);
+        function closeDuplicateConfirm() {
+            const m = document.getElementById('duplicateConfirmModal');
+            m.classList.add('hidden');
+        }
+        document.getElementById('duplicateCancelBtn')?.addEventListener('click', function(){
+            if (typeof pendingDuplicateResolver === 'function') pendingDuplicateResolver(false);
+            closeDuplicateConfirm();
+        });
+        document.getElementById('duplicateOkBtn')?.addEventListener('click', function(){
+            if (typeof pendingDuplicateResolver === 'function') pendingDuplicateResolver(true);
+            closeDuplicateConfirm();
+            openNotification('New version created!', 'success');
+        });
+        function confirmDuplicateAsync() {
+            return new Promise(function(resolve){
+                pendingDuplicateResolver = resolve;
+                openDuplicateConfirm();
             });
         }
 
@@ -595,6 +619,10 @@ $conn->close();
             if (!fileInput.files.length) {
                 openNotification('Please select a file to upload.', 'error');
                 try { fileInput.focus(); fileInput.click(); } catch(_) {}
+                return;
+            }
+            if (fileInput.files.length > 3) {
+                openNotification('Please select up to 3 files.', 'error');
                 return;
             }
 
@@ -609,6 +637,18 @@ $conn->close();
                 const formData = new FormData();
                 formData.append('action', 'upload_file');
                 formData.append('file', fileInput.files[i]);
+                try {
+                    const pre = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'check_duplicate', name: fileInput.files[i].name })
+                    });
+                    const preData = await pre.json();
+                    if (preData && preData.success && preData.exists) {
+                        const ok = await confirmDuplicateAsync();
+                        if (!ok) { continue; }
+                    }
+                } catch (_e) {}
 
                 try {
                     const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
