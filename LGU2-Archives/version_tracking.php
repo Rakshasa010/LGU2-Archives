@@ -404,6 +404,10 @@ $conn->close();
                             </div>
                         </button>
                     </div>
+                    <div class="mt-8">
+                        <div class="mb-3 text-sm text-gray-600 dark:text-gray-400">Archive Folders</div>
+                        <div id="archive-folders-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"></div>
+                    </div>
                     <div id="filesPanel" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 mt-6 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <div>
@@ -520,11 +524,117 @@ $conn->close();
                 }
             });
         }
+        (function(){
+            var grid = document.getElementById('archive-folders-grid');
+            if (!grid) return;
+            fetch('archives_api.php?action=list_folders').then(function(r){ return r.json(); }).then(function(d){
+                var folders = (d && d.success) ? (d.folders || []) : [];
+                var html = folders.map(function(f){
+                    return '<button type="button" data-id="'+String(f.id)+'" data-name="'+String(f.name)+'" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 text-left hover:shadow-xl hover:scale-[1.02] transition-all group">'
+                         + '<div class="flex items-center space-x-3"><svg class="w-9 h-9 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>'
+                         + '<div><div class="font-light text-sm md:text-base tracking-tight">'+String(f.name)+'</div>'
+                         + '<div class="text-xs text-gray-500">Archive folder</div></div></div></button>';
+                }).join('');
+                grid.innerHTML = html;
+                Array.prototype.forEach.call(grid.querySelectorAll('button[data-id]'), function(btn){
+                    btn.addEventListener('click', function(){
+                        var folder = { id: parseInt(btn.getAttribute('data-id'),10), name: btn.getAttribute('data-name') };
+                        viewArchiveFolder(folder);
+                    });
+                });
+            }).catch(function(){});
+        })();
         function clearFolder() {
             var panel = document.getElementById('filesPanel');
             var list = document.getElementById('filesPanelList');
             list.innerHTML = '';
             panel.classList.add('hidden');
+        }
+        function viewArchiveFolder(folder) {
+            var panel = document.getElementById('filesPanel');
+            var title = document.getElementById('filesPanelTitle');
+            var meta = document.getElementById('filesPanelMeta');
+            var list = document.getElementById('filesPanelList');
+            title.textContent = folder.name;
+            list.innerHTML = '<div class="text-center py-4 text-gray-500">Loading files...</div>';
+            panel.classList.remove('hidden');
+            fetch('archives_api.php?action=get_files&folder_id=' + encodeURIComponent(folder.id))
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                var files = (d && d.success) ? (d.files || []) : [];
+                meta.textContent = files.length ? (files.length + ' files') : 'No files';
+                list.innerHTML = '';
+                if (!files.length) {
+                    var empty = document.createElement('div');
+                    empty.className = 'text-sm text-gray-500 dark:text-gray-400 text-center py-4';
+                    empty.textContent = 'No files found';
+                    list.appendChild(empty);
+                } else {
+                    files.forEach(function(f){
+                        var row = document.createElement('div');
+                        row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
+                        var left = document.createElement('div');
+                        left.className = 'min-w-0';
+                        var titleEl = document.createElement('div');
+                        titleEl.className = 'font-medium text-gray-800 dark:text-white truncate';
+                        titleEl.textContent = f.title;
+                        var metaEl = document.createElement('div');
+                        metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
+                        var badge = document.createElement('span');
+                        badge.className = 'px-2 py-0.5 rounded text-[11px] bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
+                        badge.textContent = 'Archive';
+                        var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
+                        var dateEl = document.createElement('span'); dateEl.textContent = (f.created_at || '');
+                        var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
+                        var verEl = document.createElement('span'); verEl.textContent = 'v' + String(f.version || 1);
+                        metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(verEl);
+                        left.appendChild(titleEl); left.appendChild(metaEl);
+                        var btn = document.createElement('button');
+                        btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
+                        var countSpan = document.createElement('span');
+                        countSpan.className = 'ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full';
+                        countSpan.textContent = '…';
+                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span>';
+                        btn.appendChild(countSpan);
+                        btn.addEventListener('click', function(){
+                            openArchiveVersionHistory(f);
+                        });
+                        row.appendChild(left);
+                        row.appendChild(btn);
+                        list.appendChild(row);
+                        fetch('archives_api.php?action=get_versions&id=' + encodeURIComponent(f.id))
+                            .then(function(r){ return r.json(); })
+                            .then(function(d){ countSpan.textContent = (d && d.success && d.versions) ? String(d.versions.length) : '0'; })
+                            .catch(function(){ countSpan.textContent = '0'; });
+                    });
+                }
+            });
+        }
+        function openArchiveVersionHistory(file) {
+            var list = document.getElementById('vm-list');
+            var header = document.getElementById('vm-title');
+            header.textContent = 'Version History — ' + (file && file.title ? file.title : 'File');
+            list.innerHTML = '<div class="text-center py-4">Loading...</div>';
+            fetch('archives_api.php?action=get_versions&id=' + (file && file.id ? file.id : ''))
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d && d.success) {
+                    if (!d.versions || d.versions.length === 0) {
+                        list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
+                    } else {
+                        list.innerHTML = d.versions.map(function(v){
+                            return '<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600">'
+                                 + '<div><div class="font-medium text-gray-800 dark:text-white">Version ' + String(v.version) + '</div>'
+                                 + '<div class="text-xs text-gray-500 dark:text-gray-400">' + (v.created_at || '') + '</div></div>'
+                                 + '<div class="flex space-x-2"><a href="#" onclick="window.open(\'' + encodeURI(file.file_path) + '\', \'_blank\')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Open</a></div>'
+                                 + '</div>';
+                        }).join('');
+                    }
+                } else {
+                    list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                }
+            });
+            document.getElementById('versionModal').classList.remove('hidden');
         }
         function openVersionHistory(record) {
             var list = document.getElementById('vm-list');
