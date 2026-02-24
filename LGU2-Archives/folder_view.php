@@ -90,70 +90,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if (move_uploaded_file($file['tmp_name'], $file_path)) {
-<<<<<<< HEAD
                 $final_name = basename($file_path);
                 $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
                 $stmt->bind_param("iss", $current_folder_id, $final_name, $file_path);
-=======
-                $conn->query("CREATE TABLE IF NOT EXISTS archive_files (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    folder_id INT NOT NULL,
-                    name VARCHAR(255) NOT NULL,
-                    file_path VARCHAR(1024) NOT NULL,
-                    version INT DEFAULT 1,
-                    parent_version_id INT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )");
-                $colV = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'version'");
-                if ($colV && $colV->num_rows === 0) { $conn->query("ALTER TABLE archive_files ADD COLUMN version INT DEFAULT 1"); }
-                $colP = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'parent_version_id'");
-                if ($colP && $colP->num_rows === 0) { $conn->query("ALTER TABLE archive_files ADD COLUMN parent_version_id INT NULL"); }
-                $version = 1;
-                $parent_version_id = NULL;
-                if ($st = $conn->prepare("SELECT id, parent_version_id, version FROM archive_files WHERE folder_id = ? AND name = ? ORDER BY id DESC LIMIT 1")) {
-                    $st->bind_param("is", $current_folder_id, $name);
-                    $st->execute();
-                    $r = $st->get_result();
-                    if ($r && $r->num_rows) {
-                        $ex = $r->fetch_assoc();
-                        $root = $ex['parent_version_id'] ? (int)$ex['parent_version_id'] : (int)$ex['id'];
-                        if ($st2 = $conn->prepare("SELECT MAX(version) AS mv FROM archive_files WHERE id = ? OR parent_version_id = ?")) {
-                            $st2->bind_param("ii", $root, $root);
-                            $st2->execute();
-                            $rs2 = $st2->get_result();
-                            $mv = $rs2 && $rs2->num_rows ? (int)($rs2->fetch_assoc()['mv'] ?? 1) : 1;
-                            $st2->close();
-                            $version = $mv + 1;
-                            $parent_version_id = $root;
-                        }
-                    }
-                    $st->close();
-                }
-                $hasVersionCols = ($conn->query("SHOW COLUMNS FROM archive_files LIKE 'version'")->num_rows > 0);
-                if ($hasVersionCols) {
-                    $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, version, parent_version_id) VALUES (?, ?, ?, ?, ?)");
-                    $stmt->bind_param("issii", $current_folder_id, $name, $file_path, $version, $parent_version_id);
-                } else {
-                    $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
-                    $stmt->bind_param("iss", $current_folder_id, $name, $file_path);
-                }
->>>>>>> dc80a92cee3d9043a78cb022f0fcfb8f99576d73
                 if ($stmt->execute()) {
                     echo json_encode([
                         'success' => true, 
                         'file' => [
                             'id' => $conn->insert_id, 
-<<<<<<< HEAD
                             'name' => $final_name, 
                             'created_at' => date('Y-m-d H:i:s')
-=======
-                            'name' => $name, 
-                            'created_at' => date('Y-m-d H:i:s'),
-                            'folder_id' => $current_folder_id,
-                            'file_path' => $file_path,
-                            'version' => $version,
-                            'parent_version_id' => $parent_version_id
->>>>>>> dc80a92cee3d9043a78cb022f0fcfb8f99576d73
                         ]
                     ]);
                 } else {
