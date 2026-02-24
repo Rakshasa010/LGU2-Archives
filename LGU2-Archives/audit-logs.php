@@ -17,6 +17,8 @@
     }
 
     require 'authdatabase.php';
+    date_default_timezone_set('Asia/Manila');
+    $conn->query("SET time_zone = '+08:00'");
     $user_id = $_SESSION['user_id'];
     $user_data = null;
     $stmt = $conn->prepare("SELECT full_name, profile_picture, role FROM users WHERE id = ?");
@@ -40,7 +42,7 @@
 
     // Load notifications from DB
     $notifications = [];
-    if ($res = $conn->query("SELECT id, time, date, content, about, status FROM notifications ORDER BY date DESC, id DESC")) {
+    if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
             $notifications[] = $row;
         }
@@ -400,8 +402,19 @@
                                             <?php $isSelected = ($selectedId !== null && $selectedId === (int)$note['id']); ?>
                                             <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isSelected ? 'highlight' : ''; ?> bg-white dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                                                 <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo (int)$note['id']; ?></td>
-                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo htmlspecialchars($note['time']); ?></td>
-                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo htmlspecialchars($note['date']); ?></td>
+                                                <td class="px-3 py-3 text-sm">
+                                                    <?php
+                                                    $createdTs = isset($note['created_at']) ? strtotime($note['created_at']) : null;
+                                                    $dispTime = $createdTs ? date('h:i A', $createdTs) : ($note['time'] ?? '');
+                                                    $dispDate = $createdTs ? date('Y-m-d', $createdTs) : ($note['date'] ?? '');
+                                                    $ms = $createdTs ? ($createdTs * 1000) : 0;
+                                                    ?>
+                                                    <span class="note-time" data-ts="<?php echo (int)$ms; ?>" data-base="<?php echo htmlspecialchars($dispTime); ?>" title="Created: <?php echo htmlspecialchars($note['created_at'] ?? $dispDate); ?> • Status: <?php echo htmlspecialchars($note['status'] ?? ''); ?>">
+                                                        <?php echo htmlspecialchars($dispTime); ?>
+                                                        <span class="text-gray-500"></span>
+                                                    </span>
+                                                </td>
+                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo htmlspecialchars($dispDate); ?></td>
                                                 <td class="px-3 py-3 text-sm">
                                                     <?php if (!empty($note['link'])): ?>
                                                         <a href="<?php echo htmlspecialchars($note['link']); ?>" class="text-gray-800 dark:text-slate-100 hover:underline block"><?php echo htmlspecialchars($note['content']); ?></a>

@@ -750,15 +750,33 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </div>
 </div>
-        <div id="restore-confirm-modal" class="hidden fixed inset-0 z-50">
-            <div id="restore-confirm-backdrop" class="absolute inset-0 bg-black/50"></div>
+        <div id="restore-modal" class="hidden fixed inset-0 z-50">
+            <div id="restore-backdrop" class="absolute inset-0 bg-black/50"></div>
             <div class="relative z-10 flex min-h-full items-center justify-center p-4">
-                <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
-                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Confirm Restore</div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">This will restore the latest backup and may overwrite current data.</div>
-                    <div class="mt-6 flex justify-end gap-2">
-                        <button id="restore-cancel-btn" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                        <button id="restore-confirm-btn" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Restore</button>
+                <div class="w-full max-w-xl rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl">
+                    <div class="p-6">
+                        <div class="text-lg font-semibold text-gray-800 dark:text-gray-100">Restore from File</div>
+                        <div id="restore-dropzone" class="mt-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-700/30 p-8 flex flex-col items-center justify-center text-center">
+                            <i class="bi bi-cloud-arrow-down text-3xl text-red-600 dark:text-red-400 mb-2"></i>
+                            <div class="text-sm text-gray-700 dark:text-gray-300">Drag and drop backup file here</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
+                            <button id="restore-browse-btn" type="button" class="mt-3 px-3 py-1.5 rounded-md bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-gray-200 text-xs font-semibold hover:bg-gray-100 dark:hover:bg-slate-600">Browse</button>
+                            <input id="restore-file-input" type="file" class="hidden" />
+                        </div>
+                        <div id="restore-file-name" class="mt-2 text-xs text-gray-600 dark:text-gray-400 hidden"></div>
+                        <div id="restore-skeleton" class="hidden mt-6 space-y-3">
+                            <div class="animate-pulse flex items-center gap-3">
+                                <div class="w-8 h-8 bg-gray-200 dark:bg-slate-700 rounded-full"></div>
+                                <div class="flex-1 h-3 bg-gray-200 dark:bg-slate-700 rounded"></div>
+                            </div>
+                            <div class="animate-pulse h-3 bg-gray-200 dark:bg-slate-700 rounded"></div>
+                            <div class="animate-pulse h-3 bg-gray-200 dark:bg-slate-700 rounded w-5/6"></div>
+                            <div class="animate-pulse h-3 bg-gray-200 dark:bg-slate-700 rounded w-2/3"></div>
+                        </div>
+                        <div class="mt-6 flex justify-end gap-2">
+                            <button id="restore-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                            <button id="restore-start" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold opacity-50 cursor-not-allowed" disabled>Restore</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -884,10 +902,15 @@ if (isset($_SESSION['user_id'])) {
         const cancelCreate = document.getElementById('cancel-create-folder');
         const confirmCreate = document.getElementById('confirm-create-folder');
         const createError = document.getElementById('folder-name-error');
-        const restoreModal = document.getElementById('restore-confirm-modal');
-        const restoreBackdrop = document.getElementById('restore-confirm-backdrop');
-        const restoreCancel = document.getElementById('restore-cancel-btn');
-        const restoreConfirm = document.getElementById('restore-confirm-btn');
+        const restoreModal = document.getElementById('restore-modal');
+        const restoreBackdrop = document.getElementById('restore-backdrop');
+        const restoreCancel = document.getElementById('restore-cancel');
+        const restoreStart = document.getElementById('restore-start');
+        const restoreDropzone = document.getElementById('restore-dropzone');
+        const restoreFileInput = document.getElementById('restore-file-input');
+        const restoreBrowseBtn = document.getElementById('restore-browse-btn');
+        const restoreFileName = document.getElementById('restore-file-name');
+        const restoreSkeleton = document.getElementById('restore-skeleton');
         const toastEl = document.getElementById('toast');
         const existingSlugs = new Set(
             Array.from(document.querySelectorAll('#archive-folders-grid [data-archive]'))
@@ -1098,9 +1121,7 @@ if (isset($_SESSION['user_id'])) {
                 deleteFolderError.classList.remove('hidden');
             }
         });
-        const closeRestoreModal = () => {
-            restoreModal?.classList.add('hidden');
-        };
+        const closeRestoreModal = () => { restoreModal?.classList.add('hidden'); };
         restoreBackdrop?.addEventListener('click', closeRestoreModal);
         restoreCancel?.addEventListener('click', closeRestoreModal);
         document.addEventListener('keydown', (e) => {
@@ -1132,18 +1153,58 @@ if (isset($_SESSION['user_id'])) {
                 showToast('System backup completed.', 'success');
             }, 900);
         });
-        restoreBtn?.addEventListener('click', () => {
-            if (restoreBtn.disabled) return;
+        function resetRestoreUI() {
+            if (restoreFileName) { restoreFileName.textContent = ''; restoreFileName.classList.add('hidden'); }
+            restoreStart?.setAttribute('disabled', 'true');
+            restoreStart?.classList.add('opacity-50', 'cursor-not-allowed');
+            restoreSkeleton?.classList.add('hidden');
+            restoreDropzone?.classList.remove('hidden');
+        }
+        function openRestoreModal() {
+            resetRestoreUI();
             restoreModal?.classList.remove('hidden');
+        }
+        restoreBtn?.addEventListener('click', () => { if (!restoreBtn?.disabled) openRestoreModal(); });
+        restoreBrowseBtn?.addEventListener('click', () => { restoreFileInput?.click(); });
+        function setSelectedFile(file) {
+            if (!file) return;
+            if (restoreFileName) {
+                restoreFileName.textContent = file.name;
+                restoreFileName.classList.remove('hidden');
+            }
+            restoreStart?.removeAttribute('disabled');
+            restoreStart?.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        restoreFileInput?.addEventListener('change', (e) => {
+            const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+            if (f) setSelectedFile(f);
         });
-        restoreConfirm?.addEventListener('click', () => {
-            closeRestoreModal();
+        restoreDropzone?.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            restoreDropzone.classList.add('ring-2', 'ring-red-400');
+        });
+        restoreDropzone?.addEventListener('dragleave', () => {
+            restoreDropzone.classList.remove('ring-2', 'ring-red-400');
+        });
+        restoreDropzone?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            restoreDropzone.classList.remove('ring-2', 'ring-red-400');
+            const files = e.dataTransfer?.files;
+            if (files && files[0]) setSelectedFile(files[0]);
+        });
+        restoreStart?.addEventListener('click', () => {
             if (!restoreBtn || restoreBtn.disabled) return;
+            restoreDropzone?.classList.add('hidden');
+            restoreSkeleton?.classList.remove('hidden');
+            setActionLoading(restoreStart, true, 'Restoring...');
             setActionLoading(restoreBtn, true, 'Restoring...');
             setTimeout(() => {
+                setActionLoading(restoreStart, false, '');
                 setActionLoading(restoreBtn, false, '');
+                closeRestoreModal();
                 showToast('System restore completed.', 'success');
-            }, 900);
+                resetRestoreUI();
+            }, 1200);
         });
         
         const profileBtn = document.getElementById('profile-btn');

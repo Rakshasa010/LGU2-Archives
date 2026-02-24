@@ -449,7 +449,7 @@ $conn->close();
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[101]" onclick="closeUploadModal()"></div>
         <div class="relative z-[102] bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
             <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Upload File</h3>
-           <form id="uploadForm" class="space-y-4" onsubmit="handleUpload(event); return false;">
+           <form id="uploadForm" class="space-y-4">
                     <input type="hidden" name="folder_id" value="<?php echo $current_folder_id ?? ''; ?>">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Name</label>
@@ -475,7 +475,7 @@ $conn->close();
                     <div id="upload-progress" class="hidden text-sm text-gray-600 dark:text-gray-400 py-1"></div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
-                        <button type="button" id="uploadBtn" onclick="handleUpload(event)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Upload</button>
+                        <button type="button" id="uploadBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Upload</button>
                     </div>
                 </form>
         </div>
@@ -634,18 +634,13 @@ $conn->close();
         }
         (function(){
             const createBtn = document.getElementById('create-subfolder-btn');
-            const uploadBtn = document.getElementById('upload-file-btn');
-            createBtn && createBtn.addEventListener('click', function(e){ e.preventDefault(); openCreateFolderModal(); });
-            uploadBtn && uploadBtn.addEventListener('click', function(e){ e.preventDefault(); openUploadModal(); });
-            document.addEventListener('click', function(e){
-                const t = e.target;
-                if (t && t.id === 'create-subfolder-btn') { e.preventDefault(); openCreateFolderModal(); }
-                if (t && t.id === 'upload-file-btn') { e.preventDefault(); openUploadModal(); }
-                const uploadTrigger = t && (t.id === 'uploadBtn' || (t.closest && t.closest('#uploadBtn')));
-                if (uploadTrigger) { e.preventDefault(); handleUpload(e); }
-            });
+            const uploadBtnOpen = document.getElementById('upload-file-btn');
             const uploadForm = document.getElementById('uploadForm');
+            const uploadBtn = document.getElementById('uploadBtn');
+            createBtn && createBtn.addEventListener('click', function(e){ e.preventDefault(); openCreateFolderModal(); });
+            uploadBtnOpen && uploadBtnOpen.addEventListener('click', function(e){ e.preventDefault(); openUploadModal(); });
             uploadForm && uploadForm.addEventListener('submit', function(e){ e.preventDefault(); handleUpload(e); });
+            uploadBtn && uploadBtn.addEventListener('click', function(e){ e.preventDefault(); handleUpload(e); });
         })();
 
         let pendingDuplicateResolver = null;
@@ -730,16 +725,21 @@ $conn->close();
             }
         }
 
+        let isUploading = false;
         async function handleUpload(e) {
             e.preventDefault();
+            if (isUploading) return;
+            isUploading = true;
             const fileInput = document.getElementById('fileInput');
             if (!fileInput.files.length) {
                 openNotification('Please select a file to upload.', 'error');
                 try { fileInput.focus(); fileInput.click(); } catch(_) {}
+                isUploading = false;
                 return;
             }
             if (fileInput.files.length > 3) {
                 openNotification('Please select up to 3 files.', 'error');
+                isUploading = false;
                 return;
             }
 
@@ -837,13 +837,8 @@ $conn->close();
                 openNotification('Failed to upload files', 'error');
                 if (progress) progress.classList.add('hidden');
             }
+            isUploading = false;
         }
-        (function(){
-            const form = document.getElementById('uploadForm');
-            const btn = document.getElementById('uploadBtn');
-            if (form) form.addEventListener('submit', function(e) { e.preventDefault(); handleUpload(e); });
-            if (btn) btn.addEventListener('click', function(e) { e.preventDefault(); handleUpload(e); });
-        })();
 
         function escapeHtml(text) {
             if (!text) return text;

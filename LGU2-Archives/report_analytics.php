@@ -93,6 +93,7 @@ $stats['downloads_by_type'] = [];
 $stats['downloads_by_format'] = [];
 $stats['recent_activity'] = [];
 $stats['recent_downloads'] = []; // legacy fallback table
+$stats['has_user_attr'] = false;
 
 $ae_count = $conn->query("SELECT COUNT(*) AS cnt FROM analytics_events WHERE $dl_where");
 if ($ae_count && ($row = $ae_count->fetch_assoc())) {
@@ -110,12 +111,24 @@ if ($ae_count && ($row = $ae_count->fetch_assoc())) {
                                   GROUP BY COALESCE(download_format,'unknown')");
     if ($ae_by_format) while ($r = $ae_by_format->fetch_assoc()) $stats['downloads_by_format'][strtoupper($r['k'])] = (int)$r['cnt'];
 
-    $ae_recent = $conn->query("SELECT event_type, record_title, record_type, download_format, bytes, created_at
-                               FROM analytics_events
-                               WHERE $act_where
-                               ORDER BY created_at DESC
-                               LIMIT 15");
-    if ($ae_recent) while ($r = $ae_recent->fetch_assoc()) $stats['recent_activity'][] = $r;
+    $col = $conn->query("SHOW COLUMNS FROM analytics_events LIKE 'user_id'");
+    if ($col && $col->num_rows > 0) {
+        $stats['has_user_attr'] = true;
+        $ae_recent = $conn->query("SELECT ae.event_type, ae.record_title, ae.record_type, ae.download_format, ae.bytes, ae.created_at, ae.user_id, u.full_name AS user_name
+                                   FROM analytics_events ae
+                                   LEFT JOIN users u ON u.id = ae.user_id
+                                   WHERE $act_where
+                                   ORDER BY ae.created_at DESC
+                                   LIMIT 15");
+        if ($ae_recent) while ($r = $ae_recent->fetch_assoc()) $stats['recent_activity'][] = $r;
+    } else {
+        $ae_recent = $conn->query("SELECT event_type, record_title, record_type, download_format, bytes, created_at
+                                   FROM analytics_events
+                                   WHERE $act_where
+                                   ORDER BY created_at DESC
+                                   LIMIT 15");
+        if ($ae_recent) while ($r = $ae_recent->fetch_assoc()) $stats['recent_activity'][] = $r;
+    }
 } else {
     // Legacy fallback: counts "records that have been accessed at least once"
     $result = $conn->query("SELECT COUNT(*) as downloads FROM legislative_records WHERE last_accessed IS NOT NULL");
@@ -207,6 +220,32 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     fclose($out);
     exit();
 }
+
+// Time series data (last 30 days)
+$days = [];
+for ($i = 29; $i >= 0; $i--) {
+    $d = date('Y-m-d', strtotime("-$i days"));
+    $days[$d] = 0;
+}
+$series_downloads = $days;
+$series_records = $days;
+$q_dl_series = $conn->query("SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM analytics_events WHERE event_type='download' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) GROUP BY DATE(created_at) ORDER BY d");
+if ($q_dl_series) {
+    while ($r = $q_dl_series->fetch_assoc()) {
+        $key = $r['d'];
+        if (isset($series_downloads[$key])) $series_downloads[$key] = (int)$r['cnt'];
+    }
+}
+$q_rec_series = $conn->query("SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM legislative_records WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) GROUP BY DATE(created_at) ORDER BY d");
+if ($q_rec_series) {
+    while ($r = $q_rec_series->fetch_assoc()) {
+        $key = $r['d'];
+        if (isset($series_records[$key])) $series_records[$key] = (int)$r['cnt'];
+    }
+}
+$series_labels = array_keys($days);
+$series_downloads_values = array_values($series_downloads);
+$series_records_values = array_values($series_records);
 
 ?>
 <!DOCTYPE html>
@@ -626,6 +665,27 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads Over Time (30 days)</h3>
+                            </div>
+                            <div id="sk-downloads-time" class="skeleton mb-2">
+                                <div class="skeleton-block"></div>
+                            </div>
+                            <canvas id="downloadsTimeChart" height="180"></canvas>
+                        </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Over Time (30 days)</h3>
+                            </div>
+                            <div id="sk-records-time" class="skeleton mb-2">
+                                <div class="skeleton-block"></div>
+                            </div>
+                            <canvas id="recordsTimeChart" height="180"></canvas>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
                             <div class="flex items-center justify-between mb-3">
@@ -635,53 +695,61 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                             <div id="sk-downloads-format" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
                             </div>
-                            <canvas id="downloadsFormatChart" height="180"></canvas>
+                            <canvas id="downloadsFormatChart" height="<?php echo $is_admin ? '180' : '140'; ?>"></canvas>
                         </div>
-                        <div class="lg:col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</h3>
-                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['recent_activity'] ?? []); ?></span>
-                            </div>
-                            <div id="sk-recent-activity" class="skeleton space-y-2 mb-2">
-                                <div class="skeleton-line w-2/3"></div>
-                                <div class="skeleton-line w-full"></div>
-                                <div class="skeleton-line w-5/6"></div>
-                                <div class="skeleton-line w-full"></div>
-                                <div class="skeleton-line w-4/5"></div>
-                                <div class="skeleton-line w-full"></div>
-                            </div>
-                            <?php if (!empty($stats['recent_activity'])): ?>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left text-sm">
-                                        <thead class="text-xs text-gray-500">
-                                            <tr><th class="py-2 pr-3">When</th><th class="py-2 pr-3">Event</th><th class="py-2 pr-3">Title</th><th class="py-2 pr-3">Type</th><th class="py-2 pr-3">Format</th></tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
-                                        <?php foreach ($stats['recent_activity'] as $a): ?>
-                                            <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
-                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['created_at']); ?></td>
-                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['event_type']); ?></td>
-                                                <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
-                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
-                                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(strtoupper($a['download_format'] ?? '')); ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                        <?php if ($is_admin): ?>
+                            <div class="lg:col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</h3>
+                                    <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['recent_activity'] ?? []); ?></span>
                                 </div>
-                            <?php else: ?>
-                                <div class="text-sm text-gray-500">No tracked activity yet. Downloads will appear here after using the download modal.</div>
-                            <?php endif; ?>
-                        </div>
+                                <div id="sk-recent-activity" class="skeleton space-y-2 mb-2">
+                                    <div class="skeleton-line w-2/3"></div>
+                                    <div class="skeleton-line w-full"></div>
+                                    <div class="skeleton-line w-5/6"></div>
+                                    <div class="skeleton-line w-full"></div>
+                                    <div class="skeleton-line w-4/5"></div>
+                                    <div class="skeleton-line w-full"></div>
+                                </div>
+                                <?php if (!empty($stats['recent_activity'])): ?>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-sm">
+                                            <thead class="text-xs text-gray-500">
+                                                <tr>
+                                                    <th class="py-2 pr-3">When</th>
+                                                    <th class="py-2 pr-3">Event</th>
+                                                    <th class="py-2 pr-3">Title</th>
+                                                    <th class="py-2 pr-3">Type</th>
+                                                    <th class="py-2 pr-3">Format</th>
+                                                    <?php if ($stats['has_user_attr']): ?><th class="py-2 pr-3">By</th><?php endif; ?>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                            <?php foreach ($stats['recent_activity'] as $a): ?>
+                                                <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['created_at']); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['event_type']); ?></td>
+                                                    <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(strtoupper($a['download_format'] ?? '')); ?></td>
+                                                    <?php if ($stats['has_user_attr']): ?><td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(($a['user_name'] ?? '') ?: 'Unknown'); ?></td><?php endif; ?>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-sm text-gray-500">No tracked activity yet. Downloads will appear here after using the download modal.</div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                             <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recent Downloads</h3>
                             <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
-                                <?php if (empty($stats['recent_downloads'])): ?>
-                                    <div class="text-gray-500">This section is legacy-based. Use "Recent Activity" above for per-download events.</div>
-                                <?php else: ?>
+                                <?php if (!empty($stats['recent_downloads'])): ?>
                                     <table class="w-full text-left text-sm">
                                         <thead class="text-xs text-gray-500">
                                             <tr><th>Title</th><th>Type</th><th>Author</th><th>When</th></tr>
@@ -692,6 +760,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
+                                <?php elseif (!empty($stats['downloads_by_type'])): ?>
+                                    <ul class="list-disc pl-5">
+                                        <?php foreach ($stats['downloads_by_type'] as $type => $count): ?>
+                                            <li><?php echo htmlspecialchars($type); ?> — <?php echo (int)$count; ?> downloads</li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php else: ?>
+                                    <div class="text-gray-500">No downloads yet.</div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -863,6 +939,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         const byType = <?php echo json_encode($stats['by_type']); ?>;
         const downloadsByType = <?php echo json_encode($stats['downloads_by_type']); ?>;
         const downloadsByFormat = <?php echo json_encode($stats['downloads_by_format']); ?>;
+        const seriesLabels = <?php echo json_encode($series_labels); ?>;
+        const seriesDownloads = <?php echo json_encode($series_downloads_values); ?>;
+        const seriesRecords = <?php echo json_encode($series_records_values); ?>;
         function labelsAndData(obj) { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; }
         const rt = labelsAndData(byType);
         const dt = labelsAndData(downloadsByType);
@@ -875,6 +954,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         const downloadsFormatCtx = document.getElementById('downloadsFormatChart')?.getContext('2d');
         if (downloadsFormatCtx) { new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-downloads-format'); }
         hideSk('sk-recent-activity');
+        const downloadsTimeCtx = document.getElementById('downloadsTimeChart')?.getContext('2d');
+        if (downloadsTimeCtx) { new Chart(downloadsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Downloads', data: seriesDownloads, tension: 0.3, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', fill: true }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-downloads-time'); }
+        const recordsTimeCtx = document.getElementById('recordsTimeChart')?.getContext('2d');
+        if (recordsTimeCtx) { new Chart(recordsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-records-time'); }
         const applyBtn = document.getElementById('apply-filters');
         let filtersApplied = false;
         function updateApplyBtn() {

@@ -66,6 +66,18 @@
                             $error = "Your account is not active.";
                         }
                     } else {
+                            $conn->query("CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, time VARCHAR(20) NOT NULL, date DATE NOT NULL, content VARCHAR(255) NOT NULL, about VARCHAR(100) NOT NULL, status ENUM('unread','read') NOT NULL DEFAULT 'unread', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+                            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                            if ($nt) {
+                                $ntime = date('h:i A');
+                                $ndate = date('Y-m-d');
+                                $ncontent = "User login: " . $username;
+                                $nabout = "Login";
+                                $nstatus = "unread";
+                                $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                                $nt->execute();
+                                $nt->close();
+                            }
                         $_SESSION['user_id'] = $user['id'];
                         $_SESSION['last_activity'] = time();
                         if (isset($user['must_change_password']) && (int)$user['must_change_password'] === 1) {

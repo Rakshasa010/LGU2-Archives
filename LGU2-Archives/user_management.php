@@ -325,7 +325,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col md:ml-64 overflow-y-auto">
+        <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -339,10 +339,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
                             
-                            <!-- Logo (Mobile) -->
-                            <div class="mobile-only flex items-center ml-2">
-                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
-                            </div>
+                            
                         </div>
                         
                         
