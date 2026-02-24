@@ -62,15 +62,24 @@
     color: #e5e5e5 !important;
 }
 
-/* Sidebar scrollbars (desktop + mobile) */
 #mobile-sidebar nav,
 .sidebar nav {
-    scrollbar-width: thin;
+    scrollbar-width: none;
     scrollbar-color: rgba(255,255,255,0.35) transparent;
+}
+#mobile-sidebar nav:hover,
+.sidebar nav:hover {
+    scrollbar-width: thin;
 }
 #mobile-sidebar nav::-webkit-scrollbar,
 .sidebar nav::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+#mobile-sidebar nav:hover::-webkit-scrollbar,
+.sidebar nav:hover::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
 }
 #mobile-sidebar nav::-webkit-scrollbar-thumb,
 .sidebar nav::-webkit-scrollbar-thumb {
