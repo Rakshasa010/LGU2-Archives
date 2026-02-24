@@ -382,7 +382,7 @@ $conn->close();
     </div>
 
     <!-- Upload File Modal -->
-    <div id="uploadFileModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="uploadFileModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeUploadModal()"></div>
         <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
             <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Upload File</h3>
@@ -410,7 +410,7 @@ $conn->close();
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Upload</button>
+                        <button type="button" id="uploadBtn" onclick="handleUpload(event)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer">Upload</button>
                     </div>
                 </form>
         </div>
@@ -545,6 +545,7 @@ $conn->close();
         }
 
         function openUploadModal() {
+            try { closeSideViewer(); } catch(_) {}
             document.getElementById('uploadFileModal').classList.remove('hidden');
             setupDragAndDrop();
         }
@@ -664,7 +665,15 @@ $conn->close();
         }
         (function(){
             const form = document.getElementById('uploadForm');
+            const btn = document.getElementById('uploadBtn');
             if (form) { form.addEventListener('submit', handleUpload); }
+            if (btn) { btn.addEventListener('click', handleUpload); }
+            document.addEventListener('click', function(e){
+                const t = e.target;
+                if (t && (t.id === 'uploadBtn' || t.closest && t.closest('#uploadBtn'))) {
+                    handleUpload(e);
+                }
+            });
         })();
 
         function escapeHtml(text) {
