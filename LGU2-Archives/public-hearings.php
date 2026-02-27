@@ -150,10 +150,7 @@ $conn->close();
                 <span>Export</span>
             </a>
             <?php if (isset($is_admin) && $is_admin): ?>
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-trash mr-3 text-lg"></i>
-                <span>Recently Deleted</span>
-            </a>
+            <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
             <div class="mt-4 pt-4 border-t border-red-700/50">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
@@ -288,11 +285,7 @@ $conn->close();
                                 <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
                                     <i class="bi bi-download"></i> <span>Download</span>
                                 </button>
-                                <?php if (isset($is_admin) && $is_admin): ?>
-                                <button onclick="openDeleteConfirm(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>')" class="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <?php endif; ?>
+                                
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -342,29 +335,7 @@ $conn->close();
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('deleteModal')"></div>
-            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700 transform transition-all scale-100 opacity-100 duration-300">
-                <div class="mb-6 text-center">
-                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4 animate-bounce">
-                        <i class="bi bi-trash text-3xl text-red-600 dark:text-red-400"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Delete File?</h3>
-                    <p class="text-gray-500 dark:text-gray-400">Are you sure you want to delete <span id="deleteFileName" class="font-semibold text-gray-800 dark:text-gray-200"></span>?</p>
-                </div>
-                <div class="flex justify-center space-x-4">
-                    <button type="button" onclick="closeModal('deleteModal')" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="confirmDelete()" class="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-lg hover:shadow-red-500/30 transition-all transform hover:-translate-y-0.5 font-medium flex items-center">
-                        <i class="bi bi-trash mr-2"></i>
-                        Delete File
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- Notification Modal -->
     <div id="notificationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -462,33 +433,7 @@ $conn->close();
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function uploadFile() { openModal('uploadModal'); }
         
-        // Delete
-        let deleteId = null;
-        function openDeleteConfirm(id, title) {
-            deleteId = id;
-            document.getElementById('deleteFileName').textContent = title;
-            openModal('deleteModal');
-        }
-        function confirmDelete() {
-            closeModal('deleteModal');
-            if (!deleteId) return;
-            const fd = new FormData();
-            fd.append('action', 'delete_record');
-            fd.append('id', deleteId);
-            fetch('legislative_api.php', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(d => {
-                    if (d && d.success) {
-                        const el = document.querySelector(`[data-id="${deleteId}"]`);
-                        if (el) el.remove();
-                        openNotification('The file has been deleted.', 'success');
-                    } else {
-                        openNotification(d.message || 'Failed to delete file.', 'error');
-                    }
-                })
-                .catch(() => openNotification('Failed to delete file.', 'error'));
-            deleteId = null;
-        }
+        
         function openNotification(message = 'Done', type = 'success', titleText) {
             const modal = document.getElementById('notificationModal');
             const title = document.getElementById('notificationTitle');

@@ -88,6 +88,12 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
             .replace(/'/g, "&#039;");
     }
 
+    function fmtBytes(b){
+        if (!b || b <= 0) return '';
+        var u = ['B','KB','MB','GB','TB'];
+        var e = Math.floor(Math.log(b)/Math.log(1024));
+        return (b/Math.pow(1024, e)).toFixed(2)+' '+u[e];
+    }
     function renderLatest() {
         const container = document.getElementById('latestFilesList');
         if (!container) return;
@@ -100,11 +106,14 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                         let icon = '';
                         let subtext = '';
                         let downloadAction = '';
+                        let previewAction = '';
+                        let size = file.size_bytes ? fmtBytes(file.size_bytes) : '';
 
                         if (file.source === 'archive') {
                             icon = '<i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>';
-                            subtext = `In: ${escapeHtml(file.folder_name)}`;
+                            subtext = `In: ${escapeHtml(file.folder_name)}${size ? ' • '+size : ''}`;
                             downloadAction = `<a href="${file.download_url}" target="_blank" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></a>`;
+                            previewAction = file.preview_url ? `<a href="${file.preview_url}" target="_blank" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview"><i class="bi bi-eye"></i></a>` : '';
                             
                             // Make the whole card clickable for archive files
                             return `
@@ -117,7 +126,7 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                                     </div>
                                 </div>
                                 <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
-                                    ${downloadAction}
+                                    ${previewAction}${downloadAction}
                                 </div>
                             </div>`;
                         } else {
@@ -144,11 +153,12 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                             
                             const colorClass = typeIcons[file.type] || 'text-gray-600';
                             icon = `<i class="bi bi-file-text ${colorClass} text-2xl"></i>`;
-                            subtext = `${escapeHtml(file.type)} • ${escapeHtml(file.author)}`;
+                            subtext = `${escapeHtml(file.type)} • ${escapeHtml(file.author)}${size ? ' • '+size : ''}`;
                             
                             // Construct download URL for legislative
                             const dlUrl = `download.php?${file.download_params}`;
                             downloadAction = `<button onclick="window.open('${dlUrl}', 'downloadPopup', 'width=520,height=520')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></button>`;
+                            previewAction = file.preview_url ? `<a href="${file.preview_url}" target="_blank" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview"><i class="bi bi-eye"></i></a>` : '';
                             
                             // Make the whole card clickable for legislative files
                             return `
@@ -161,7 +171,7 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                                     </div>
                                 </div>
                                 <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
-                                    ${downloadAction}
+                                    ${previewAction}${downloadAction}
                                 </div>
                             </div>`;
                         }
@@ -253,8 +263,37 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     }
 })();
 
-// Notifications: fetch latest and unread count
+// Notifications: fetch latest and unread count (grouped) + mark all read
 (function(){
+    function groupItems(items) {
+        var groups = { Security: [], Export: [], Activity: [], Other: [] };
+        (items||[]).forEach(function(n){
+            var key = String(n.about || '').toLowerCase();
+            if (key.indexOf('security') !== -1) groups.Security.push(n);
+            else if (key.indexOf('export') !== -1) groups.Export.push(n);
+            else if (key.indexOf('login') !== -1 || key.indexOf('download') !== -1 || key.indexOf('activity') !== -1) groups.Activity.push(n);
+            else groups.Other.push(n);
+        });
+        return groups;
+    }
+    function renderGroup(title, items){
+        if (!items.length) return '';
+        var section = '<div class="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-2 mb-1 px-1">'+title+'</div>';
+        section += items.map(renderItem).join('');
+        return section;
+    }
+    function renderItem(n){
+        var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+        var badge = (n.status === 'unread') ? ' ring-2 ring-red-200' : '';
+        var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+        return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+               '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+               '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+               '<div class="flex-1 min-w-0">'+
+               '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+               '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+               '</div></a>';
+    }
     function renderNotifList(items){
         var container = document.getElementById('notif-list');
         if (!container) return;
@@ -262,19 +301,13 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
             container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
             return;
         }
-        var html = items.map(function(n){
-            var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
-            var badge = '';
-            var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
-            if (n.status === 'unread') badge = ' ring-2 ring-red-200';
-            return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
-                   '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
-                   '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
-                   '<div class="flex-1 min-w-0">'+
-                   '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
-                   '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
-                   '</div></a>';
-        }).join('');
+        var g = groupItems(items);
+        var html = '';
+        html += renderGroup('Security', g.Security);
+        html += renderGroup('Export', g.Export);
+        html += renderGroup('Activity', g.Activity);
+        html += renderGroup('Other', g.Other);
+        html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
         container.innerHTML = html;
         container.querySelectorAll('a[data-id]').forEach(function(a){
             a.addEventListener('click', function(){
@@ -291,6 +324,26 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                 if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
             });
         });
+        var btnAll = document.getElementById('mark-all-read');
+        if (btnAll) {
+            btnAll.addEventListener('click', function(){
+                var anchors = Array.from(container.querySelectorAll('a[data-id]'));
+                anchors.forEach(function(a){
+                    var id = a.getAttribute('data-id');
+                    try {
+                        fetch('notifications_update.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'id='+encodeURIComponent(id)+'&status=read'
+                        }).then(function(){});
+                    } catch(e){}
+                    a.classList.remove('ring-2','ring-red-200');
+                    var p = a.querySelector('p.text-sm');
+                    if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                });
+                notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+            });
+        }
     }
     function escapeHtml(s){
         if (typeof s !== 'string') return '';
@@ -319,4 +372,69 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
         refresh();
     }
     window.addEventListener('focus', refresh);
+})();
+
+// Keyboard shortcuts
+(function(){
+    var buffer = [];
+    function focusSearch(){
+        var el = document.getElementById('legislativeSearchInput');
+        if (el) { el.focus(); el.select && el.select(); }
+    }
+    function handle(e){
+        var tag = (e.target && (e.target.tagName||'')).toLowerCase();
+        var inInput = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+        if (!inInput && e.key === '/') {
+            e.preventDefault();
+            focusSearch();
+            return;
+        }
+        buffer.push(e.key.toLowerCase());
+        if (buffer.length > 2) buffer.shift();
+        if (!inInput && buffer.join(' ') === 'g r') {
+            window.location.href = 'report_analytics.php';
+        }
+    }
+    document.addEventListener('keydown', handle);
+})();
+
+// Layout and compact mode toggles
+(function(){
+    var grid = document.getElementById('foldersGrid');
+    function applyLayout(mode){
+        if (!grid) return;
+        var isList = mode === 'list';
+        grid.classList.toggle('sm:grid-cols-2', !isList);
+        grid.classList.toggle('lg:grid-cols-4', !isList);
+    }
+    function loadLayout(){
+        var m = localStorage.getItem('dashboardLayout') || 'grid';
+        applyLayout(m);
+    }
+    function toggleLayout(){
+        var m = localStorage.getItem('dashboardLayout') || 'grid';
+        var next = m === 'grid' ? 'list' : 'grid';
+        localStorage.setItem('dashboardLayout', next);
+        applyLayout(next);
+    }
+    var layoutBtn = document.getElementById('layoutToggle');
+    layoutBtn && layoutBtn.addEventListener('click', toggleLayout);
+    loadLayout();
+
+    function applyCompact(flag){
+        document.body.classList.toggle('compact', !!flag);
+    }
+    function loadCompact(){
+        var c = localStorage.getItem('compactMode') === 'true';
+        applyCompact(c);
+    }
+    function toggleCompact(){
+        var c = localStorage.getItem('compactMode') === 'true';
+        var next = !c;
+        localStorage.setItem('compactMode', String(next));
+        applyCompact(next);
+    }
+    var compactBtn = document.getElementById('compactToggle');
+    compactBtn && compactBtn.addEventListener('click', toggleCompact);
+    loadCompact();
 })();

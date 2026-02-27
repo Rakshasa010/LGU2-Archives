@@ -21,8 +21,8 @@ try {
 
     // 1. Fetch from archive_files (Dynamic folders)
     // We join with archive_folders to get the folder name
-    $sql1 = "SELECT f.id, f.name, f.created_at, 'Archive File' as type, 'archive' as source, f.folder_id, fo.name as folder_name 
-             FROM archive_files f 
+    $sql1 = "SELECT f.id, f.name, f.file_path, f.created_at, 'Archive File' as type, 'archive' as source, f.folder_id, fo.name as folder_name 
+             FROM archive_files f
              JOIN archive_folders fo ON f.folder_id = fo.id
              WHERE f.created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
              ORDER BY f.created_at DESC LIMIT ?";
@@ -32,6 +32,18 @@ try {
         if ($stmt1->execute()) {
             $res1 = $stmt1->get_result();
             while ($row = $res1->fetch_assoc()) {
+                $sizeBytes = 0;
+                $p = $row['file_path'];
+                if ($p && file_exists($p)) {
+                    $size = @filesize($p);
+                    if ($size !== false) $sizeBytes = (int)$size;
+                } else {
+                    $abs = __DIR__ . '/' . $p;
+                    if ($p && file_exists($abs)) {
+                        $size = @filesize($abs);
+                        if ($size !== false) $sizeBytes = (int)$size;
+                    }
+                }
                 $files[] = [
                     'id' => $row['id'],
                     'title' => $row['name'],
@@ -41,7 +53,9 @@ try {
                     'source' => 'archive',
                     'folder_id' => $row['folder_id'],
                     'folder_name' => $row['folder_name'],
-                    'download_url' => 'download_file.php?id=' . $row['id']
+                    'download_url' => 'download_file.php?id=' . $row['id'],
+                    'preview_url' => 'download_file.php?id=' . $row['id'] . '&view=1',
+                    'size_bytes' => $sizeBytes
                 ];
             }
         }
@@ -49,7 +63,7 @@ try {
     }
 
     // 2. Fetch from legislative_records (Ordinances, etc.)
-    $sql2 = "SELECT id, title, type, month, year, author, created_at 
+    $sql2 = "SELECT id, title, type, month, year, author, file_path, created_at 
              FROM legislative_records 
              WHERE created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
              ORDER BY created_at DESC LIMIT ?";
@@ -59,6 +73,26 @@ try {
         if ($stmt2->execute()) {
             $res2 = $stmt2->get_result();
             while ($row = $res2->fetch_assoc()) {
+                $sizeBytes = 0;
+                $p = $row['file_path'] ?? '';
+                if ($p && file_exists($p)) {
+                    $size = @filesize($p);
+                    if ($size !== false) $sizeBytes = (int)$size;
+                } else {
+                    $abs = __DIR__ . '/' . $p;
+                    if ($p && file_exists($abs)) {
+                        $size = @filesize($abs);
+                        if ($size !== false) $sizeBytes = (int)$size;
+                    }
+                }
+                $params = [
+                    'id' => $row['id'],
+                    'title' => $row['title'],
+                    'type' => $row['type'],
+                    'month' => $row['month'],
+                    'year' => $row['year'],
+                    'author' => $row['author']
+                ];
                 $files[] = [
                     'id' => $row['id'],
                     'title' => $row['title'],
@@ -67,14 +101,9 @@ try {
                     'date' => date('M j, Y', strtotime($row['created_at'])),
                     'source' => 'legislative',
                     'author' => $row['author'],
-                    'download_params' => http_build_query([
-                        'id' => $row['id'],
-                        'title' => $row['title'],
-                        'type' => $row['type'],
-                        'month' => $row['month'],
-                        'year' => $row['year'],
-                        'author' => $row['author']
-                    ])
+                    'download_params' => http_build_query($params),
+                    'preview_url' => 'download.php?action=view&' . http_build_query($params),
+                    'size_bytes' => $sizeBytes
                 ];
             }
         }

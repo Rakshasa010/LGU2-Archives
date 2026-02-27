@@ -17,6 +17,11 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">
+    <style>
+        .compact .p-6 { padding: 0.75rem; }
+        .compact .text-xl { font-size: 1.1rem; }
+        .compact .text-3xl { font-size: 1.5rem; }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
     <?php
@@ -107,10 +112,7 @@
             </a>
             
             <?php if (isset($user_data['role']) && strtolower($user_data['role']) === 'admin'): ?>
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-trash mr-3 text-lg"></i>
-                <span>Recently Deleted</span>
-            </a>
+            <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -195,10 +197,7 @@
                     </a>
 
                     <?php if (isset($user_data['role']) && strtolower($user_data['role']) === 'admin'): ?>
-                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-trash mr-3"></i>
-                        <span class="sidebar-text">Recently Deleted</span>
-                    </a>
+                    <a href="recent_deleted.php" class="hidden"></a>
                     <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -271,7 +270,6 @@
                                 <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
                             </div>
                         </div>
-                        
                         
                         <!-- Page Title & Breadcrumb -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
@@ -413,8 +411,362 @@
 
                         <!-- Recent Archives Section -->
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Storage Overview</h2>
+                            <?php
+                            require 'authdatabase.php';
+                            $totalBytes = 0;
+                            $fileCount = 0;
+                            $storageTop = [];
+                            if ($r = $conn->query("SELECT file_path FROM legislative_records WHERE file_path IS NOT NULL AND file_path <> ''")) {
+                                while ($row = $r->fetch_assoc()) {
+                                    $p = $row['file_path'];
+                                    if ($p && file_exists($p)) {
+                                        $fileCount++;
+                                        $size = @filesize($p);
+                                        if ($size !== false) {
+                                            $totalBytes += (int)$size;
+                                            $storageTop[] = ['path'=>$p,'size'=>(int)$size,'src'=>'Records'];
+                                        }
+                                    }
+                                }
+                            }
+                            if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+                                if ($r = $conn->query("SELECT name, file_path FROM archive_files WHERE file_path IS NOT NULL AND file_path <> ''")) {
+                                    while ($row = $r->fetch_assoc()) {
+                                        $p = $row['file_path'];
+                                        if ($p && file_exists($p)) {
+                                            $fileCount++;
+                                            $size = @filesize($p);
+                                            if ($size !== false) {
+                                                $totalBytes += (int)$size;
+                                                $storageTop[] = ['path'=>$p,'name'=>$row['name'],'size'=>(int)$size,'src'=>'Archive'];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            $capacityBytes = 50 * 1024 * 1024 * 1024;
+                            $pct = $capacityBytes > 0 ? min(100, round(($totalBytes / $capacityBytes) * 100, 1)) : 0;
+                            function fmt_bytes($b){ if($b<=0) return '0 B'; $u=['B','KB','MB','GB','TB']; $e=floor(log($b,1024)); return round($b/pow(1024,$e),2).' '.$u[$e]; }
+                            usort($storageTop, function($a,$b){ return ($b['size']??0) <=> ($a['size']??0); });
+                            $storageTop = array_slice($storageTop, 0, 15);
+                            ?>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">Used Storage</div>
+                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo fmt_bytes($totalBytes); ?></div>
+                                </div>
+                                <div class="p-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">Capacity</div>
+                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">50 GB</div>
+                                </div>
+                                <div class="p-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">Files Tracked</div>
+                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$fileCount; ?></div>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">Usage</span>
+                                    <span class="text-sm font-semibold text-gray-800 dark:text-gray-100"><?php echo $pct; ?>%</span>
+                                </div>
+                                <div id="storage-usage-bar" class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden cursor-pointer">
+                                    <div class="bg-gradient-to-r from-red-600 to-orange-500 h-3 rounded-full" style="width: <?php echo $pct; ?>%;"></div>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1"><?php echo fmt_bytes($totalBytes); ?> of 50 GB</div>
+                            </div>
+                        </div>
+                        <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">
+                            <div class="flex items-center justify-center min-h-screen px-4">
+                                <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+                                <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200 dark:border-slate-700">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="text-lg font-semibold text-gray-800 dark:text-gray-100">Storage Details</div>
+                                        <button id="storageDetailsClose" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button>
+                                    </div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Largest files</div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-sm">
+                                            <thead class="text-xs text-gray-500">
+                                                <tr><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Source</th><th class="py-2 pr-3">Size</th></tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                                <?php foreach ($storageTop as $it): ?>
+                                                <tr>
+                                                    <td class="py-2 pr-3 break-all"><?php echo htmlspecialchars($it['name'] ?? basename($it['path'])); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($it['src'] ?? ''); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo fmt_bytes($it['size'] ?? 0); ?></td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                                <?php if (empty($storageTop)): ?>
+                                                <tr><td colspan="3" class="py-3 text-gray-500">No files found</td></tr>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Analytics -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                            <?php
+                            require 'authdatabase.php';
+                            $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
+                            $fa_end = isset($_GET['end']) ? $_GET['end'] : null;
+                            $fa_type = isset($_GET['type']) ? $_GET['type'] : null;
+                            $f_from = null;
+                            $f_to = null;
+                            if ($fa_start) { $d = DateTime::createFromFormat('Y-m-d', $fa_start); if ($d) $f_from = $d->format('Y-m-d'); }
+                            if ($fa_end) { $d = DateTime::createFromFormat('Y-m-d', $fa_end); if ($d) $f_to = $d->format('Y-m-d'); }
+                            $where_rec = "1=1";
+                            if ($f_from) $where_rec .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                            if ($f_to) $where_rec .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                            if ($fa_type) $where_rec .= " AND type = '".$conn->real_escape_string($fa_type)."'";
+                            $where_dl = "event_type='download'";
+                            if ($f_from) $where_dl .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                            if ($f_to) $where_dl .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                            if ($fa_type) $where_dl .= " AND record_type = '".$conn->real_escape_string($fa_type)."'";
+                            $types_list = [];
+                            if ($r = $conn->query("SELECT DISTINCT type FROM legislative_records ORDER BY type")) {
+                                while ($row = $r->fetch_assoc()) { if ($row['type'] !== null && $row['type'] !== '') $types_list[] = $row['type']; }
+                            }
+                            $qa_total_records = 0;
+                            $qa_downloads = 0;
+                            $qa_by_type = [];
+                            if ($res = $conn->query("SELECT COUNT(*) AS t FROM legislative_records WHERE $where_rec")) {
+                                if ($row = $res->fetch_assoc()) $qa_total_records = (int)$row['t'];
+                            }
+                            if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
+                                if ($res = $conn->query("SELECT COUNT(*) AS c FROM analytics_events WHERE $where_dl")) {
+                                    if ($row = $res->fetch_assoc()) $qa_downloads = (int)$row['c'];
+                                }
+                            } else {
+                                $where_legacy = "last_accessed IS NOT NULL";
+                                if ($f_from) $where_legacy .= " AND last_accessed >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                                if ($f_to) $where_legacy .= " AND last_accessed <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                                if ($fa_type) $where_legacy .= " AND type = '".$conn->real_escape_string($fa_type)."'";
+                                if ($res = $conn->query("SELECT COUNT(*) AS c FROM legislative_records WHERE $where_legacy")) {
+                                    if ($row = $res->fetch_assoc()) $qa_downloads = (int)$row['c'];
+                                }
+                            }
+                            if ($res = $conn->query("SELECT type, COUNT(*) AS c FROM legislative_records WHERE $where_rec GROUP BY type")) {
+                                while ($row = $res->fetch_assoc()) $qa_by_type[$row['type']] = (int)$row['c'];
+                            }
+                            // Merge newest folders uploaded into record type counts
+                            if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
+                                $af_where = "1=1";
+                                if ($f_from) $af_where .= " AND f.created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                                if ($f_to) $af_where .= " AND f.created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                                $q = "SELECT fo.name AS folder_name, COUNT(f.id) AS cnt
+                                      FROM archive_files f
+                                      JOIN archive_folders fo ON fo.id = f.folder_id
+                                      WHERE $af_where
+                                      GROUP BY fo.id, fo.name";
+                                if ($r = $conn->query($q)) {
+                                    while ($row = $r->fetch_assoc()) {
+                                        $folder = strtolower($row['folder_name'] ?? '');
+                                        $count = (int)$row['cnt'];
+                                        $mapped = null;
+                                        if (strpos($folder, 'resolution') !== false) $mapped = 'Resolution';
+                                        elseif (strpos($folder, 'ordinance') !== false) $mapped = 'Ordinance';
+                                        elseif (strpos($folder, 'billing') !== false) $mapped = 'Billing';
+                                        elseif (strpos($folder, 'public hearing') !== false || strpos($folder, 'hearing') !== false) $mapped = 'Public Hearing';
+                                        elseif (strpos($folder, 'meeting') !== false || strpos($folder, 'session') !== false) $mapped = 'Meeting';
+                                        if ($mapped !== null) {
+                                            if ($fa_type && $fa_type !== $mapped) continue;
+                                            $qa_by_type[$mapped] = ($qa_by_type[$mapped] ?? 0) + $count;
+                                        }
+                                    }
+                                }
+                            }
+                            $days = [];
+                            for ($i = 13; $i >= 0; $i--) { $d = date('Y-m-d', strtotime("-$i days")); $days[$d] = 0; }
+                            $series_downloads = $days;
+                            $series_records = $days;
+                            $dl_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)";
+                            $rec_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)";
+                            if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
+                                $q = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM analytics_events WHERE $where_dl $dl_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                                if ($r = $conn->query($q)) {
+                                    while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_downloads[$k])) $series_downloads[$k] = (int)$row['c']; }
+                                }
+                            } else {
+                                $w = "last_accessed IS NOT NULL";
+                                if ($f_from) $w .= " AND last_accessed >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                                if ($f_to) $w .= " AND last_accessed <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                                if ($fa_type) $w .= " AND type = '".$conn->real_escape_string($fa_type)."'";
+                                $q = "SELECT DATE(last_accessed) AS d, COUNT(*) AS c FROM legislative_records WHERE $w $rec_limit_clause GROUP BY DATE(last_accessed) ORDER BY d";
+                                if ($r = $conn->query($q)) {
+                                    while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_downloads[$k])) $series_downloads[$k] = (int)$row['c']; }
+                                }
+                            }
+                            $q = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM legislative_records WHERE $where_rec $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            if ($r = $conn->query($q)) {
+                                while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_records[$k])) $series_records[$k] = (int)$row['c']; }
+                            }
+                            $qa_series_labels = array_keys($days);
+                            $qa_series_downloads = array_values($series_downloads);
+                            $qa_series_records = array_values($series_records);
+                            ?>
+                            <div class="flex items-end justify-between gap-3 flex-wrap">
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Quick Reports & Analytics</h2>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        <?php
+                                        $range = ($f_from ? $f_from : 'Start') . ' — ' . ($f_to ? $f_to : 'End');
+                                        echo htmlspecialchars($range);
+                                        echo $fa_type ? ' • '.htmlspecialchars($fa_type) : '';
+                                        ?>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input id="qa-from" type="date" value="<?php echo htmlspecialchars($f_from ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <input id="qa-to" type="date" value="<?php echo htmlspecialchars($f_to ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <select id="qa-type" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                        <option value="">All Types</option>
+                                        <?php foreach ($types_list as $t): ?>
+                                            <option value="<?php echo htmlspecialchars($t); ?>" <?php echo ($fa_type === $t ? 'selected' : ''); ?>><?php echo htmlspecialchars($t); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button id="qa-apply" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                                <div class="lg:col-span-2 p-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="text-sm opacity-80">Downloads</div>
+                                        <div class="text-xs opacity-80">Last 14 days</div>
+                                    </div>
+                                    <div class="text-2xl font-bold mb-2"><?php echo $qa_downloads; ?></div>
+                                    <canvas id="qaDownloadsBar" height="120"></canvas>
+                                </div>
+                                <div class="p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Records</div>
+                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"><?php echo $qa_total_records; ?></div>
+                                    <canvas id="qaRecordsMini" height="80"></canvas>
+                                </div>
+                                <div class="p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Downloads</div>
+                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"><?php echo $qa_downloads; ?></div>
+                                    <canvas id="qaDownloadsMini" height="80"></canvas>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                                <div class="lg:col-span-2 p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Records Trend</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">Last 14 days</div>
+                                    </div>
+                                    <canvas id="qaRecordsLine" height="140"></canvas>
+                                </div>
+                                <div class="lg:col-span-2 p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-600 dark:text-gray-400"><?php echo count($qa_by_type); ?> types</span>
+                                        <button id="rbt-toggle" class="text-[11px] px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
+                                    </div>
+                                </div>
+                                    <canvas id="qaRecordsByType" height="180"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <?php
+                        $uploads_by_folder = [];
+                        $uploads_labels = [];
+                        $uploads_last7 = [];
+                        $uploads_prev7 = [];
+                        $uploads_earlier = [];
+                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
+                            $q = "
+                                SELECT fo.name AS folder,
+                                       SUM(CASE WHEN f.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS last7,
+                                       SUM(CASE WHEN f.created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND f.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 1 ELSE 0 END) AS prev7,
+                                       SUM(CASE WHEN f.created_at < DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND f.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS earlier
+                                FROM archive_folders fo
+                                LEFT JOIN archive_files f
+                                  ON f.folder_id = fo.id
+                                 AND f.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                                GROUP BY fo.id, fo.name
+                                ORDER BY fo.name
+                            ";
+                            if ($r = $conn->query($q)) {
+                                while ($row = $r->fetch_assoc()) {
+                                    $uploads_labels[] = $row['folder'];
+                                    $uploads_last7[] = (int)$row['last7'];
+                                    $uploads_prev7[] = (int)$row['prev7'];
+                                    $uploads_earlier[] = (int)$row['earlier'];
+                                }
+                            }
+                        }
+                        $recent_uploads = [];
+                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
+                            $q = "SELECT f.id, f.name, fo.name AS folder_name, f.created_at FROM archive_files f JOIN archive_folders fo ON fo.id=f.folder_id ORDER BY f.created_at DESC LIMIT 12";
+                            if ($r = $conn->query($q)) {
+                                while ($row = $r->fetch_assoc()) $recent_uploads[] = $row;
+                            }
+                        }
+                        ?>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Folders & Uploads</h2>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div class="lg:col-span-1">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</div>
+                                        <a href="storage.php" class="text-sm text-red-600 dark:text-red-400 hover:underline">View All</a>
+                                    </div>
+                                    <div class="mb-2">
+                                        <select id="fu-filter" class="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                            <option value="">All Folders</option>
+                                            <?php foreach ($uploads_labels as $lab): ?>
+                                                <option value="<?php echo htmlspecialchars($lab); ?>"><?php echo htmlspecialchars($lab); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-sm">
+                                            <thead class="text-xs text-gray-500">
+                                                <tr><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Folder</th><th class="py-2 pr-3">Date</th></tr>
+                                            </thead>
+                                            <tbody id="fu-table" class="divide-y divide-gray-100 dark:divide-slate-700">
+                                                <?php foreach ($recent_uploads as $u): ?>
+                                                <tr data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>">
+                                                    <td class="py-2 pr-3 truncate"><?php echo htmlspecialchars($u['name']); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($u['folder_name']); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($u['created_at']); ?></td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                                <?php if (empty($recent_uploads)): ?>
+                                                <tr><td colspan="3" class="py-3 text-gray-500">No uploads yet.</td></tr>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="lg:col-span-2">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">Last 30 days</div>
+                                    </div>
+                                    <canvas id="uploadsByFolderChart" height="180"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                            <?php
+                            $warn_count = 0;
+                            if ($r = $conn->query("SELECT COUNT(*) AS c FROM legislative_records WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND (author='' OR author IS NULL OR file_path IS NULL OR file_path='')")) {
+                                if ($row = $r->fetch_assoc()) $warn_count = (int)$row['c'];
+                            }
+                            ?>
+                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders <?php if ($warn_count>0): ?><span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800"><?php echo $warn_count; ?> attention</span><?php endif; ?></h2>
+                            <div id="foldersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
                                     <div class="mb-3 group-hover:scale-110 transition-transform">
                                         <svg class="w-12 h-12 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,6 +823,9 @@
                             <div id="latestFilesList" class="space-y-3">
                                 <div class="text-sm text-gray-600 dark:text-gray-400">Loading recent files...</div>
                             </div>
+                            <div class="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
+                                <div class="text-sm text-gray-700 dark:text-gray-200"><?php echo $is_admin ? 'Tip: Use Reports & Analytics to audit user downloads.' : 'Tip: You can preview documents before downloading.'; ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -488,6 +843,31 @@
     if ($r = $conn->query("SELECT id, content, about, status, time, date FROM notifications WHERE status='unread' ORDER BY date DESC, id DESC LIMIT 5")) {
         while ($row = $r->fetch_assoc()) {
             $notif_data[] = $row;
+        }
+    }
+    // Normalized duplicate detection (case-insensitive, trimmed)
+    $dup_leg_labels = []; $dup_leg_counts = [];
+    if ($conn->query("SHOW TABLES LIKE 'legislative_records'")->num_rows > 0) {
+        $q = "SELECT LOWER(TRIM(title)) AS k, MIN(title) AS label, COUNT(*) AS c
+              FROM legislative_records
+              GROUP BY k
+              HAVING c > 1
+              ORDER BY c DESC, label ASC
+              LIMIT 10";
+        if ($r = $conn->query($q)) {
+            while ($row = $r->fetch_assoc()) { $dup_leg_labels[] = $row['label']; $dup_leg_counts[] = (int)$row['c']; }
+        }
+    }
+    $dup_file_labels = []; $dup_file_counts = [];
+    if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+        $q = "SELECT LOWER(TRIM(name)) AS k, MIN(name) AS label, COUNT(*) AS c
+              FROM archive_files
+              GROUP BY k
+              HAVING c > 1
+              ORDER BY c DESC, label ASC
+              LIMIT 10";
+        if ($r = $conn->query($q)) {
+            while ($row = $r->fetch_assoc()) { $dup_file_labels[] = $row['label']; $dup_file_counts[] = (int)$row['c']; }
         }
     }
     $conn->close();
@@ -574,5 +954,200 @@
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        (function(){
+            var byType = <?php echo json_encode($qa_by_type ?? []); ?>;
+            var seriesLabels = <?php echo json_encode($qa_series_labels ?? []); ?>;
+            var seriesDownloads = <?php echo json_encode($qa_series_downloads ?? []); ?>;
+            var seriesRecords = <?php echo json_encode($qa_series_records ?? []); ?>;
+            var fuLabels = <?php echo json_encode($uploads_labels ?? []); ?>;
+            var fuLast7 = <?php echo json_encode($uploads_last7 ?? []); ?>;
+            var fuPrev7 = <?php echo json_encode($uploads_prev7 ?? []); ?>;
+            var fuEarlier = <?php echo json_encode($uploads_earlier ?? []); ?>;
+            var catLabels = <?php echo json_encode($cat_labels ?? []); ?>;
+            var catLast7 = <?php echo json_encode($cat_last7 ?? []); ?>;
+            var catPrev7 = <?php echo json_encode($cat_prev7 ?? []); ?>;
+            var catEarlier = <?php echo json_encode($cat_earlier ?? []); ?>;
+            var ffLabels = <?php echo json_encode($folder_counts_labels ?? []); ?>;
+            var ffValues = <?php echo json_encode($folder_counts_values ?? []); ?>;
+            var dupLegLabels = <?php echo json_encode($dup_leg_labels ?? []); ?>;
+            var dupLegCounts = <?php echo json_encode($dup_leg_counts ?? []); ?>;
+            var dupFileLabels = <?php echo json_encode($dup_file_labels ?? []); ?>;
+            var dupFileCounts = <?php echo json_encode($dup_file_counts ?? []); ?>;
+            var typeCtx = document.getElementById('qaRecordsByType');
+            var rbtToggle = document.getElementById('rbt-toggle');
+            var rbtChart = null;
+            var rbtMode = localStorage.getItem('rbtMode') || 'abs';
+            function renderRbt() {
+                if (!typeCtx) return;
+                var labels = Object.keys(byType);
+                var values = Object.values(byType);
+                var total = values.reduce(function(a,b){return a+b;},0) || 1;
+                var data = (rbtMode === 'pct') ? values.map(function(v){ return +(v*100/total).toFixed(2); }) : values;
+                if (rbtChart) { rbtChart.destroy(); }
+                rbtChart = new Chart(typeCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444'] }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            tooltip: { callbacks: { label: function(ctx){
+                                var idx = ctx.dataIndex;
+                                var raw = values[idx];
+                                var pct = (raw*100/total).toFixed(2)+'%';
+                                return labels[idx]+': '+ (rbtMode==='pct' ? pct : raw);
+                            }}}
+                        }
+                    }
+                });
+                if (rbtToggle) rbtToggle.textContent = (rbtMode==='pct' ? '%' : 'ABS');
+            }
+            renderRbt();
+            if (rbtToggle) {
+                rbtToggle.addEventListener('click', function(){
+                    rbtMode = (rbtMode === 'abs') ? 'pct' : 'abs';
+                    localStorage.setItem('rbtMode', rbtMode);
+                    renderRbt();
+                });
+            }
+            var dlBar = document.getElementById('qaDownloadsBar');
+            if (dlBar) {
+                new Chart(dlBar.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, backgroundColor: 'rgba(255,255,255,0.9)' }] },
+                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
+                });
+            }
+            var recMini = document.getElementById('qaRecordsMini');
+            if (recMini) {
+                new Chart(recMini.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                });
+            }
+            var dlMini = document.getElementById('qaDownloadsMini');
+            if (dlMini) {
+                new Chart(dlMini.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                });
+            }
+            var recLine = document.getElementById('qaRecordsLine');
+            if (recLine) {
+                new Chart(recLine.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
+                });
+            }
+            var fu = document.getElementById('uploadsByFolderChart');
+            if (fu) {
+                new Chart(fu.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: fuLabels,
+                        datasets: [
+                            { label: 'Last 7d', data: fuLast7, backgroundColor: '#2563eb' },
+                            { label: 'Prev 7d', data: fuPrev7, backgroundColor: '#f97316' },
+                            { label: '8-30d', data: fuEarlier, backgroundColor: '#6b7280' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
+                    }
+                });
+            }
+            var rbc = document.getElementById('recordsByCategoryChart');
+            if (rbc) {
+                new Chart(rbc.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: catLabels,
+                        datasets: [
+                            { label: 'Last 7d', data: catLast7, backgroundColor: '#dc2626' },
+                            { label: 'Prev 7d', data: catPrev7, backgroundColor: '#f97316' },
+                            { label: '8-30d', data: catEarlier, backgroundColor: '#6b7280' }
+                        ]
+                    },
+                    options: { responsive: true, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
+                });
+            }
+            var ffd = document.getElementById('filesByFolderDonut');
+            if (ffd) {
+                new Chart(ffd.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ffLabels,
+                        datasets: [{ data: ffValues, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
+                    },
+                    options: { responsive: true, plugins:{ legend:{ position:'bottom' } } }
+                });
+            }
+            var d1 = document.getElementById('dupLegBar');
+            if (d1) {
+                new Chart(d1.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: dupLegLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupLegCounts, backgroundColor:'#dc2626' }] },
+                    options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                });
+            }
+            var d2 = document.getElementById('dupFileBar');
+            if (d2) {
+                new Chart(d2.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: dupFileLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupFileCounts, backgroundColor:'#2563eb' }] },
+                    options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                });
+            }
+            var fuFilter = document.getElementById('fu-filter');
+            if (fuFilter) {
+                fuFilter.addEventListener('change', function(){
+                    var val = this.value || '';
+                    var rows = document.querySelectorAll('#fu-table tr[data-folder]');
+                    rows.forEach(function(tr){
+                        var fld = tr.getAttribute('data-folder') || '';
+                        tr.style.display = (!val || fld === val) ? '' : 'none';
+                    });
+                });
+            }
+        })();
+    </script>
+    <script>
+        (function(){
+            var bar = document.getElementById('storage-usage-bar');
+            var modal = document.getElementById('storageDetailsModal');
+            var closeBtn = document.getElementById('storageDetailsClose');
+            bar && bar.addEventListener('click', function(){ modal && modal.classList.remove('hidden'); });
+            closeBtn && closeBtn.addEventListener('click', function(){ modal && modal.classList.add('hidden'); });
+            modal && modal.addEventListener('click', function(e){ if (e.target === modal) modal.classList.add('hidden'); });
+        })();
+    </script>
+    <script>
+        (function(){
+            var applyBtn = document.getElementById('qa-apply');
+            function applyFilters(){
+                var p = new URLSearchParams(window.location.search);
+                var from = document.getElementById('qa-from')?.value || '';
+                var to = document.getElementById('qa-to')?.value || '';
+                var type = document.getElementById('qa-type')?.value || '';
+                ['start','end','type'].forEach(function(k){ p.delete(k); });
+                if (from) p.set('start', from);
+                if (to) p.set('end', to);
+                if (type) p.set('type', type);
+                var url = window.location.pathname + (p.toString() ? ('?'+p.toString()) : '');
+                window.location.assign(url);
+            }
+            applyBtn && applyBtn.addEventListener('click', applyFilters);
+        })();
+    </script>
 </body>
 </html>

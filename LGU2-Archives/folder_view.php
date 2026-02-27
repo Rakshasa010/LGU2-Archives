@@ -134,47 +134,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    if ($action === 'delete_file') {
-        header('Content-Type: application/json');
-        $file_id = $input['id'] ?? 0;
-        $stmt = $conn->prepare("SELECT * FROM archive_files WHERE id = ? AND folder_id = ?");
-        $stmt->bind_param("ii", $file_id, $current_folder_id);
-        $stmt->execute();
-        $file = $stmt->get_result()->fetch_assoc();
-        
-        if ($file) {
-            if (file_exists($file['file_path'])) {
-                unlink($file['file_path']);
-            }
-            $conn->query("DELETE FROM archive_files WHERE id = $file_id");
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'File not found']);
-        }
-        exit();
-    }
-
-    if ($action === 'delete_folder') {
-        header('Content-Type: application/json');
-        $folder_id = $input['id'] ?? 0;
-        // Basic check to ensure we are deleting a subfolder of current folder
-        $stmt = $conn->prepare("SELECT id FROM archive_folders WHERE id = ? AND parent_id = ?");
-        $stmt->bind_param("ii", $folder_id, $current_folder_id);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows > 0) {
-            // Recursive delete is complex, for now let's just delete the folder entry.
-            // Ideally we should delete all subfiles and subfolders.
-            // For this implementation, we'll assume foreign keys CASCADE or we might leave orphans if not careful.
-            // The schema update used ON DELETE CASCADE for files, so files are safe.
-            // For subfolders, we didn't add foreign key constraint on parent_id in my update script (oops, I just added the column).
-            // But let's proceed with simple delete.
-            $conn->query("DELETE FROM archive_folders WHERE id = $folder_id");
-            echo json_encode(['success' => true]);
-        } else {
-             echo json_encode(['success' => false, 'message' => 'Folder not found']);
-        }
-        exit();
-    }
     
     if ($action === 'search_folder') {
         header('Content-Type: application/json');
@@ -336,13 +295,7 @@ $conn->close();
                             <div class="text-xs text-gray-500 dark:text-gray-400"><?php echo date('M d, Y', strtotime($folder['created_at'])); ?></div>
                         </div>
                     </a>
-                    <?php if ($is_admin): ?>
-                    <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button onclick="openDeleteFolderConfirm(<?php echo $folder['id']; ?>, '<?php echo addslashes(htmlspecialchars($folder['name'])); ?>')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                    <?php endif; ?>
+                    
                 </div>
                 <?php endforeach; ?>
 
@@ -371,13 +324,7 @@ $conn->close();
                         <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
                             <i class="bi bi-download"></i><span>Download</span>
                         </a>
-                        <?php if ($is_admin): ?>
-                        <button onclick="openDeleteConfirm(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
-                            <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                        <?php endif; ?>
+                        
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -449,30 +396,6 @@ $conn->close();
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('deleteModal')"></div>
-            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700 transform transition-all scale-100 opacity-100 duration-300">
-                <div class="mb-6 text-center">
-                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-                        <i class="bi bi-trash text-3xl text-red-600 dark:text-red-400"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Delete File?</h3>
-                    <p class="text-gray-500 dark:text-gray-400">Are you sure you want to delete <span id="deleteFileName" class="font-semibold text-gray-800 dark:text-gray-200"></span>?</p>
-                </div>
-                <div class="flex justify-center space-x-4">
-                    <button type="button" onclick="closeModal('deleteModal')" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="confirmDelete()" class="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl shadow-lg transition-all font-medium flex items-center">
-                        <i class="bi bi-trash mr-2"></i>
-                        Delete File
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Notification Modal -->
     <div id="notificationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -689,12 +612,7 @@ $conn->close();
                         <div class="text-xs text-gray-500 dark:text-gray-400">Just now</div>
                     </div>
                 </a>
-                ${isAdmin ? `
-                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="openDeleteFolderConfirm(${folder.id}, '${escapeHtml(folder.name || 'New Folder')}')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>` : ''}
+                
             `;
             const emptyState = list.querySelector('.text-center');
             if (emptyState) emptyState.remove();
@@ -991,20 +909,7 @@ $conn->close();
              // ... existing downloadFile logic is mostly redundant with direct link, but kept if needed
         }
         
-        function openDeleteConfirm(id, name) {
-            deleteId = id;
-            deleteIsFolder = false;
-            const el = document.getElementById('deleteFileName');
-            if (el) el.textContent = name;
-            openModal('deleteModal');
-        }
-        function openDeleteFolderConfirm(id, name) {
-            deleteId = id;
-            deleteIsFolder = true;
-            const el = document.getElementById('deleteFileName');
-            if (el) el.textContent = name;
-            openModal('deleteModal');
-        }
+        
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function openNotification(message = 'Uploaded!', type = 'success') {
@@ -1090,85 +995,7 @@ $conn->close();
             const modal = document.getElementById('notificationModal');
             if (modal) modal.classList.add('hidden');
         }
-        async function confirmDelete() {
-            closeModal('deleteModal');
-            if (deleteId == null) return;
-            if (deleteIsFolder) {
-                try {
-                    const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'delete_folder', id: deleteId })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        const el = document.getElementById('folder-' + deleteId);
-                        if (el) el.remove();
-                    } else {
-                        alert(data.message || 'Failed to delete folder');
-                    }
-                } catch (e) {
-                    alert('Error deleting folder');
-                }
-            } else {
-                try {
-                    const fileEl = document.getElementById('file-' + deleteId);
-                    let fileName = 'Unknown File';
-                    if (fileEl) {
-                        const nameEl = fileEl.querySelector('.truncate');
-                        if (nameEl) fileName = nameEl.textContent;
-                    }
-                    const deletedItem = {
-                        id: deleteId,
-                        name: fileName,
-                        type: fileName.split('.').pop().toUpperCase(),
-                        category: 'Main Storage',
-                        originalPath: 'Main Storage',
-                        deletedAt: new Date().toLocaleString()
-                    };
-                    const existing = JSON.parse(localStorage.getItem('deletedFiles') || '[]');
-                    existing.push(deletedItem);
-                    localStorage.setItem('deletedFiles', JSON.stringify(existing));
-                    const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'delete_file', id: deleteId })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        if (fileEl) fileEl.remove();
-                    } else {
-                        alert(data.message || 'Failed to delete file');
-                    }
-                } catch (e) {
-                    alert('Error deleting file');
-                }
-            }
-            deleteId = null;
-            deleteIsFolder = false;
-        }
-
-        async function deleteFolder(id) {
-            if (!confirm('Are you sure you want to delete this folder?')) return;
-
-            try {
-                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'delete_folder', id: id })
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('folder-' + id).remove();
-                } else {
-                    alert(data.message || 'Failed to delete folder');
-                }
-            } catch (e) {
-                console.error(e);
-                alert('Error deleting folder');
-            }
-        }
+        
 
         // Mobile Sidebar Toggle
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');

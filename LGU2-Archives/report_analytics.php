@@ -160,6 +160,87 @@ $exportQuery = $_GET;
 $exportQuery['export'] = 'csv';
 $exportUrl = 'report_analytics.php?' . http_build_query($exportQuery);
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
+    $action = $_POST['export_action'];
+    $password = $_POST['confirm_password'] ?? '';
+    $uid = (int)$_SESSION['user_id'];
+    $ok = false;
+    $stmt = $conn->prepare("SELECT password, username FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res && $res->num_rows === 1) {
+            $row = $res->fetch_assoc();
+            if (password_verify($password, $row['password'])) $ok = true;
+        }
+        $stmt->close();
+    }
+    if ($ok) {
+        if ($action === 'txt') {
+            $filename = 'report_analytics_' . date('Ymd_His') . '.txt';
+            header('Content-Type: text/plain; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            echo "Reports & Analytics\n";
+            echo "Generated At: " . date('Y-m-d H:i:s') . "\n\n";
+            echo "Summary\n";
+            echo "Total Records: " . (string)($stats['total_records'] ?? 0) . "\n";
+            echo "Total Downloads: " . (string)($stats['downloads'] ?? 0) . "\n";
+            echo "Uploads Folder Size: " . format_bytes($uploads_bytes) . "\n\n";
+            echo "Downloads by Type\n";
+            foreach (($stats['downloads_by_type'] ?? []) as $k => $v) echo $k . ": " . (string)$v . "\n";
+            echo "\nDownloads by Format\n";
+            foreach (($stats['downloads_by_format'] ?? []) as $k => $v) echo $k . ": " . (string)$v . "\n";
+            echo "\nRecent Activity\n";
+            if (!empty($stats['recent_activity'])) {
+                foreach ($stats['recent_activity'] as $row) {
+                    echo ($row['created_at'] ?? '') . " | " . ($row['event_type'] ?? '') . " | " . ($row['record_title'] ?? '') . " | " . ($row['record_type'] ?? '') . " | " . strtoupper($row['download_format'] ?? '') . "\n";
+                }
+            } elseif (!empty($stats['recent_downloads'])) {
+                foreach ($stats['recent_downloads'] as $row) {
+                    echo ($row['last_accessed'] ?? '') . " | " . ($row['title'] ?? '') . " | " . ($row['type'] ?? '') . " | " . ($row['author'] ?? '') . "\n";
+                }
+            } else {
+                echo "No recent activity available\n";
+            }
+            exit();
+        } elseif ($action === 'pdf') {
+            $html = '<!doctype html><html><head><meta charset="utf-8"><title>Reports & Analytics</title><style>body{font-family:Arial,sans-serif;color:#111}h1{font-size:20px;margin:0 0 8px}h2{font-size:16px;margin:16px 0 8px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ddd;padding:6px}th{background:#f3f4f6;text-align:left}</style></head><body>';
+            $html .= '<h1>Reports & Analytics</h1><div>Generated At: '.date('Y-m-d H:i:s').'</div>';
+            $html .= '<h2>Summary</h2><table><tr><th>Metric</th><th>Value</th></tr>';
+            $html .= '<tr><td>Total Records</td><td>'.(int)($stats['total_records'] ?? 0).'</td></tr>';
+            $html .= '<tr><td>Total Downloads</td><td>'.(int)($stats['downloads'] ?? 0).'</td></tr>';
+            $html .= '<tr><td>Uploads Folder Size</td><td>'.htmlspecialchars(format_bytes($uploads_bytes)).'</td></tr></table>';
+            $html .= '<h2>Downloads by Type</h2><table><tr><th>Type</th><th>Count</th></tr>';
+            foreach (($stats['downloads_by_type'] ?? []) as $k=>$v) $html .= '<tr><td>'.htmlspecialchars($k).'</td><td>'.(int)$v.'</td></tr>';
+            $html .= '</table><h2>Downloads by Format</h2><table><tr><th>Format</th><th>Count</th></tr>';
+            foreach (($stats['downloads_by_format'] ?? []) as $k=>$v) $html .= '<tr><td>'.htmlspecialchars($k).'</td><td>'.(int)$v.'</td></tr>';
+            $html .= '</table><h2>Recent Activity</h2>';
+            if (!empty($stats['recent_activity'])) {
+                $html .= '<table><tr><th>When</th><th>Event</th><th>Title</th><th>Type</th><th>Format</th></tr>';
+                foreach ($stats['recent_activity'] as $r) {
+                    $html .= '<tr><td>'.htmlspecialchars($r['created_at']).'</td><td>'.htmlspecialchars($r['event_type']).'</td><td>'.htmlspecialchars($r['record_title'] ?? '').'</td><td>'.htmlspecialchars($r['record_type'] ?? '').'</td><td>'.htmlspecialchars(strtoupper($r['download_format'] ?? '')).'</td></tr>';
+                }
+                $html .= '</table>';
+            } elseif (!empty($stats['recent_downloads'])) {
+                $html .= '<table><tr><th>When</th><th>Title</th><th>Type</th><th>Author</th></tr>';
+                foreach ($stats['recent_downloads'] as $r) {
+                    $html .= '<tr><td>'.htmlspecialchars($r['last_accessed'] ?? '').'</td><td>'.htmlspecialchars($r['title'] ?? '').'</td><td>'.htmlspecialchars($r['type'] ?? '').'</td><td>'.htmlspecialchars($r['author'] ?? '').'</td></tr>';
+                }
+                $html .= '</table>';
+            } else {
+                $html .= '<div>No recent activity available</div>';
+            }
+            $html .= '<script>window.print && setTimeout(function(){window.print();},250)</script></body></html>';
+            header('Content-Type: text/html; charset=UTF-8');
+            echo $html;
+            exit();
+        }
+    } else {
+        $export_error = 'Invalid password for export.';
+    }
+}
+
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     $filename = 'report_analytics_' . date('Ymd_His') . '.csv';
     header('Content-Type: text/csv; charset=UTF-8');
@@ -315,10 +396,7 @@ $series_records_values = array_values($series_records);
             </a>
             
             <?php if (isset($is_admin) && $is_admin): ?>
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-trash mr-3 text-lg"></i>
-                <span>Recently Deleted</span>
-            </a>
+            <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -403,10 +481,7 @@ $series_records_values = array_values($series_records);
                     </a>
 
                     <?php if (isset($is_admin) && $is_admin): ?>
-                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-trash mr-3"></i>
-                        <span class="sidebar-text">Recently Deleted</span>
-                    </a>
+                    <a href="recent_deleted.php" class="hidden"></a>
                     <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -563,19 +638,24 @@ $series_records_values = array_values($series_records);
                                 <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Quick overview of records, downloads, and recent activity</p>
                             </div>
                             <div class="flex flex-col items-end gap-1">
-                            <div class="flex items-center gap-2">
-                                <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</a>
-                                <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
-                                <div class="relative">
-                                    <button id="more-actions-btn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200" title="More options">
-                                        <i class="bi bi-three-dots-vertical text-lg"></i>
-                                    </button>
-                                    <div id="more-actions-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
-                                        <button id="refresh-analytics" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Refresh Data</button>
-                                        <a href="audit-logs.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">View Audit Logs</a>
+                                <div class="flex items-center gap-2">
+                                    <button id="export-pdf-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export PDF</button>
+                                    <button id="export-txt-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export Plain</button>
+                                    <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
+                                    <div class="relative">
+                                        <button id="more-actions-btn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200" title="More options">
+                                            <i class="bi bi-three-dots-vertical text-lg"></i>
+                                        </button>
+                                        <div id="more-actions-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                            <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Export CSV</a>
+                                            <button id="refresh-analytics" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Refresh Data</button>
+                                            <a href="audit-logs.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">View Audit Logs</a>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                                <?php if (!empty($export_error)): ?>
+                                    <div class="text-xs text-red-600 dark:text-red-400"><?php echo htmlspecialchars($export_error); ?></div>
+                                <?php endif; ?>
                                 <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browser’s default Downloads folder.</div>
                             </div>
                         </div>
@@ -804,6 +884,29 @@ $series_records_values = array_values($series_records);
         </div>
     </div>
 
+    <div id="export-modal" class="hidden fixed inset-0 z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 border border-gray-200 dark:border-slate-700">
+                <div class="mb-4">
+                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Confirm Export</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Enter your password to continue.</div>
+                </div>
+                <form id="export-form" method="post" class="space-y-3">
+                    <input type="hidden" name="export_action" id="export-action" value="">
+                    <div>
+                        <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                        <input type="password" name="confirm_password" required class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" id="export-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
+                        <button type="submit" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Sidebar toggle functionality (mobile + desktop)
         const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -1002,5 +1105,18 @@ $series_records_values = array_values($series_records);
 
     </script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        const exportModal = document.getElementById('export-modal');
+        const exportAction = document.getElementById('export-action');
+        const exportCancel = document.getElementById('export-cancel');
+        const exportPdfBtn = document.getElementById('export-pdf-btn');
+        const exportTxtBtn = document.getElementById('export-txt-btn');
+        function openExport(which){ exportAction.value = which; exportModal.classList.remove('hidden'); }
+        function closeExport(){ exportModal.classList.add('hidden'); exportAction.value = ''; }
+        exportPdfBtn?.addEventListener('click', () => openExport('pdf'));
+        exportTxtBtn?.addEventListener('click', () => openExport('txt'));
+        exportCancel?.addEventListener('click', closeExport);
+        exportModal?.addEventListener('click', (e) => { if (e.target === exportModal) closeExport(); });
+    </script>
 </body>
 </html>

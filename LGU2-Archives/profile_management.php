@@ -88,10 +88,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                     <span>Main Storage Archives</span>
                 </a>
                 <?php if (isset($is_admin) && $is_admin): ?>
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-trash mr-3 text-lg"></i>
-                <span>Recently Deleted</span>
-            </a>
+            <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
 
                 <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
@@ -173,10 +170,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                         </a>
 
                         <?php if (isset($is_admin) && $is_admin): ?>
-                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-trash mr-3"></i>
-                        <span class="sidebar-text">Recently Deleted</span>
-                    </a>
+                    <a href="recent_deleted.php" class="hidden"></a>
                     <?php endif; ?>
 
                         <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">

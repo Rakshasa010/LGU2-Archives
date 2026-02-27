@@ -52,6 +52,34 @@ if ($resN) {
         if (isset($rowN['status']) && $rowN['status'] === 'unread') $unread_count++;
     }
 }
+if (count($mock_notifications) < 10) {
+    $base = [
+        ['Ordinance No. 12-2025 (PDF)', '08:15 AM', 'Export Request', 'unread'],
+        ['Resolution 34 Series 2024 (DOCX)', '09:40 AM', 'Export Request', 'read'],
+        ['Billing Report Q1 (XLSX)', '10:05 AM', 'Export Request', 'unread'],
+        ['Public Hearing Minutes Jan (PDF)', '11:22 AM', 'Export Request', 'unread'],
+        ['Meeting Attendance List (CSV)', '01:10 PM', 'Export Request', 'read'],
+        ['Annual Summary 2025 (PDF)', '02:55 PM', 'Export Request', 'unread'],
+        ['Session Agenda 03-12 (DOC)', '03:30 PM', 'Export Request', 'read'],
+        ['Records Index Update (TXT)', '04:05 PM', 'Export Request', 'unread'],
+        ['Audit Findings Draft (PDF)', '04:45 PM', 'Export Request', 'unread'],
+        ['Metadata Export Batch #7 (JSON)', '05:20 PM', 'Export Request', 'read'],
+        ['Supplemental Report (PDF)', '06:05 PM', 'Export Request', 'unread'],
+    ];
+    $today = date('Y-m-d');
+    $needed = 10 - count($mock_notifications);
+    for ($i = 0; $i < $needed; $i++) {
+        $pick = $base[$i % count($base)];
+        $mock_notifications[] = [
+            'time' => $pick[1],
+            'date' => $today,
+            'content' => $pick[0],
+            'about' => $pick[2],
+            'status' => $pick[3],
+        ];
+        if ($pick[3] === 'unread') $unread_count++;
+    }
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -107,10 +135,7 @@ if ($resN) {
             </a>
             
             <?php if (isset($is_admin) && $is_admin): ?>
-            <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-trash mr-3 text-lg"></i>
-                <span>Recently Deleted</span>
-            </a>
+            <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
 
             <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
@@ -194,11 +219,8 @@ if ($resN) {
                         <span class="sidebar-text">Export</span>
                     </a>
 
-                    <?php if (isset($is_admin) && $is_admin): ?>
-                    <a href="recent_deleted.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-trash mr-3"></i>
-                        <span class="sidebar-text">Recently Deleted</span>
-                    </a>
+                        <?php if (isset($is_admin) && $is_admin): ?>
+                    <a href="recent_deleted.php" class="hidden"></a>
                     <?php endif; ?>
 
                     <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
