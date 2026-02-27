@@ -114,7 +114,7 @@ if ($ae_count && ($row = $ae_count->fetch_assoc())) {
     $col = $conn->query("SHOW COLUMNS FROM analytics_events LIKE 'user_id'");
     if ($col && $col->num_rows > 0) {
         $stats['has_user_attr'] = true;
-        $ae_recent = $conn->query("SELECT ae.event_type, ae.record_title, ae.record_type, ae.download_format, ae.bytes, ae.created_at, ae.user_id, u.full_name AS user_name
+        $ae_recent = $conn->query("SELECT ae.id, ae.event_type, ae.record_id, ae.record_title, ae.record_type, ae.download_format, ae.bytes, ae.created_at, ae.user_id, u.full_name AS user_name
                                    FROM analytics_events ae
                                    LEFT JOIN users u ON u.id = ae.user_id
                                    WHERE $act_where
@@ -177,6 +177,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
         $stmt->close();
     }
     if ($ok) {
+        $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            time VARCHAR(20) NOT NULL,
+            date DATE NOT NULL,
+            content VARCHAR(255) NOT NULL,
+            about VARCHAR(100) NOT NULL,
+            status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+        $ntime = date('h:i A');
+        $ndate = date('Y-m-d');
+        $ncontent = 'Export requested: '.strtoupper($action).' by user #'.$uid;
+        $nabout = 'Export';
+        $nstatus = 'unread';
+        $ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)");
+        if ($ins) { $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus); $ins->execute(); $ins->close(); }
         if ($action === 'txt') {
             $filename = 'report_analytics_' . date('Ymd_His') . '.txt';
             header('Content-Type: text/plain; charset=UTF-8');
@@ -327,6 +343,49 @@ if ($q_rec_series) {
 $series_labels = array_keys($days);
 $series_downloads_values = array_values($series_downloads);
 $series_records_values = array_values($series_records);
+
+// Funnel and active users
+$views_by_type = [];
+$funnel_types = [];
+$has_ae = $conn->query("SHOW TABLES LIKE 'analytics_events'");
+if ($has_ae && $has_ae->num_rows > 0) {
+    $vw_where = "event_type='view'";
+    if ($f_start) $vw_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
+    if ($f_end) $vw_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
+    if ($safe_type) $vw_where .= " AND record_type = '".$safe_type."'";
+    $qe = $conn->query("SELECT COALESCE(record_type,'Unknown') AS k, COUNT(*) AS c FROM analytics_events WHERE $vw_where GROUP BY COALESCE(record_type,'Unknown')");
+    if ($qe) { while ($r = $qe->fetch_assoc()) $views_by_type[$r['k']] = (int)$r['c']; }
+    $funnel_types = array_unique(array_merge(array_keys($views_by_type), array_keys($stats['downloads_by_type'] ?? [])));
+    $dau = 0; $wau = 0; $mau = 0;
+    $col = $conn->query("SHOW COLUMNS FROM analytics_events LIKE 'user_id'");
+    if ($col && $col->num_rows > 0) {
+        $q1 = $conn->query("SELECT COUNT(DISTINCT user_id) AS c FROM analytics_events WHERE created_at >= CURDATE()");
+        if ($q1 && ($r=$q1->fetch_assoc())) $dau = (int)$r['c'];
+        $q2 = $conn->query("SELECT COUNT(DISTINCT user_id) AS c FROM analytics_events WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)");
+        if ($q2 && ($r=$q2->fetch_assoc())) $wau = (int)$r['c'];
+        $q3 = $conn->query("SELECT COUNT(DISTINCT user_id) AS c FROM analytics_events WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
+        if ($q3 && ($r=$q3->fetch_assoc())) $mau = (int)$r['c'];
+    }
+    $top_downloaders = [];
+    $qd = $conn->query("SELECT ae.user_id, 
+                        COALESCE(NULLIF(u.full_name,''), 
+                                 NULLIF(u.username,''), 
+                                 NULLIF(u.email,''), 
+                                 CONCAT('User #', ae.user_id)) AS name, 
+                        COUNT(*) AS c
+                        FROM analytics_events ae
+                        LEFT JOIN users u ON u.id = ae.user_id
+                        WHERE ae.event_type='download' AND ae.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                        GROUP BY ae.user_id, name
+                        ORDER BY c DESC
+                        LIMIT 10");
+    if ($qd) { while ($r = $qd->fetch_assoc()) $top_downloaders[] = $r; }
+} else {
+    $funnel_types = array_keys($stats['downloads_by_type'] ?? []);
+    $dau = $wau = $mau = 0;
+    $top_downloaders = [];
+}
+$funnel_types = array_values($funnel_types);
 
 ?>
 <!DOCTYPE html>
@@ -745,6 +804,48 @@ $series_records_values = array_values($series_records);
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Conversion Funnel (Views → Downloads)</h3>
+                            </div>
+                            <canvas id="funnelChart" height="200"></canvas>
+                        </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
+                                    <div class="text-xs text-gray-500">DAU</div>
+                                    <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$dau; ?></div>
+                                </div>
+                                <div class="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
+                                    <div class="text-xs text-gray-500">WAU</div>
+                                    <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$wau; ?></div>
+                                </div>
+                                <div class="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
+                                    <div class="text-xs text-gray-500">MAU</div>
+                                    <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$mau; ?></div>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="text-sm font-semibold mb-2 text-gray-800 dark:text-gray-100">Top Downloaders (30d)</div>
+                                <?php if (!empty($top_downloaders)): ?>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="text-xs text-gray-500"><tr><th class="py-1 pr-3">User</th><th class="py-1 pr-3">Downloads</th></tr></thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                            <?php foreach ($top_downloaders as $u): ?>
+                                            <tr><td class="py-1 pr-3 truncate"><?php echo htmlspecialchars($u['name']); ?></td><td class="py-1 pr-3"><?php echo (int)$u['c']; ?></td></tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php else: ?>
+                                <div class="text-xs text-gray-500">No data</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
                             <div class="flex items-center justify-between mb-3">
@@ -796,23 +897,27 @@ $series_records_values = array_values($series_records);
                                         <table class="w-full text-left text-sm">
                                             <thead class="text-xs text-gray-500">
                                                 <tr>
-                                                    <th class="py-2 pr-3">When</th>
+                                                    <?php if ($stats['has_user_attr']): ?><th class="py-2 pr-3">User / App</th><?php endif; ?>
+                                                    <th class="py-2 pr-3">Date &amp; time</th>
                                                     <th class="py-2 pr-3">Event</th>
-                                                    <th class="py-2 pr-3">Title</th>
-                                                    <th class="py-2 pr-3">Type</th>
-                                                    <th class="py-2 pr-3">Format</th>
-                                                    <?php if ($stats['has_user_attr']): ?><th class="py-2 pr-3">By</th><?php endif; ?>
+                                                    <th class="py-2 pr-3">Event ID</th>
+                                                    <th class="py-2 pr-3">Status</th>
+                                                    <th class="py-2 pr-3">Entity type</th>
+                                                    <th class="py-2 pr-3">Entity name</th>
+                                                    <th class="py-2 pr-3">Entity ID</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                                             <?php foreach ($stats['recent_activity'] as $a): ?>
                                                 <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
+                                                    <?php if ($stats['has_user_attr']): ?><td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(($a['user_name'] ?? '') ?: 'Unknown'); ?></td><?php endif; ?>
                                                     <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['created_at']); ?></td>
                                                     <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['event_type']); ?></td>
-                                                    <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo isset($a['id']) ? (int)$a['id'] : ''; ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo 'Succeeded'; ?></td>
                                                     <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(strtoupper($a['download_format'] ?? '')); ?></td>
-                                                    <?php if ($stats['has_user_attr']): ?><td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(($a['user_name'] ?? '') ?: 'Unknown'); ?></td><?php endif; ?>
+                                                    <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo isset($a['record_id']) ? (int)$a['record_id'] : ''; ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
                                             </tbody>
@@ -1105,6 +1210,26 @@ $series_records_values = array_values($series_records);
 
     </script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        (function(){
+            var funnelLabels = <?php echo json_encode($funnel_types); ?>;
+            var viewsByType = <?php echo json_encode($views_by_type); ?>;
+            var downloadsByType = <?php echo json_encode($stats['downloads_by_type'] ?? []); ?>;
+            var v = funnelLabels.map(function(k){ return viewsByType[k] || 0; });
+            var d = funnelLabels.map(function(k){ return downloadsByType[k] || 0; });
+            var ctx = document.getElementById('funnelChart');
+            if (ctx) {
+                new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: funnelLabels, datasets: [
+                        { label: 'Views', data: v, backgroundColor: '#3b82f6' },
+                        { label: 'Downloads', data: d, backgroundColor: '#dc2626' }
+                    ]},
+                    options: { responsive: true, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
+                });
+            }
+        })();
+    </script>
     <script>
         const exportModal = document.getElementById('export-modal');
         const exportAction = document.getElementById('export-action');

@@ -584,6 +584,7 @@
                             for ($i = 13; $i >= 0; $i--) { $d = date('Y-m-d', strtotime("-$i days")); $days[$d] = 0; }
                             $series_downloads = $days;
                             $series_records = $days;
+                            $series_folders = $days;
                             $dl_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)";
                             $rec_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)";
                             if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
@@ -605,9 +606,23 @@
                             if ($r = $conn->query($q)) {
                                 while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_records[$k])) $series_records[$k] = (int)$row['c']; }
                             }
+                            if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+                                $wf = "1=1";
+                                if ($f_from) $wf .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                                if ($f_to) $wf .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                                $qf = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM archive_files WHERE $wf $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                                if ($r = $conn->query($qf)) {
+                                    while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_folders[$k])) $series_folders[$k] = (int)$row['c']; }
+                                }
+                            }
+                            $series_records_merged = $series_records;
+                            foreach ($series_records_merged as $k => $v) {
+                                $series_records_merged[$k] = $v + ($series_folders[$k] ?? 0);
+                            }
                             $qa_series_labels = array_keys($days);
                             $qa_series_downloads = array_values($series_downloads);
                             $qa_series_records = array_values($series_records);
+                            $qa_series_records_merged = array_values($series_records_merged);
                             ?>
                             <div class="flex items-end justify-between gap-3 flex-wrap">
                                 <div>
@@ -765,61 +780,11 @@
                                 if ($row = $r->fetch_assoc()) $warn_count = (int)$row['c'];
                             }
                             ?>
-                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Recent Archives Folders <?php if ($warn_count>0): ?><span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800"><?php echo $warn_count; ?> attention</span><?php endif; ?></h2>
-                            <div id="foldersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
-                                    <div class="mb-3 group-hover:scale-110 transition-transform">
-                                        <svg class="w-12 h-12 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Ordinances & Resolutions</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="ordinances-resolution">Last opened: Not yet opened</div>
-                                </a>
-                                <a href="billing.php" data-archive="billing" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
-                                    <div class="mb-3 group-hover:scale-110 transition-transform">
-                                        <svg class="w-12 h-12 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Billing</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="billing">Last opened: Not yet opened</div>
-                                </a>
-                                <a href="public-hearings.php" data-archive="public-hearings" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
-                                    <div class="mb-3 group-hover:scale-110 transition-transform">
-                                        <svg class="w-12 h-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Public Hearings</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="public-hearings">Last opened: Not yet opened</div>
-                                </a>
-                                <a href="meeting-records.php" data-archive="meeting-records" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
-                                    <div class="mb-3 group-hover:scale-110 transition-transform">
-                                        <svg class="w-12 h-12 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Meeting/Sessions Records</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="meeting-records">Last opened: Not yet opened</div>
-                                </a>
-                                <?php foreach ($archive_folders as $folder): ?>
-                                <a href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group">
-                                    <div class="mb-3 group-hover:scale-110 transition-transform">
-                                        <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">Last opened: Not yet opened</div>
-                                </a>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
+                           
 
                         <!-- Latest Archives Section (dynamic: shows recent files visited) -->
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Latest Archive Files</h2>
+                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Latest Archive Files Visit </h2>
                             <div id="latestFilesList" class="space-y-3">
                                 <div class="text-sm text-gray-600 dark:text-gray-400">Loading recent files...</div>
                             </div>
@@ -926,6 +891,54 @@
             });
         })();
     </script>
+    <script>
+        (function(){
+            var uploads = <?php echo json_encode($recent_uploads ?? []); ?> || [];
+            var ctn = document.getElementById('toast-container');
+            var KEY = 'archives_shown_upload_ids';
+            function getShown(){
+                try{ var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+            }
+            function mark(id){
+                try{
+                    var ids = getShown();
+                    if (ids.indexOf(String(id)) === -1) {
+                        ids.push(String(id));
+                        if (ids.length > 120) ids.splice(0, ids.length - 120);
+                        localStorage.setItem(KEY, JSON.stringify(ids));
+                    }
+                }catch(e){}
+            }
+            function showUploadToast(u){
+                if (!ctn) return;
+                var el = document.createElement('div');
+                el.setAttribute('role','status');
+                el.setAttribute('aria-live','polite');
+                el.className = 'pointer-events-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all duration-300 ease-out font-semibold max-w-sm';
+                var txt = 'New upload: ' + String(u.name || u.title || 'File') + (u.folder_name ? ' • ' + String(u.folder_name) : '');
+                el.textContent = txt;
+                ctn.appendChild(el);
+                requestAnimationFrame(function(){ el.classList.remove('opacity-0','translate-y-4'); el.classList.add('opacity-100','translate-y-0'); });
+                mark(u.id || (u.name || ''));
+                setTimeout(function(){
+                    el.classList.remove('opacity-100','translate-y-0');
+                    el.classList.add('opacity-0','translate-y-4');
+                    setTimeout(function(){ el.remove(); }, 300);
+                }, 2600);
+            }
+            var shown = getShown();
+            var now = Date.now();
+            uploads.filter(function(u){
+                if (!u || !u.id) return false;
+                if (shown.indexOf(String(u.id)) !== -1) return false;
+                var t = Date.parse(u.created_at || u.raw_date || '');
+                if (isNaN(t)) return true;
+                return (now - t) <= 3*24*60*60*1000;
+            }).slice(0, 6).forEach(function(u, idx){
+                setTimeout(function(){ showUploadToast(u); }, idx * 1000);
+            });
+        })();
+    </script>
     <!-- Modal -->
     <div id="createFolderModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4">
@@ -961,6 +974,7 @@
             var seriesLabels = <?php echo json_encode($qa_series_labels ?? []); ?>;
             var seriesDownloads = <?php echo json_encode($qa_series_downloads ?? []); ?>;
             var seriesRecords = <?php echo json_encode($qa_series_records ?? []); ?>;
+            var seriesRecordsMerged = <?php echo json_encode($qa_series_records_merged ?? []); ?>;
             var fuLabels = <?php echo json_encode($uploads_labels ?? []); ?>;
             var fuLast7 = <?php echo json_encode($uploads_last7 ?? []); ?>;
             var fuPrev7 = <?php echo json_encode($uploads_prev7 ?? []); ?>;
@@ -1027,7 +1041,7 @@
             if (recMini) {
                 new Chart(recMini.getContext('2d'), {
                     type: 'line',
-                    data: { labels: seriesLabels, datasets: [{ data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                    data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
                     options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }

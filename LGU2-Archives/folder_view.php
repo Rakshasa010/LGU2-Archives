@@ -60,6 +60,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              if (!file_exists($folder_path)) {
                  @mkdir($folder_path, 0777, true);
              }
+             $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                 id INT AUTO_INCREMENT PRIMARY KEY,
+                 time VARCHAR(20) NOT NULL,
+                 date DATE NOT NULL,
+                 content VARCHAR(255) NOT NULL,
+                 about VARCHAR(100) NOT NULL,
+                 status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+             )");
+             $ntime = date('h:i A'); $ndate = date('Y-m-d');
+             $ncontent = 'Folder created: ' . $name . ' (ID ' . $new_id . ')';
+             $nabout = 'Storage'; $nstatus = 'unread';
+             if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                 $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                 $ins->execute(); $ins->close();
+             }
              echo json_encode(['success' => true, 'folder' => ['id' => $new_id, 'name' => $name, 'slug' => $slug]]);
         } else {
              echo json_encode(['success' => false, 'message' => 'Failed to create folder']);
@@ -94,6 +110,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
                 $stmt->bind_param("iss", $current_folder_id, $final_name, $file_path);
                 if ($stmt->execute()) {
+                    $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        time VARCHAR(20) NOT NULL,
+                        date DATE NOT NULL,
+                        content VARCHAR(255) NOT NULL,
+                        about VARCHAR(100) NOT NULL,
+                        status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )");
+                    $ntime = date('h:i A'); $ndate = date('Y-m-d');
+                    $ncontent = 'New upload: ' . $final_name . ' in folder #' . $current_folder_id;
+                    $nabout = 'Upload'; $nstatus = 'unread';
+                    if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                        $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                        $ins->execute(); $ins->close();
+                    }
                     echo json_encode([
                         'success' => true, 
                         'file' => [

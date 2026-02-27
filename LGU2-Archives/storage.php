@@ -1,6 +1,7 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require 'authdatabase.php';
+    if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
         header('Content-Type: application/json');
@@ -18,6 +19,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Invalid year']);
             $conn->close();
             exit();
+        }
+        $confirm = $_POST['confirm_password'] ?? '';
+        $uid = (int)$_SESSION['user_id'];
+        $ok = false;
+        if ($confirm !== '') {
+            if ($st = $conn->prepare("SELECT password FROM users WHERE id = ?")) {
+                $st->bind_param("i", $uid);
+                $st->execute();
+                $rs = $st->get_result();
+                if ($rs && $rs->num_rows === 1) {
+                    $row = $rs->fetch_assoc();
+                    if (password_verify($confirm, $row['password'])) $ok = true;
+                }
+                $st->close();
+            }
+        }
+        if (!$ok) {
+            http_response_code(403);
+            header('Content-Type: text/html; charset=UTF-8');
+            echo '<!doctype html><html><head><meta charset="utf-8"><title>Export</title><style>body{font-family:Arial;padding:24px;color:#222}</style></head><body><h3>Export Blocked</h3><p>Invalid password. Please try again.</p></body></html>';
+            $conn->close();
+            exit();
+        }
+        $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            time VARCHAR(20) NOT NULL,
+            date DATE NOT NULL,
+            content VARCHAR(255) NOT NULL,
+            about VARCHAR(100) NOT NULL,
+            status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+        $ntime = date('h:i A'); $ndate = date('Y-m-d');
+        $ncontent = 'Yearly export requested: ' . $year . ' by user #' . $uid;
+        $nabout = 'Export'; $nstatus = 'unread';
+        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+            $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            $ins->execute(); $ins->close();
         }
         if (!class_exists('ZipArchive')) {
             header('Content-Type: application/json');
@@ -635,9 +674,28 @@ if (isset($_SESSION['user_id'])) {
                             <form id="year-export-form" method="POST" action="storage.php" target="_blank" class="hidden">
                                 <input type="hidden" name="action" value="export_year_zip">
                                 <input type="hidden" name="year" id="year-export-input" value="">
+                                <input type="hidden" name="confirm_password" id="year-export-pass" value="">
                             </form>
                         </div>
                         <div id="yearly-archives-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                    </div>
+                    <div id="year-export-modal" class="hidden fixed inset-0 z-50">
+                        <div class="flex items-center justify-center min-h-screen px-4">
+                            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+                            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 border border-gray-200 dark:border-slate-700">
+                                <div class="mb-4">
+                                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Confirm Yearly Export</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">Enter your password to continue.</div>
+                                </div>
+                                <div class="space-y-3">
+                                    <input type="password" id="year-export-password-input" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="Password" />
+                                    <div class="flex justify-end gap-2 pt-2">
+                                        <button type="button" id="year-export-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
+                                        <button type="button" id="year-export-confirm" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-4 px-4 py-3 bg-yellow-50 dark:bg-amber-900/20 rounded-lg border border-yellow-200 dark:border-amber-800 text-xs text-yellow-700 dark:text-amber-200">
                         Retention policy: Main Storage retains files for 5 years.
@@ -1342,12 +1400,7 @@ if (isset($_SESSION['user_id'])) {
                                 modal.remove();
                             });
                             document.getElementById('year-modal-export').addEventListener('click', function(){
-                                var form = document.getElementById('year-export-form');
-                                var input = document.getElementById('year-export-input');
-                                if (form && input) {
-                                    input.value = String(year);
-                                    form.submit();
-                                }
+                                openYearExport(String(year));
                             });
                         }).catch(function(){
                             showToast('Error loading year '+year, 'error');
@@ -1357,12 +1410,7 @@ if (isset($_SESSION['user_id'])) {
                 grid.querySelectorAll('.export-year-btn').forEach(function(btn){
                     btn.addEventListener('click', function(){
                         var year = parseInt(btn.getAttribute('data-year'), 10);
-                        var form = document.getElementById('year-export-form');
-                        var input = document.getElementById('year-export-input');
-                        if (form && input) {
-                            input.value = String(year);
-                            form.submit();
-                        }
+                        openYearExport(String(year));
                     });
                 });
             }
@@ -1440,6 +1488,43 @@ if (isset($_SESSION['user_id'])) {
             } else {
                 init();
             }
+        })();
+    </script>
+    <script>
+        (function(){
+            var modal = document.getElementById('year-export-modal');
+            var passInput = document.getElementById('year-export-password-input');
+            var passField = document.getElementById('year-export-pass');
+            var yearField = document.getElementById('year-export-input');
+            var confirmBtn = document.getElementById('year-export-confirm');
+            var cancelBtn = document.getElementById('year-export-cancel');
+            var pendingYear = '';
+            window.openYearExport = function(y){
+                pendingYear = y;
+                passInput && (passInput.value = '');
+                modal && modal.classList.remove('hidden');
+                setTimeout(function(){ passInput && passInput.focus(); }, 50);
+            };
+            function closeModal(){
+                modal && modal.classList.add('hidden');
+                pendingYear = '';
+            }
+            cancelBtn && cancelBtn.addEventListener('click', closeModal);
+            confirmBtn && confirmBtn.addEventListener('click', function(){
+                var p = passInput ? passInput.value : '';
+                if (!p || !pendingYear) return;
+                if (yearField) yearField.value = pendingYear;
+                if (passField) passField.value = p;
+                var form = document.getElementById('year-export-form');
+                if (form) {
+                    if (typeof showToast === 'function') { try { showToast('Starting export for '+pendingYear, 'success'); } catch(e){} }
+                    form.submit();
+                }
+                closeModal();
+            });
+            window.addEventListener('keydown', function(e){
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+            });
         })();
     </script>
     <?php include 'includes/footer_scripts.php'; ?>

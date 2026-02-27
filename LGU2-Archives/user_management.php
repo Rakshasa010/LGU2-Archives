@@ -485,7 +485,8 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                 <table class="min-w-full" id="userTable">
                     <thead class="bg-gray-50 dark:bg-slate-700/50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User Email</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Active</th>
@@ -495,13 +496,37 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                     <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                         <?php if (empty($all_users)): ?>
                             <tr>
-                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No users found</td>
+                                <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No users found</td>
                             </tr>
                         <?php else: foreach ($all_users as $u): ?>
                             <tr class="user-row" data-role="<?php echo isset($u['role']) ? strtolower($u['role']) : 'user'; ?>">
-                                <td class="px-6 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200">
-                                    <?php echo htmlspecialchars($u['full_name']); ?>
-                                    <?php if(isset($u['role']) && $u['role']==='admin') echo '<span class="ml-2 text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Admin</span>'; ?>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <?php
+                                            $name = trim($u['full_name'] ?? '');
+                                            $initials = '';
+                                            if ($name !== '') {
+                                                $parts = preg_split('/\s+/', $name);
+                                                $initials = strtoupper(substr($parts[0] ?? '',0,1) . substr($parts[count($parts)-1] ?? '',0,1));
+                                            } else {
+                                                $initials = strtoupper(substr($u['username'] ?? 'U',0,1));
+                                            }
+                                        ?>
+                                        <div class="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300 text-xs font-bold">
+                                            <?php echo htmlspecialchars($initials); ?>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['full_name']); ?></div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($u['role'] ?? 'user'); ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm">
+                                    <?php if (!empty($u['email'])): ?>
+                                        <a href="mailto:<?php echo htmlspecialchars($u['email']); ?>" class="text-blue-600 hover:underline dark:text-blue-400"><?php echo htmlspecialchars($u['email']); ?></a>
+                                    <?php else: ?>
+                                        <span class="text-gray-500">—</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
                                 <td class="px-6 py-4 text-sm">
@@ -579,6 +604,9 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
             // Update the counter text
             document.getElementById('userCount').textContent = visibleCount + ' users';
         });
+        </script>
+        <script>
+        // No details dropdown; avatars and emails are shown inline now.
         </script>
 
         <div class="mt-6">

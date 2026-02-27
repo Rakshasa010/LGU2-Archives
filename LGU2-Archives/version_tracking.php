@@ -351,66 +351,44 @@ $conn->close();
                         <h1 class="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">Version Tracking</h1>
                         <p class="text-gray-600 dark:text-gray-400">Browse folders and view mock version history of files</p>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                        <button type="button" onclick="viewFolder('ordRes','Ordinances & Resolutions')" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 text-left hover:shadow-xl hover:scale-[1.02] transition-all group">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-9 h-9 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                </svg>
-                                <div>
-                                    <div class="font-light text-sm md:text-base tracking-tight">Ordinances & Resolutions</div>
-                                    <div class="text-xs text-gray-500">From main storage archive</div>
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <div class="lg:col-span-1">
+                            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4">
+                                <div class="font-semibold text-gray-800 dark:text-gray-100 mb-2">Folders</div>
+                                <div id="vt-folders-list" class="space-y-2">
+                                    <button type="button" onclick="viewFolder('ordRes','Ordinances & Resolutions')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
+                                        <span class="flex items-center gap-2"><i class="bi bi-folder text-orange-600"></i><span>Ordinances & Resolutions</span></span>
+                                        <i class="bi bi-chevron-right text-gray-400"></i>
+                                    </button>
+                                    <button type="button" onclick="viewFolder('billing','Billing')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
+                                        <span class="flex items-center gap-2"><i class="bi bi-folder2-open text-emerald-600"></i><span>Billing</span></span>
+                                        <i class="bi bi-chevron-right text-gray-400"></i>
+                                    </button>
+                                    <button type="button" onclick="viewFolder('publicHearing','Public Hearings')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
+                                        <span class="flex items-center gap-2"><i class="bi bi-folder2 text-blue-600"></i><span>Public Hearings</span></span>
+                                        <i class="bi bi-chevron-right text-gray-400"></i>
+                                    </button>
+                                    <button type="button" onclick="viewFolder('meeting','Meeting/Sessions Records')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
+                                        <span class="flex items-center gap-2"><i class="bi bi-journal-text text-purple-600"></i><span>Meeting/Sessions Records</span></span>
+                                        <i class="bi bi-chevron-right text-gray-400"></i>
+                                    </button>
                                 </div>
                             </div>
-                        </button>
-                        <button type="button" onclick="viewFolder('billing','Billing')" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 text-left hover:shadow-xl hover:scale-[1.02] transition-all group">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-9 h-9 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
-                                <div>
-                                    <div class="font-light text-sm md:text-base tracking-tight">Billing</div>
-                                    <div class="text-xs text-gray-500">From main storage archive</div>
-                                </div>
-                            </div>
-                        </button>
-                        <button type="button" onclick="viewFolder('publicHearing','Public Hearings')" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 text-left hover:shadow-xl hover:scale-[1.02] transition-all group">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-9 h-9 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                </svg>
-                                <div>
-                                    <div class="font-light text-sm md:text-base tracking-tight">Public Hearings</div>
-                                    <div class="text-xs text-gray-500">From main storage archive</div>
-                                </div>
-                            </div>
-                        </button>
-                        <button type="button" onclick="viewFolder('meeting','Meeting/Sessions Records')" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 text-left hover:shadow-xl hover:scale-[1.02] transition-all group">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-9 h-9 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                </svg>
-                                <div>
-                                    <div class="font-light text-sm md:text-base tracking-tight">Meeting/Sessions Records</div>
-                                    <div class="text-xs text-gray-500">From main storage archive</div>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
-                    <div class="mt-8">
-                        <div class="mb-3 text-sm text-gray-600 dark:text-gray-400">Archive Folders</div>
-                        <div id="archive-folders-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"></div>
-                    </div>
-                    <div id="filesPanel" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 mt-6 hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <div id="filesPanelTitle" class="font-semibold text-base md:text-lg tracking-tight text-gray-800 dark:text-gray-200">Files</div>
-                                <div id="filesPanelMeta" class="text-xs md:text-sm text-gray-500 dark:text-gray-400"></div>
-                            </div>
-                            <button type="button" onclick="clearFolder()" class="px-3 py-1.5 text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded hover:bg-red-100 dark:hover:bg-red-800/40">Close</button>
                         </div>
-                        <div id="filesPanelList" class="space-y-3"></div>
+                        <div class="lg:col-span-3">
+                            <div id="filesPanel" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <div id="filesPanelTitle" class="font-semibold text-base md:text-lg tracking-tight text-gray-800 dark:text-gray-200">Files</div>
+                                        <div id="filesPanelMeta" class="text-xs md:text-sm text-gray-500 dark:text-gray-400"></div>
+                                    </div>
+                                    <button type="button" onclick="clearFolder()" class="px-3 py-1.5 text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded hover:bg-red-100 dark:hover:bg-red-800/40">Close</button>
+                                </div>
+                                <div id="filesPanelList" class="space-y-3">
+                                    <div class="text-sm text-gray-500">Select a folder on the left</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -519,18 +497,17 @@ $conn->close();
             });
         }
         (function(){
-            var grid = document.getElementById('archive-folders-grid');
-            if (!grid) return;
+            var list = document.getElementById('vt-folders-list');
+            if (!list) return;
             fetch('archives_api.php?action=list_folders').then(function(r){ return r.json(); }).then(function(d){
                 var folders = (d && d.success) ? (d.folders || []) : [];
                 var html = folders.map(function(f){
-                    return '<button type="button" data-id="'+String(f.id)+'" data-name="'+String(f.name)+'" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 text-left hover:shadow-xl hover:scale-[1.02] transition-all group">'
-                         + '<div class="flex items-center space-x-3"><svg class="w-9 h-9 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>'
-                         + '<div><div class="font-light text-sm md:text-base tracking-tight">'+String(f.name)+'</div>'
-                         + '<div class="text-xs text-gray-500">Archive folder</div></div></div></button>';
+                    return '<button type="button" data-id="'+String(f.id)+'" data-name="'+String(f.name)+'" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">'
+                         + '<span class="flex items-center gap-2"><i class="bi bi-folder text-red-600"></i><span>'+String(f.name)+'</span></span>'
+                         + '<i class="bi bi-chevron-right text-gray-400"></i></button>';
                 }).join('');
-                grid.innerHTML = html;
-                Array.prototype.forEach.call(grid.querySelectorAll('button[data-id]'), function(btn){
+                list.insertAdjacentHTML('beforeend', html);
+                Array.prototype.forEach.call(list.querySelectorAll('button[data-id]'), function(btn){
                     btn.addEventListener('click', function(){
                         var folder = { id: parseInt(btn.getAttribute('data-id'),10), name: btn.getAttribute('data-name') };
                         viewArchiveFolder(folder);
