@@ -430,20 +430,25 @@ if ($q = $conn->query($qStr)) {
             </div>
         <?php endif; ?>
 
-        <!-- Database Backup Panel -->
+        <!-- Database Backup & Restore Panel -->
         <div class="bg-gradient-to-r from-red-800 to-red-900 rounded-xl shadow-lg border border-red-700 p-6 mb-8 flex flex-col md:flex-row items-center justify-between text-white">
             <div class="flex items-center space-x-4 mb-4 md:mb-0">
                 <div class="bg-white/20 p-3 rounded-full">
-                    <i class="bi bi-database-down text-2xl"></i>
+                    <i class="bi bi-database text-2xl"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-lg">System Database Backup</h3>
-                    <p class="text-red-100 text-sm">Download a complete .sql snapshot of the system structure and data.</p>
+                    <h3 class="font-bold text-lg">System Database Management</h3>
+                    <p class="text-red-100 text-sm">Download or restore a complete .sql snapshot of the system structure and data.</p>
                 </div>
             </div>
-            <a href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
-                <i class="bi bi-download mr-2"></i> Download full backup
-            </a>
+            <div class="flex gap-3">
+                <a href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
+                    <i class="bi bi-download mr-2"></i> Download Backup
+                </a>
+                <button onclick="openRestoreModal()" class="px-5 py-2.5 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center shadow-md border border-white/20">
+                    <i class="bi bi-upload mr-2"></i> Restore Database
+                </button>
+            </div>
         </div>
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
@@ -670,7 +675,232 @@ if ($q = $conn->query($qStr)) {
             </a>
         </div>
     </div>
+
+    <!-- Restore Database Modal -->
+    <div id="restoreModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeRestoreModal()"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                        <i class="bi bi-database-up text-red-600"></i>
+                        Restore Database
+                    </h2>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeRestoreModal()">&times;</button>
+                </div>
+                
+                <div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg text-sm text-yellow-800 dark:text-yellow-300">
+                    <i class="bi bi-exclamation-triangle mr-2"></i>
+                    <strong>Warning:</strong> This will replace your entire database. Ensure you have a backup first.
+                </div>
+
+                <form id="restoreForm" class="space-y-4">
+                    <!-- Drag and Drop Area -->
+                    <div 
+                        id="dropZone" 
+                        class="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+                        ondrop="handleDrop(event)"
+                        ondragover="handleDragOver(event)"
+                        ondragleave="handleDragLeave(event)"
+                        onclick="document.getElementById('fileInput').click()">
+                        
+                        <i class="bi bi-cloud-upload text-4xl text-gray-400 dark:text-gray-500 mb-3 block"></i>
+                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Drag and drop your .sql file here</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">or click to browse</p>
+                        
+                        <input 
+                            type="file" 
+                            id="fileInput" 
+                            name="backupFile" 
+                            accept=".sql,.zip,.gz" 
+                            class="hidden"
+                            onchange="handleFileSelect(this.files)">
+                    </div>
+
+                    <!-- Selected File Info -->
+                    <div id="fileInfo" class="hidden p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="bi bi-file-earmark-check text-green-600 dark:text-green-400 text-lg"></i>
+                                <div>
+                                    <p id="fileName" class="text-sm font-semibold text-gray-800 dark:text-gray-200"></p>
+                                    <p id="fileSize" class="text-xs text-gray-600 dark:text-gray-400"></p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="clearFileInput()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                <i class="bi bi-x-circle text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div id="progressContainer" class="hidden space-y-2">
+                        <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                            <span>Uploading and restoring...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                            <div id="progressBar" class="bg-red-600 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="closeRestoreModal()" class="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" id="restoreBtn" class="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                            <i class="bi bi-lightning-charge"></i> Restore Now
+                        </button>
+                    </div>
+
+                    <!-- Info Text -->
+                    <p class="text-xs text-gray-600 dark:text-gray-400 text-center mt-4">
+                        Supported formats: .sql, .zip, .gz
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+<script src="assets/js/archives.js"></script>
     <script src="assets/js/archives-landing.js"></script>
-    <script src="assets/js/theme-toggle.js"></script>
-</body>
-</html>
+
+    <script>
+    let selectedFile = null;
+
+    function openRestoreModal() {
+        document.getElementById('restoreModal').classList.remove('hidden');
+        selectedFile = null;
+        document.getElementById('fileInfo').classList.add('hidden');
+        document.getElementById('progressContainer').classList.add('hidden');
+        document.getElementById('restoreBtn').disabled = true;
+    }
+
+    function closeRestoreModal() {
+        document.getElementById('restoreModal').classList.add('hidden');
+        selectedFile = null;
+        document.getElementById('fileInput').value = '';
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById('dropZone').classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById('dropZone').classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById('dropZone').classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
+        
+        const files = e.dataTransfer.files;
+        handleFileSelect(files);
+    }
+
+    function handleFileSelect(files) {
+        if (!files || files.length === 0) return;
+        
+        const file = files[0];
+        const validExtensions = ['sql', 'zip', 'gz'];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        
+        if (!validExtensions.includes(fileExtension)) {
+            alert('Invalid file type. Please upload a .sql, .zip, or .gz file.');
+            return;
+        }
+        
+        selectedFile = file;
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(2) + ' KB';
+        document.getElementById('fileInfo').classList.remove('hidden');
+        document.getElementById('restoreBtn').disabled = false;
+    }
+
+    function clearFileInput() {
+        selectedFile = null;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('fileInfo').classList.add('hidden');
+        document.getElementById('restoreBtn').disabled = true;
+    }
+
+    document.getElementById('restoreForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!selectedFile) {
+            alert('Please select a file to restore.');
+            return;
+        }
+        
+        // Confirm before restoring
+        if (!confirm('Are you absolutely sure? This will replace your entire database with the contents of the selected file.\n\nThis action CANNOT be undone. Make sure you have a backup first.')) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'restore');
+        formData.append('backupFile', selectedFile);
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const restoreBtn = document.getElementById('restoreBtn');
+        
+        progressContainer.classList.remove('hidden');
+        restoreBtn.disabled = true;
+        
+        try {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    progressPercent.textContent = Math.round(percentComplete) + '%';
+                }
+            });
+            
+            xhr.addEventListener('load', function() {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            alert('Database restored successfully! The page will reload.');
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            alert('Restoration failed: ' + (response.message || 'Unknown error'));
+                            progressContainer.classList.add('hidden');
+                            restoreBtn.disabled = false;
+                        }
+                    } catch (err) {
+                        alert('Invalid response from server.');
+                        progressContainer.classList.add('hidden');
+                        restoreBtn.disabled = false;
+                    }
+                } else {
+                    alert('Server error: ' + xhr.status);
+                    progressContainer.classList.add('hidden');
+                    restoreBtn.disabled = false;
+                }
+            });
+            
+            xhr.addEventListener('error', function() {
+                alert('Network error occurred.');
+                progressContainer.classList.add('hidden');
+                restoreBtn.disabled = false;
+            });
+            
+            xhr.open('POST', 'archives_api.php');
+            xhr.send(formData);
+        } catch (error) {
+            alert('Error: ' + error.message);
+            progressContainer.classList.add('hidden');
+            restoreBtn.disabled = false;
+        }
+    });
+    </script>

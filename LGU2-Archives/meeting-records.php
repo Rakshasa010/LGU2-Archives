@@ -257,51 +257,80 @@ $conn->close();
                         $fileExt = strtolower(pathinfo($record['title'], PATHINFO_EXTENSION));
                         $iconClass = 'bi-file-earmark-text text-indigo-500';
                         if (in_array($fileExt, ['jpg','jpeg','png','gif','webp'])) $iconClass = 'bi-file-earmark-image text-purple-500';
-                        elseif (in_array($fileExt, ['pdf'])) $iconClass = 'bi-file-earmark-pdf text-red-500';
+                        elseif (in_array($fileExt, ['pdf'])) { $iconClass = 'bi-file-earmark-pdf text-red-500'; }
                         elseif (in_array($fileExt, ['mp4','avi','mov'])) $iconClass = 'bi-file-earmark-play text-pink-500';
                         elseif (in_array($fileExt, ['doc','docx'])) $iconClass = 'bi-file-earmark-word text-blue-700';
 
                         $realFilePath = "uploads/records/" . $record['author'] . "/" . $record['year'] . "/" . $record['month'] . "/" . $record['type'] . "/" . $record['title'];
                         $hasPreview = in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($realFilePath);
+                        $isPDF = in_array($fileExt, ['pdf']);
                     ?>
                         <div data-id="<?php echo $record['id']; ?>" 
-                             class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex flex-col"
+                             class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex flex-col overflow-hidden"
                              draggable="true"
                              ondragstart="drag(event, 'file', <?php echo $record['id']; ?>)">
                             
-                            <div class="h-32 bg-gray-100 dark:bg-slate-700/50 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer" onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>')">
+                            <div class="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>')">
                                 <?php if ($hasPreview): ?>
-                                    <img src="<?php echo htmlspecialchars($realFilePath); ?>" class="w-full h-full object-cover">
+                                    <div class="relative w-full h-full">
+                                        <img src="<?php echo htmlspecialchars($realFilePath); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <i class="bi bi-eye text-white text-3xl drop-shadow-lg"></i>
+                                        </div>
+                                    </div>
                                 <?php else: ?>
-                                    <i class="bi <?php echo $iconClass; ?> text-5xl opacity-80 group-hover:scale-110 transition-transform"></i>
+                                    <div class="relative flex flex-col items-center">
+                                        <?php if ($isPDF): ?>
+                                            <div class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2">
+                                                <i class="bi bi-filetype-pdf text-sm"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                        <i class="bi <?php echo $iconClass; ?> text-6xl opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all"></i>
+                                    </div>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="p-3 flex items-start justify-between flex-1">
-                                <div class="min-w-0 pr-2">
-                                    <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate" title="<?php echo htmlspecialchars($record['title']); ?>"><?php echo htmlspecialchars($record['title']); ?></div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                                        <?php echo htmlspecialchars($record['author']); ?> • <?php echo htmlspecialchars($record['month'] . ' ' . $record['year']); ?>
+                            <div class="p-4 flex flex-col flex-1">
+                                <div class="flex items-start justify-between gap-2 mb-2">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate" title="<?php echo htmlspecialchars($record['title']); ?>"><?php echo htmlspecialchars($record['title']); ?></div>
                                     </div>
-                                    <div class="text-[10px] mt-1">
-                                        <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 rounded"><?php echo htmlspecialchars($record['type']); ?></span>
+                                    <div class="relative flex-shrink-0">
+                                        <button class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 transition-colors" onclick="event.stopPropagation(); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#record-menu-<?php echo $record['id']; ?>') && !e.target.closest('button')){ document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                            <i class="bi bi-three-dots-vertical text-lg"></i>
+                                        </button>
+                                        
+                                        <div id="record-menu-<?php echo $record['id']; ?>" class="hidden absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 py-1 overflow-hidden">
+                                            <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
+                                                <i class="bi bi-eye text-indigo-500"></i> View
+                                            </button>
+                                            <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
+                                                <i class="bi bi-download text-emerald-500"></i> Download
+                                            </button>
+                                            <button onclick="openVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                                                <i class="bi bi-clock-history text-blue-500"></i> History
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="relative flex-shrink-0">
-                                    <button class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 transition-colors" onclick="document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#record-menu-<?php echo $record['id']; ?>') && !e.target.closest('button')){ document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    
-                                    <div id="record-menu-<?php echo $record['id']; ?>" class="hidden absolute right-0 bottom-full mb-1 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 py-1">
-                                        <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
-                                            <i class="bi bi-eye mr-2"></i> View
-                                        </button>
-                                        <button onclick="openVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
-                                            <i class="bi bi-clock-history mr-2"></i> History
-                                        </button>
-                                        <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
-                                            <i class="bi bi-download mr-2"></i> Download
-                                        </button>
+
+                                <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-3">
+                                    <span><?php echo htmlspecialchars($record['author']); ?></span>
+                                    <span class="text-gray-400 dark:text-gray-500">•</span>
+                                    <span><?php echo htmlspecialchars($record['month'] . ' ' . $record['year']); ?></span>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2 mb-3">
+                                    <span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded"><?php echo htmlspecialchars($record['type']); ?></span>
+                                    <?php if (isset($record['version'])): ?>
+                                        <span class="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded">v<?php echo htmlspecialchars($record['version']); ?></span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="mt-auto pt-3 border-t border-gray-100 dark:border-slate-700">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 font-mono text-xs font-semibold text-blue-700 dark:text-blue-300 text-center tracking-wider">
+                                        MR-<?php echo str_pad($record['id'], 6, '0', STR_PAD_LEFT); ?>
                                     </div>
                                 </div>
                             </div>

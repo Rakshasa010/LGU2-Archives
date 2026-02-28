@@ -97,8 +97,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $colCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'author'");
             if ($colCheck && $colCheck->num_rows == 0) {
-                $conn->query("ALTER TABLE archive_files ADD COLUMN author VARCHAR(255) DEFAULT NULL, ADD COLUMN file_date DATE DEFAULT NULL, ADD COLUMN unique_number VARCHAR(100) DEFAULT NULL");
+                $conn->query("ALTER TABLE archive_files ADD COLUMN author VARCHAR(255) DEFAULT NULL, ADD COLUMN file_date DATE DEFAULT NULL, ADD COLUMN unique_number VARCHAR(100) DEFAULT NULL, ADD COLUMN version INT DEFAULT 1, ADD COLUMN parent_version_id INT NULL");
             }
+            
+            // Ensure version tracking columns exist
+            $versionCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'version'");
+            if (!$versionCheck || $versionCheck->num_rows == 0) {
+                $conn->query("ALTER TABLE archive_files ADD COLUMN version INT DEFAULT 1");
+            }
+            $parentCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'parent_version_id'");
+            if (!$parentCheck || $parentCheck->num_rows == 0) {
+                $conn->query("ALTER TABLE archive_files ADD COLUMN parent_version_id INT NULL");
+            }
+            
             $conn->query("CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, time VARCHAR(20) NOT NULL, date DATE NOT NULL, content VARCHAR(255) NOT NULL, about VARCHAR(100) NOT NULL, status ENUM('unread','read') NOT NULL DEFAULT 'unread', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
 
             $count = count($_FILES['files']['name']);
@@ -123,9 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $final_name = basename($file_path);
                         $unq = empty($unq_base) ? null : ($unq_base . ($count > 1 ? "-$i" : ''));
                         $isBlankUnq = empty($unq);
+                        $version = 1;
+                        $parent_version_id = null;
 
-                        $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number) VALUES (?, ?, ?, ?, ?, ?)");
-                        $stmt->bind_param("isssss", $current_folder_id, $final_name, $file_path, $author, $fdate, $unq);
+                        $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                        $stmt->bind_param("isssssii", $current_folder_id, $final_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id);
                         if ($stmt->execute()) {
                             $new_id = $conn->insert_id;
                             if ($isBlankUnq) {
@@ -353,40 +366,87 @@ $conn->close();
                     elseif (in_array($fileExt, ['pdf'])) $iconClass = 'bi-file-earmark-pdf text-red-500';
                     elseif (in_array($fileExt, ['mp4','avi','mov'])) $iconClass = 'bi-file-earmark-play text-pink-500';
                     elseif (in_array($fileExt, ['doc','docx'])) $iconClass = 'bi-file-earmark-word text-blue-700';
+                    
+                    // Format file size
+                    $fileSizeDisplay = $fileSize > 0 ? (
+                        $fileSize >= 1073741824 ? round($fileSize / 1073741824, 2) . ' GB' :
+                        ($fileSize >= 1048576 ? round($fileSize / 1048576, 2) . ' MB' :
+                        ($fileSize >= 1024 ? round($fileSize / 1024, 2) . ' KB' : $fileSize . ' B'))
+                    ) : 'Unknown';
+                    
+                    // Get unique ID
+                    $uniqueId = !empty($file['unique_number']) ? htmlspecialchars($file['unique_number']) : sprintf("DOC-%06d", $file['id']);
                 ?>
-                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex flex-col" id="file-<?php echo $file['id']; ?>">
-                    <div class="h-32 bg-gray-100 dark:bg-slate-700/50 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer" onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')">
+                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="file-<?php echo $file['id']; ?>">
+                    <!-- Thumbnail Preview Area -->
+                    <div class="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')">
                         <?php if (in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($fileUrl)): ?>
-                            <img src="<?php echo htmlspecialchars($fileUrl); ?>" class="w-full h-full object-cover">
+                            <img src="<?php echo htmlspecialchars($fileUrl); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" alt="Preview">
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                                <i class="bi bi-eye text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl"></i>
+                            </div>
+                        <?php elseif ($fileExt === 'pdf' && file_exists($fileUrl)): ?>
+                            <div class="flex flex-col items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform duration-300">
+                                <i class="bi bi-file-earmark-pdf text-5xl mb-2 opacity-90"></i>
+                                <span class="text-xs font-semibold">PDF Preview</span>
+                            </div>
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                                <i class="bi bi-eye text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl"></i>
+                            </div>
                         <?php else: ?>
-                            <i class="bi <?php echo $iconClass; ?> text-5xl opacity-80 group-hover:scale-110 transition-transform"></i>
+                            <div class="flex flex-col items-center">
+                                <i class="bi <?php echo $iconClass; ?> text-5xl opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all duration-300"></i>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 mt-2 font-semibold"><?php echo strtoupper($fileExt); ?></span>
+                            </div>
                         <?php endif; ?>
                     </div>
-                    <div class="p-3 flex items-start justify-between flex-1">
-                        <div class="min-w-0 pr-2">
-                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate" title="<?php echo htmlspecialchars($file['name']); ?>"><?php echo htmlspecialchars($file['name']); ?></div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                                <?php echo !empty($file['author']) ? htmlspecialchars($file['author']) : 'Unknown Author'; ?> • <?php echo !empty($file['file_date']) ? date('M d, Y', strtotime($file['file_date'])) : date('M d, Y', strtotime($file['created_at'])); ?>
+                    
+                    <!-- File Info Section -->
+                    <div class="p-4 flex flex-col flex-1">
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="<?php echo htmlspecialchars($file['name']); ?>"><?php echo htmlspecialchars($file['name']); ?></div>
                             </div>
-                            <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
-                                ID: <span class="font-mono"><?php echo !empty($file['unique_number']) ? htmlspecialchars($file['unique_number']) : sprintf("DOC-%06d", $file['id']); ?></span>
+                            <div class="relative flex-shrink-0">
+                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#file-menu-<?php echo $file['id']; ?>') && !e.target.closest('button')){ document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                    <i class="bi bi-three-dots-vertical text-lg"></i>
+                                </button>
+                                <!-- Dropdown Menu -->
+                                <div id="file-menu-<?php echo $file['id']; ?>" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
+                                    <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
+                                        <i class="bi bi-eye"></i> <span>View</span>
+                                    </button>
+                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" title="Download file" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');">
+                                        <i class="bi bi-download"></i> <span>Download</span>
+                                    </a>
+                                    <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
+                                        <i class="bi bi-clock-history"></i> <span>History</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="relative flex-shrink-0">
-                            <button class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 transition-colors" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#file-menu-<?php echo $file['id']; ?>') && !e.target.closest('button')){ document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <!-- Dropdown menu -->
-                            <div id="file-menu-<?php echo $file['id']; ?>" class="hidden absolute right-0 mt-1 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 py-1">
-                                <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
-                                    <i class="bi bi-eye mr-2"></i> View
-                                </button>
-                                <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
-                                    <i class="bi bi-clock-history mr-2"></i> History
-                                </button>
-                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');">
-                                    <i class="bi bi-download mr-2"></i> Download
-                                </a>
+                        
+                        <!-- Metadata -->
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+                                <span class="font-medium">Author:</span>
+                                <span class="truncate"><?php echo !empty($file['author']) ? htmlspecialchars($file['author']) : 'Unknown'; ?></span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+                                <span class="font-medium">Date:</span>
+                                <span><?php echo !empty($file['file_date']) ? date('M d, Y', strtotime($file['file_date'])) : date('M d, Y', strtotime($file['created_at'])); ?></span>
+                            </div>
+                            <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+                                <span class="font-medium">Size:</span>
+                                <span><?php echo $fileSizeDisplay; ?></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Unique ID Badge -->
+                        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/30 text-center">
+                                <div class="text-xs text-blue-700 dark:text-blue-300 font-semibold">Document ID</div>
+                                <div class="text-xs font-mono text-blue-900 dark:text-blue-200 font-bold"><?php echo $uniqueId; ?></div>
                             </div>
                         </div>
                     </div>
@@ -1002,7 +1062,6 @@ $conn->close();
             const modal = document.getElementById('notificationModal');
             if (modal) modal.classList.add('hidden');
         }
-        
 
         // Mobile Sidebar Toggle
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
