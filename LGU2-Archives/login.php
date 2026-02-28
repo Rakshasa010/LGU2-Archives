@@ -261,13 +261,11 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex items-center justify-between -mt-2">
-                    <label class="flex items-center">
-                        <input type="checkbox" class="rounded border-gray-300 dark:border-slate-600 text-red-600 focus:ring-red-500 dark:bg-slate-700">
-                        <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
-                    </label>
-                    <a href="forgot-password.php" class="text-sm text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300">Forgot password?</a>
-                </div>
+    <div class="mt-4 flex items-start gap-3">
+        <input id="agreeTerms" name="agreeTerms" type="checkbox" required class="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500">
+        <label for="agreeTerms" class="text-sm text-gray-700 dark:text-gray-300">I agree to the <button type="button" onclick="openTerms()" class="text-red-600 hover:underline">Terms & Conditions</button></label>
+    </div>
+
                 <button id="login-btn" type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center gap-2">
                     <span id="login-btn-text">Sign In</span>
                     <span id="login-btn-icon" class="hidden spinner"></span>
@@ -295,7 +293,7 @@
                 <div class="mt-6 text-center">
                     <p class="text-sm text-gray-600 dark:text-gray-400">Don't have an account? <a href="registering.php" class="text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 font-medium">Create Account</a></p>
                 </div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Don't have an account? <a href="registering.php" class="text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 font-medium">Register here</a></p>
+
             </form>
         <?php else: ?>
             <div class="mb-4">
@@ -365,6 +363,57 @@
             });
         });
     })();
+    </script>
+
+    <!-- Terms & Conditions Modal -->
+    <div id="termsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
+        <div class="max-w-3xl w-full mx-4 bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-start justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Terms & Conditions</h3>
+                <button type="button" onclick="closeTerms()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200">✕</button>
+            </div>
+            <div class="px-6 py-4 max-h-[60vh] overflow-auto text-sm text-gray-700 dark:text-gray-300 space-y-4">
+                <div>
+                    <strong>1. Acceptance of Terms</strong>
+                    <p>By accessing and using the Legislative Services Committee Management System, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                </div>
+                <div>
+                    <strong>2. Use License</strong>
+                    <p>Permission is granted to temporarily download one copy of the materials (information or software) on the Legislative Services Committee Management System for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:</p>
+                    <ul class="list-disc pl-5">
+                        <li>Modify or copy the materials</li>
+                        <li>Use the materials for any commercial purpose or for any public display</li>
+                        <li>Attempt to decompile or reverse engineer any software contained on the system</li>
+                        <li>Remove any copyright or other proprietary notations from the materials</li>
+                        <li>Transfer the materials to another person or "mirror" the materials on any other server</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>3. Disclaimer</strong>
+                    <p>The materials on the Legislative Services Committee Management System are provided on an 'as is' basis. We make no warranties, expressed or implied, and hereby disclaim and negate all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-end gap-3">
+                <button type="button" onclick="closeTerms()" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200">Close</button>
+                <button type="button" id="acceptTermsBtn" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Accept</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openTerms(){
+            var m = document.getElementById('termsModal');
+            if (m){ m.classList.remove('hidden'); m.classList.add('flex'); document.body.style.overflow = 'hidden'; }
+        }
+        function closeTerms(){
+            var m = document.getElementById('termsModal');
+            if (m){ m.classList.add('hidden'); m.classList.remove('flex'); document.body.style.overflow = ''; }
+        }
+        document.getElementById('acceptTermsBtn')?.addEventListener('click', function(){
+            var chk = document.getElementById('agreeTerms');
+            if (chk){ chk.checked = true; }
+            closeTerms();
+        });
     </script>
 
 

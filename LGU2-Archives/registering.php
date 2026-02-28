@@ -262,11 +262,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="blob b1"></div>
         <div class="blob b2"></div>
     </div>
-    <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8">
+    <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 relative animate-fade-in-up">
         <div class="text-center mb-8">
-            <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="h-16 w-auto mx-auto mb-4">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Archives</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Create your account</p>
+            <div class="mx-auto w-20 h-20 rounded-full shadow-lg bg-white flex items-center justify-center -mt-12 mb-4 ring-4 ring-white dark:ring-slate-900">
+                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-14 h-14 object-contain">
+            </div>
+            <div class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">LAS</div>
+            <div class="text-sm text-gray-700 dark:text-gray-300">Legislative Archive System</div>
+            <div class="text-sm font-semibold text-red-600 dark:text-red-400">City Government of Valenzuela</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Metropolitan Manila</div>
         </div>
 
         <?php if (isset($error)): ?>
