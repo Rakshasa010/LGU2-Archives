@@ -116,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $success = $emailSent
                     ? 'Requesting admin approval. Check your email for the temporary password.'
-                    : 'Registered successfully. Use <a href="forgot-password.php" class="underline font-medium">Forgot password</a> to set your password and sign in.';
+                    : 'Registered successfully. (Email failed to send). Your temporary password is: <strong>' . htmlspecialchars($tmp) . '</strong> (Save this!). <a href="login.php" class="underline font-medium">Go to Sign in</a>.';
 
                 // Ensure notifications table exists
                 $conn->query("CREATE TABLE IF NOT EXISTS notifications (
@@ -196,15 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                // Redirect on success
-                if ($emailSent) {
-                    header("Location: login.php?registered=email");
-                    exit();
-                } else {
-                    header("Location: login.php?registered=manual");
-                    exit();
-                }
-            } else {
+                // Success stays on page to display message or temporary password smoothly
+                // No redirect so user can copy password if fallback is used.
                 $error = 'Registration failed.';
             }
             $ins->close();
@@ -250,6 +243,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @keyframes move1{from{transform:translate(0,0) scale(1)}to{transform:translate(6vmax,4vmax) scale(1.1)}}
         @keyframes move2{from{transform:translate(0,0) scale(1)}to{transform:translate(-5vmax,-3vmax) scale(1.08)}}
         @media (prefers-color-scheme: dark){.bg-anim .grid{background-image:radial-gradient(rgba(148,163,184,.08) 1px, transparent 1px)}}
+        @keyframes fade-in{from{opacity:0}to{opacity:1}}
+        @keyframes fade-in-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes bounce-in{0%{opacity:0;transform:scale(0.3)}50%{opacity:1;transform:scale(1.05)}70%{opacity:1;transform:scale(0.9)}100%{opacity:1;transform:scale(1)}}
+        @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-5px)}20%,40%,60%,80%{transform:translateX(5px)}}
+        .animate-fade-in{animation:fade-in .6s ease-out forwards}
+        .animate-fade-in-up{animation:fade-in-up .6s ease-out forwards}
+        .animate-bounce-in{animation:bounce-in .6s cubic-bezier(.68,-.55,.265,1.55) forwards}
+        .animate-shake{animation:shake .5s ease-in-out}
     </style>
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
@@ -274,8 +275,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <?php if (isset($error)): ?>
-            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded animate-shake">
                 <?php echo $error; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($success)): ?>
+            <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded animate-fade-in">
+                <?php echo $success; ?>
             </div>
         <?php endif; ?>
 

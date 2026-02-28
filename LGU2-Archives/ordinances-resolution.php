@@ -227,69 +227,87 @@ $conn->close();
         <?php endif; ?>
 
         <!-- Folders & Files List -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-            <div id="filesList" class="space-y-4">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div id="filesList" class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 bg-gray-50/50 dark:bg-slate-800/20">
                 
                 <!-- Folders -->
                 <?php foreach ($folders as $folder): ?>
-                <div class="folder-item flex items-center space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors rounded-md border border-transparent hover:border-gray-100 dark:hover:border-slate-600 cursor-pointer"
+                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex items-center p-4 cursor-pointer"
                      onclick="window.location.href='?folder_id=<?php echo $folder['id']; ?>'"
                      ondrop="drop(event, <?php echo $folder['id']; ?>)"
                      ondragover="allowDrop(event)"
                      draggable="true"
                      ondragstart="drag(event, 'folder', <?php echo $folder['id']; ?>)">
-                    <div class="flex-shrink-0">
-                        <i class="bi bi-folder-fill text-yellow-500 text-2xl"></i>
-                    </div>
+                    <i class="bi bi-folder-fill text-yellow-500 text-3xl mr-4 group-hover:scale-110 transition-transform"></i>
                     <div class="flex-1 min-w-0">
-                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($folder['name']); ?></div>
+                        <div class="font-semibold text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($folder['name']); ?></div>
                     </div>
                 </div>
                 <?php endforeach; ?>
 
                 <!-- Files -->
                 <?php if (empty($files) && empty($folders)): ?>
-                    <div class="text-center py-12">
+                    <div class="col-span-full text-center py-12">
                         <i class="bi bi-inbox text-6xl text-gray-400 dark:text-gray-600 mb-4 block"></i>
                         <div class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">No Ordinances or Resolutions Found</div>
                         <div class="text-gray-600 dark:text-gray-400">Documents will appear here once uploaded</div>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($files as $record): ?>
+                    <?php foreach ($files as $record): 
+                        $fileExt = strtolower(pathinfo($record['title'], PATHINFO_EXTENSION));
+                        $iconClass = 'bi-file-earmark-text text-blue-500';
+                        if (in_array($fileExt, ['jpg','jpeg','png','gif','webp'])) $iconClass = 'bi-file-earmark-image text-purple-500';
+                        elseif (in_array($fileExt, ['pdf'])) $iconClass = 'bi-file-earmark-pdf text-red-500';
+                        elseif (in_array($fileExt, ['mp4','avi','mov'])) $iconClass = 'bi-file-earmark-play text-pink-500';
+                        elseif (in_array($fileExt, ['doc','docx'])) $iconClass = 'bi-file-earmark-word text-blue-700';
+
+                        // Specific icon based on type (override if text only, otherwise keep document type logo color structure usually)
+                        // If we want it dynamic, we let them all be documents if they are PDFs, etc.
+                        $typeClass = ($record['type'] === 'Ordinance') ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+                        
+                        $realFilePath = "uploads/records/" . $record['author'] . "/" . $record['year'] . "/" . $record['month'] . "/" . $record['type'] . "/" . $record['title'];
+                        $hasPreview = in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($realFilePath);
+                    ?>
                         <div data-id="<?php echo $record['id']; ?>" 
-                             class="file-item flex items-center space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors rounded-md border border-transparent hover:border-gray-100 dark:hover:border-slate-600"
+                             class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex flex-col"
                              draggable="true"
                              ondragstart="drag(event, 'file', <?php echo $record['id']; ?>)">
-                            <div class="flex-shrink-0">
-                                <?php if ($record['type'] === 'Ordinance'): ?>
-                                    <i class="bi bi-file-earmark-text text-orange-600 dark:text-orange-400 text-2xl"></i>
+                            
+                            <div class="h-32 bg-gray-100 dark:bg-slate-700/50 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer" onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>')">
+                                <?php if ($hasPreview): ?>
+                                    <img src="<?php echo htmlspecialchars($realFilePath); ?>" class="w-full h-full object-cover">
                                 <?php else: ?>
-                                    <i class="bi bi-file-earmark-text text-blue-600 dark:text-blue-400 text-2xl"></i>
+                                    <i class="bi <?php echo $iconClass; ?> text-5xl opacity-80 group-hover:scale-110 transition-transform"></i>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="flex-1 min-w-0">
-                                <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($record['title']); ?></div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                                    <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-[11px]"><?php echo htmlspecialchars($record['type']); ?></span>
-                                    <span class="mx-2">•</span>
-                                    <span><?php echo htmlspecialchars($record['month'] . ' ' . $record['year']); ?></span>
-                                    <span class="mx-2">•</span>
-                                    <span><?php echo htmlspecialchars($record['author']); ?></span>
+                            <div class="p-3 flex items-start justify-between flex-1">
+                                <div class="min-w-0 pr-2">
+                                    <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate" title="<?php echo htmlspecialchars($record['title']); ?>"><?php echo htmlspecialchars($record['title']); ?></div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                                        <?php echo htmlspecialchars($record['author']); ?> • <?php echo htmlspecialchars($record['month'] . ' ' . $record['year']); ?>
+                                    </div>
+                                    <div class="text-[10px] mt-1">
+                                        <span class="px-1.5 py-0.5 rounded <?php echo $typeClass; ?>"><?php echo htmlspecialchars($record['type']); ?></span>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div class="flex items-center space-x-2">
-                                <button onclick="openVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>')" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Version History">
-                                    <i class="bi bi-clock-history"></i> <span class="text-xs font-bold bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full"><?php echo $record['version'] ?? 1; ?></span>
-                                </button>
-                                <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>')" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="View">
-                                    <i class="bi bi-eye"></i> <span>View</span>
-                                </button>
-                                <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>')" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
-                                    <i class="bi bi-download"></i> <span>Download</span>
-                                </button>
-                                
+                                <div class="relative flex-shrink-0">
+                                    <button class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 transition-colors" onclick="document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#record-menu-<?php echo $record['id']; ?>') && !e.target.closest('button')){ document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    
+                                    <div id="record-menu-<?php echo $record['id']; ?>" class="hidden absolute right-0 bottom-full mb-1 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 py-1">
+                                        <button onclick="openSideViewerServer(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>', '<?php echo addslashes(htmlspecialchars($record['created_at'])); ?>', '<?php echo addslashes(htmlspecialchars($record['last_accessed'] ?? '')); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
+                                            <i class="bi bi-eye mr-2"></i> View
+                                        </button>
+                                        <button onclick="openVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
+                                            <i class="bi bi-clock-history mr-2"></i> History
+                                        </button>
+                                        <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
+                                            <i class="bi bi-download mr-2"></i> Download
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>

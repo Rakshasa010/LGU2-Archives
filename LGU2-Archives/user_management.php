@@ -126,7 +126,14 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
 }
 
 $all_users = [];
-if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activity, role FROM users ORDER BY full_name ASC")) {
+$qStr = "SELECT id, username, email, full_name, status, last_activity, role";
+// Add extra columns if they exist
+$colCheck = $conn->query("SHOW COLUMNS FROM users LIKE 'nickname'");
+if ($colCheck && $colCheck->num_rows > 0) {
+    $qStr .= ", nickname, birthplace, birthdate, address";
+}
+$qStr .= " FROM users ORDER BY full_name ASC";
+if ($q = $conn->query($qStr)) {
     while ($row = $q->fetch_assoc()) { $all_users[] = $row; }
 }
 ?>
@@ -422,6 +429,22 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
+
+        <!-- Database Backup Panel -->
+        <div class="bg-gradient-to-r from-red-800 to-red-900 rounded-xl shadow-lg border border-red-700 p-6 mb-8 flex flex-col md:flex-row items-center justify-between text-white">
+            <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                <div class="bg-white/20 p-3 rounded-full">
+                    <i class="bi bi-database-down text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg">System Database Backup</h3>
+                    <p class="text-red-100 text-sm">Download a complete .sql snapshot of the system structure and data.</p>
+                </div>
+            </div>
+            <a href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
+                <i class="bi bi-download mr-2"></i> Download full backup
+            </a>
+        </div>
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
                 <div class="font-semibold">Pending Approvals</div>
@@ -499,9 +522,10 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                                 <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No users found</td>
                             </tr>
                         <?php else: foreach ($all_users as $u): ?>
-                            <tr class="user-row" data-role="<?php echo isset($u['role']) ? strtolower($u['role']) : 'user'; ?>">
+                            <tr class="user-row hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer" data-role="<?php echo isset($u['role']) ? strtolower($u['role']) : 'user'; ?>" onclick="toggleUserDetails(<?php echo (int)$u['id']; ?>)">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
+                                        <i id="icon-<?php echo (int)$u['id']; ?>" class="bi bi-chevron-right text-gray-400 text-sm transition-transform duration-200"></i>
                                         <?php
                                             $name = trim($u['full_name'] ?? '');
                                             $initials = '';
@@ -556,7 +580,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                                 </td>
                                 <td class="px-6 py-4">
                                     <?php if ((int)$u['id'] !== $user_id): // Prevent deleting self ?>
-                                    <form method="post" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                    <form method="post" class="inline-block" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to delete this user?');">
                                         <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
                                         <input type="hidden" name="action" value="delete">
                                         <button type="submit" class="text-red-600 hover:text-red-800 dark:hover:text-red-400" title="Delete User">
@@ -564,6 +588,28 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
                                         </button>
                                     </form>
                                     <?php endif; ?>
+                                </td>
+                            </tr>
+                            <tr id="details-<?php echo (int)$u['id']; ?>" class="hidden bg-gray-50 dark:bg-slate-800/80">
+                                <td colspan="6" class="px-8 py-5 border-t border-gray-100 dark:border-slate-700">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Nickname</div>
+                                            <div class="font-medium text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($u['nickname'] ?? 'N/A'); ?></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Birthdate</div>
+                                            <div class="font-medium text-gray-800 dark:text-gray-200"><?php echo !empty($u['birthdate']) ? date('F j, Y', strtotime($u['birthdate'])) : 'N/A'; ?></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Birthplace</div>
+                                            <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['birthplace'] ?? 'N/A'); ?></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Address</div>
+                                            <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['address'] ?? 'N/A'); ?></div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; endif; ?>
@@ -604,9 +650,18 @@ if ($q = $conn->query("SELECT id, username, email, full_name, status, last_activ
             // Update the counter text
             document.getElementById('userCount').textContent = visibleCount + ' users';
         });
-        </script>
-        <script>
-        // No details dropdown; avatars and emails are shown inline now.
+
+        function toggleUserDetails(id) {
+            const detailsRow = document.getElementById('details-' + id);
+            const icon = document.getElementById('icon-' + id);
+            if (detailsRow.classList.contains('hidden')) {
+                detailsRow.classList.remove('hidden');
+                icon.classList.add('rotate-90');
+            } else {
+                detailsRow.classList.add('hidden');
+                icon.classList.remove('rotate-90');
+            }
+        }
         </script>
 
         <div class="mt-6">

@@ -82,17 +82,33 @@
     var year = item.year || '';
     var author = item.author || '';
     var meta = [month && String(month), year && String(year)].filter(Boolean).join(' ');
+    
+    var isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(title);
+    var previewFn = isImg ? ' onclick="if(window.openImagePreview) { window.openImagePreview(\'uploads/archives/\' + \'' + title + '\', \'' + title + '\'); } return false;"' : '';
+    
+    var dropdownHtml = 
+      '<div class="relative ml-auto">' +
+        '<button onclick="var menu = this.nextElementSibling; document.querySelectorAll(\'.rv-dropdown\').forEach(function(el){ if(el !== menu) el.classList.add(\'hidden\'); }); menu.classList.toggle(\'hidden\'); if(event) event.stopPropagation();" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none rounded-full hover:bg-gray-200 dark:hover:bg-slate-600">' +
+          '<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>' +
+        '</button>' +
+        '<div class="rv-dropdown hidden absolute right-0 mt-1 w-32 bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 z-10 py-1">' +
+          '<a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Open</a>' +
+          (isImg ? '<a href="#"' + previewFn + ' class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Preview Layout</a>' : '') +
+          '<a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Download</a>' +
+        '</div>' +
+      '</div>';
+
     return (
-      '<div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 border border-gray-200 dark:border-slate-600 flex items-start space-x-3">' +
+      '<div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 border border-gray-200 dark:border-slate-600 flex items-center space-x-3">' +
       '<div class="flex-shrink-0">' + iconForType(type) + '</div>' +
-      '<div class="flex-1">' +
-      '<div class="font-semibold text-gray-800 dark:text-gray-200">' + title + '</div>' +
-      '<div class="text-xs text-gray-600 dark:text-gray-400">' +
+      '<div class="flex-1 min-w-0" onclick="document.querySelectorAll(\'.rv-dropdown\').forEach(function(el){ el.classList.add(\'hidden\'); });">' +
+      '<div class="font-semibold text-gray-800 dark:text-gray-200 truncate pr-2">' + title + '</div>' +
+      '<div class="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">' +
       (type ? '<span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">' + type + '</span>' : '') +
-      (meta ? '<span class="mx-2">•</span><span>' + meta + '</span>' : '') +
-      (author ? '<span class="mx-2">•</span><span>' + author + '</span>' : '') +
+      (meta ? '<span class="mx-2 truncate">•</span><span class="truncate">' + meta + '</span>' : '') +
+      (author ? '<span class="mx-2 truncate">•</span><span class="truncate">' + author + '</span>' : '') +
       '</div>' +
-      '</div>' +
+      '</div>' + dropdownHtml +
       '</div>'
     );
   }

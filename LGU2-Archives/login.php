@@ -160,7 +160,7 @@
                             }
                         }
                         $otp_step = true;
-                        $error = $sent ? "An OTP was sent to your email." : "Unable to send OTP. Please contact support.";
+                        $error = $sent ? "An OTP was sent to your email." : "Unable to send OTP via Email. Testing fallback OTP is: " . $otp;
                     }
                 } else {
                     // Increment failed attempts

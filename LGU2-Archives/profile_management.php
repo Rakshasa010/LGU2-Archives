@@ -16,9 +16,16 @@ if (!file_exists($upload_dir)) {
 }
 
 $extraCols = [];
-$cr = $conn->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('nickname','birthplace','birthdate','address')");
-if ($cr) { while ($r = $cr->fetch_assoc()) { $extraCols[] = $r['COLUMN_NAME']; } }
-$selectCols = "username, email, full_name, profile_picture, role";
+    $cr = $conn->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('nickname','birthplace','birthdate','address')");
+    if ($cr) { while ($r = $cr->fetch_assoc()) { $extraCols[] = $r['COLUMN_NAME']; } }
+    $reqCols = ['nickname','birthplace','birthdate','address'];
+    $missingCols = array_diff($reqCols, $extraCols);
+    foreach ($missingCols as $mcol) {
+        $ctype = ($mcol === 'birthdate') ? 'DATE' : 'VARCHAR(255)';
+        $conn->query("ALTER TABLE users ADD COLUMN $mcol $ctype DEFAULT NULL");
+        $extraCols[] = $mcol;
+    }
+    $selectCols = "username, email, full_name, profile_picture, role";
 if (!empty($extraCols)) { $selectCols .= ", " . implode(", ", $extraCols); }
 $sql = "SELECT $selectCols FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);

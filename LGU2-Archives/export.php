@@ -386,43 +386,54 @@ if (count($mock_notifications) < 10) {
 									<input id="export-search" type="text" class="peer w-56 sm:w-64 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Search requests">
 									<i class="bi bi-search absolute right-3 top-2.5 text-gray-400 dark:text-gray-300"></i>
 								</div>
-								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">Unread</button>
-								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">Today</button>
-								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white" aria-pressed="false">This Week</button>
+								<button id="filter-all" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-700 text-white border border-transparent dark:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="true">All</button>
+								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="false">Unread</button>
+								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="false">Today</button>
+								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="false">This Week</button>
 							</div>
 						</div>
-						<div class="mt-6 divide-y divide-gray-200 dark:divide-slate-700" id="export-list">
+						<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="export-list">
 							<?php foreach ($mock_notifications as $n): ?>
-								<div class="export-item flex items-start gap-4 py-4 first:pt-0 last:pb-0" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo htmlspecialchars($n['content']); ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
-									<div class="flex-shrink-0 mt-0.5">
-										<div class="w-10 h-10 rounded-md bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300">
-											<i class="bi bi-cloud-arrow-up-fill text-lg"></i>
-										</div>
-									</div>
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center justify-between">
-											<div class="truncate text-sm text-gray-800 dark:text-gray-200 font-medium"><?php echo htmlspecialchars($n['content']); ?></div>
-											<div class="flex items-center gap-3">
-												<span class="hidden sm:inline-flex px-2 py-0.5 text-[11px] rounded-md border <?php echo $n['status'] === 'unread' ? 'border-red-300 text-red-700 bg-red-50 dark:border-red-700 dark:text-red-300 dark:bg-red-900/20' : 'border-gray-300 text-gray-700 bg-gray-50 dark:border-slate-600 dark:text-gray-300 dark:bg-slate-700'; ?>"><?php echo htmlspecialchars(ucfirst($n['status'])); ?></span>
-												<div class="text-xs text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($n['time']); ?></div>
-											</div>
-										</div>
-										<div class="mt-1.5 flex items-center justify-between">
-											<div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($n['about']); ?> • <?php echo htmlspecialchars($n['date']); ?></div>
-											<div class="flex items-center gap-2">
-												<button class="view-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent">View</button>
-												<button class="send-to-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white border border-transparent flex items-center gap-1" data-content="<?php echo htmlspecialchars($n['content']); ?>">
-													<i class="bi bi-send"></i>
-													<span>Send To</span>
-												</button>
-											</div>
-										</div>
-										<div class="export-details hidden mt-3 rounded-lg border border-gray-200 dark:border-slate-700 p-3 bg-gray-50 dark:bg-slate-700/40">
-											<div class="text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($n['content']); ?></div>
-											<div class="mt-2 text-xs text-gray-600 dark:text-gray-400">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?> • Time: <?php echo htmlspecialchars($n['time']); ?> • Date: <?php echo htmlspecialchars($n['date']); ?></div>
-										</div>
-									</div>
-								</div>
+                                <div class="export-item rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow relative" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo htmlspecialchars($n['content']); ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
+                                                <i class="bi bi-file-earmark-zip text-lg"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="w-2.5 h-2.5 rounded-full <?php echo $n['status'] === 'unread' ? 'bg-red-500' : 'bg-gray-400'; ?>"></span>
+                                                <span class="text-[10px] font-bold uppercase tracking-wider <?php echo $n['status'] === 'unread' ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'; ?>">
+                                                    <?php echo htmlspecialchars(ucfirst($n['status'])); ?>
+                                                </span>
+                                            </div>
+                                            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none" onclick="document.querySelectorAll('.export-menu').forEach(i => {if(i !== this.nextElementSibling) i.classList.add('hidden');}); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <div class="hidden absolute right-4 top-12 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-lg rounded-lg z-10 w-32 py-1 export-menu">
+                                               <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 view-btn">View Details</button>
+                                               <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 send-to-btn" data-content="<?php echo htmlspecialchars($n['content']); ?>">Send To</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" title="<?php echo htmlspecialchars($n['content']); ?>">
+                                        <?php echo htmlspecialchars($n['content']); ?>
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        <?php echo htmlspecialchars($n['about']); ?>
+                                    </div>
+                                    
+                                    <div class="mt-4 pt-3 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center text-xs text-gray-400 dark:text-gray-500">
+                                        <span><?php echo htmlspecialchars($n['date']); ?></span>
+                                        <span><?php echo htmlspecialchars($n['time']); ?></span>
+                                    </div>
+                                    <div class="export-details hidden mt-3 bg-gray-50 dark:bg-slate-900 rounded p-2 text-xs border border-gray-200 dark:border-slate-600">
+                                        <div class="text-gray-800 dark:text-gray-200 mb-1">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?></div>
+                                        <div class="break-words text-gray-600 dark:text-gray-400"><?php echo htmlspecialchars($n['content']); ?></div>
+                                    </div>
+                                </div>
 							<?php endforeach; ?>
 						</div>
 						<div id="export-empty" class="hidden mt-6 rounded-lg border border-dashed border-gray-300 dark:border-slate-600 p-6 text-center">
@@ -436,6 +447,24 @@ if (count($mock_notifications) < 10) {
 			</main>
 		</div>
 		</div>
+
+        <!-- Floating Action Button -->
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 group">
+            <div class="flex-col items-end gap-2 hidden group-hover:flex transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 mb-2">
+                <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    <i class="bi bi-cloud-arrow-up text-red-600 dark:text-red-400"></i> Upload Archive
+                </button>
+                <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    <i class="bi bi-collection text-red-600 dark:text-red-400"></i> Bulk Export
+                </button>
+                <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    <i class="bi bi-file-earmark-plus text-red-600 dark:text-red-400"></i> New Export
+                </button>
+            </div>
+            <button class="w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg flex items-center justify-center focus:outline-none transition-transform hover:scale-105">
+                <i class="bi bi-plus-lg text-2xl transition-transform duration-300 group-hover:rotate-45"></i>
+            </button>
+        </div>
 
 		<div id="send-to-modal" class="fixed inset-0 z-50 hidden">
 			<div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
@@ -485,20 +514,35 @@ if (count($mock_notifications) < 10) {
 			const sendToConfirm = document.getElementById('send-to-confirm');
 			let sendFile = '';
 			const search = document.getElementById('export-search');
+			const allBtn = document.getElementById('filter-all');
 			const unreadBtn = document.getElementById('filter-unread');
 			const todayBtn = document.getElementById('filter-today');
 			const weekBtn = document.getElementById('filter-week');
 			const empty = document.getElementById('export-empty');
-			let onlyUnread = false;
-			let onlyToday = false;
-			let onlyWeek = false;
+			let filterMode = 'all'; // all, unread, today, week
 			let q = '';
-			function isDark() {
-				return document.documentElement.classList.contains('dark');
-			}
-			function updateUnreadBtnStyle() {
-				unreadBtn.classList.remove('bg-red-600','bg-red-700');
-				unreadBtn.classList.add(onlyUnread ? 'bg-red-700' : 'bg-red-600');
+
+			document.addEventListener('click', function(){
+				document.querySelectorAll('.export-menu').forEach(el => el.classList.add('hidden'));
+			});
+
+			function updateBtnsStyle() {
+			    [allBtn, unreadBtn, todayBtn, weekBtn].forEach(b => {
+			        b.classList.remove('bg-red-700','dark:bg-red-800');
+			        b.classList.add('bg-red-600','dark:bg-red-700');
+			        b.setAttribute('aria-pressed', 'false');
+			    });
+			    let active;
+			    if(filterMode==='all') active = allBtn;
+			    if(filterMode==='unread') active = unreadBtn;
+			    if(filterMode==='today') active = todayBtn;
+			    if(filterMode==='week') active = weekBtn;
+			    
+			    if(active) {
+			        active.classList.add('bg-red-700','dark:bg-red-800');
+			        active.classList.remove('bg-red-600','dark:bg-red-700');
+			        active.setAttribute('aria-pressed', 'true');
+			    }
 			}
 			function isToday(dateStr) {
 				const d = new Date(dateStr + 'T00:00:00');
@@ -520,39 +564,33 @@ if (count($mock_notifications) < 10) {
 					const content = el.getAttribute('data-content') || '';
 					const dateStr = el.getAttribute('data-date') || '';
 					const matchText = content.toLowerCase().includes(q);
-					const matchUnread = !onlyUnread || status === 'unread';
-					const matchDate = (!onlyToday && !onlyWeek) || (onlyToday && isToday(dateStr)) || (onlyWeek && isThisWeek(dateStr));
-					const visible = matchText && matchUnread && matchDate;
+					let matchCond = true;
+					if(filterMode === 'unread') matchCond = (status === 'unread');
+					if(filterMode === 'today') matchCond = isToday(dateStr);
+					if(filterMode === 'week') matchCond = isThisWeek(dateStr);
+					
+					const visible = matchText && matchCond;
 					el.style.display = visible ? '' : 'none';
 					if (visible) shown++;
 				});
 				empty.classList.toggle('hidden', shown !== 0);
-				updateUnreadBtnStyle();
+				updateBtnsStyle();
 			}
 			search.addEventListener('input', function () {
 				q = this.value.trim().toLowerCase();
 				apply();
 			});
-			unreadBtn.addEventListener('click', function () {
-				onlyUnread = !onlyUnread;
-				this.setAttribute('aria-pressed', String(onlyUnread));
-				apply();
+			allBtn.addEventListener('click', function () {
+				filterMode = 'all'; apply();
 			});
-			function updateToggle(btn, active) {
-				btn.classList.remove('bg-red-600','bg-red-700');
-				btn.classList.add(active ? 'bg-red-700' : 'bg-red-600');
-			}
+			unreadBtn.addEventListener('click', function () {
+				filterMode = 'unread'; apply();
+			});
 			todayBtn.addEventListener('click', function () {
-				onlyToday = !onlyToday;
-				this.setAttribute('aria-pressed', String(onlyToday));
-				updateToggle(this, onlyToday);
-				apply();
+				filterMode = 'today'; apply();
 			});
 			weekBtn.addEventListener('click', function () {
-				onlyWeek = !onlyWeek;
-				this.setAttribute('aria-pressed', String(onlyWeek));
-				updateToggle(this, onlyWeek);
-				apply();
+				filterMode = 'week'; apply();
 			});
 			const mo = new MutationObserver(() => updateUnreadBtnStyle());
 			mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });

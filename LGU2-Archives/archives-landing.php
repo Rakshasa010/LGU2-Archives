@@ -567,16 +567,10 @@
                                     while ($row = $r->fetch_assoc()) {
                                         $folder = strtolower($row['folder_name'] ?? '');
                                         $count = (int)$row['cnt'];
-                                        $mapped = null;
-                                        if (strpos($folder, 'resolution') !== false) $mapped = 'Resolution';
-                                        elseif (strpos($folder, 'ordinance') !== false) $mapped = 'Ordinance';
-                                        elseif (strpos($folder, 'billing') !== false) $mapped = 'Billing';
-                                        elseif (strpos($folder, 'public hearing') !== false || strpos($folder, 'hearing') !== false) $mapped = 'Public Hearing';
-                                        elseif (strpos($folder, 'meeting') !== false || strpos($folder, 'session') !== false) $mapped = 'Meeting';
-                                        if ($mapped !== null) {
-                                            if ($fa_type && $fa_type !== $mapped) continue;
-                                            $qa_by_type[$mapped] = ($qa_by_type[$mapped] ?? 0) + $count;
-                                        }
+                                        $mapped = trim($row['folder_name']);
+                                        if ($mapped === '') $mapped = 'Unknown Folder';
+                                        if ($fa_type && $fa_type !== $mapped) continue;
+                                        $qa_by_type[$mapped] = ($qa_by_type[$mapped] ?? 0) + $count;
                                     }
                                 }
                             }
@@ -752,7 +746,20 @@
                                                 <?php foreach ($recent_uploads as $u): ?>
                                                 <tr data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>">
                                                     <td class="py-2 pr-3 truncate"><?php echo htmlspecialchars($u['name']); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($u['folder_name']); ?></td>
+                                                    <?php
+                                                    $fname = strtolower($u['folder_name']);
+                                                    $link = 'folder_view.php?folder=' . urlencode($u['folder_name']);
+                                                    if (strpos($fname, 'billing') !== false) {
+                                                        $link = 'billing.php';
+                                                    } elseif (strpos($fname, 'meeting') !== false || strpos($fname, 'session') !== false) {
+                                                        $link = 'meeting-records.php';
+                                                    } elseif (strpos($fname, 'ordinance') !== false || strpos($fname, 'resolution') !== false) {
+                                                        $link = 'ordinances-resolution.php';
+                                                    } elseif (strpos($fname, 'hearing') !== false) {
+                                                        $link = 'public-hearings.php';
+                                                    }
+                                                    ?>
+                                                    <td class="py-2 pr-3 whitespace-nowrap"><a href="<?php echo htmlspecialchars($link); ?>" class="text-red-600 hover:text-red-800 hover:underline"><?php echo htmlspecialchars($u['folder_name']); ?></a></td>
                                                     <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($u['created_at']); ?></td>
                                                 </tr>
                                                 <?php endforeach; ?>
@@ -787,9 +794,6 @@
                             <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Latest Archive Files Visit </h2>
                             <div id="latestFilesList" class="space-y-3">
                                 <div class="text-sm text-gray-600 dark:text-gray-400">Loading recent files...</div>
-                            </div>
-                            <div class="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
-                                <div class="text-sm text-gray-700 dark:text-gray-200"><?php echo $is_admin ? 'Tip: Use Reports & Analytics to audit user downloads.' : 'Tip: You can preview documents before downloading.'; ?></div>
                             </div>
                         </div>
                     </div>
@@ -948,6 +952,58 @@
                     <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Create New Folder</h2>
                     <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeModal()">&times;</button>
                 </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imagePreviewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeImagePreview()"></div>
+            <div class="inline-block align-bottom bg-white dark:bg-slate-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle max-w-4xl w-full border border-gray-200 dark:border-slate-700">
+                <div class="absolute top-0 right-0 pt-4 pr-4 z-10">
+                    <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none bg-white/50 dark:bg-slate-800/50 rounded-full p-1 backdrop-blur-sm" onclick="closeImagePreview()">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="bg-gray-100 dark:bg-slate-900 flex items-center justify-center min-h-[50vh] max-h-[85vh] p-4 relative" id="previewImageContainer">
+                    <img id="previewModalImage" src="" alt="Preview" class="max-w-full max-h-[80vh] object-contain shadow-lg rounded" />
+                    <div id="previewLoading" class="absolute inset-0 flex items-center justify-center bg-gray-100/80 dark:bg-slate-900/80">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between border-t border-gray-200 dark:border-slate-700">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 truncate pr-4" id="previewModalTitle">Image Preview</h3>
+                    <button type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeImagePreview()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function openImagePreview(url, title) {
+            const modal = document.getElementById('imagePreviewModal');
+            const img = document.getElementById('previewModalImage');
+            const tit = document.getElementById('previewModalTitle');
+            const loader = document.getElementById('previewLoading');
+            if(modal && img) {
+                tit.textContent = title || 'Image Preview';
+                img.classList.add('hidden');
+                loader.classList.remove('hidden');
+                img.onload = function() {
+                    loader.classList.add('hidden');
+                    img.classList.remove('hidden');
+                };
+                img.src = url;
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        function closeImagePreview() {
+            const modal = document.getElementById('imagePreviewModal');
+            if(modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+                document.getElementById('previewModalImage').src = '';
+            }
+        }
+    </script>
                 <div class="mb-6">
                     <label for="folderName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Folder Name:</label>
                     <input type="text" id="folderName" 

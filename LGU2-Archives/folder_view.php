@@ -83,65 +83,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     
-    if ($action === 'upload_file') {
+    if ($action === 'upload_files_bulk') {
         header('Content-Type: application/json');
-        if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-            $file = $_FILES['file'];
-            $name = $file['name'];
+        if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
+            $author = $_POST['fileAuthor'] ?? null;
+            $fdate = $_POST['fileDate'] ?? null;
+            $unq_base = $_POST['fileUniqueNumber'] ?? null;
+            if ($fdate === '') $fdate = null;
+
+            $uploadedFiles = [];
             $target_dir = "uploads/archives/" . $current_folder_id . "/";
             if (!file_exists($target_dir)) { @mkdir($target_dir, 0777, true); }
-            // Sanitize filename
-            $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $name);
-            
-            // Check if file exists and append number if needed to preserve original name as much as possible
-            $file_path = $target_dir . $safe_name;
-            $counter = 1;
-            $path_info = pathinfo($safe_name);
-            $base_name = $path_info['filename'];
-            $extension = isset($path_info['extension']) ? '.' . $path_info['extension'] : '';
 
-            while (file_exists($file_path)) {
-                $file_path = $target_dir . $base_name . '_' . $counter . $extension;
-                $counter++;
+            $colCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'author'");
+            if ($colCheck && $colCheck->num_rows == 0) {
+                $conn->query("ALTER TABLE archive_files ADD COLUMN author VARCHAR(255) DEFAULT NULL, ADD COLUMN file_date DATE DEFAULT NULL, ADD COLUMN unique_number VARCHAR(100) DEFAULT NULL");
             }
-            
-            if (move_uploaded_file($file['tmp_name'], $file_path)) {
-                $final_name = basename($file_path);
-                $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path) VALUES (?, ?, ?)");
-                $stmt->bind_param("iss", $current_folder_id, $final_name, $file_path);
-                if ($stmt->execute()) {
-                    $conn->query("CREATE TABLE IF NOT EXISTS notifications (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        time VARCHAR(20) NOT NULL,
-                        date DATE NOT NULL,
-                        content VARCHAR(255) NOT NULL,
-                        about VARCHAR(100) NOT NULL,
-                        status ENUM('unread','read') NOT NULL DEFAULT 'unread',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )");
-                    $ntime = date('h:i A'); $ndate = date('Y-m-d');
-                    $ncontent = 'New upload: ' . $final_name . ' in folder #' . $current_folder_id;
-                    $nabout = 'Upload'; $nstatus = 'unread';
-                    if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                        $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
-                        $ins->execute(); $ins->close();
+            $conn->query("CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, time VARCHAR(20) NOT NULL, date DATE NOT NULL, content VARCHAR(255) NOT NULL, about VARCHAR(100) NOT NULL, status ENUM('unread','read') NOT NULL DEFAULT 'unread', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+
+            $count = count($_FILES['files']['name']);
+            for ($i = 0; $i < $count; $i++) {
+                if ($_FILES['files']['error'][$i] === UPLOAD_ERR_OK) {
+                    $name = $_FILES['files']['name'][$i];
+                    $tmp_name = $_FILES['files']['tmp_name'][$i];
+                    
+                    $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $name);
+                    $file_path = $target_dir . $safe_name;
+                    $counter = 1;
+                    $path_info = pathinfo($safe_name);
+                    $base_name = $path_info['filename'];
+                    $extension = isset($path_info['extension']) ? '.' . $path_info['extension'] : '';
+
+                    while (file_exists($file_path)) {
+                        $file_path = $target_dir . $base_name . '_' . $counter . $extension;
+                        $counter++;
                     }
-                    echo json_encode([
-                        'success' => true, 
-                        'file' => [
-                            'id' => $conn->insert_id, 
-                            'name' => $final_name, 
-                            'created_at' => date('Y-m-d H:i:s')
-                        ]
-                    ]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Database error']);
+
+                    if (move_uploaded_file($tmp_name, $file_path)) {
+                        $final_name = basename($file_path);
+                        $unq = empty($unq_base) ? null : ($unq_base . ($count > 1 ? "-$i" : ''));
+                        $isBlankUnq = empty($unq);
+
+                        $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number) VALUES (?, ?, ?, ?, ?, ?)");
+                        $stmt->bind_param("isssss", $current_folder_id, $final_name, $file_path, $author, $fdate, $unq);
+                        if ($stmt->execute()) {
+                            $new_id = $conn->insert_id;
+                            if ($isBlankUnq) {
+                                $unq = sprintf("DOC-%06d", $new_id);
+                                $conn->query("UPDATE archive_files SET unique_number = '$unq' WHERE id = $new_id");
+                            }
+                            $uploadedFiles[] = ['id' => $new_id, 'name' => $final_name];
+                        }
+                    }
                 }
+            }
+
+            if (!empty($uploadedFiles)) {
+                $num = count($uploadedFiles);
+                $ntime = date('h:i A'); $ndate = date('Y-m-d');
+                $ncontent = ($num > 1) ? "$num files uploaded in folder #$current_folder_id" : "New upload: {$uploadedFiles[0]['name']} in folder #$current_folder_id";
+                $nabout = 'Upload'; $nstatus = 'unread';
+                if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                    $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                    $ins->execute(); $ins->close();
+                }
+                echo json_encode(['success' => true, 'files' => $uploadedFiles]);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to move uploaded file']);
+                echo json_encode(['success' => false, 'message' => 'Failed to upload files']);
             }
         } else {
-            echo json_encode(['success' => false, 'message' => 'No file uploaded or upload error']);
+            echo json_encode(['success' => false, 'message' => 'No files provided']);
         }
         exit();
     }
@@ -332,34 +343,56 @@ $conn->close();
                 <?php endforeach; ?>
 
                 <!-- Files -->
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-gray-50/50 dark:bg-slate-800/20">
                 <?php foreach ($files as $file): 
                     $fileUrl = $file['file_path'];
                     $fileSize = file_exists($file['file_path']) ? filesize($file['file_path']) : 0;
-                    $fileExt = pathinfo($file['name'], PATHINFO_EXTENSION);
+                    $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    $iconClass = 'bi-file-earmark-text text-blue-500';
+                    if (in_array($fileExt, ['jpg','jpeg','png','gif','webp'])) $iconClass = 'bi-file-earmark-image text-purple-500';
+                    elseif (in_array($fileExt, ['pdf'])) $iconClass = 'bi-file-earmark-pdf text-red-500';
+                    elseif (in_array($fileExt, ['mp4','avi','mov'])) $iconClass = 'bi-file-earmark-play text-pink-500';
+                    elseif (in_array($fileExt, ['doc','docx'])) $iconClass = 'bi-file-earmark-word text-blue-700';
                 ?>
-                <div class="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group" id="file-<?php echo $file['id']; ?>">
-                    <div class="flex items-center flex-1 min-w-0 gap-4">
-                        <i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>
-                        <div class="min-w-0">
-                            <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($file['name']); ?></div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400"><?php echo date('M d, Y', strtotime($file['created_at'])); ?></div>
-                        </div>
+                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex flex-col" id="file-<?php echo $file['id']; ?>">
+                    <div class="h-32 bg-gray-100 dark:bg-slate-700/50 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer" onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')">
+                        <?php if (in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($fileUrl)): ?>
+                            <img src="<?php echo htmlspecialchars($fileUrl); ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <i class="bi <?php echo $iconClass; ?> text-5xl opacity-80 group-hover:scale-110 transition-transform"></i>
+                        <?php endif; ?>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            <span>View</span>
-                        </button>
-                        <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>')" class="px-3 py-1.5 text-sm font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Version History">
-                            <i class="bi bi-clock-history"></i><span>History</span>
-                        </button>
-                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1" title="Download">
-                            <i class="bi bi-download"></i><span>Download</span>
-                        </a>
-                        
+                    <div class="p-3 flex items-start justify-between flex-1">
+                        <div class="min-w-0 pr-2">
+                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate" title="<?php echo htmlspecialchars($file['name']); ?>"><?php echo htmlspecialchars($file['name']); ?></div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                                <?php echo !empty($file['author']) ? htmlspecialchars($file['author']) : 'Unknown Author'; ?> • <?php echo !empty($file['file_date']) ? date('M d, Y', strtotime($file['file_date'])) : date('M d, Y', strtotime($file['created_at'])); ?>
+                            </div>
+                            <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                                ID: <span class="font-mono"><?php echo !empty($file['unique_number']) ? htmlspecialchars($file['unique_number']) : sprintf("DOC-%06d", $file['id']); ?></span>
+                            </div>
+                        </div>
+                        <div class="relative flex-shrink-0">
+                            <button class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 transition-colors" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#file-menu-<?php echo $file['id']; ?>') && !e.target.closest('button')){ document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <!-- Dropdown menu -->
+                            <div id="file-menu-<?php echo $file['id']; ?>" class="hidden absolute right-0 mt-1 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 py-1">
+                                <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
+                                    <i class="bi bi-eye mr-2"></i> View
+                                </button>
+                                <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center">
+                                    <i class="bi bi-clock-history mr-2"></i> History
+                                </button>
+                                <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');">
+                                    <i class="bi bi-download mr-2"></i> Download
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
+                </div>
             </div>
         </div>
         </div>
@@ -405,7 +438,7 @@ $conn->close();
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
-                        <input type="file" id="fileInput" name="file" accept="image/*,.pdf,.doc,.docx,.txt" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                        <input type="file" id="fileInput" name="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
                         <div id="file-list-preview" class="mt-2 space-y-1"></div>
                     </div>
                     <div id="upload-progress" class="hidden text-sm text-gray-600 dark:text-gray-400 py-1"></div>
@@ -691,93 +724,35 @@ $conn->close();
             }
 
             let successCount = 0;
-            const list = document.getElementById('content-list');
+            const formData = new FormData();
+            formData.append('action', 'upload_files_bulk');
+            formData.append('fileAuthor', document.getElementById('fileAuthor')?.value || '');
+            formData.append('fileDate', document.getElementById('fileDate')?.value || '');
+            formData.append('fileUniqueNumber', document.getElementById('fileUniqueNumber')?.value || '');
 
             for (let i = 0; i < fileInput.files.length; i++) {
-                const formData = new FormData();
-                formData.append('action', 'upload_file');
-                formData.append('file', fileInput.files[i]);
-                const baseName = (document.getElementById('fileName')?.value || '').trim() || fileInput.files[i].name.replace(/\.[^.\s]+$/, '');
-                formData.append('fileName', baseName);
-                try {
-                    const pre = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'check_duplicate', name: fileInput.files[i].name, base: baseName })
-                    });
-                    const preData = await pre.json();
-                    if (preData && preData.success && preData.exists) {
-                        const ok = await confirmDuplicateAsync();
-                        if (!ok) { continue; }
-                    }
-                } catch (_e) {}
+                formData.append('files[]', fileInput.files[i]);
+            }
 
-                try {
-                    const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-
-                    if (data.success) {
-                        successCount++;
-                        const file = data.file;
-                        const div = document.createElement('div');
-                        div.className = 'p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group';
-                        div.id = 'file-' + file.id;
-                        div.innerHTML = `
-                            <div class="flex items-center flex-1 min-w-0 gap-4">
-                                <i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>
-                                <div class="min-w-0">
-                                    <div class="font-medium text-gray-800 dark:text-gray-200 truncate">${escapeHtml(file.name)}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">Just now</div>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="previewFile('${escapeHtml(file.name)}', ${file.id}, '${escapeHtml(file.file_path)}', ${fileInput.files[i].size}, '${file.created_at}')" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                    <span>View</span>
-                                </button>
-                                <button onclick="openArchiveVersionHistory(${file.id}, '${escapeHtml(file.name)}')" class="px-3 py-1.5 text-sm font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1">
-                                    <i class="bi bi-clock-history"></i><span>History</span><span class="ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full" id="ver-count-${file.id}">…</span>
-                                </button>
-                                <a href="${escapeHtml(file.file_path)}" download="${escapeHtml(file.name)}" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors flex items-center space-x-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                    <span>Download</span>
-                                </a>
-                                ${isAdmin ? `<button onclick="deleteFile(${file.id})" class="px-3 py-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-all" title="Delete file">
-                                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>` : ''}
-                            </div>
-                        `;
-                        if (list.querySelector('.text-center')) list.querySelector('.text-center').remove();
-                        list.appendChild(div);
-                        try {
-                            fetch('archives_api.php?action=get_versions&id=' + encodeURIComponent(file.id))
-                                .then(function(r){ return r.json(); })
-                                .then(function(d){
-                                    var cEl = document.getElementById('ver-count-' + String(file.id));
-                                    if (cEl) cEl.textContent = (d && d.success && Array.isArray(d.versions)) ? String(d.versions.length) : '0';
-                                }).catch(function(){
-                                    var cEl = document.getElementById('ver-count-' + String(file.id));
-                                    if (cEl) cEl.textContent = '0';
-                                });
-                        } catch(_e){}
-                    }
-                } catch (e) {
-                    console.error(e);
+            try {
+                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
+                    method: 'POST', body: formData
+                });
+                const data = await response.json();
+                if (data.success && data.files) {
+                    successCount = data.files.length;
+                    closeUploadModal();
+                    openNotification(`${successCount} file(s) uploaded successfully!`, 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    openNotification(data.message || 'Failed to upload files', 'error');
                 }
+            } catch (e) {
+                console.error(e);
+                openNotification('Network error during upload', 'error');
             }
 
-            if (successCount > 0) {
-                closeUploadModal();
-                openNotification('Your file(s) have been uploaded.', 'success');
-            } else {
-                openNotification('Failed to upload files', 'error');
-                if (progress) progress.classList.add('hidden');
-            }
+            if (progress) progress.classList.add('hidden');
             isUploading = false;
         }
 

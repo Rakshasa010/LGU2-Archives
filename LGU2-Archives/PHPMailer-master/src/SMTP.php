@@ -178,7 +178,7 @@ class SMTP
      *
      * @var int
      */
-    public $Timeout = 120;
+    public $Timeout = 1200;
 
     /**
      * How long to wait for commands to complete, in seconds.
@@ -186,7 +186,7 @@ class SMTP
      *
      * @var int
      */
-    public $Timelimit = 120;
+    public $Timelimit = 1200;
 
     /**
      * Patterns to extract an SMTP transaction id from reply to a DATA command.
