@@ -379,7 +379,7 @@ $conn->close();
                 ?>
                 <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="file-<?php echo $file['id']; ?>">
                     <!-- Thumbnail Preview Area -->
-                    <div class="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')">
+                    <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')">
                         <?php if (in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($fileUrl)): ?>
                             <img src="<?php echo htmlspecialchars($fileUrl); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" alt="Preview">
                             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">

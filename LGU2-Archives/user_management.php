@@ -854,7 +854,7 @@ if ($q = $conn->query($qStr)) {
         e.preventDefault();
         
         if (!selectedFile) {
-            try { UI_ENH.toast('Please select a file to restore.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
+            try { UI_ENH.toast('Please select a file to restore.', {background:'#dc2626'}); } catch(e) {}
             return;
         }
         
@@ -891,27 +891,27 @@ if ($q = $conn->query($qStr)) {
                     try {
                         const response = JSON.parse(xhr.responseText);
                         if (response.success) {
-                            try { UI_ENH.toast('Database restored successfully — reloading…', {background:'linear-gradient(90deg,#34d399,#10b981)'}); } catch(e) {}
+                            try { UI_ENH.toast('Database restored successfully — reloading…', {background:'#10b981'}); } catch(e) {}
                             setTimeout(() => location.reload(), 1200);
                         } else {
-                            try { UI_ENH.toast('Restoration failed: ' + (response.message || 'Unknown error'), {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
+                            try { UI_ENH.toast('Restoration failed: ' + (response.message || 'Unknown error'), {background:'#dc2626'}); } catch(e) {}
                             progressContainer.classList.add('hidden');
                             restoreBtn.disabled = false;
                         }
                     } catch (err) {
-                        try { UI_ENH.toast('Invalid response from server.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
+                        try { UI_ENH.toast('Invalid response from server.', {background:'#dc2626'}); } catch(e) {}
                         progressContainer.classList.add('hidden');
                         restoreBtn.disabled = false;
                     }
                 } else {
-                    try { UI_ENH.toast('Server error: ' + xhr.status, {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
+                    try { UI_ENH.toast('Server error: ' + xhr.status, {background:'#dc2626'}); } catch(e) {}
                     progressContainer.classList.add('hidden');
                     restoreBtn.disabled = false;
                 }
             });
             
             xhr.addEventListener('error', function() {
-                try { UI_ENH.toast('Network error occurred.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
+                try { UI_ENH.toast('Network error occurred.', {background:'#dc2626'}); } catch(e) {}
                 progressContainer.classList.add('hidden');
                 restoreBtn.disabled = false;
             });
@@ -919,7 +919,7 @@ if ($q = $conn->query($qStr)) {
             xhr.open('POST', 'archives_api.php');
             xhr.send(formData);
         } catch (error) {
-            try { UI_ENH.toast('Error: ' + error.message, {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
+            try { UI_ENH.toast('Error: ' + error.message, {background:'#dc2626'}); } catch(e) {}
             progressContainer.classList.add('hidden');
             restoreBtn.disabled = false;
         }

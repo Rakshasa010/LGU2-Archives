@@ -10,18 +10,7 @@
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
     <style>
-        .bg-anim{position:fixed;inset:0;z-index:-1;overflow:hidden}
-        .bg-anim .layer1{position:absolute;inset:-20%;background:radial-gradient(1200px 800px at 20% 30%, rgba(220,38,38,.25), transparent 60%),radial-gradient(1000px 700px at 80% 70%, rgba(249,115,22,.25), transparent 60%);filter:blur(40px);animation:drift 18s linear infinite alternate}
-        .bg-anim .layer2{position:absolute;inset:0;background:linear-gradient(135deg, rgba(220,38,38,.15), rgba(249,115,22,.1) 50%, rgba(239,68,68,.15));animation:hue 20s linear infinite alternate}
-        .bg-anim .grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);background-size:24px 24px;mix-blend-mode:overlay;opacity:.6}
-        .bg-anim .blob{position:absolute;width:40vmax;height:40vmax;border-radius:50%;filter:blur(60px);opacity:.2}
-        .bg-anim .b1{background:#dc2626;top:-10vmax;left:-10vmax;animation:move1 24s ease-in-out infinite alternate}
-        .bg-anim .b2{background:#f97316;bottom:-12vmax;right:-8vmax;animation:move2 26s ease-in-out infinite alternate}
-        @keyframes drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(2%,-2%,0)}}
-        @keyframes hue{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(20deg)}}
-        @keyframes move1{from{transform:translate(0,0) scale(1)}to{transform:translate(6vmax,4vmax) scale(1.1)}}
-        @keyframes move2{from{transform:translate(0,0) scale(1)}to{transform:translate(-5vmax,-3vmax) scale(1.08)}}
-        @media (prefers-color-scheme: dark){.bg-anim .grid{background-image:radial-gradient(rgba(148,163,184,.08) 1px, transparent 1px)}}
+        
         @keyframes fade-in{from{opacity:0}to{opacity:1}}
         @keyframes fade-in-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
         @keyframes bounce-in{0%{opacity:0;transform:scale(0.3)}50%{opacity:1;transform:scale(1.05)}70%{opacity:1;transform:scale(0.9)}100%{opacity:1;transform:scale(1)}}
@@ -207,42 +196,33 @@
         $conn->close();
     }
     ?>
-    <div class="w-full max-w-md bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 backdrop-blur-2xl rounded-3xl shadow-2xl border-2 border-gradient p-10 relative animate-fade-in-up overflow-hidden">
-        <!-- Enhanced gradient border effect -->
-        <div class="absolute inset-0 bg-gradient-to-br from-red-600/20 to-orange-500/10 dark:from-red-600/10 dark:to-orange-500/5 rounded-3xl -z-10"></div>
-        
+    <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 relative animate-fade-in-up">
         <div class="text-center mb-8">
-            <div class="mx-auto w-24 h-24 rounded-2xl shadow-xl bg-white dark:bg-slate-100 flex items-center justify-center -mt-16 mb-6 ring-4 ring-white dark:ring-slate-900 transform hover:scale-110 transition-transform duration-300">
-                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-16 h-16 object-contain">
+            <div class="mx-auto w-20 h-20 rounded-full shadow-lg bg-white flex items-center justify-center -mt-12 mb-4 ring-4 ring-white dark:ring-slate-900">
+                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-14 h-14 object-contain">
             </div>
-            <div class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">LAS</div>
-            <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Legislative Archive System</div>
-            <div class="text-sm text-red-600 dark:text-red-400">City Government of Valenzuela</div>
+            <div class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">LAS</div>
+            <div class="text-sm text-gray-700 dark:text-gray-300">Legislative Archive System</div>
+            <div class="text-sm font-semibold text-red-600 dark:text-red-400">City Government of Valenzuela</div>
             <div class="text-xs text-gray-500 dark:text-gray-400">Metropolitan Manila</div>
         </div>
 
         <?php if (isset($error)): ?>
-            <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-400 dark:border-red-700/60 text-red-700 dark:text-red-300 rounded-xl font-semibold animate-shake">
-                <div class="flex items-start gap-3">
-                    <i class="bi bi-exclamation-circle-fill text-xl flex-shrink-0"></i>
-                    <span><?php echo $error; ?></span>
-                </div>
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                <?php echo $error; ?>
             </div>
         <?php endif; ?>
 
         <?php if (isset($_GET['registered'])): ?>
-            <div class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-700/60 text-green-700 dark:text-green-300 rounded-xl font-semibold">
-                <div class="flex items-start gap-3">
-                    <i class="bi bi-check-circle-fill text-xl flex-shrink-0"></i>
-                    <span><?php 
-                        if ($_GET['registered'] === 'email') {
-                            echo "Registered successfully. Check your email for the temporary password.";
-                        } else {
-                            echo "Registered successfully. Use Forgot password to set your password and sign in.";
-                        }
-                    ?></span>
-                </div>
-            </div>
+            <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+                <?php 
+                if ($_GET['registered'] === 'email') {
+                    echo "Registered successfully. Check your email for the temporary password.";
+                } else {
+                    echo "Registered successfully. Use Forgot password to set your password and sign in.";
+                }
+?>
+  </div>
         <?php endif; ?>
 
         <?php if (!$otp_step): ?>
@@ -258,7 +238,7 @@
                             <i class="bi bi-envelope text-lg"></i>
                         </span>
                         <input type="text" id="username" name="username" placeholder="your.email@lgu.gov.ph" required
-                            class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
                     </div>
                 </div>
                 <div>
@@ -267,7 +247,7 @@
                         <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
                             <i class="bi bi-lock text-lg"></i>
                         </span>
-                        <input type="password" id="password" name="password" required class="w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600" />
+                        <input type="password" id="password" name="password" required class="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors" />
                         <button type="button" id="togglePassword" class="absolute right-0 top-0 h-full flex items-center px-4 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 focus:outline-none transition-colors" aria-label="Toggle password visibility">
                             <i id="eyeOpen" class="bi bi-eye text-lg"></i>
                             <i id="eyeClosed" class="bi bi-eye-slash text-lg hidden"></i>
@@ -279,7 +259,7 @@
         <label for="agreeTerms" class="text-sm text-gray-700 dark:text-gray-300">I agree to the <button type="button" onclick="openTerms()" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold underline">Terms & Conditions</button></label>
     </div>
 
-                <button id="login-btn" type="submit" class="w-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 hover:from-red-700 hover:via-red-600 hover:to-orange-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-3 group">
+                <button id="login-btn" type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-semibold transition duration-200 ease-in-out flex items-center justify-center gap-2">
                     <span id="login-btn-text">Sign In</span>
                     <i id="login-btn-icon" class="bi bi-arrow-right text-xl group-hover:translate-x-1 transition-transform"></i>
                     <span id="login-btn-spinner" class="hidden spinner"></span>
@@ -318,9 +298,9 @@
                 <input type="hidden" name="verify_otp" value="1">
                 <div>
                     <label for="otp" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">OTP Code</label>
-                    <input type="text" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required class="w-full px-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 text-center text-2xl font-bold tracking-widest transition-all duration-200" placeholder="000000">
+                    <input type="text" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 text-center text-2xl font-bold tracking-widest transition-colors" placeholder="000000">
                 </div>
-                <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl">Verify Code</button>
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl">Verify Code</button>
                 <a href="login.php" class="block text-center text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-semibold">← Start Over</a>
             </form>
             <script>

@@ -187,7 +187,7 @@
         </div>
         
         <!-- Mobile Navigation Menu -->
-        <nav class="flex-1 py-4 px-3 overflow-y-auto">
+        <nav class="flex-1 py-4 px-3">
             <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                 <i class="bi bi-speedometer2 mr-3 text-lg"></i>
                 <span>Dashboard Archives</span>
@@ -267,7 +267,7 @@
             </div>
             
             <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-y-auto py-4">
+            <nav class="flex-1 py-4">
                 <div class="px-4 space-y-1">
                     <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
                         <i class="bi bi-speedometer2 mr-3"></i>
@@ -339,7 +339,7 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
+            <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
@@ -443,7 +443,7 @@
                 <!-- Content Header -->
                 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                     <div class="flex items-center justify-between">
-                        <h1 class="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Document Archives</h1>
+                        <h1 class="text-3xl font-bold text-red-600 dark:text-red-400">Document Archives</h1>
                     </div>
                 </div>
 
@@ -455,7 +455,7 @@
                             <p class="text-gray-600 dark:text-gray-400 mb-4">Advanced Search</p>
                             
                             <!-- Search Bar -->
-                            <div class="flex flex-col sm:flex-row gap-3 mb-3">
+                                <div class="flex flex-col sm:flex-row gap-3 mb-3">
                                 <div class="flex-1 relative">
                                     <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -465,7 +465,7 @@
                                            placeholder="Search for ordinances, resolutions, billing, public hearings, meetings, sessions..." 
                                            autocomplete="off">
                                 </div>
-                                <button id="legislativeSearchBtn" class="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-500 text-white rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg">Search</button>
+                                <button id="legislativeSearchBtn" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg">Search</button>
                             </div>
 
                             <!-- Display of current search term -->
@@ -527,7 +527,7 @@
                             <div class="mb-8">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <h2 class="text-4xl font-bold bg-gradient-to-r from-red-600 via-orange-500 to-red-600 bg-clip-text text-transparent mb-2">Storage Overview</h2>
+                                        <h2 class="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">Storage Overview</h2>
                                         <p class="text-gray-600 dark:text-gray-400 text-sm">Real-time storage analytics and space management</p>
                                     </div>
                                     <div class="hidden md:flex items-center gap-2">
@@ -639,9 +639,6 @@
                                     Last updated: <span id="lastUpdateTime" class="font-semibold">just now</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button class="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white transition-colors" id="storage-cleanup-btn">
-                                        <i class="bi bi-trash3 mr-2"></i>Cleanup
-                                    </button>
                                     <button class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 transition-colors" id="storage-export-btn">
                                         <i class="bi bi-download mr-2"></i>Export Report
                                     </button>

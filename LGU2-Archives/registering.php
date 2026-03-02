@@ -231,18 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
     <style>
         [x-cloak] { display: none !important; }
-        .bg-anim{position:fixed;inset:0;z-index:-1;overflow:hidden}
-        .bg-anim .layer1{position:absolute;inset:-20%;background:radial-gradient(1200px 800px at 20% 30%, rgba(220,38,38,.25), transparent 60%),radial-gradient(1000px 700px at 80% 70%, rgba(249,115,22,.25), transparent 60%);filter:blur(40px);animation:drift 18s linear infinite alternate}
-        .bg-anim .layer2{position:absolute;inset:0;background:linear-gradient(135deg, rgba(220,38,38,.15), rgba(249,115,22,.1) 50%, rgba(239,68,68,.15));animation:hue 20s linear infinite alternate}
-        .bg-anim .grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);background-size:24px 24px;mix-blend-mode:overlay;opacity:.6}
-        .bg-anim .blob{position:absolute;width:40vmax;height:40vmax;border-radius:50%;filter:blur(60px);opacity:.2}
-        .bg-anim .b1{background:#dc2626;top:-10vmax;left:-10vmax;animation:move1 24s ease-in-out infinite alternate}
-        .bg-anim .b2{background:#f97316;bottom:-12vmax;right:-8vmax;animation:move2 26s ease-in-out infinite alternate}
-        @keyframes drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(2%,-2%,0)}}
-        @keyframes hue{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(20deg)}}
-        @keyframes move1{from{transform:translate(0,0) scale(1)}to{transform:translate(6vmax,4vmax) scale(1.1)}}
-        @keyframes move2{from{transform:translate(0,0) scale(1)}to{transform:translate(-5vmax,-3vmax) scale(1.08)}}
-        @media (prefers-color-scheme: dark){.bg-anim .grid{background-image:radial-gradient(rgba(148,163,184,.08) 1px, transparent 1px)}}
+
         @keyframes fade-in{from{opacity:0}to{opacity:1}}
         @keyframes fade-in-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
         @keyframes bounce-in{0%{opacity:0;transform:scale(0.3)}50%{opacity:1;transform:scale(1.05)}70%{opacity:1;transform:scale(0.9)}100%{opacity:1;transform:scale(1)}}
@@ -258,22 +247,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-anim">
-        <div class="layer1"></div>
-        <div class="layer2"></div>
-        <div class="grid"></div>
-        <div class="blob b1"></div>
-        <div class="blob b2"></div>
-    </div>
-    <div class="w-full max-w-2xl bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 backdrop-blur-2xl rounded-3xl shadow-2xl border-2 border-gray-200 dark:border-slate-700 p-10 relative animate-fade-in-up overflow-hidden">
-        <!-- Gradient overlay background -->
-        <div class="absolute inset-0 bg-gradient-to-br from-red-600/10 to-orange-500/5 dark:from-red-600/5 dark:to-orange-500/3 rounded-3xl -z-10"></div>
-        
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8">        
         <div class="text-center mb-8">
             <div class="mx-auto w-24 h-24 rounded-2xl shadow-xl bg-white dark:bg-slate-100 flex items-center justify-center -mt-16 mb-6 ring-4 ring-white dark:ring-slate-900 transform hover:scale-110 transition-transform duration-300">
                 <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-16 h-16 object-contain">
             </div>
-            <div class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">LAS</div>
+            <div class="text-4xl font-extrabold tracking-tight text-red-600 mb-2">LAS</div>
             <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Join Our Archive System</div>
             <div class="text-sm text-red-600 dark:text-red-400">City Government of Valenzuela</div>
         </div>
@@ -388,7 +367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 After registration, a temporary password will be sent to your email. Use <strong>Forgot Password</strong> to set a new one.
             </p>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 hover:from-red-700 hover:via-red-600 hover:to-orange-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-2 group">
+            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-2 group">
                 <span>Create Account</span>
                 <i class="bi bi-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </button>

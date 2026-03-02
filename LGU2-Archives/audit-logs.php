@@ -336,7 +336,7 @@
                             <div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600/80 ring-1 ring-gray-200 dark:ring-slate-700 transition-all p-4 sm:p-6">
                                 <div class="flex items-center justify-between mb-6">
                                     <div class="flex items-center space-x-3">
-                                        <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-500 dark:from-red-400 dark:to-orange-300 bg-clip-text text-transparent">Audit Logs</h1>
+                                        <h1 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">Audit Logs</h1>
                                     </div>
                                 </div>
 
