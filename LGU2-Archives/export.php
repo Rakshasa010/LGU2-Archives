@@ -623,7 +623,7 @@ if (count($mock_notifications) < 10) {
 				if (!chosen) return;
 				sendToModal.classList.add('hidden');
 				document.body.style.overflow = '';
-				alert('Sent "' + sendFile + '" to ' + chosen.value);
+                try { UI_ENH.toast('Sent "' + sendFile + '" to ' + chosen.value, {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
 			});
 		})();
 	</script>

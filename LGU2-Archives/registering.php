@@ -252,6 +252,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .animate-bounce-in{animation:bounce-in .6s cubic-bezier(.68,-.55,.265,1.55) forwards}
         .animate-shake{animation:shake .5s ease-in-out}
     </style>
+    <link rel="stylesheet" href="assets/css/skeletons.css">
+    <script src="assets/js/ui-enhancements.js"></script>
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
@@ -285,6 +287,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php echo $success; ?>
             </div>
         <?php endif; ?>
+
+        <script>
+        (function(){
+            document.addEventListener('DOMContentLoaded', function(){
+                <?php if (isset($error)): ?>
+                    if (window.UI_ENH && typeof UI_ENH.toast === 'function') UI_ENH.toast(<?php echo json_encode($error); ?>, {background:'linear-gradient(90deg,#f87171,#ef4444)'});
+                <?php endif; ?>
+                <?php if (isset($success)): ?>
+                    if (window.UI_ENH && typeof UI_ENH.toast === 'function') UI_ENH.toast(<?php echo json_encode(strip_tags($success)); ?>, {background:'linear-gradient(90deg,#34d399,#10b981)'});
+                <?php endif; ?>
+            });
+        })();
+        </script>
 
 
         <form action="registering.php" method="POST" class="space-y-6">

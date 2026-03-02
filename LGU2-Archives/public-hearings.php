@@ -550,7 +550,9 @@ $conn->close();
                 .then(r => r.json())
                 .then(d => {
                     if(d.success) location.reload();
-                    else alert(d.message);
+                    else {
+                        UI_ENH.toast(d.message || 'Operation failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
+                    }
                 });
             }
         }
@@ -635,8 +637,10 @@ $conn->close();
                 fetch('legislative_api.php', { method: 'POST', body: fd })
                 .then(r => r.json())
                 .then(d => {
-                    if(d.success) location.reload();
-                    else alert(d.message);
+                    if (d.success) location.reload();
+                    else {
+                        try { UI_ENH.toast(d.message || 'Operation failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+                    }
                 });
             }
         }

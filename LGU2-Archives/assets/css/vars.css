@@ -1,0 +1,28 @@
+/* CSS variables and dark mode (MVP) */
+:root{
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --text: #0f172a;
+  --accent: #dc2626;
+  --accent-2: #f97316;
+}
+
+[data-theme="dark"]{
+  --bg: #0f172a;
+  --card: #0b1220;
+  --muted: #9ca3af;
+  --text: #e6eef8;
+  --accent: #fb7185;
+  --accent-2: #f97316;
+}
+
+body{background:var(--bg);color:var(--text)}
+.card{background:var(--card);color:var(--text)}
+.muted{color:var(--muted)}
+.btn-accent{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff}
+
+/* Respect prefers-color-scheme as initial state (non-JS) */
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0f172a;--card:#0b1220;--muted:#9ca3af;--text:#e6eef8}
+}

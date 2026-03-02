@@ -11,7 +11,7 @@ function closeModal(modalId) {
 function createFolder() {
     const folderName = prompt('Enter folder name:');
     if (folderName && folderName.trim()) {
-        alert(`Folder "${folderName}" created successfully!`);
+        try { UI_ENH.toast(`Folder "${folderName}" created successfully!`, {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
     }
 }
 
@@ -35,7 +35,7 @@ document.getElementById('uploadForm')?.addEventListener('submit', function(e) {
 
         this.reset();
         closeModal('uploadModal');
-        alert('File uploaded successfully!');
+        try { UI_ENH.toast('File uploaded successfully!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
     }
 });
 

@@ -737,37 +737,36 @@
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-left text-sm">
-                                            <thead class="text-xs text-gray-500">
-                                                <tr><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Folder</th><th class="py-2 pr-3">Date</th></tr>
-                                            </thead>
-                                            <tbody id="fu-table" class="divide-y divide-gray-100 dark:divide-slate-700">
-                                                <?php foreach ($recent_uploads as $u): ?>
-                                                <tr data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>">
-                                                    <td class="py-2 pr-3 truncate"><?php echo htmlspecialchars($u['name']); ?></td>
-                                                    <?php
-                                                    $fname = strtolower($u['folder_name']);
-                                                    $link = 'folder_view.php?folder=' . urlencode($u['folder_name']);
-                                                    if (strpos($fname, 'billing') !== false) {
-                                                        $link = 'billing.php';
-                                                    } elseif (strpos($fname, 'meeting') !== false || strpos($fname, 'session') !== false) {
-                                                        $link = 'meeting-records.php';
-                                                    } elseif (strpos($fname, 'ordinance') !== false || strpos($fname, 'resolution') !== false) {
-                                                        $link = 'ordinances-resolution.php';
-                                                    } elseif (strpos($fname, 'hearing') !== false) {
-                                                        $link = 'public-hearings.php';
-                                                    }
-                                                    ?>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><a href="<?php echo htmlspecialchars($link); ?>" class="text-red-600 hover:text-red-800 hover:underline"><?php echo htmlspecialchars($u['folder_name']); ?></a></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($u['created_at']); ?></td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                                <?php if (empty($recent_uploads)): ?>
-                                                <tr><td colspan="3" class="py-3 text-gray-500">No uploads yet.</td></tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
+                                    <div id="fu-cards" class="grid grid-cols-1 gap-3">
+                                        <?php foreach ($recent_uploads as $u): ?>
+                                            <?php
+                                            $fname = strtolower($u['folder_name']);
+                                            $link = 'folder_view.php?folder=' . urlencode($u['folder_name']);
+                                            if (strpos($fname, 'billing') !== false) {
+                                                $link = 'billing.php';
+                                            } elseif (strpos($fname, 'meeting') !== false || strpos($fname, 'session') !== false) {
+                                                $link = 'meeting-records.php';
+                                            } elseif (strpos($fname, 'ordinance') !== false || strpos($fname, 'resolution') !== false) {
+                                                $link = 'ordinances-resolution.php';
+                                            } elseif (strpos($fname, 'hearing') !== false) {
+                                                $link = 'public-hearings.php';
+                                            }
+                                            ?>
+                                            <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>" class="file-card block bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 hover:shadow-md transition-all">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="min-w-0">
+                                                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['name']); ?></div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($u['folder_name']); ?> • <?php echo htmlspecialchars($u['created_at']); ?></div>
+                                                    </div>
+                                                    <div class="ml-3 text-gray-400">
+                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        <?php endforeach; ?>
+                                        <?php if (empty($recent_uploads)): ?>
+                                            <div class="text-gray-500">No uploads yet.</div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="lg:col-span-2">
@@ -792,8 +791,24 @@
                         <!-- Latest Archives Section (dynamic: shows recent files visited) -->
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                             <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Latest Archive Files Visit </h2>
-                            <div id="latestFilesList" class="space-y-3">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Loading recent files...</div>
+                            <div id="latestFilesList" class="space-y-3" data-fetch-url="fetch_latest_files.php">
+                                <div class="skeleton-grid" aria-hidden="true">
+                                    <div class="skeleton p-3">
+                                        <div class="skeleton-thumb"></div>
+                                        <div class="skeleton-title skeleton-text mt-3"></div>
+                                        <div class="skeleton-line skeleton-text" style="width:80%"></div>
+                                    </div>
+                                    <div class="skeleton p-3">
+                                        <div class="skeleton-thumb"></div>
+                                        <div class="skeleton-title skeleton-text mt-3"></div>
+                                        <div class="skeleton-line skeleton-text" style="width:60%"></div>
+                                    </div>
+                                    <div class="skeleton p-3">
+                                        <div class="skeleton-thumb"></div>
+                                        <div class="skeleton-title skeleton-text mt-3"></div>
+                                        <div class="skeleton-line skeleton-text" style="width:70%"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1182,10 +1197,10 @@
             if (fuFilter) {
                 fuFilter.addEventListener('change', function(){
                     var val = this.value || '';
-                    var rows = document.querySelectorAll('#fu-table tr[data-folder]');
-                    rows.forEach(function(tr){
-                        var fld = tr.getAttribute('data-folder') || '';
-                        tr.style.display = (!val || fld === val) ? '' : 'none';
+                    var items = document.querySelectorAll('#fu-cards [data-folder]');
+                    items.forEach(function(el){
+                        var fld = el.getAttribute('data-folder') || '';
+                        el.style.display = (!val || fld === val) ? '' : 'none';
                     });
                 });
             }
@@ -1217,6 +1232,64 @@
                 window.location.assign(url);
             }
             applyBtn && applyBtn.addEventListener('click', applyFilters);
+        })();
+    </script>
+    <script>
+        (function(){
+            if (typeof Chart === 'undefined') return;
+            try{
+                const labels = <?php echo json_encode($qa_series_labels ?? []); ?>;
+                const downloads = <?php echo json_encode($qa_series_downloads ?? []); ?>;
+                const records = <?php echo json_encode($qa_series_records ?? []); ?>;
+                const merged = <?php echo json_encode($qa_series_records_merged ?? []); ?>;
+
+                const hex = function(c){ return c; };
+
+                // Downloads bar
+                const elBar = document.getElementById('qaDownloadsBar');
+                if (elBar) {
+                    new Chart(elBar.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: labels, datasets: [{ label:'Downloads', data: downloads, backgroundColor:'rgba(255,99,132,0.7)'}] },
+                        options: { responsive:true, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
+                    });
+                }
+
+                // Records mini
+                const elRecMini = document.getElementById('qaRecordsMini');
+                if (elRecMini) {
+                    new Chart(elRecMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{responsive:true,plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
+                }
+
+                const elDLMini = document.getElementById('qaDownloadsMini');
+                if (elDLMini) {
+                    new Chart(elDLMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{responsive:true,plugins:{legend:{display:false}}} });
+                }
+
+                const elRecordsLine = document.getElementById('qaRecordsLine');
+                if (elRecordsLine) {
+                    new Chart(elRecordsLine.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{responsive:true,plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
+                }
+
+                // Records by type (pie) - build from PHP $qa_by_type
+                const byType = <?php echo json_encode($qa_by_type ?? []); ?>;
+                const typeKeys = Object.keys(byType || {});
+                const typeVals = typeKeys.map(k=>byType[k]);
+                const elByType = document.getElementById('qaRecordsByType');
+                if (elByType && typeKeys.length>0) {
+                    new Chart(elByType.getContext('2d'), { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{responsive:true,plugins:{legend:{position:'right'}}} });
+                }
+
+                // Uploads by folder stacked bar (if exists)
+                const upLabels = <?php echo json_encode($uploads_labels ?? []); ?>;
+                const upLast7 = <?php echo json_encode($uploads_last7 ?? []); ?>;
+                const upPrev7 = <?php echo json_encode($uploads_prev7 ?? []); ?>;
+                const upEarlier = <?php echo json_encode($uploads_earlier ?? []); ?>;
+                const elUploads = document.getElementById('uploadsByFolderChart');
+                if (elUploads && upLabels.length>0) {
+                    new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{responsive:true, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
+                }
+            }catch(e){console.warn('Chart init error',e);}
         })();
     </script>
 </body>

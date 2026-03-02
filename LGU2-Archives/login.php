@@ -359,7 +359,7 @@
         ms.forEach(function(a){
             a.addEventListener('click', function(e){
                 e.preventDefault();
-                alert('Single Sign-On coming soon.');
+                UI_ENH.toast('Single Sign-On coming soon.', {background:'linear-gradient(90deg,#fbbf24,#f59e0b)'});
             });
         });
     })();

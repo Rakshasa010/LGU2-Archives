@@ -175,6 +175,10 @@
                 } catch (e) { }
                 updateRowStatus(idBtn, nextBtn);
                 updateUnreadCount();
+                // Update highlight for mark-read button on dark mode
+                if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                    btn.classList.add('highlight-mark-read');
+                }
                 return;
             }
             var anchor = e.target.closest('a');

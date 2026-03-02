@@ -145,6 +145,33 @@ $result = $conn->query("SELECT id, title, type, author, created_at FROM legislat
 $stats['recent_added'] = [];
 if ($result) while ($r = $result->fetch_assoc()) $stats['recent_added'][] = $r;
 
+// Fetch folder types with file counts (for new MVP display)
+$stats['folder_types'] = [];
+$stats['folder_types_detailed'] = [];
+$folder_query = $conn->query("
+    SELECT 
+        af.id,
+        af.name,
+        COUNT(afi.id) as file_count,
+        af.created_at,
+        u.full_name as created_by_name
+    FROM archive_folders af
+    LEFT JOIN archive_files afi ON af.id = afi.folder_id
+    LEFT JOIN users u ON af.created_by = u.id
+    WHERE af.parent_id IS NULL
+    GROUP BY af.id, af.name, af.created_at, u.full_name
+    ORDER BY af.created_at DESC
+");
+if ($folder_query) {
+    while ($row = $folder_query->fetch_assoc()) {
+        $stats['folder_types_detailed'][] = $row;
+        if (!isset($stats['folder_types'][$row['name']])) {
+            $stats['folder_types'][$row['name']] = 0;
+        }
+        $stats['folder_types'][$row['name']] += (int)$row['file_count'];
+    }
+}
+
 // Calculate uploads directory size (will show profile pictures and any other uploads)
 $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
 $uploads_bytes = dir_size($uploads_path);
@@ -397,6 +424,9 @@ $funnel_types = array_values($funnel_types);
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/archives-landing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
+    <link rel="stylesheet" href="assets/css/skeletons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="assets/js/ui-enhancements.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -747,18 +777,60 @@ $funnel_types = array_values($funnel_types);
                                 </div>
                             </div>
                             <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300 flex items-center justify-center"><i class="bi bi-tags"></i></div>
-                                    <div class="min-w-0">
-                                        <div class="text-xs text-gray-500">Types</div>
-                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
-                                            <?php if (!empty($stats['by_type'])): ?>
-                                                <?php foreach ($stats['by_type'] as $k=>$v) echo '<span class="inline-block mr-2">'.htmlspecialchars($k).': <strong>'.(int)$v.'</strong></span>'; ?>
-                                            <?php else: ?>
-                                                <span class="text-gray-500">No types</span>
-                                            <?php endif; ?>
+                                <div class="flex items-center justify-between gap-3 mb-3">
+                                    <div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Archive Types</div>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <div class="text-lg font-bold text-gray-800 dark:text-gray-100"><?php echo count($stats['folder_types'] ?? []); ?></div>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400">types</span>
                                         </div>
                                     </div>
+                                    <div class="relative">
+                                        <button id="types-dropdown-btn" class="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400" title="View all types">
+                                            <i class="bi bi-three-dots-vertical text-lg"></i>
+                                        </button>
+                                        <div id="types-dropdown-menu" class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
+                                            <div class="p-3 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+                                                <h4 class="font-semibold text-sm text-gray-800 dark:text-gray-100">Archive Types</h4>
+                                            </div>
+                                            <div class="max-h-64 overflow-y-auto">
+                                                <?php if (!empty($stats['folder_types_detailed'])): ?>
+                                                    <?php foreach ($stats['folder_types_detailed'] as $folder): ?>
+                                                        <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                            <div class="flex items-center justify-between mb-1">
+                                                                <span class="font-medium text-sm text-gray-800 dark:text-gray-100"><?php echo htmlspecialchars($folder['name']); ?></span>
+                                                                <span class="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs font-semibold"><?php echo (int)$folder['file_count']; ?></span>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                                Created <?php echo date('M j, Y', strtotime($folder['created_at'])); ?>
+                                                                <?php if ($folder['created_by_name']): ?>by <?php echo htmlspecialchars($folder['created_by_name']); ?><?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <div class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                        <p>No types available</p>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <?php if (!empty($stats['folder_types'])): ?>
+                                        <?php $type_count = 0; foreach ($stats['folder_types'] as $name => $count): if ($type_count < 3): ?>
+                                            <span class="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium whitespace-nowrap">
+                                                <?php echo htmlspecialchars($name); ?> (<?php echo (int)$count; ?>)
+                                            </span>
+                                        <?php $type_count++; endif; endforeach; ?>
+                                        <?php if (count($stats['folder_types']) > 3): ?>
+                                            <span class="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-xs font-medium">
+                                                +<?php echo count($stats['folder_types']) - 3; ?> more
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="text-gray-500 dark:text-gray-400 text-xs">No types yet</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -1082,6 +1154,21 @@ $funnel_types = array_values($funnel_types);
             profileDropdown?.classList.add('hidden');
             notifDropdown?.classList.add('hidden');
             moreDropdown?.classList.toggle('hidden');
+        });
+
+        // Types Dropdown Handler
+        const typesDropdownBtn = document.getElementById('types-dropdown-btn');
+        const typesDropdownMenu = document.getElementById('types-dropdown-menu');
+        
+        typesDropdownBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            typesDropdownMenu?.classList.toggle('hidden');
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!typesDropdownBtn?.contains(e.target) && !typesDropdownMenu?.contains(e.target)) {
+                typesDropdownMenu?.classList.add('hidden');
+            }
         });
 
         refreshBtn?.addEventListener('click', () => {

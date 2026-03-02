@@ -454,6 +454,30 @@ $conn->close();
                 <?php endforeach; ?>
                 </div>
             </div>
+    
+            <script>
+                function previewFile(name, id, url, size, created_at){
+                    try{
+                        var ext = (name || '').split('.').pop().toLowerCase();
+                        var t = '';
+                        if (['mp4','webm','ogg'].indexOf(ext) >= 0) t = 'video';
+                        else if (ext === 'pdf') t = 'pdf';
+                        else if (['jpg','jpeg','png','gif','webp'].indexOf(ext) >= 0) t = 'image';
+                        // Prefer UI_ENH if available
+                        if (window.UI_ENH && typeof window.UI_ENH.openPreview === 'function') {
+                            window.UI_ENH.openPreview(url, t);
+                            return;
+                        }
+                        // Fallback simple viewer
+                        var w = window.open(url, '_blank');
+                        if (!w) {
+                            try { UI_ENH.toast('Popup blocked — file will open in a new tab.'); } catch(e) {}
+                        }
+                    }catch(e){ console.error(e);
+                        try { UI_ENH.toast('Unable to preview file'); } catch(e) {}
+                    }
+                }
+            </script>
         </div>
         </div>
             </main>

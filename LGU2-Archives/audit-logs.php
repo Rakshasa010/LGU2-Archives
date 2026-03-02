@@ -380,7 +380,7 @@
                                     </div>
 
                                     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-600/80">
-                                    <table class="w-full text-left table-auto">
+                                    <table id="auditTable" class="w-full text-left table-auto">
                                         <thead>
                                             <tr class="text-sm text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/80 border-b border-gray-200 dark:border-slate-600">
                                                 <th class="px-3 py-3 font-semibold">#</th>
@@ -419,7 +419,7 @@
                                                 <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
                                                 <td class="px-3 py-3 text-sm">
                                                     <?php $isReadBtn = strtolower($note['status']) === 'read'; ?>
-                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border <?php echo $isReadBtn ? 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 border-gray-200 dark:border-slate-600' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?> transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" type="button"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
+                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 <?php echo $isReadBtn ? 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 border-gray-200 dark:border-slate-600 highlight-mark-read' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?>" type="button" data-status="<?php echo htmlspecialchars($note['status']); ?>"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -437,5 +437,37 @@
         <script src="assets/js/archives-landing.js"></script>
         <script src="assets/js/audit-logs.js"></script>
         <script src="assets/js/theme-toggle.js"></script>
+        <script>
+        (function(){
+            // Initialize DataTable for audit logs
+            try{
+                const table = $('#auditTable').DataTable({
+                    pageLength: parseInt(document.getElementById('page-size')?.value || 10,10),
+                    lengthChange: false,
+                    ordering: true,
+                    autoWidth: false,
+                    columnDefs: [{ targets: -1, orderable: false }]
+                });
+
+                // Wire search input
+                $('#searchInput').on('input', function(){ table.search(this.value).draw(); });
+
+                // Wire page size control
+                document.getElementById('page-size')?.addEventListener('change', function(){ table.page.len(parseInt(this.value,10)).draw(); });
+
+                // Populate 'About' filter from table data
+                const aboutSet = new Set();
+                $('#auditTable tbody tr').each(function(){ aboutSet.add($(this).find('td').eq(4).text().trim()); });
+                const sel = document.getElementById('filter-about');
+                if (sel){ aboutSet.forEach(v=>{ if(v){ const o = document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); } }); sel.addEventListener('change', function(){ table.column(4).search(this.value).draw(); }); }
+
+                // Wire preset date buttons to filter via search (simple)
+                document.getElementById('date-preset-today')?.addEventListener('click', function(){ table.column(2).search('<?php echo date('Y-m-d'); ?>').draw(); });
+                document.getElementById('date-preset-week')?.addEventListener('click', function(){ table.column(2).search('<?php echo date('Y-m-d', strtotime('-7 days')); ?>').draw(); });
+                document.getElementById('date-preset-month')?.addEventListener('click', function(){ table.column(2).search('<?php echo date('Y-m-d', strtotime('-30 days')); ?>').draw(); });
+
+            }catch(e){ console.warn('DataTable init failed', e); }
+        })();
+        </script>
     </body>
     </html>

@@ -562,7 +562,9 @@ $conn->close();
                 .then(r => r.json())
                 .then(d => {
                     if(d.success) location.reload();
-                    else alert(d.message);
+                    else {
+                        UI_ENH.toast(d.message || 'Failed to create folder', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
+                    }
                 });
             }
         }
@@ -648,7 +650,9 @@ $conn->close();
                 .then(r => r.json())
                 .then(d => {
                     if(d.success) location.reload();
-                    else alert(d.message);
+                    else {
+                        UI_ENH.toast(d.message || 'Move failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
+                    }
                 });
             }
         }

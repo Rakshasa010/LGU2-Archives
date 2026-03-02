@@ -24,11 +24,11 @@ document.addEventListener('DOMContentLoaded', function() {
         createBtn.addEventListener('click', function() {
             const folderName = document.getElementById('folderName').value;
             if (folderName.trim() !== '') {
-                alert('Folder "' + folderName + '" would be created here');
+                UI_ENH.toast('Folder "' + folderName + '" would be created here', {background:'linear-gradient(90deg,#4ade80,#16a34a)'});
                 document.getElementById('folderName').value = '';
                 closeModal();
             } else {
-                alert('Please enter a folder name');
+                UI_ENH.toast('Please enter a folder name', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
             }
         });
     }
@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             displaySearchResults(data.results, searchTerm);
+            if (data.related) displaySearchFacets(data.related);
         })
         .catch(error => {
             console.error('Search error:', error);
@@ -100,6 +101,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="text-gray-600 dark:text-gray-400">Unable to perform search. Please try again.</div>
                 </div>
             `;
+        });
+    }
+
+    function displaySearchFacets(facets) {
+        const container = document.getElementById('searchRelated');
+        const chips = document.getElementById('searchRelatedChips');
+        if (!container || !chips) return;
+        if (!facets || facets.length === 0) {
+            container.classList.add('hidden');
+            chips.innerHTML = '';
+            return;
+        }
+        chips.innerHTML = facets.map(f => {
+            return `<button data-query="${escapeHtml(f.query)}" class="px-3 py-1 text-xs rounded-full bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">${escapeHtml(f.label)}</button>`;
+        }).join('');
+        container.classList.remove('hidden');
+        chips.querySelectorAll('button[data-query]').forEach(btn => {
+            btn.addEventListener('click', function(){
+                const q = this.getAttribute('data-query');
+                if (q) {
+                    legislativeSearchInput.value = q;
+                    performSearch();
+                }
+            });
         });
     }
 
@@ -249,6 +274,9 @@ document.addEventListener('DOMContentLoaded', function() {
         legislativeSearchInput.value = '';
         document.getElementById('legislativeSearchResults').classList.add('hidden');
         document.getElementById('legislativeEmptyState').classList.remove('hidden');
+        // hide related facets
+        const rel = document.getElementById('searchRelated');
+        if (rel) rel.classList.add('hidden');
 
         // Hide the displayed search term
         if (searchTermDisplay && searchTermText) {

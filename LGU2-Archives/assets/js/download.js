@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     downloadBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             if (!record) {
-                alert('Download data is missing. Please close and try again.');
+                try { UI_ENH.toast('Download data is missing. Please close and try again.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
                 return;
             }
             const format = this.getAttribute('data-format');
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 700);
 
         } catch (err) {
-            alert('Download failed: ' + (err.message || err));
+            try { UI_ENH.toast('Download failed: ' + (err.message || err), {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
             btns.forEach(b => b.disabled = false);
         }
     }

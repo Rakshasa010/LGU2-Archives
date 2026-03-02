@@ -353,8 +353,8 @@ if ($q = $conn->query($qStr)) {
                         
                         <!-- Right Side Actions -->
                         <div class="flex items-center space-x-1 md:space-x-4">
-                            <!-- Dark Mode Toggle -->
-                            <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
+                            <!-- Dark Mode Toggle (Centralized) -->
+                            <button data-theme-toggle class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle dark mode">
                                 <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                                 </svg>
@@ -669,6 +669,27 @@ if ($q = $conn->query($qStr)) {
         }
         </script>
 
+    <script>
+    (function(){
+        // Initialize DataTable for user list (MVP)
+        try{
+            const userTable = $('#userTable').DataTable({
+                pageLength: 25,
+                autoWidth: false,
+                columnDefs: [{ targets: -1, orderable: false }]
+            });
+
+            // Role filter integration: simple client-side filter
+            document.getElementById('roleFilter')?.addEventListener('change', function(){
+                const v = this.value;
+                if (v === 'all') userTable.column(3).search('').draw();
+                else if (v === 'admin') userTable.column(3).search('admin', true, false).draw();
+                else userTable.column(3).search('^(?!.*admin).*$','regex',false).draw();
+            });
+        }catch(e){ console.warn('user table datatable init', e); }
+    })();
+    </script>
+
         <div class="mt-6">
             <a href="archives-landing.php" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700">
                 <span class="mr-2">←</span> Back to Archives
@@ -811,7 +832,7 @@ if ($q = $conn->query($qStr)) {
         const fileExtension = file.name.split('.').pop().toLowerCase();
         
         if (!validExtensions.includes(fileExtension)) {
-            alert('Invalid file type. Please upload a .sql, .zip, or .gz file.');
+            try { UI_ENH.toast('Invalid file type. Please upload a .sql, .zip, or .gz file.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
             return;
         }
         
@@ -833,7 +854,7 @@ if ($q = $conn->query($qStr)) {
         e.preventDefault();
         
         if (!selectedFile) {
-            alert('Please select a file to restore.');
+            try { UI_ENH.toast('Please select a file to restore.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
             return;
         }
         
@@ -870,27 +891,27 @@ if ($q = $conn->query($qStr)) {
                     try {
                         const response = JSON.parse(xhr.responseText);
                         if (response.success) {
-                            alert('Database restored successfully! The page will reload.');
-                            setTimeout(() => location.reload(), 2000);
+                            try { UI_ENH.toast('Database restored successfully — reloading…', {background:'linear-gradient(90deg,#34d399,#10b981)'}); } catch(e) {}
+                            setTimeout(() => location.reload(), 1200);
                         } else {
-                            alert('Restoration failed: ' + (response.message || 'Unknown error'));
+                            try { UI_ENH.toast('Restoration failed: ' + (response.message || 'Unknown error'), {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
                             progressContainer.classList.add('hidden');
                             restoreBtn.disabled = false;
                         }
                     } catch (err) {
-                        alert('Invalid response from server.');
+                        try { UI_ENH.toast('Invalid response from server.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
                         progressContainer.classList.add('hidden');
                         restoreBtn.disabled = false;
                     }
                 } else {
-                    alert('Server error: ' + xhr.status);
+                    try { UI_ENH.toast('Server error: ' + xhr.status, {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
                     progressContainer.classList.add('hidden');
                     restoreBtn.disabled = false;
                 }
             });
             
             xhr.addEventListener('error', function() {
-                alert('Network error occurred.');
+                try { UI_ENH.toast('Network error occurred.', {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
                 progressContainer.classList.add('hidden');
                 restoreBtn.disabled = false;
             });
@@ -898,7 +919,7 @@ if ($q = $conn->query($qStr)) {
             xhr.open('POST', 'archives_api.php');
             xhr.send(formData);
         } catch (error) {
-            alert('Error: ' + error.message);
+            try { UI_ENH.toast('Error: ' + error.message, {background:'linear-gradient(90deg,#f87171,#ef4444)'}); } catch(e) {}
             progressContainer.classList.add('hidden');
             restoreBtn.disabled = false;
         }

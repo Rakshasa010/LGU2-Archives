@@ -9,6 +9,16 @@
     border-left: 3px solid rgba(248, 113, 113, 0.6);
 }
 
+/* Highlight for mark-read button in dark mode */
+.highlight-mark-read {
+    box-shadow: inset 0 0 0 2px #fbbf24, 0 0 0 1px rgba(251, 191, 36, 0.5);
+}
+.dark .highlight-mark-read,
+:root.dark .highlight-mark-read {
+    box-shadow: inset 0 0 0 2px #fbbf24, 0 0 0 2px rgba(251, 191, 36, 0.6);
+    background-color: rgba(251, 191, 36, 0.1) !important;
+}
+
 /* Dark mode: card and table */
 .dark .bg-white.rounded-xl.border,
 body.dark .bg-white.rounded-xl.border,

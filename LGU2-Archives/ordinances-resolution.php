@@ -501,8 +501,11 @@ $conn->close();
                 fetch('legislative_api.php', { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(d => {
-                    if(d.success) location.reload();
-                    else alert(d.message);
+                    if (d.success) {
+                        location.reload();
+                    } else {
+                        try { UI_ENH.toast(d.message || 'Operation failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+                    }
                 });
             }
         }
@@ -518,7 +521,7 @@ $conn->close();
             .then(r => r.json())
             .then(d => {
                 if(d.success) {
-                    alert('Uploaded!');
+                    UI_ENH.toast('Uploaded!', {background:'linear-gradient(90deg,#4ade80,#10b981)'});
                     location.reload();
                 } else if (d.duplicate) {
                     if (confirm(d.message)) {
@@ -529,15 +532,15 @@ $conn->close();
                         .then(r2 => r2.json())
                         .then(d2 => {
                             if(d2.success) {
-                                alert('New version created!');
+                                UI_ENH.toast('New version created!', {background:'linear-gradient(90deg,#4ade80,#10b981)'});
                                 location.reload();
                             } else {
-                                alert(d2.message);
+                                UI_ENH.toast(d2.message || 'Failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
                             }
                         });
                     }
                 } else {
-                    alert(d.message);
+                    UI_ENH.toast(d.message || 'Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
                 }
             });
         });
@@ -598,7 +601,9 @@ $conn->close();
                 .then(r => r.json())
                 .then(d => {
                     if(d.success) location.reload();
-                    else alert(d.message);
+                    else {
+                        try { UI_ENH.toast(d.message || 'Move failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+                    }
                 });
             }
         }
