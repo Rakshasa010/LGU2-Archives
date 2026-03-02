@@ -265,91 +265,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="blob b1"></div>
         <div class="blob b2"></div>
     </div>
-    <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 relative animate-fade-in-up">
+    <div class="w-full max-w-2xl bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 backdrop-blur-2xl rounded-3xl shadow-2xl border-2 border-gray-200 dark:border-slate-700 p-10 relative animate-fade-in-up overflow-hidden">
+        <!-- Gradient overlay background -->
+        <div class="absolute inset-0 bg-gradient-to-br from-red-600/10 to-orange-500/5 dark:from-red-600/5 dark:to-orange-500/3 rounded-3xl -z-10"></div>
+        
         <div class="text-center mb-8">
-            <div class="mx-auto w-20 h-20 rounded-full shadow-lg bg-white flex items-center justify-center -mt-12 mb-4 ring-4 ring-white dark:ring-slate-900">
-                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-14 h-14 object-contain">
+            <div class="mx-auto w-24 h-24 rounded-2xl shadow-xl bg-white dark:bg-slate-100 flex items-center justify-center -mt-16 mb-6 ring-4 ring-white dark:ring-slate-900 transform hover:scale-110 transition-transform duration-300">
+                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-16 h-16 object-contain">
             </div>
-            <div class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">LAS</div>
-            <div class="text-sm text-gray-700 dark:text-gray-300">Legislative Archive System</div>
-            <div class="text-sm font-semibold text-red-600 dark:text-red-400">City Government of Valenzuela</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Metropolitan Manila</div>
+            <div class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">LAS</div>
+            <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Join Our Archive System</div>
+            <div class="text-sm text-red-600 dark:text-red-400">City Government of Valenzuela</div>
         </div>
 
         <?php if (isset($error)): ?>
-            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded animate-shake">
-                <?php echo $error; ?>
+            <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-400 dark:border-red-700/60 text-red-700 dark:text-red-300 rounded-xl font-semibold animate-shake flex items-start gap-3">
+                <i class="bi bi-exclamation-circle-fill text-xl flex-shrink-0"></i>
+                <span><?php echo $error; ?></span>
             </div>
         <?php endif; ?>
 
         <?php if (isset($success)): ?>
-            <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded animate-fade-in">
-                <?php echo $success; ?>
+            <div class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-700/60 text-green-700 dark:text-green-300 rounded-xl font-semibold flex items-start gap-3">
+                <i class="bi bi-check-circle-fill text-xl flex-shrink-0"></i>
+                <span><?php echo strip_tags($success); ?></span>
             </div>
         <?php endif; ?>
 
-        <script>
-        (function(){
-            document.addEventListener('DOMContentLoaded', function(){
-                <?php if (isset($error)): ?>
-                    if (window.UI_ENH && typeof UI_ENH.toast === 'function') UI_ENH.toast(<?php echo json_encode($error); ?>, {background:'linear-gradient(90deg,#f87171,#ef4444)'});
-                <?php endif; ?>
-                <?php if (isset($success)): ?>
-                    if (window.UI_ENH && typeof UI_ENH.toast === 'function') UI_ENH.toast(<?php echo json_encode(strip_tags($success)); ?>, {background:'linear-gradient(90deg,#34d399,#10b981)'});
-                <?php endif; ?>
-            });
-        })();
-        </script>
+        <form action="registering.php" method="POST" class="space-y-5">
+            <!-- Grid 2x2 for main fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label for="full_name" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Full Name</label>
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-person text-lg"></i>
+                        </span>
+                        <input type="text" id="full_name" name="full_name" required placeholder="Juan Dela Cruz"
+                               class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                    </div>
+                </div>
 
+                <div>
+                    <label for="username" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Username</label>
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-at text-lg"></i>
+                        </span>
+                        <input type="text" id="username" name="username" required placeholder="juan.delacruz"
+                               class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                    </div>
+                </div>
 
-        <form action="registering.php" method="POST" class="space-y-6">
-            <div>
-                <label for="full_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
-                <input type="text" id="full_name" name="full_name" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Email Address</label>
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-envelope text-lg"></i>
+                        </span>
+                        <input type="email" id="email" name="email" required placeholder="juan@lgu.gov.ph"
+                               class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                    </div>
+                </div>
 
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
-                <input type="text" id="username" name="username" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
-
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
-                <input type="email" id="email" name="email" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
-            <div>
-                <label for="nickname" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nickname (optional)</label>
-                <input type="text" id="nickname" name="nickname"
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
-            <div>
-                <label for="birthdate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birthdate</label>
-                <input type="date" id="birthdate" name="birthdate" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
-            <div>
-                <label for="birthplace" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birthplace</label>
-                <input type="text" id="birthplace" name="birthplace" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
-            </div>
-            <div>
-                <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Complete Address</label>
-                <input type="text" id="address" name="address" required
-                       class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+                <div>
+                    <label for="nickname" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Nickname <span class="text-xs text-gray-500">(optional)</span></label>
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-tag text-lg"></i>
+                        </span>
+                        <input type="text" id="nickname" name="nickname" placeholder="JDC"
+                               class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                    </div>
+                </div>
             </div>
 
-            <p class="text-sm text-gray-600 dark:text-gray-400">After registering, you can sign in using the password sent to your email (if configured), or use <strong>Forgot password</strong> to set one.</p>
+            <!-- Personal Info Section -->
+            <div class="pt-6 border-t border-gray-200 dark:border-slate-700">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    <i class="bi bi-person-badge text-red-600"></i>
+                    Personal Information
+                </h3>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                Register
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label for="birthdate" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Birthdate</label>
+                        <div class="relative group">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                                <i class="bi bi-calendar-event text-lg"></i>
+                            </span>
+                            <input type="date" id="birthdate" name="birthdate" required
+                                   class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="birthplace" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Birthplace</label>
+                        <div class="relative group">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                                <i class="bi bi-geo-alt text-lg"></i>
+                            </span>
+                            <input type="text" id="birthplace" name="birthplace" required placeholder="City, Province"
+                                   class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <label for="address" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Complete Address</label>
+                    <div class="relative group">
+                        <span class="absolute top-4 left-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-map text-lg"></i>
+                        </span>
+                        <input type="text" id="address" name="address" required placeholder="House/Building, Street, Barangay, City"
+                               class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                <i class="bi bi-info-circle text-blue-600 dark:text-blue-400 mr-2"></i>
+                After registration, a temporary password will be sent to your email. Use <strong>Forgot Password</strong> to set a new one.
+            </p>
+
+            <button type="submit" class="w-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 hover:from-red-700 hover:via-red-600 hover:to-orange-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-2 group">
+                <span>Create Account</span>
+                <i class="bi bi-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </button>
         </form>
 
-        <div class="mt-6 text-center">
-            <p class="text-sm text-gray-600 dark:text-gray-400">Already have an account? <a href="login.php" class="text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 font-medium">Sign in</a></p>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400">Already have an account? <a href="login.php" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-bold hover:underline">Sign In Here</a></p>
         </div>
     </div>
 

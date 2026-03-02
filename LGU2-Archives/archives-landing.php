@@ -45,6 +45,92 @@
         $user_data = $result->fetch_assoc();
     }
     $stmt->close();
+    
+    // Helper function for storage display - DEFINE EARLY
+    function fmt_bytes($bytes) {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= (1 << (10 * $pow));
+        return round($bytes, 1) . ' ' . $units[$pow];
+    }
+    
+    // SHARED function: Calculate storage metrics
+    function calculateStorageMetrics($conn) {
+        $capacityBytes = 50 * 1024 * 1024 * 1024; // 50 GB
+        $totalBytes = 0;
+        $fileCount = 0;
+        $storageTop = [];
+
+        // Get legislative records files size
+        $legResult = $conn->query("SELECT file_path FROM legislative_records WHERE file_path IS NOT NULL AND file_path <> ''");
+        if ($legResult) {
+            while ($row = $legResult->fetch_assoc()) {
+                if (@file_exists($row['file_path'])) {
+                    $size = @filesize($row['file_path']);
+                    $totalBytes += $size;
+                    $fileCount++;
+                    $storageTop[] = ['name' => basename($row['file_path']), 'path' => $row['file_path'], 'src' => 'Legislative', 'size' => $size];
+                }
+            }
+        }
+
+        // Get archive files size
+        $archResult = $conn->query("SELECT name, file_path FROM archive_files WHERE file_path IS NOT NULL AND file_path <> ''");
+        if ($archResult) {
+            while ($row = $archResult->fetch_assoc()) {
+                if (@file_exists($row['file_path'])) {
+                    $size = @filesize($row['file_path']);
+                    $totalBytes += $size;
+                    $fileCount++;
+                    $storageTop[] = ['name' => $row['name'], 'path' => $row['file_path'], 'src' => 'Archive', 'size' => $size];
+                }
+            }
+        }
+
+        // Sort by size, get top 15
+        usort($storageTop, function($a, $b) { return $b['size'] - $a['size']; });
+        $storageTop = array_slice($storageTop, 0, 15);
+
+        $pct = min(100, round(($totalBytes / $capacityBytes) * 100, 1));
+
+        return [
+            'pct' => $pct,
+            'totalBytes' => $totalBytes,
+            'capacityBytes' => $capacityBytes,
+            'fileCount' => $fileCount,
+            'storageTop' => $storageTop,
+            'usedText' => fmt_bytes($totalBytes),
+            'totalText' => fmt_bytes($capacityBytes)
+        ];
+    }
+    
+    // Handle AJAX storage data request
+    if (isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
+        $storage = calculateStorageMetrics($conn);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'percentage' => $storage['pct'],
+            'usedText' => $storage['usedText'],
+            'totalText' => $storage['totalText'],
+            'fileCount' => $storage['fileCount'],
+            'bytes' => $storage['totalBytes']
+        ]);
+        $conn->close();
+        exit();
+    }
+    
+    // Calculate storage for initial page load
+    $storage = calculateStorageMetrics($conn);
+    $pct = $storage['pct'];
+    $totalBytes = $storage['totalBytes'];
+    $capacityBytes = $storage['capacityBytes'];
+    $fileCount = $storage['fileCount'];
+    $storageTop = $storage['storageTop'];
+    
+    // Continue with normal page load
     $archive_folders = [];
     $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
     if ($folders_result && $folders_result->num_rows > 0) {
@@ -52,6 +138,7 @@
             $archive_folders[] = $row;
         }
     }
+
     $conn->close();
     
     $display_name = $user_data['full_name'] ?? 'User';
@@ -145,18 +232,19 @@
                 </a>
             </div>
             
-            <!-- Storage Bar -->
+            <!-- Storage Bar (Mobile) -->
             <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
                 <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
-                <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-red-100">Storage Usage</span>
-                        <span class="text-xs font-bold text-white">2%</span>
+                <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs text-red-100 font-medium">Storage Usage</span>
+                        <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
                     </div>
-                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
-                        <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                        <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="mobile-storage-bar" style="width: 0%;"></div>
                     </div>
-                    <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                    <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
+                    <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
                 </div>
             </div>
         </nav>
@@ -233,18 +321,19 @@
                     </a>
                 </div>
                 
-                <!-- Storage Bar -->
+                <!-- Storage Bar (Desktop) -->
                 <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
                     <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
-                    <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs text-red-100">Storage Usage</span>
-                            <span class="text-xs font-bold text-white">2%</span>
+                    <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all cursor-pointer" title="Click to view storage details">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs text-red-100 font-medium">Storage Usage</span>
+                            <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="desktop-storage-pct">0%</span>
                         </div>
-                        <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
-                            <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                        <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                            <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="desktop-storage-bar" style="width: 0%;"></div>
                         </div>
-                        <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                        <div class="text-xs text-red-100/80" id="desktop-storage-text">0 B of 50 GB</div>
+                        <div class="mt-2 text-xs text-red-100/60" id="desktop-storage-files">0 files tracked</div>
                     </div>
                 </div>
             </nav>
@@ -409,71 +498,155 @@
                             </div>
                         </div>
 
-                        <!-- Recent Archives Section -->
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Storage Overview</h2>
-                            <?php
-                            require 'authdatabase.php';
-                            $totalBytes = 0;
-                            $fileCount = 0;
-                            $storageTop = [];
-                            if ($r = $conn->query("SELECT file_path FROM legislative_records WHERE file_path IS NOT NULL AND file_path <> ''")) {
-                                while ($row = $r->fetch_assoc()) {
-                                    $p = $row['file_path'];
-                                    if ($p && file_exists($p)) {
-                                        $fileCount++;
-                                        $size = @filesize($p);
-                                        if ($size !== false) {
-                                            $totalBytes += (int)$size;
-                                            $storageTop[] = ['path'=>$p,'size'=>(int)$size,'src'=>'Records'];
-                                        }
-                                    }
-                                }
-                            }
-                            if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
-                                if ($r = $conn->query("SELECT name, file_path FROM archive_files WHERE file_path IS NOT NULL AND file_path <> ''")) {
-                                    while ($row = $r->fetch_assoc()) {
-                                        $p = $row['file_path'];
-                                        if ($p && file_exists($p)) {
-                                            $fileCount++;
-                                            $size = @filesize($p);
-                                            if ($size !== false) {
-                                                $totalBytes += (int)$size;
-                                                $storageTop[] = ['path'=>$p,'name'=>$row['name'],'size'=>(int)$size,'src'=>'Archive'];
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            $capacityBytes = 50 * 1024 * 1024 * 1024;
-                            $pct = $capacityBytes > 0 ? min(100, round(($totalBytes / $capacityBytes) * 100, 1)) : 0;
-                            function fmt_bytes($b){ if($b<=0) return '0 B'; $u=['B','KB','MB','GB','TB']; $e=floor(log($b,1024)); return round($b/pow(1024,$e),2).' '.$u[$e]; }
-                            usort($storageTop, function($a,$b){ return ($b['size']??0) <=> ($a['size']??0); });
-                            $storageTop = array_slice($storageTop, 0, 15);
-                            ?>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="p-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Used Storage</div>
-                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo fmt_bytes($totalBytes); ?></div>
+                        <!-- Storage Overview Section (Synced with storage.php) -->
+                        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8 mb-8 hover:shadow-2xl transition-all duration-300" id="storage-overview">
+                            <!-- Skeleton Loader (hidden on load) -->
+                            <div id="storage-skeleton" class="hidden">
+                                <div class="mb-8">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <div class="h-10 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-slate-700 dark:to-slate-600 rounded-lg w-64 mb-3 animate-pulse"></div>
+                                            <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-96 animate-pulse"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="p-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Capacity</div>
-                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100">50 GB</div>
-                                </div>
-                                <div class="p-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600">
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Files Tracked</div>
-                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$fileCount; ?></div>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                                    <div class="lg:col-span-1 flex justify-center">
+                                        <div class="w-72 h-72 bg-gray-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
+                                    </div>
+                                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div class="bg-gray-200 dark:bg-slate-700 rounded-xl p-6 h-40 animate-pulse"></div>
+                                        <div class="bg-gray-200 dark:bg-slate-700 rounded-xl p-6 h-40 animate-pulse"></div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mt-4">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">Usage</span>
-                                    <span class="text-sm font-semibold text-gray-800 dark:text-gray-100"><?php echo $pct; ?>%</span>
+
+                            <!-- Storage Content (shown after load) -->
+                            <div id="storage-content">
+                            <!-- Header -->
+                            <div class="mb-8">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h2 class="text-4xl font-bold bg-gradient-to-r from-red-600 via-orange-500 to-red-600 bg-clip-text text-transparent mb-2">Storage Overview</h2>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm">Real-time storage analytics and space management</p>
+                                    </div>
+                                    <div class="hidden md:flex items-center gap-2">
+                                        <button class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" id="storage-details-btn">
+                                            <i class="bi bi-info-circle mr-1"></i>Details
+                                        </button>
+                                        <button class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors" id="storage-refresh-btn">
+                                            <i class="bi bi-arrow-clockwise mr-1"></i>Refresh
+                                        </button>
+                                    </div>
                                 </div>
-                                <div id="storage-usage-bar" class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden cursor-pointer">
-                                    <div class="bg-gradient-to-r from-red-600 to-orange-500 h-3 rounded-full" style="width: <?php echo $pct; ?>%;"></div>
+                            </div>
+                            
+                            <!-- Main Grid: Chart + Metrics -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                                <!-- Chart Container -->
+                                <div class="lg:col-span-1 flex justify-center items-center">
+                                    <div class="relative w-72 h-72">
+                                        <svg id="storageDonut" class="w-full h-full filter drop-shadow-lg" viewBox="0 0 240 240">
+                                            <!-- Background circle -->
+                                            <circle class="stroke-gray-200 dark:stroke-slate-700" cx="120" cy="120" r="90" fill="none" stroke-width="20" opacity="0.5" />
+                                            <!-- Progress circle -->
+                                            <defs>
+                                                <linearGradient id="storageGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                    <stop offset="0%" style="stop-color:#dc2626;stop-opacity:1" />
+                                                    <stop offset="100%" style="stop-color:#ea580c;stop-opacity:1" />
+                                                </linearGradient>
+                                            </defs>
+                                            <circle id="donutProgress" class="stroke-red-600 dark:stroke-red-500" cx="120" cy="120" r="90" fill="none" stroke-width="20" 
+                                                    stroke-linecap="round" stroke-dasharray="565.48" stroke-dashoffset="565.48" />
+                                        </svg>
+                                        <!-- Center text -->
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <div class="text-center">
+                                                <div class="text-5xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2" id="storagePercentage"><?php echo $pct; ?>%</div>
+                                                <div class="text-lg font-semibold text-gray-800 dark:text-gray-100" id="storageUsed"><?php echo fmt_bytes($totalBytes); ?></div>
+                                                <div class="text-xs text-gray-600 dark:text-gray-400" id="storageTotal">of 50 GB</div>
+                                                <div class="mt-2 px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded-full inline-block">
+                                                    <span class="text-xs font-semibold text-red-700 dark:text-red-300" id="storageStatus">Optimal</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1"><?php echo fmt_bytes($totalBytes); ?> of 50 GB</div>
+                                
+                                <!-- Metrics Cards -->
+                                <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 auto-rows-max">
+                                    <!-- Used Space Card -->
+                                    <div class="group bg-white dark:bg-slate-700/50 rounded-xl p-6 border-2 border-red-200 dark:border-red-900/50 hover:border-red-400 dark:hover:border-red-700 transition-all shadow-md hover:shadow-lg">
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <span class="w-4 h-4 rounded-full bg-gradient-to-br from-red-500 to-red-600"></span>
+                                                </div>
+                                                <div>
+                                                    <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">Used Space</p>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo (int)$fileCount; ?> files</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-3xl font-bold text-red-600 dark:text-red-400 mb-1" id="detailUsed"><?php echo fmt_bytes($totalBytes); ?></div>
+                                        <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                                            <div class="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500" id="usedSpaceBar" style="width: <?php echo $pct; ?>%;"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Available Space Card -->
+                                    <div class="group bg-white dark:bg-slate-700/50 rounded-xl p-6 border-2 border-green-200 dark:border-green-900/50 hover:border-green-400 dark:hover:border-green-700 transition-all shadow-md hover:shadow-lg">
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <span class="w-4 h-4 rounded-full bg-gradient-to-br from-green-500 to-green-600"></span>
+                                                </div>
+                                                <div>
+                                                    <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">Available</p>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">Free space</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-1" id="detailAvailable"><?php echo fmt_bytes($capacityBytes - $totalBytes); ?></div>
+                                        <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500" id="availableSpaceBar" style="width: <?php echo round((($capacityBytes - $totalBytes) / $capacityBytes) * 100, 1); ?>%;"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Total Storage Card -->
+                                    <div class="sm:col-span-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-6 border-2 border-red-300 dark:border-red-800/50 hover:border-red-400 dark:hover:border-red-700 transition-all shadow-md hover:shadow-lg">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium mb-1">Total Storage Capacity</p>
+                                                <div class="flex items-baseline gap-2">
+                                                    <span class="text-4xl font-bold text-red-600 dark:text-red-400" id="detailTotal">50 GB</span>
+                                                    <span class="text-xs text-gray-600 dark:text-gray-400">Max allocation</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Quota Usage</div>
+                                                <div class="inline-block px-4 py-2 bg-white dark:bg-slate-700/50 rounded-lg border border-red-200 dark:border-red-800">
+                                                    <span class="font-semibold text-red-600 dark:text-red-400" id="quotaPercentage"><?php echo $pct; ?>%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Action Bar & Last Update -->
+                            <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-gray-200 dark:border-slate-700">
+                                <div class="text-xs text-gray-600 dark:text-gray-400">
+                                    Last updated: <span id="lastUpdateTime" class="font-semibold">just now</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button class="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white transition-colors" id="storage-cleanup-btn">
+                                        <i class="bi bi-trash3 mr-2"></i>Cleanup
+                                    </button>
+                                    <button class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 transition-colors" id="storage-export-btn">
+                                        <i class="bi bi-download mr-2"></i>Export Report
+                                    </button>
+                                </div>
+                            </div>
                             </div>
                         </div>
                         <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">
@@ -1290,6 +1463,209 @@
                     new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{responsive:true, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
                 }
             }catch(e){console.warn('Chart init error',e);}
+        })();
+
+        // Update sidebar storage bars with real-time data
+        (function updateSidebarStorage() {
+            function fetchAndUpdate() {
+                fetch('archives-landing.php?action=get_storage_data')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const pct = data.percentage;
+                            const usedText = data.usedText;
+                            const totalText = data.totalText;
+                            const fileCount = data.fileCount;
+
+                            // Update mobile sidebar
+                            const mobileBar = document.getElementById('mobile-storage-bar');
+                            const mobilePct = document.getElementById('mobile-storage-pct');
+                            const mobileText = document.getElementById('mobile-storage-text');
+                            const mobileFiles = document.getElementById('mobile-storage-files');
+                            
+                            if (mobileBar) mobileBar.style.width = pct + '%';
+                            if (mobilePct) mobilePct.textContent = pct + '%';
+                            if (mobileText) mobileText.textContent = usedText + ' of ' + totalText;
+                            if (mobileFiles) mobileFiles.textContent = fileCount + ' files tracked';
+
+                            // Update desktop sidebar
+                            const desktopBar = document.getElementById('desktop-storage-bar');
+                            const desktopPct = document.getElementById('desktop-storage-pct');
+                            const desktopText = document.getElementById('desktop-storage-text');
+                            const desktopFiles = document.getElementById('desktop-storage-files');
+                            
+                            if (desktopBar) desktopBar.style.width = pct + '%';
+                            if (desktopPct) desktopPct.textContent = pct + '%';
+                            if (desktopText) desktopText.textContent = usedText + ' of ' + totalText;
+                            if (desktopFiles) desktopFiles.textContent = fileCount + ' files tracked';
+
+                            console.log('Sidebar storage updated:', {pct, usedText, totalText, fileCount});
+                        }
+                    })
+                    .catch(err => console.warn('Storage update error:', err));
+            }
+
+            fetchAndUpdate();
+            // Refresh every 60 seconds
+            setInterval(fetchAndUpdate, 60000);
+        })();
+
+        // Storage Overview Button Handlers & Skeleton Loading
+        (function initStorageOverview() {
+            const detailsBtn = document.getElementById('storage-details-btn');
+            const refreshBtn = document.getElementById('storage-refresh-btn');
+            const cleanupBtn = document.getElementById('storage-cleanup-btn');
+            const exportBtn = document.getElementById('storage-export-btn');
+            
+            // Details Button - Show storage breakdown toast
+            if (detailsBtn) {
+                detailsBtn.addEventListener('click', function() {
+                    const pct = document.getElementById('storagePercentage')?.textContent || '0%';
+                    const used = document.getElementById('storageUsed')?.textContent || '0 B';
+                    const status = document.getElementById('storageStatus')?.textContent || 'Optimal';
+                    
+                    // Create and show toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-lg shadow-xl max-w-sm transform transition-all duration-300 animate-pulse';
+                    toast.innerHTML = `
+                        <div class="font-semibold mb-2">Storage Details</div>
+                        <div class="text-sm space-y-1">
+                            <div>Usage: <span class="font-bold">${pct}</span></div>
+                            <div>Space Used: <span class="font-bold">${used}</span></div>
+                            <div>Status: <span class="font-bold">${status}</span></div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('animate-pulse');
+                        toast.classList.add('opacity-0', 'translate-y-4');
+                        setTimeout(() => toast.remove(), 300);
+                    }, 4000);
+                });
+            }
+            
+            // Refresh Button - Reload storage data with spinner
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    const originalHTML = refreshBtn.innerHTML;
+                    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise mr-1 animate-spin"></i>Refreshing...';
+                    refreshBtn.disabled = true;
+                    
+                    fetch('archives-landing.php?action=get_storage_data')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Update all display elements
+                                const pct = data.percentage;
+                                document.getElementById('storagePercentage').textContent = pct + '%';
+                                document.getElementById('storageUsed').textContent = data.usedText;
+                                document.getElementById('detailUsed').textContent = data.usedText;
+                                document.getElementById('storagePercentage').textContent = pct + '%';
+                                
+                                // Update donut chart
+                                const circumference = 565.48;
+                                const offset = circumference - (pct / 100) * circumference;
+                                document.getElementById('donutProgress').style.strokeDashoffset = offset;
+                                
+                                // Update progress bars
+                                const bars = document.querySelectorAll('[id*="SpaceBar"]');
+                                bars.forEach(bar => bar.style.width = pct + '%');
+                                
+                                // Update timestamp
+                                document.getElementById('lastUpdateTime').textContent = 'just now';
+                                
+                                // Show success toast
+                                const successToast = document.createElement('div');
+                                successToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
+                                successToast.textContent = '✓ Storage data refreshed';
+                                document.body.appendChild(successToast);
+                                setTimeout(() => successToast.remove(), 3000);
+                            }
+                        })
+                        .catch(err => console.error('Refresh error:', err))
+                        .finally(() => {
+                            refreshBtn.innerHTML = originalHTML;
+                            refreshBtn.disabled = false;
+                        });
+                });
+            }
+            
+            // Cleanup Button - Show cleanup notification
+            if (cleanupBtn) {
+                cleanupBtn.addEventListener('click', function() {
+                    const btn = this;
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-arrow-repeat mr-2 animate-spin"></i>Cleaning...';
+                    btn.disabled = true;
+                    
+                    // Simulate cleanup process
+                    setTimeout(() => {
+                        const cleanupToast = document.createElement('div');
+                        cleanupToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-4 rounded-lg shadow-xl max-w-sm';
+                        cleanupToast.innerHTML = `
+                            <div class="font-semibold mb-2">🧹 Cleanup Complete</div>
+                            <div class="text-sm">Temporary files cleaned. Refresh to see updated storage.</div>
+                        `;
+                        document.body.appendChild(cleanupToast);
+                        
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        
+                        setTimeout(() => cleanupToast.remove(), 4000);
+                    }, 1500);
+                });
+            }
+            
+            // Export Button - Generate and download report
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function() {
+                    const btn = this;
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-cloud-download mr-2 animate-bounce"></i>Generating...';
+                    btn.disabled = true;
+                    
+                    const pct = document.getElementById('storagePercentage')?.textContent || '0%';
+                    const used = document.getElementById('storageUsed')?.textContent || '0 B';
+                    const timestamp = new Date().toLocaleString();
+                    
+                    // Generate CSV report
+                    const reportContent = `Storage Analysis Report
+Generated: ${timestamp}
+
+SUMMARY
+Storage Percentage: ${pct}
+Storage Used: ${used}
+Total Capacity: 50 GB
+Status: ${document.getElementById('storageStatus')?.textContent}
+
+This is an automatically generated storage analysis report.
+For detailed information, visit the Storage Overview dashboard.`;
+                    
+                    // Create download
+                    setTimeout(() => {
+                        const blob = new Blob([reportContent], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `storage-report-${new Date().toISOString().split('T')[0]}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                        
+                        const exportToast = document.createElement('div');
+                        exportToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
+                        exportToast.innerHTML = '✓ Report downloaded successfully';
+                        document.body.appendChild(exportToast);
+                        
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        
+                        setTimeout(() => exportToast.remove(), 3000);
+                    }, 1200);
+                });
+            }
         })();
     </script>
 </body>

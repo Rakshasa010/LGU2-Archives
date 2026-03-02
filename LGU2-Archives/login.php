@@ -207,110 +207,121 @@
         $conn->close();
     }
     ?>
-    <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 relative animate-fade-in-up">
+    <div class="w-full max-w-md bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 backdrop-blur-2xl rounded-3xl shadow-2xl border-2 border-gradient p-10 relative animate-fade-in-up overflow-hidden">
+        <!-- Enhanced gradient border effect -->
+        <div class="absolute inset-0 bg-gradient-to-br from-red-600/20 to-orange-500/10 dark:from-red-600/10 dark:to-orange-500/5 rounded-3xl -z-10"></div>
+        
         <div class="text-center mb-8">
-            <div class="mx-auto w-20 h-20 rounded-full shadow-lg bg-white flex items-center justify-center -mt-12 mb-4 ring-4 ring-white dark:ring-slate-900">
-                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-14 h-14 object-contain">
+            <div class="mx-auto w-24 h-24 rounded-2xl shadow-xl bg-white dark:bg-slate-100 flex items-center justify-center -mt-16 mb-6 ring-4 ring-white dark:ring-slate-900 transform hover:scale-110 transition-transform duration-300">
+                <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-16 h-16 object-contain">
             </div>
-            <div class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">LAS</div>
-            <div class="text-sm text-gray-700 dark:text-gray-300">Legislative Archive System</div>
-            <div class="text-sm font-semibold text-red-600 dark:text-red-400">City Government of Valenzuela</div>
+            <div class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">LAS</div>
+            <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Legislative Archive System</div>
+            <div class="text-sm text-red-600 dark:text-red-400">City Government of Valenzuela</div>
             <div class="text-xs text-gray-500 dark:text-gray-400">Metropolitan Manila</div>
         </div>
 
         <?php if (isset($error)): ?>
-            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                <?php echo $error; ?>
+            <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-400 dark:border-red-700/60 text-red-700 dark:text-red-300 rounded-xl font-semibold animate-shake">
+                <div class="flex items-start gap-3">
+                    <i class="bi bi-exclamation-circle-fill text-xl flex-shrink-0"></i>
+                    <span><?php echo $error; ?></span>
+                </div>
             </div>
         <?php endif; ?>
 
         <?php if (isset($_GET['registered'])): ?>
-            <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-                <?php 
-                if ($_GET['registered'] === 'email') {
-                    echo "Registered successfully. Check your email for the temporary password.";
-                } else {
-                    echo "Registered successfully. Use Forgot password to set your password and sign in.";
-                }
-                ?>
+            <div class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-700/60 text-green-700 dark:text-green-300 rounded-xl font-semibold">
+                <div class="flex items-start gap-3">
+                    <i class="bi bi-check-circle-fill text-xl flex-shrink-0"></i>
+                    <span><?php 
+                        if ($_GET['registered'] === 'email') {
+                            echo "Registered successfully. Check your email for the temporary password.";
+                        } else {
+                            echo "Registered successfully. Use Forgot password to set your password and sign in.";
+                        }
+                    ?></span>
+                </div>
             </div>
         <?php endif; ?>
 
         <?php if (!$otp_step): ?>
-            <div class="mb-4">
-                <div class="text-xl font-semibold text-gray-900 dark:text-gray-100">Welcome Back</div>
-                <div class="text-sm text-gray-600 dark:text-gray-400">Sign in to access your account</div>
+            <div class="mb-6">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome Back</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">Sign in to access your archives</div>
             </div>
-            <form action="login.php" method="POST" class="space-y-6">
+            <form action="login.php" method="POST" class="space-y-5">
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12H8m0 0l-4 4m4-4l-4-4m8 4h8" /></svg></span>
+                    <label for="username" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Email Address</label>
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-envelope text-lg"></i>
+                        </span>
                         <input type="text" id="username" name="username" placeholder="your.email@lgu.gov.ph" required
-                            class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+                            class="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600">
                     </div>
                 </div>
-                <div class="mb-4">
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                    <div class="relative">
-                        <input type="password" id="password" name="password" required class="w-full pl-10 px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors" />
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.105-.672 2-1.5 2S9 12.105 9 11s.672-2 1.5-2S12 9.895 12 11z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></span>
-                        <button type="button" id="togglePassword" class="absolute right-0 top-0 h-full flex items-center px-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none" aria-label="Show password">
-                            <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5 c4.478 0 8.268 2.943 9.542 7 -1.274 4.057-5.064 7-9.542 7 -4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.585 10.585A2 2 0 0012 14a2 2 0 001.414-.586" /><path stroke-linecap="round" stroke-linejoin="round" d="M6.223 6.223A9.956 9.956 0 0112 5 c4.478 0 8.268 2.943 9.543 7 a9.97 9.97 0 01-4.216 5.568" /></svg>
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Password</label>
+                    <div class="relative group">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                            <i class="bi bi-lock text-lg"></i>
+                        </span>
+                        <input type="password" id="password" name="password" required class="w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200 hover:border-red-300 dark:hover:border-red-600" />
+                        <button type="button" id="togglePassword" class="absolute right-0 top-0 h-full flex items-center px-4 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 focus:outline-none transition-colors" aria-label="Toggle password visibility">
+                            <i id="eyeOpen" class="bi bi-eye text-lg"></i>
+                            <i id="eyeClosed" class="bi bi-eye-slash text-lg hidden"></i>
                         </button>
                     </div>
                 </div>
-    <div class="mt-4 flex items-start gap-3">
-        <input id="agreeTerms" name="agreeTerms" type="checkbox" required class="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500">
-        <label for="agreeTerms" class="text-sm text-gray-700 dark:text-gray-300">I agree to the <button type="button" onclick="openTerms()" class="text-red-600 hover:underline">Terms & Conditions</button></label>
+        <div class="mt-5 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+        <input id="agreeTerms" name="agreeTerms" type="checkbox" required class="mt-1.5 h-5 w-5 rounded border-2 border-blue-300 dark:border-blue-600 text-red-600 focus:ring-red-500 cursor-pointer">
+        <label for="agreeTerms" class="text-sm text-gray-700 dark:text-gray-300">I agree to the <button type="button" onclick="openTerms()" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold underline">Terms & Conditions</button></label>
     </div>
 
-                <button id="login-btn" type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center gap-2">
+                <button id="login-btn" type="submit" class="w-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 hover:from-red-700 hover:via-red-600 hover:to-orange-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-3 group">
                     <span id="login-btn-text">Sign In</span>
-                    <span id="login-btn-icon" class="hidden spinner"></span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13.293 4.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 11-1.414-1.414L17.586 12l-4.293-4.293a1 1 0 010-1.414z"/><path d="M3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                    <i id="login-btn-icon" class="bi bi-arrow-right text-xl group-hover:translate-x-1 transition-transform"></i>
+                    <span id="login-btn-spinner" class="hidden spinner"></span>
                 </button>
-                <div class="relative my-2">
+                <div class="relative my-4">
                     <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                        <div class="w-full border-t border-gray-200 dark:border-slate-700"></div>
+                        <div class="w-full border-t-2 border-gray-200 dark:border-slate-700"></div>
                     </div>
                     <div class="relative flex justify-center">
-                        <span class="px-3 text-xs text-gray-500 bg-white dark:bg-slate-800">Or continue with</span>
+                        <span class="px-3 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900">Or continue with</span>
                     </div>
                 </div>
-                <a href="forgot-password.php" class="text-sm text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300">Forgot password?</a>
+                <a href="forgot-password.php" class="block text-center text-sm font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded-lg transition-colors">Forgot password?</a>
                 <div class="grid grid-cols-2 gap-3">
-                    <a href="#" class="flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600">
-                        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/microsoft.svg" alt="Microsoft" class="w-5 h-5 opacity-80">
+                    <a href="#" class="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-300 dark:hover:border-red-700 transition-all duration-200 font-semibold">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         <span class="text-sm">Microsoft</span>
                     </a>
-                    <a href="#" class="flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600">
-                        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/google.svg" alt="Google" class="w-5 h-5 opacity-80">
+                    <a href="#" class="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-300 dark:hover:border-red-700 transition-all duration-200 font-semibold">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                         <span class="text-sm">Google</span>
                     </a>
                 </div>
-                <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Don't have an account? <a href="registering.php" class="text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 font-medium">Create Account</a></p>
+                <div class="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Don't have an account? <a href="registering.php" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-bold hover:underline">Create Account</a></p>
                 </div>
 
             </form>
         <?php else: ?>
-            <div class="mb-4">
-                <div class="text-xl font-semibold text-gray-900 dark:text-gray-100">Verify OTP</div>
-                <div class="text-sm text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to your email. Expires in 1 minute.</div>
+            <div class="mb-6">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Verify OTP</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to your email</div>
+                <div class="text-xs text-amber-600 dark:text-amber-400 mt-2">⏱️ Expires in <span id="timer" class="font-bold">60</span>s</div>
             </div>
-            <form action="login.php" method="POST" class="space-y-6">
+            <form action="login.php" method="POST" class="space-y-5">
                 <input type="hidden" name="verify_otp" value="1">
                 <div>
-                    <label for="otp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">OTP Code</label>
-                    <input type="text" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors" placeholder="123456">
+                    <label for="otp" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">OTP Code</label>
+                    <input type="text" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required class="w-full px-4 py-3.5 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 text-center text-2xl font-bold tracking-widest transition-all duration-200" placeholder="000000">
                 </div>
-                <div class="flex items-center justify-between">
-                    <div class="text-sm text-gray-600 dark:text-gray-400" id="otp-timer">Expires in: <span id="timer">60</span>s</div>
-                    <a href="login.php" class="text-sm text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300">Sign in again</a>
-                </div>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Verify</button>
+                <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl">Verify Code</button>
+                <a href="login.php" class="block text-center text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-semibold">← Start Over</a>
             </form>
             <script>
                 (function(){
