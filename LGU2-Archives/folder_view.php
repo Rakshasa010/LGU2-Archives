@@ -145,6 +145,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $unq = sprintf("DOC-%06d", $new_id);
                                 $conn->query("UPDATE archive_files SET unique_number = '$unq' WHERE id = $new_id");
                             }
+
+                            // log analytics event for upload
+                            $bytes = @filesize($file_path) ?: 0;
+                            $ext = strtolower(pathinfo($final_name, PATHINFO_EXTENSION));
+                            $rtype = '';
+                            if (in_array($ext, ['mp4','webm','ogg'])) {
+                                $rtype = 'video';
+                            } elseif ($ext === 'pdf') {
+                                $rtype = 'pdf';
+                            } elseif (in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
+                                $rtype = 'image';
+                            } else {
+                                $rtype = $ext ?: 'unknown';
+                            }
+                            if ($ev = $conn->prepare("INSERT INTO analytics_events (event_type, user_id, record_id, record_title, record_type, bytes) VALUES (?,?,?,?,?,?)")) {
+                                $etype = 'upload';
+                                $uid = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+                                $ev->bind_param('sisssi', $etype, $uid, $new_id, $final_name, $rtype, $bytes);
+                                $ev->execute();
+                                $ev->close();
+                            }
+
                             $uploadedFiles[] = ['id' => $new_id, 'name' => $final_name];
                         }
                     }

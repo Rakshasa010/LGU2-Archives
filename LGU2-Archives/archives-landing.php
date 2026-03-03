@@ -232,12 +232,12 @@
                 </a>
             </div>
             
-            <!-- Storage Bar (Mobile) -->
+            <!-- Centralized Storage Overview (Mobile) -->
             <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
                 <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-red-100 font-medium">Storage Usage</span>
+                        <span class="text-xs text-red-100 font-medium">Capacity Used</span>
                         <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
                     </div>
                     <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
@@ -245,6 +245,7 @@
                     </div>
                     <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
                     <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
+                    <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
                 </div>
             </div>
         </nav>
@@ -321,12 +322,12 @@
                     </a>
                 </div>
                 
-                <!-- Storage Bar (Desktop) -->
+                <!-- Centralized Storage Overview (Desktop) -->
                 <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
-                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
                     <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all cursor-pointer" title="Click to view storage details">
                         <div class="flex items-center justify-between mb-3">
-                            <span class="text-xs text-red-100 font-medium">Storage Usage</span>
+                            <span class="text-xs text-red-100 font-medium">Capacity Used</span>
                             <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="desktop-storage-pct">0%</span>
                         </div>
                         <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
@@ -334,6 +335,7 @@
                         </div>
                         <div class="text-xs text-red-100/80" id="desktop-storage-text">0 B of 50 GB</div>
                         <div class="mt-2 text-xs text-red-100/60" id="desktop-storage-files">0 files tracked</div>
+                        <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
                     </div>
                 </div>
             </nav>
@@ -685,6 +687,9 @@
                             $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
                             $fa_end = isset($_GET['end']) ? $_GET['end'] : null;
                             $fa_type = isset($_GET['type']) ? $_GET['type'] : null;
+                            // event filter (download / upload)
+                            $q_event = isset($_GET['event']) ? $_GET['event'] : null;
+                            $safe_event = $q_event ? $conn->real_escape_string(strtolower($q_event)) : null;
                             $f_from = null;
                             $f_to = null;
                             if ($fa_start) { $d = DateTime::createFromFormat('Y-m-d', $fa_start); if ($d) $f_from = $d->format('Y-m-d'); }
@@ -694,6 +699,18 @@
                             if ($f_to) $where_rec .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
                             if ($fa_type) $where_rec .= " AND type = '".$conn->real_escape_string($fa_type)."'";
                             $where_dl = "event_type='download'";
+                            if ($fa_type && $fa_type !== '') {
+                                // type param may refer to record_type or folder name, but we still apply directly
+                            }
+                            if ($safe_event) {
+                                if ($safe_event === 'download') {
+                                    // do nothing
+                                } elseif ($safe_event === 'upload') {
+                                    $where_dl = "event_type='upload'";
+                                } else {
+                                    $where_dl = "0";
+                                }
+                            }
                             if ($f_from) $where_dl .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                             if ($f_to) $where_dl .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
                             if ($fa_type) $where_dl .= " AND record_type = '".$conn->real_escape_string($fa_type)."'";
@@ -703,6 +720,7 @@
                             }
                             $qa_total_records = 0;
                             $qa_downloads = 0;
+                            $qa_uploads = 0;
                             $qa_by_type = [];
                             if ($res = $conn->query("SELECT COUNT(*) AS t FROM legislative_records WHERE $where_rec")) {
                                 if ($row = $res->fetch_assoc()) $qa_total_records = (int)$row['t'];
@@ -711,6 +729,18 @@
                                 if ($res = $conn->query("SELECT COUNT(*) AS c FROM analytics_events WHERE $where_dl")) {
                                     if ($row = $res->fetch_assoc()) $qa_downloads = (int)$row['c'];
                                 }
+                                // uploads count (respect event filter)
+                                $qa_uploads = 0;
+                                $up_where = "event_type='upload'";
+                                if ($safe_event && $safe_event !== 'upload') {
+                                    $up_where = "0"; // no rows
+                                }
+                                if ($f_from) $up_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                                if ($f_to) $up_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                                if ($fa_type) $up_where .= " AND record_type = '".$conn->real_escape_string($fa_type)."'";
+                                if ($up_where !== "0" && $res2 = $conn->query("SELECT COUNT(*) AS c FROM analytics_events WHERE $up_where")) {
+                                    if ($row2 = $res2->fetch_assoc()) $qa_uploads = (int)$row2['c'];
+                                }
                             } else {
                                 $where_legacy = "last_accessed IS NOT NULL";
                                 if ($f_from) $where_legacy .= " AND last_accessed >= '".$conn->real_escape_string($f_from)." 00:00:00'";
@@ -718,6 +748,13 @@
                                 if ($fa_type) $where_legacy .= " AND type = '".$conn->real_escape_string($fa_type)."'";
                                 if ($res = $conn->query("SELECT COUNT(*) AS c FROM legislative_records WHERE $where_legacy")) {
                                     if ($row = $res->fetch_assoc()) $qa_downloads = (int)$row['c'];
+                                }
+                                // fallback uploads using archive_files count
+                                $w2 = "1=1";
+                                if ($f_from) $w2 .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                                if ($f_to) $w2 .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                                if ($res3 = $conn->query("SELECT COUNT(*) AS c FROM archive_files WHERE $w2")) {
+                                    if ($row3 = $res3->fetch_assoc()) $qa_uploads = (int)$row3['c'];
                                 }
                             }
                             if ($res = $conn->query("SELECT type, COUNT(*) AS c FROM legislative_records WHERE $where_rec GROUP BY type")) {
@@ -785,6 +822,7 @@
                             }
                             $qa_series_labels = array_keys($days);
                             $qa_series_downloads = array_values($series_downloads);
+                            $qa_series_uploads = array_values($series_folders);
                             $qa_series_records = array_values($series_records);
                             $qa_series_records_merged = array_values($series_records_merged);
                             ?>
@@ -796,6 +834,7 @@
                                         $range = ($f_from ? $f_from : 'Start') . ' — ' . ($f_to ? $f_to : 'End');
                                         echo htmlspecialchars($range);
                                         echo $fa_type ? ' • '.htmlspecialchars($fa_type) : '';
+                                        echo $safe_event ? ' • '.htmlspecialchars(ucfirst($safe_event)) : '';
                                         ?>
                                     </div>
                                 </div>
@@ -807,6 +846,11 @@
                                         <?php foreach ($types_list as $t): ?>
                                             <option value="<?php echo htmlspecialchars($t); ?>" <?php echo ($fa_type === $t ? 'selected' : ''); ?>><?php echo htmlspecialchars($t); ?></option>
                                         <?php endforeach; ?>
+                                    </select>
+                                    <select id="qa-event" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                        <option value="">All Events</option>
+                                        <option value="download" <?php echo ($safe_event === 'download' ? 'selected' : ''); ?>>Download</option>
+                                        <option value="upload" <?php echo ($safe_event === 'upload' ? 'selected' : ''); ?>>Upload</option>
                                     </select>
                                     <button id="qa-apply" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
                                 </div>
@@ -851,7 +895,6 @@
                                 </div>
                             </div>
                         </div>
-
 
                         <?php
                         $uploads_by_folder = [];
@@ -960,7 +1003,13 @@
 
                         <!-- Latest Archives Section (dynamic: shows recent files visited) -->
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Latest Archive Files Visit </h2>
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Latest Archive Files Visit</h2>
+                                <button id="latest-files-toggle" type="button" class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors" aria-expanded="true" aria-controls="latestFilesList">
+                                    <span id="latest-files-toggle-text">Hide List</span>
+                                    <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-xs"></i>
+                                </button>
+                            </div>
                             <div id="latestFilesList" class="space-y-3" data-fetch-url="fetch_latest_files.php">
                                 <div class="skeleton-grid" aria-hidden="true">
                                     <div class="skeleton p-3">
@@ -1214,6 +1263,7 @@
             var byType = <?php echo json_encode($qa_by_type ?? []); ?>;
             var seriesLabels = <?php echo json_encode($qa_series_labels ?? []); ?>;
             var seriesDownloads = <?php echo json_encode($qa_series_downloads ?? []); ?>;
+            var seriesUploads = <?php echo json_encode($qa_series_uploads ?? []); ?>;
             var seriesRecords = <?php echo json_encode($qa_series_records ?? []); ?>;
             var seriesRecordsMerged = <?php echo json_encode($qa_series_records_merged ?? []); ?>;
             var fuLabels = <?php echo json_encode($uploads_labels ?? []); ?>;
@@ -1291,6 +1341,14 @@
                 new Chart(dlMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                });
+            }
+            var upMini = document.getElementById('qaUploadsMini');
+            if (upMini) {
+                new Chart(upMini.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
                     options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
@@ -1394,10 +1452,12 @@
                 var from = document.getElementById('qa-from')?.value || '';
                 var to = document.getElementById('qa-to')?.value || '';
                 var type = document.getElementById('qa-type')?.value || '';
-                ['start','end','type'].forEach(function(k){ p.delete(k); });
+                var event = document.getElementById('qa-event')?.value || '';
+                ['start','end','type','event'].forEach(function(k){ p.delete(k); });
                 if (from) p.set('start', from);
                 if (to) p.set('end', to);
                 if (type) p.set('type', type);
+                if (event) p.set('event', event);
                 var url = window.location.pathname + (p.toString() ? ('?'+p.toString()) : '');
                 window.location.assign(url);
             }
@@ -1663,6 +1723,28 @@ For detailed information, visit the Storage Overview dashboard.`;
                     }, 1200);
                 });
             }
+        })();
+    </script>
+    <script>
+        (function() {
+            var toggleBtn = document.getElementById('latest-files-toggle');
+            var list = document.getElementById('latestFilesList');
+            var txt = document.getElementById('latest-files-toggle-text');
+            var icon = document.getElementById('latest-files-toggle-icon');
+            if (!toggleBtn || !list || !txt || !icon) return;
+
+            function setExpanded(expanded) {
+                list.classList.toggle('hidden', !expanded);
+                toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                txt.textContent = expanded ? 'Hide List' : 'Show List';
+                icon.className = expanded ? 'bi bi-chevron-up text-xs' : 'bi bi-chevron-down text-xs';
+            }
+
+            setExpanded(true);
+            toggleBtn.addEventListener('click', function() {
+                var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+                setExpanded(!expanded);
+            });
         })();
     </script>
 </body>

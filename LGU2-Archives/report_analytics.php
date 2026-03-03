@@ -745,7 +745,7 @@ $funnel_types = array_values($funnel_types);
                                 <?php if (!empty($export_error)): ?>
                                     <div class="text-xs text-red-600 dark:text-red-400"><?php echo htmlspecialchars($export_error); ?></div>
                                 <?php endif; ?>
-                                <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browserâ€™s default Downloads folder.</div>
+                                <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browser’s default Downloads folder.</div>
                             </div>
                         </div>
                         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -879,7 +879,7 @@ $funnel_types = array_values($funnel_types);
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                         <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
                             <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Conversion Funnel (Views â†’ Downloads)</h3>
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Conversion Funnel (Views ? Downloads)</h3>
                             </div>
                             <canvas id="funnelChart" height="200"></canvas>
                         </div>
@@ -1032,7 +1032,7 @@ $funnel_types = array_values($funnel_types);
                                 <?php elseif (!empty($stats['downloads_by_type'])): ?>
                                     <ul class="list-disc pl-5">
                                         <?php foreach ($stats['downloads_by_type'] as $type => $count): ?>
-                                            <li><?php echo htmlspecialchars($type); ?> â€” <?php echo (int)$count; ?> downloads</li>
+                                            <li><?php echo htmlspecialchars($type); ?> — <?php echo (int)$count; ?> downloads</li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php else: ?>
@@ -1049,7 +1049,7 @@ $funnel_types = array_values($funnel_types);
                                 <?php else: ?>
                                     <ul class="list-disc pl-5">
                                         <?php foreach ($stats['recent_added'] as $r): ?>
-                                            <li><?php echo htmlspecialchars($r['title'].' â€” '.$r['type'].' â€” '.date('M j, Y', strtotime($r['created_at']))); ?></li>
+                                            <li><?php echo htmlspecialchars($r['title'].' — '.$r['type'].' — '.date('M j, Y', strtotime($r['created_at']))); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php endif; ?>
