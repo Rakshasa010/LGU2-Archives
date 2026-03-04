@@ -185,6 +185,25 @@ switch ($action) {
         }
         break;
 
+    case 'get_file':
+        $id = (int)($_GET['id'] ?? 0);
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Invalid file ID']);
+            exit;
+        }
+
+        $stmt = $conn->prepare("SELECT id, title, type, month, year, author, created_at, last_accessed, version, parent_version_id FROM legislative_records WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($file = $result->fetch_assoc()) {
+            echo json_encode(['success' => true, 'file' => $file]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'File not found']);
+        }
+        break;
+
     case 'get_versions':
         $id = (int)($_GET['id'] ?? 0);
         if (!$id) {

@@ -510,6 +510,105 @@ $conn->close();
             }
         }
 
+        // Helper functions for dynamic file display
+        function getFileIcon(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            if (['jpg','jpeg','png','gif','webp'].includes(ext)) return 'bi-file-earmark-image text-purple-500';
+            if (['pdf'].includes(ext)) return 'bi-file-earmark-pdf text-red-500';
+            if (['mp4','avi','mov'].includes(ext)) return 'bi-file-earmark-play text-pink-500';
+            if (['doc','docx'].includes(ext)) return 'bi-file-earmark-word text-blue-700';
+            return 'bi-file-earmark-text text-blue-500';
+        }
+
+        function addUploadedFileToList(fileData) {
+            const filesList = document.getElementById('filesList');
+            if (!filesList) return;
+
+            const fileExt = fileData.title.split('.').pop().toLowerCase();
+            const iconClass = getFileIcon(fileData.title);
+            const typeClass = (fileData.type === 'Ordinance') ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+            const typePrefix = (fileData.type === 'Ordinance') ? 'ORD' : 'RES';
+
+            const realFilePath = "uploads/records/" + fileData.author + "/" + fileData.year + "/" + fileData.month + "/" + fileData.type + "/" + fileData.title;
+            const hasPreview = ['jpg','jpeg','png','gif','webp'].includes(fileExt) && fileData.title;
+            const isPDF = ['pdf'].includes(fileExt);
+
+            const fileCard = document.createElement('div');
+            fileCard.setAttribute('data-id', fileData.id);
+            fileCard.className = 'bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative flex flex-col overflow-hidden';
+            fileCard.setAttribute('draggable', 'true');
+            fileCard.setAttribute('ondragstart', `drag(event, 'file', ${fileData.id})`);
+
+            fileCard.innerHTML = `
+                <div class="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="openSideViewerServer(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}', '${fileData.type.replace(/'/g, "\\'")}', '${fileData.month.replace(/'/g, "\\'")}', '${fileData.year}', '${fileData.author.replace(/'/g, "\\'")}', '${fileData.created_at.replace(/'/g, "\\'")}', '${(fileData.last_accessed || '').replace(/'/g, "\\'")}')">
+                    ${hasPreview ? `
+                        <div class="relative w-full h-full">
+                            <img src="${realFilePath}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="bi bi-eye text-white text-3xl drop-shadow-lg"></i>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="relative flex flex-col items-center">
+                            ${isPDF ? '<div class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2"><i class="bi bi-filetype-pdf text-sm"></i></div>' : ''}
+                            <i class="bi ${iconClass} text-6xl opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all"></i>
+                        </div>
+                    `}
+                </div>
+
+                <div class="p-4 flex flex-col flex-1">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate" title="${fileData.title}">${fileData.title}</div>
+                        </div>
+                        <div class="relative flex-shrink-0">
+                            <button class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 transition-colors" onclick="event.stopPropagation(); document.getElementById('record-menu-${fileData.id}').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#record-menu-${fileData.id}') && !e.target.closest('button')){ document.getElementById('record-menu-${fileData.id}').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                <i class="bi bi-three-dots-vertical text-lg"></i>
+                            </button>
+
+                            <div id="record-menu-${fileData.id}" class="hidden absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 py-1 overflow-hidden">
+                                <button onclick="openSideViewerServer(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}', '${fileData.type.replace(/'/g, "\\'")}', '${fileData.month.replace(/'/g, "\\'")}', '${fileData.year}', '${fileData.author.replace(/'/g, "\\'")}', '${fileData.created_at.replace(/'/g, "\\'")}', '${(fileData.last_accessed || '').replace(/'/g, "\\'")}'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
+                                    <i class="bi bi-eye text-blue-500"></i> View
+                                </button>
+                                <button onclick="openDownloadPopup(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}', '${fileData.type.replace(/'/g, "\\'")}', '${fileData.month.replace(/'/g, "\\'")}', '${fileData.year}', '${fileData.author.replace(/'/g, "\\'")}'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
+                                    <i class="bi bi-download text-emerald-500"></i> Download
+                                </button>
+                                <button onclick="openVersionHistory(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                                    <i class="bi bi-clock-history text-orange-500"></i> History
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-3">
+                        <span>${fileData.author}</span>
+                        <span class="text-gray-400 dark:text-gray-500">•</span>
+                        <span>${fileData.month} ${fileData.year}</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="px-2 py-1 rounded ${typeClass} text-xs font-medium">${fileData.type}</span>
+                        ${fileData.version ? `<span class="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded">v${fileData.version}</span>` : ''}
+                    </div>
+
+                    <div class="mt-auto pt-3 border-t border-gray-100 dark:border-slate-700">
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 font-mono text-xs font-semibold text-blue-700 dark:text-blue-300 text-center tracking-wider">
+                            ${typePrefix}-${String(fileData.id).padStart(6, '0')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Insert at the beginning of the files list (after any folders)
+            const firstFile = filesList.querySelector('.bg-white.dark\\:bg-slate-800.rounded-xl.border');
+            if (firstFile) {
+                filesList.insertBefore(fileCard, firstFile);
+            } else {
+                filesList.appendChild(fileCard);
+            }
+        }
+
         // Upload Form
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -521,8 +620,20 @@ $conn->close();
             .then(r => r.json())
             .then(d => {
                 if(d.success) {
-                    UI_ENH.toast('Uploaded!', {background:'linear-gradient(90deg,#4ade80,#10b981)'});
-                    location.reload();
+                    // Close modal and show success message
+                    closeModal('uploadModal');
+                    try { UI_ENH.toast('Uploaded!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
+                    
+                    // Fetch the uploaded file data and add to page
+                    fetch('legislative_api.php?action=get_file&id=' + d.id)
+                    .then(r2 => r2.json())
+                    .then(fileData => {
+                        if(fileData.success) {
+                            addUploadedFileToList(fileData.file);
+                        }
+                    })
+                    .catch(err => console.error('Failed to fetch file data:', err));
+                    
                 } else if (d.duplicate) {
                     if (confirm(d.message)) {
                         // User wants to create new version
@@ -532,16 +643,31 @@ $conn->close();
                         .then(r2 => r2.json())
                         .then(d2 => {
                             if(d2.success) {
-                                UI_ENH.toast('New version created!', {background:'linear-gradient(90deg,#4ade80,#10b981)'});
-                                location.reload();
+                                closeModal('uploadModal');
+                                try { UI_ENH.toast('New version created!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
+                                
+                                // Fetch the new version data and add to page
+                                fetch('legislative_api.php?action=get_file&id=' + d2.id)
+                                .then(r3 => r3.json())
+                                .then(fileData => {
+                                    if(fileData.success) {
+                                        addUploadedFileToList(fileData.file);
+                                    }
+                                })
+                                .catch(err => console.error('Failed to fetch file data:', err));
+                                
                             } else {
-                                UI_ENH.toast(d2.message || 'Failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
+                                try { UI_ENH.toast(d2.message || 'Failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
                             }
                         });
                     }
                 } else {
-                    UI_ENH.toast(d.message || 'Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'});
+                    try { UI_ENH.toast(d.message || 'Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
                 }
+            })
+            .catch(err => {
+                console.error('Upload error:', err);
+                try { UI_ENH.toast('Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
             });
         });
 

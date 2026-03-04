@@ -560,27 +560,121 @@ $conn->close();
         // Upload Form
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const formData = new FormData(this);
-            formData.append('action', 'upload_file');
-            formData.append('type', 'Meeting'); 
-            
-            fetch('legislative_api.php', { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(d => {
-                if(d.success) {
-                    closeModal('uploadModal');
-                    window.__reloadAfterNotification = true;
-                    openNotification('Your file has been uploaded.', 'success', 'Uploaded');
-                } else if (d.duplicate) {
-                    window.__pendingUploadFD = formData;
-                    window.__pendingUploadExistingId = d.existing_id;
-                    document.getElementById('versionConfirmMessage').textContent = d.message || 'File already exists. Create new version?';
-                    openModal('versionConfirmModal');
-                } else {
-                    openNotification(d.message || 'Upload failed.', 'error', 'Error');
-                }
-            });
+            try {
+                const formData = new FormData(this);
+                formData.append('action', 'upload_file');
+                formData.append('type', 'Meeting');
+
+                fetch('legislative_api.php', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(d => {
+                    try {
+                        if(d && d.success) {
+                            // Fetch the newly uploaded file data
+                            fetch('legislative_api.php?action=get_file&id=' + d.id)
+                            .then(r2 => r2.json())
+                            .then(fileData => {
+                                if(fileData && fileData.success && fileData.file) {
+                                    // Add file to page dynamically
+                                    addUploadedFileToList(fileData.file);
+                                    // Reset form and close modal
+                                    document.getElementById('uploadForm').reset();
+                                    closeModal('uploadModal');
+                                    openNotification('Your file has been uploaded successfully!', 'success', 'Uploaded');
+                                } else {
+                                    closeModal('uploadModal');
+                                    openNotification('File uploaded but failed to refresh display. Please refresh the page.', 'error', 'Warning');
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Error fetching file data:', err);
+                                closeModal('uploadModal');
+                                openNotification('File uploaded successfully! Please refresh to see it.', 'success', 'Uploaded');
+                            });
+                        } else if (d && d.duplicate) {
+                            window.__pendingUploadFD = formData;
+                            window.__pendingUploadExistingId = d.existing_id;
+                            document.getElementById('versionConfirmMessage').textContent = d.message || 'File already exists. Create new version?';
+                            openModal('versionConfirmModal');
+                        } else {
+                            openNotification(d?.message || 'Upload failed. Please try again.', 'error', 'Error');
+                        }
+                    } catch(err) {
+                        console.error('Error processing upload response:', err);
+                        openNotification('Error processing upload. Please try again.', 'error', 'Error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Upload error:', err);
+                    openNotification('Network error during upload. Please try again.', 'error', 'Error');
+                });
+            } catch(err) {
+                console.error('Upload form error:', err);
+                openNotification('An error occurred during upload.', 'error', 'Error');
+            }
         });
+
+        // Add uploaded file to the page dynamically
+        function addUploadedFileToList(file) {
+            try {
+                const filesList = document.getElementById('filesList');
+                if (!filesList) return;
+
+                const ext = (file.title || '').split('.').pop().toLowerCase();
+                const fileIcon = getFileIcon(ext);
+
+                // Create file card
+                const fileCard = document.createElement('div');
+                fileCard.className = 'bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-all overflow-hidden group cursor-pointer';
+                fileCard.id = `file-${file.id}`;
+
+                const fileDate = file.created_at ? new Date(file.created_at).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'}) : new Date().toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'});
+
+                fileCard.innerHTML = `
+                    <div class="h-40 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center overflow-hidden">
+                        <div class="text-center">
+                            <i class="${fileIcon} text-5xl opacity-70 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-2 font-semibold">${ext.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-2 truncate" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</h3>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            <div><span class="font-medium">Author:</span> ${escapeHtml(file.author || 'Unknown')}</div>
+                            <div><span class="font-medium">Date:</span> ${fileDate}</div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600">
+                            <button onclick="openSideViewerServer(${file.id}, '${escapeHtml(file.title).replace(/'/g, "\\'")}', '${escapeHtml(file.type || 'Meeting').replace(/'/g, "\\'")}', '${file.month || ''}', '${file.year || ''}', '${escapeHtml(file.author || '').replace(/'/g, "\\'")}', '${file.created_at || ''}', '${file.last_accessed || ''}')" class="w-full px-3 py-1.5 text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                filesList.appendChild(fileCard);
+            } catch(err) {
+                console.error('Error adding file to list:', err, file);
+            }
+        }
+
+        // Get appropriate file icon based on extension
+        function getFileIcon(ext) {
+            if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) return 'bi bi-file-earmark-image text-purple-500';
+            if (ext === 'pdf') return 'bi bi-file-earmark-pdf text-red-500';
+            if (['mp4','webm','avi','mov','mkv'].includes(ext)) return 'bi bi-file-earmark-play text-pink-500';
+            if (['doc','docx','odt'].includes(ext)) return 'bi bi-file-earmark-word text-blue-700';
+            if (['xls','xlsx','ods','csv'].includes(ext)) return 'bi bi-file-earmark-spreadsheet text-green-600';
+            if (['ppt','pptx','odp'].includes(ext)) return 'bi bi-file-earmark-slides text-orange-600';
+            if (['txt','log','md','json','xml'].includes(ext)) return 'bi bi-file-earmark-text text-blue-500';
+            return 'bi bi-file-earmark text-gray-500';
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+            return String(text).replace(/[&<>"']/g, c => map[c]);
+        }
 
         function openVersionHistory(id, title) {
             document.getElementById('versionHistoryTitle').textContent = title;
