@@ -720,7 +720,7 @@ $funnel_types = array_values($funnel_types);
 
             <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900 p-4 sm:p-6">
                 <div class="max-w-7xl mx-auto space-y-6">
-                    <div class="card bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+                    <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6">
                         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                             <div>
                                 <h1 class="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Reports & Analytics</h1>
@@ -745,11 +745,11 @@ $funnel_types = array_values($funnel_types);
                                 <?php if (!empty($export_error)): ?>
                                     <div class="text-xs text-red-600 dark:text-red-400"><?php echo htmlspecialchars($export_error); ?></div>
                                 <?php endif; ?>
-                                <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browser’s default Downloads folder.</div>
+                                <div class="text-[11px] text-gray-500 dark:text-gray-400">Download location: your browserÂ’s default Downloads folder.</div>
                             </div>
                         </div>
                         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></div>
                                     <div>
@@ -758,7 +758,7 @@ $funnel_types = array_values($funnel_types);
                                     </div>
                                 </div>
                             </div>
-                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 flex items-center justify-center"><i class="bi bi-download"></i></div>
                                     <div>
@@ -767,7 +767,7 @@ $funnel_types = array_values($funnel_types);
                                     </div>
                                 </div>
                             </div>
-                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300 flex items-center justify-center"><i class="bi bi-hdd"></i></div>
                                     <div>
@@ -776,7 +776,7 @@ $funnel_types = array_values($funnel_types);
                                     </div>
                                 </div>
                             </div>
-                            <div class="card p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center justify-between gap-3 mb-3">
                                     <div>
                                         <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Archive Types</div>
@@ -854,7 +854,7 @@ $funnel_types = array_values($funnel_types);
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</h3>
                                 <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['by_type'] ?? []); ?> types</span>
@@ -862,9 +862,11 @@ $funnel_types = array_values($funnel_types);
                             <div id="sk-records" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
                             </div>
-                            <canvas id="recordsTypeChart" height="180"></canvas>
+                            <div class="relative w-full h-64 md:h-72 flex justify-center">
+                                <canvas id="recordsTypeChart"></canvas>
+                            </div>
                         </div>
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads by Type</h3>
                                 <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo array_sum($stats['downloads_by_type'] ?? []); ?></span>
@@ -872,28 +874,32 @@ $funnel_types = array_values($funnel_types);
                             <div id="sk-downloads-type" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
                             </div>
-                            <canvas id="downloadsTypeChart" height="180"></canvas>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="downloadsTypeChart"></canvas>
+                            </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Conversion Funnel (Views ? Downloads)</h3>
                             </div>
-                            <canvas id="funnelChart" height="200"></canvas>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="funnelChart"></canvas>
+                            </div>
                         </div>
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="grid grid-cols-3 gap-3">
-                                <div class="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
+                                <div class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/40 border border-gray-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow">
                                     <div class="text-xs text-gray-500">DAU</div>
                                     <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$dau; ?></div>
                                 </div>
-                                <div class="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
+                                <div class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/40 border border-gray-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow">
                                     <div class="text-xs text-gray-500">WAU</div>
                                     <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$wau; ?></div>
                                 </div>
-                                <div class="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
+                                <div class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/40 border border-gray-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow">
                                     <div class="text-xs text-gray-500">MAU</div>
                                     <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$mau; ?></div>
                                 </div>
@@ -919,28 +925,32 @@ $funnel_types = array_values($funnel_types);
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads Over Time (30 days)</h3>
                             </div>
                             <div id="sk-downloads-time" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
                             </div>
-                            <canvas id="downloadsTimeChart" height="180"></canvas>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="downloadsTimeChart"></canvas>
+                            </div>
                         </div>
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Over Time (30 days)</h3>
                             </div>
                             <div id="sk-records-time" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
                             </div>
-                            <canvas id="recordsTimeChart" height="180"></canvas>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="recordsTimeChart"></canvas>
+                            </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads by Format</h3>
                                 <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo array_sum($stats['downloads_by_format'] ?? []); ?></span>
@@ -948,10 +958,12 @@ $funnel_types = array_values($funnel_types);
                             <div id="sk-downloads-format" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
                             </div>
-                            <canvas id="downloadsFormatChart" height="<?php echo $is_admin ? '180' : '140'; ?>"></canvas>
+                            <div class="relative w-full h-64 md:h-72 flex justify-center">
+                                <canvas id="downloadsFormatChart"></canvas>
+                            </div>
                         </div>
                         <?php if ($is_admin): ?>
-                            <div class="lg:col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="lg:col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                                 <div class="flex items-center justify-between mb-3">
                                     <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</h3>
                                     <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['recent_activity'] ?? []); ?></span>
@@ -1000,7 +1012,7 @@ $funnel_types = array_values($funnel_types);
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
-                            <div class="lg:col-span-2 card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div class="lg:col-span-2 card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 shadow-sm">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
                                         <i class="bi bi-lock"></i>
@@ -1015,7 +1027,7 @@ $funnel_types = array_values($funnel_types);
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                        <div class="card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300">
                             <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recent Downloads</h3>
                             <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
                                 <?php if (!empty($stats['recent_downloads'])): ?>
@@ -1032,7 +1044,7 @@ $funnel_types = array_values($funnel_types);
                                 <?php elseif (!empty($stats['downloads_by_type'])): ?>
                                     <ul class="list-disc pl-5">
                                         <?php foreach ($stats['downloads_by_type'] as $type => $count): ?>
-                                            <li><?php echo htmlspecialchars($type); ?> — <?php echo (int)$count; ?> downloads</li>
+                                            <li><?php echo htmlspecialchars($type); ?> Â— <?php echo (int)$count; ?> downloads</li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php else: ?>
@@ -1041,7 +1053,7 @@ $funnel_types = array_values($funnel_types);
                             </div>
                         </div>
 
-                        <div class="card p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                        <div class="card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300">
                             <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recently Added</h3>
                             <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
                                 <?php if (empty($stats['recent_added'])): ?>
@@ -1049,7 +1061,7 @@ $funnel_types = array_values($funnel_types);
                                 <?php else: ?>
                                     <ul class="list-disc pl-5">
                                         <?php foreach ($stats['recent_added'] as $r): ?>
-                                            <li><?php echo htmlspecialchars($r['title'].' — '.$r['type'].' — '.date('M j, Y', strtotime($r['created_at']))); ?></li>
+                                            <li><?php echo htmlspecialchars($r['title'].' Â— '.$r['type'].' Â— '.date('M j, Y', strtotime($r['created_at']))); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php endif; ?>
@@ -1255,16 +1267,16 @@ $funnel_types = array_values($funnel_types);
         const df = labelsAndData(downloadsByFormat);
         const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const recordsCtx = document.getElementById('recordsTypeChart')?.getContext('2d');
-        if (recordsCtx) { new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-records'); }
+        if (recordsCtx) { new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-records'); }
         const downloadsCtx = document.getElementById('downloadsTypeChart')?.getContext('2d');
-        if (downloadsCtx) { new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } }); hideSk('sk-downloads-type'); }
+        if (downloadsCtx) { new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } }); hideSk('sk-downloads-type'); }
         const downloadsFormatCtx = document.getElementById('downloadsFormatChart')?.getContext('2d');
-        if (downloadsFormatCtx) { new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-downloads-format'); }
+        if (downloadsFormatCtx) { new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-downloads-format'); }
         hideSk('sk-recent-activity');
         const downloadsTimeCtx = document.getElementById('downloadsTimeChart')?.getContext('2d');
-        if (downloadsTimeCtx) { new Chart(downloadsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Downloads', data: seriesDownloads, tension: 0.3, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', fill: true }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-downloads-time'); }
+        if (downloadsTimeCtx) { new Chart(downloadsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Downloads', data: seriesDownloads, tension: 0.3, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-downloads-time'); }
         const recordsTimeCtx = document.getElementById('recordsTimeChart')?.getContext('2d');
-        if (recordsTimeCtx) { new Chart(recordsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-records-time'); }
+        if (recordsTimeCtx) { new Chart(recordsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-records-time'); }
         const applyBtn = document.getElementById('apply-filters');
         let filtersApplied = false;
         function updateApplyBtn() {
@@ -1312,7 +1324,7 @@ $funnel_types = array_values($funnel_types);
                         { label: 'Views', data: v, backgroundColor: '#3b82f6' },
                         { label: 'Downloads', data: d, backgroundColor: '#dc2626' }
                     ]},
-                    options: { responsive: true, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
                 });
             }
         })();

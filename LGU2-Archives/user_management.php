@@ -20,28 +20,7 @@ if (!$is_admin) {
     exit();
 }
 
-// configuration: enable/disable the server-side hourly trigger
-$enableAutoTrigger = true; // set to false to stop launching auto_backup.php
-
-// --- automatic backup trigger -------------------------------------------
-// when an admin loads this page, spawn the auto_backup.php script once
-// per hour in the background. uses a timestamp file to avoid duplicates.
-if ($is_admin && $enableAutoTrigger) {
-    $stampFile = __DIR__ . '/last_auto_backup.txt';
-    $run = true;
-    if (file_exists($stampFile)) {
-        $last = (int) file_get_contents($stampFile);
-        if (time() - $last < 3600) { // 1 hour
-            $run = false;
-        }
-    }
-    if ($run) {
-        // Windows start /B to launch in background without waiting
-        $cmd = 'start /B php "' . __DIR__ . '/../auto_backup.php"';
-        @exec($cmd);
-        @file_put_contents($stampFile, (string) time());
-    }
-}
+// Auto backup removed. Using manual toggle for Google Drive backup instead.
 
 
 $message = '';
@@ -465,7 +444,17 @@ if ($q = $conn->query($qStr)) {
                     <p class="text-red-100 text-sm">Download or restore a complete .sql snapshot of the system structure and data.</p>
                 </div>
             </div>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-lg border border-white/20">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold">G-Drive Backup Sync</span>
+                        <span class="text-[10px] text-red-100" title="hambebe0995@archives-backup-489112.iam.gserviceaccount.com">hambebe0995@archives...</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="gdriveToggle" class="sr-only peer" onchange="triggerGDriveBackup(this)">
+                        <div class="w-11 h-6 bg-red-950/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
+                </div>
                 <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
                     <i class="bi bi-download mr-2"></i> Download Backup
                 </a>
@@ -692,16 +681,24 @@ if ($q = $conn->query($qStr)) {
             }
         }
 
-        // automatically click the backup button at most once per hour
-        document.addEventListener('DOMContentLoaded', function() {
-            const btn = document.getElementById('downloadBackupBtn');
-            if (!btn) return;
-            const last = localStorage.getItem('lastBackupClick') || 0;
-            const now = Date.now();
-            if (now - last > 3600 * 1000) { // 1 hour
-                btn.click();
-                localStorage.setItem('lastBackupClick', now);
-            }
+        // Trigger manual Google Drive Backup via Toggle
+        function triggerGDriveBackup(toggleBtn) {
+            if (!toggleBtn.checked) return;
+
+            alert('Starting Google Drive Backup Sync. Please wait...');
+
+            fetch('../auto_backup.php')
+                .then(response => response.text())
+                .then(text => {
+                    alert('Backup Status:\n' + text.trim());
+                    // Turn toggle back off since it is a one-time trigger action
+                    setTimeout(() => { toggleBtn.checked = false; }, 1000);
+                })
+                .catch(err => {
+                    alert('Error executing backup:\n' + err);
+                    toggleBtn.checked = false;
+                });
+        }
         });
         </script>
 
