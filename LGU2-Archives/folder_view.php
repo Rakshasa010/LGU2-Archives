@@ -167,7 +167,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $ev->close();
                             }
 
-                            $uploadedFiles[] = ['id' => $new_id, 'name' => $final_name];
+                            $uploadedFiles[] = [
+                                'id' => $new_id,
+                                'name' => $final_name,
+                                'file_path' => $file_path,
+                                'author' => $author,
+                                'file_date' => $fdate,
+                                'unique_number' => $unq,
+                                'size' => @filesize($file_path) ?: 0,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'folder_id' => $current_folder_id
+                            ];
                         }
                     }
                 }
@@ -847,9 +857,17 @@ $conn->close();
                 const data = await response.json();
                 if (data.success && data.files) {
                     successCount = data.files.length;
+                    
+                    // Add files to page dynamically
+                    addUploadedFilesToPage(data.files);
+                    
+                    // Close modal and reset form
                     closeUploadModal();
+                    document.getElementById('uploadForm').reset();
+                    if (fileInput) fileInput.value = '';
+                    updateFilePreview({ files: [] });
+                    
                     openNotification(`${successCount} file(s) uploaded successfully!`, 'success');
-                    setTimeout(() => window.location.reload(), 1500);
                 } else {
                     openNotification(data.message || 'Failed to upload files', 'error');
                 }
@@ -860,6 +878,117 @@ $conn->close();
 
             if (progress) progress.classList.add('hidden');
             isUploading = false;
+        }
+
+        function addUploadedFilesToPage(files) {
+            const contentList = document.getElementById('content-list');
+            if (!contentList) return;
+            
+            // Remove empty state if exists
+            const emptyMsg = contentList.querySelector('.text-center.text-gray-500');
+            if (emptyMsg) {
+                emptyMsg.parentElement?.remove();
+            }
+
+            // Find or create files grid container
+            let filesGrid = contentList.querySelector('.grid.gap-4');
+            if (!filesGrid) {
+                filesGrid = document.createElement('div');
+                filesGrid.className = 'p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-gray-50/50 dark:bg-slate-800/20';
+                contentList.appendChild(filesGrid);
+            }
+
+            // Add each uploaded file to the grid
+            if (Array.isArray(files)) {
+                files.forEach(file => {
+                    try {
+                        if (!file || !file.id) return;
+                        
+                        const fileExt = (file.name || '').split('.').pop().toLowerCase();
+                        let iconClass = 'bi-file-earmark-text text-blue-500';
+                        
+                        if (['jpg','jpeg','png','gif','webp'].includes(fileExt)) iconClass = 'bi-file-earmark-image text-purple-500';
+                        else if (fileExt === 'pdf') iconClass = 'bi-file-earmark-pdf text-red-500';
+                        else if (['mp4','avi','mov'].includes(fileExt)) iconClass = 'bi-file-earmark-play text-pink-500';
+                        else if (['doc','docx'].includes(fileExt)) iconClass = 'bi-file-earmark-word text-blue-700';
+
+                        const fileSizeDisplay = formatFileSize(file.size || 0);
+                        const uniqueId = file.unique_number ? escapeHtml(file.unique_number) : `DOC-${String(file.id).padStart(6, '0')}`;
+                        const createdAt = file.created_at || new Date().toISOString();
+                        const fileDate = file.file_date ? new Date(file.file_date).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'}) : new Date(createdAt).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'});
+                        const filePath = file.file_path || `uploads/archives/${file.folder_id}/${file.name}`;
+
+                        const fileCardHTML = `
+                            <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="file-${file.id}">
+                                <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('${escapeHtml(file.name).replace(/'/g, "\\'")}', ${file.id}, '${escapeHtml(filePath).replace(/'/g, "\\'")}', ${file.size || 0}, '${createdAt}')">
+                                    <div class="flex flex-col items-center">
+                                        <i class="bi ${iconClass} text-5xl opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all duration-300"></i>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 mt-2 font-semibold">${fileExt.toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="p-4 flex flex-col flex-1">
+                                    <div class="flex items-start justify-between gap-2 mb-3">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+                                        </div>
+                                        <div class="relative flex-shrink-0">
+                                            <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); const menu = document.getElementById('file-menu-${file.id}'); if(menu) { menu.classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(menu && !e.target.closest('#file-menu-${file.id}') && !e.target.closest('button')){ menu.classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10); }">
+                                                <i class="bi bi-three-dots-vertical text-lg"></i>
+                                            </button>
+                                            <div id="file-menu-${file.id}" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
+                                                <button onclick="previewFile('${escapeHtml(file.name).replace(/'/g, "\\'")}', ${file.id}, '${escapeHtml(filePath).replace(/'/g, "\\'")}', ${file.size || 0}, '${createdAt}'); const m = document.getElementById('file-menu-${file.id}'); if(m) m.classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
+                                                    <i class="bi bi-eye"></i> <span>View</span>
+                                                </button>
+                                                <a href="${escapeHtml(filePath)}" download="${escapeHtml(file.name)}" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" title="Download file" onclick="const m = document.getElementById('file-menu-${file.id}'); if(m) m.classList.add('hidden');">
+                                                    <i class="bi bi-download"></i> <span>Download</span>
+                                                </a>
+                                                <button onclick="openArchiveVersionHistory(${file.id}, '${escapeHtml(file.name).replace(/'/g, "\\'")}'); const m = document.getElementById('file-menu-${file.id}'); if(m) m.classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
+                                                    <i class="bi bi-clock-history"></i> <span>History</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="space-y-2 text-xs">
+                                        <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+                                            <span class="font-medium">Author:</span>
+                                            <span class="truncate">${file.author ? escapeHtml(file.author) : 'Unknown'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+                                            <span class="font-medium">Date:</span>
+                                            <span>${fileDate}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+                                            <span class="font-medium">Size:</span>
+                                            <span>${fileSizeDisplay}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600">
+                                        <div class="bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/30 text-center">
+                                            <div class="text-xs text-blue-700 dark:text-blue-300 font-semibold">Document ID</div>
+                                            <div class="text-xs font-mono text-blue-900 dark:text-blue-200 font-bold">${uniqueId}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        filesGrid.insertAdjacentHTML('beforeend', fileCardHTML);
+                    } catch (err) {
+                        console.error('Error adding file card:', err, file);
+                    }
+                });
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
         }
 
         function escapeHtml(text) {
