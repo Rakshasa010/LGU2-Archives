@@ -20,6 +20,30 @@ if (!$is_admin) {
     exit();
 }
 
+// configuration: enable/disable the server-side hourly trigger
+$enableAutoTrigger = true; // set to false to stop launching auto_backup.php
+
+// --- automatic backup trigger -------------------------------------------
+// when an admin loads this page, spawn the auto_backup.php script once
+// per hour in the background. uses a timestamp file to avoid duplicates.
+if ($is_admin && $enableAutoTrigger) {
+    $stampFile = __DIR__ . '/last_auto_backup.txt';
+    $run = true;
+    if (file_exists($stampFile)) {
+        $last = (int) file_get_contents($stampFile);
+        if (time() - $last < 3600) { // 1 hour
+            $run = false;
+        }
+    }
+    if ($run) {
+        // Windows start /B to launch in background without waiting
+        $cmd = 'start /B php "' . __DIR__ . '/../auto_backup.php"';
+        @exec($cmd);
+        @file_put_contents($stampFile, (string) time());
+    }
+}
+
+
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -442,7 +466,7 @@ if ($q = $conn->query($qStr)) {
                 </div>
             </div>
             <div class="flex gap-3">
-                <a href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
+                <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
                     <i class="bi bi-download mr-2"></i> Download Backup
                 </a>
                 <button onclick="openRestoreModal()" class="px-5 py-2.5 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center shadow-md border border-white/20">
@@ -667,6 +691,18 @@ if ($q = $conn->query($qStr)) {
                 icon.classList.remove('rotate-90');
             }
         }
+
+        // automatically click the backup button at most once per hour
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('downloadBackupBtn');
+            if (!btn) return;
+            const last = localStorage.getItem('lastBackupClick') || 0;
+            const now = Date.now();
+            if (now - last > 3600 * 1000) { // 1 hour
+                btn.click();
+                localStorage.setItem('lastBackupClick', now);
+            }
+        });
         </script>
 
     <script>

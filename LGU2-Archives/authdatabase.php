@@ -1,9 +1,32 @@
 <?php
-// Database configuration for XAMPP MySQL
-$servername = "localhost";
-$username = "las_adminsql";
-$password = "lasadminsql123";  // Default XAMPP MySQL password is empty
-$dbname = "las_lgu2_archives";  // Database name
+// Database configuration – local vs Cloud SQL
+// set $useCloud = true when you want to connect against the remote instance
+$useCloud   = false; // change to true to use cloud connection
+
+// local XAMPP settings
+$local_host     = "localhost";
+$local_user     = "las_adminsql";
+$local_pass     = "lasadminsql123";
+$local_dbname   = "las_lgu2_archives";
+
+// cloud settings (set these after you finish step 1 & 2 in accounts.md)
+$cloud_host     = "34.143.152.82"; // Cloud SQL public IP
+$cloud_user     = "php_user";
+$cloud_pass     = "YOUR_PASSWORD_HERE";
+$cloud_dbname   = "my_database"; // or las_lgu2_archives if you imported
+
+// pick configuration
+if ($useCloud) {
+    $servername = $cloud_host;
+    $username   = $cloud_user;
+    $password   = $cloud_pass;
+    $dbname     = $cloud_dbname;
+} else {
+    $servername = $local_host;
+    $username   = $local_user;
+    $password   = $local_pass;
+    $dbname     = $local_dbname;
+}
 
 // Create connection
 $conn = new mysqli($servername, $username, $password);
@@ -13,9 +36,11 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Create database if it doesn't exist
-$sql = "CREATE DATABASE IF NOT EXISTS $dbname";
-$conn->query($sql);
+// Create database if it doesn't exist (only applies to local)
+if (!$useCloud) {
+    $sql = "CREATE DATABASE IF NOT EXISTS $dbname";
+    $conn->query($sql);
+}
 
 // Select the database
 $conn->select_db($dbname);

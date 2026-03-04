@@ -79,6 +79,87 @@
             }
             exit();
         }
+    } elseif ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['google_sso'])) {
+        include 'authdatabase.php';
+        $google_email = trim($_POST['google_email']);
+        
+        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, email, full_name, username FROM users WHERE email = ?");
+        $stmt->bind_param("s", $google_email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $user = $result->fetch_assoc();
+            if (isset($user['status']) && $user['status'] !== 'active') {
+                $error = "Your account is not active. Status: " . $user['status'];
+            }
+        } else {
+            // Register new Google user
+            $temp_username = 'google_' . substr(md5(uniqid()), 0, 8);
+            $temp_password = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
+            $role = 'user';
+            $status = 'active'; 
+            $full_name = explode('@', $google_email)[0];
+            
+            $insert = $conn->prepare("INSERT INTO users (username, password, email, full_name, role, status) VALUES (?, ?, ?, ?, ?, ?)");
+            $insert->bind_param("ssssss", $temp_username, $temp_password, $google_email, $full_name, $role, $status);
+            if ($insert->execute()) {
+                $user = [
+                    'id' => $conn->insert_id,
+                    'email' => $google_email,
+                    'username' => $temp_username,
+                    'full_name' => $full_name,
+                    'must_change_password' => 0
+                ];
+            } else {
+                $error = "Failed to register new Google account.";
+            }
+        }
+        
+        if (!isset($error)) {
+            $otp = random_int(100000, 999999);
+            $_SESSION['otp_code'] = $otp;
+            $_SESSION['otp_expires'] = time() + 180;
+            $_SESSION['otp_user_id'] = (int)$user['id'];
+            $_SESSION['otp_must_change'] = (int)($user['must_change_password'] ?? 0);
+            $_SESSION['otp_pending'] = true;
+            
+            $toEmail = $google_email;
+            $cfgFile = __DIR__ . '/mail_config.php';
+            $sent = false;
+            
+            if (filter_var($toEmail, FILTER_VALIDATE_EMAIL) && file_exists($cfgFile)) {
+                $cfg = require $cfgFile;
+                $smtpUser = trim((string)($cfg['username'] ?? ''));
+                $smtpPass = trim((string)($cfg['password'] ?? ''));
+                if ($smtpUser !== '' && $smtpPass !== '') {
+                    require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
+                    require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
+                    require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
+                    $mailer = new PHPMailer\PHPMailer\PHPMailer(true);
+                    $mailer->isSMTP();
+                    $mailer->Host = $cfg['host'] ?? 'smtp.gmail.com';
+                    $mailer->SMTPAuth = true;
+                    $mailer->Username = $smtpUser;
+                    $mailer->Password = $smtpPass;
+                    $enc = strtolower(trim($cfg['encryption'] ?? 'tls'));
+                    if ($enc === 'ssl') { $mailer->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; $mailer->Port = (int)($cfg['port'] ?? 465); }
+                    else { $mailer->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS; $mailer->Port = (int)($cfg['port'] ?? 587); }
+                    if (!empty($cfg['smtp_options'])) { $mailer->SMTPOptions = $cfg['smtp_options']; }
+                    $mailer->CharSet = 'UTF-8';
+                    $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'Archives');
+                    $mailer->addAddress($toEmail, ($user['full_name'] ?? '') ?: 'Google User');
+                    $mailer->Subject = 'Your Verification Code';
+                    $mailer->isHTML(true);
+                    $mailer->Body = '<p>Your OTP code is <strong>' . htmlspecialchars((string)$otp) . '</strong>.</p><p>It expires in 3 minutes.</p>';
+                    $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 3 minutes.';
+                    try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
+                }
+            }
+            $otp_step = true;
+            $error = $sent ? "An OTP was sent to your Google email." : "Unable to send OTP via Email. Testing fallback OTP is: " . $otp;
+        }
+
     } elseif ($_SERVER["REQUEST_METHOD"] == "POST") {
         include 'authdatabase.php';
 
@@ -274,13 +355,31 @@
                 </div>
                 <a href="forgot-password.php" class="block text-center text-sm font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded-lg transition-colors">Forgot password?</a>
                 <div class="grid grid-cols-2 gap-3">
-                    <a href="#" class="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-300 dark:hover:border-red-700 transition-all duration-200 font-semibold">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <span class="text-sm">Microsoft</span>
+                    <a href="#" id="btn-ms-sso" onclick="initiateSSO('microsoft', this)" class="relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-blue-500 transition-all duration-200 font-semibold overflow-hidden group">
+                        <div class="absolute inset-0 bg-blue-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                        <svg class="w-5 h-5 relative z-10" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+                            <rect x="12" y="1" width="10" height="10" fill="#7FBA00"/>
+                            <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
+                            <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+                        </svg>
+                        <span class="text-sm relative z-10">Microsoft</span>
+                        <span class="sso-spinner hidden absolute inset-0 bg-white/90 dark:bg-slate-800/90 flex items-center justify-center z-20">
+                            <i class="bi bi-arrow-repeat animate-spin text-xl text-blue-600"></i>
+                        </span>
                     </a>
-                    <a href="#" class="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-300 dark:hover:border-red-700 transition-all duration-200 font-semibold">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                        <span class="text-sm">Google</span>
+                    <a href="#" id="btn-google-sso" onclick="initiateSSO('google', this)" class="relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-red-500 transition-all duration-200 font-semibold overflow-hidden group">
+                        <div class="absolute inset-0 bg-red-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                        <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        <span class="text-sm relative z-10">Google</span>
+                        <span class="sso-spinner hidden absolute inset-0 bg-white/90 dark:bg-slate-800/90 flex items-center justify-center z-20">
+                            <i class="bi bi-arrow-repeat animate-spin text-xl text-red-600"></i>
+                        </span>
                     </a>
                 </div>
                 <div class="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 text-center">
@@ -346,15 +445,73 @@
                 }
             });
         }
-        var ms = document.querySelectorAll('.grid a[href="#"]');
-        ms.forEach(function(a){
-            a.addEventListener('click', function(e){
-                e.preventDefault();
-                UI_ENH.toast('Single Sign-On coming soon.', {background:'linear-gradient(90deg,#fbbf24,#f59e0b)'});
-            });
-        });
     })();
+    
+    // SSO Initialization Logic
+    function initiateSSO(provider, element) {
+        event.preventDefault();
+
+        if (provider === 'google') {
+            document.getElementById('googleSsoModal').classList.remove('hidden');
+            document.getElementById('googleSsoModal').classList.add('flex');
+            return;
+        }
+        
+        // Disable other buttons to prevent multiple clicks
+        const allSsoBtns = document.querySelectorAll('#btn-ms-sso, #btn-google-sso, #login-btn');
+        allSsoBtns.forEach(b => {
+            b.style.pointerEvents = 'none';
+            b.style.opacity = '0.7';
+        });
+
+        // Show loading spinner on the clicked button
+        const spinner = element.querySelector('.sso-spinner');
+        if (spinner) {
+            spinner.classList.remove('hidden');
+            spinner.classList.add('flex');
+        }
+        
+        // Show Toast info optionally if UI_ENH exists
+        if (typeof UI_ENH !== 'undefined' && UI_ENH.toast) {
+            UI_ENH.toast(`Connecting to ${provider.charAt(0).toUpperCase() + provider.slice(1)}...`, {background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)'});
+        }
+
+        // Redirect to the SSO handler script after a slight delay to allow the animation
+        setTimeout(() => {
+            window.location.href = `sso.php?provider=${provider}`;
+        }, 800);
+    }
     </script>
+
+    <!-- Google SSO Modal -->
+    <div id="googleSsoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-bounce-in mx-4">
+            <button type="button" onclick="closeGoogleModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                ✕
+            </button>
+            <div class="text-center mb-6 mt-2">
+                <div class="w-16 h-16 bg-white rounded-full shadow-md flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                    <svg class="w-8 h-8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Sign in with Google</h3>
+                <p class="text-sm text-gray-500 mt-2">Enter your Google email to receive an OTP.</p>
+            </div>
+            <form action="login.php" method="POST" class="space-y-4">
+                <input type="hidden" name="google_sso" value="1">
+                <div>
+                    <input type="email" name="google_email" required placeholder="name@gmail.com" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
+                </div>
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                    Send OTP to Email
+                </button>
+            </form>
+        </div>
+    </div>
 
     <!-- Terms & Conditions Modal -->
     <div id="termsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
@@ -399,6 +556,10 @@
         function closeTerms(){
             var m = document.getElementById('termsModal');
             if (m){ m.classList.add('hidden'); m.classList.remove('flex'); document.body.style.overflow = ''; }
+        }
+        function closeGoogleModal() {
+            var m = document.getElementById('googleSsoModal');
+            if (m){ m.classList.add('hidden'); m.classList.remove('flex'); }
         }
         document.getElementById('acceptTermsBtn')?.addEventListener('click', function(){
             var chk = document.getElementById('agreeTerms');
