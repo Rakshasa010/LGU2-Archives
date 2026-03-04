@@ -272,47 +272,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
                 }
                 $html .= '</table>';
             } else {
-                $html .= '<div>No recent activity available</div>';
-            }
-            $html .= '<script>window.print && setTimeout(function(){window.print();},250)</script>
-    <script>
-        (function() {
-            function fetchAndUpdateStorage() {
-                fetch('archives-landing.php?action=get_storage_data')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            const pct = data.percentage;
-                            const usedText = data.usedText;
-                            const totalText = data.totalText;
-                            const fileCount = data.fileCount;
+            $html .= <<<HTML
 
-                            ['mobile', 'desktop'].forEach(prefix => {
-                                const bar = document.getElementById(prefix + '-storage-bar');
-                                const pctEl = document.getElementById(prefix + '-storage-pct');
-                                const textEl = document.getElementById(prefix + '-storage-text');
-                                const filesEl = document.getElementById(prefix + '-storage-files');
-                                
-                                if (bar) bar.style.width = pct + '%';
-                                if (pctEl) pctEl.textContent = pct + '%';
-                                if (textEl) textEl.textContent = usedText + ' of ' + totalText;
-                                if (filesEl) filesEl.textContent = fileCount + ' files tracked';
-                            });
-                        }
-                    }).catch(err => console.warn('Storage fetch error:', err));
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', fetchAndUpdateStorage);
-            } else {
-                fetchAndUpdateStorage();
-            }
-            setInterval(fetchAndUpdateStorage, 60000);
-        })();
-    </script>
-\n</body></html>';
+<div>No recent activity available</div>
+<script>window.print && setTimeout(function(){window.print();},250)</script>
+<script>
+    (function() {
+        function fetchAndUpdateStorage() {
+            fetch("archives-landing.php?action=get_storage_data")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const pct = data.percentage;
+                        const usedText = data.usedText;
+                        const totalText = data.totalText;
+                        const fileCount = data.fileCount;
+
+                        ["mobile", "desktop"].forEach(prefix => {
+                            const bar = document.getElementById(prefix + '-storage-bar');
+                            const pctEl = document.getElementById(prefix + '-storage-pct');
+                            const textEl = document.getElementById(prefix + '-storage-text');
+                            const filesEl = document.getElementById(prefix + '-storage-files');
+                            
+                            if (bar) bar.style.width = pct + '%';
+                            if (pctEl) pctEl.textContent = pct + '%';
+                            if (textEl) textEl.textContent = usedText + ' of ' + totalText;
+                            if (filesEl) filesEl.textContent = fileCount + ' files tracked';
+                        });
+                    }
+                }).catch(err => console.warn('Storage fetch error:', err));
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fetchAndUpdateStorage);
+        } else {
+            fetchAndUpdateStorage();
+        }
+        setInterval(fetchAndUpdateStorage, 60000);
+    })();
+</script>
+</body></html>
+HTML;
             header('Content-Type: text/html; charset=UTF-8');
             echo $html;
             exit();
+        }
         }
     } else {
         $export_error = 'Invalid password for export.';
@@ -1385,7 +1388,7 @@ $funnel_types = array_values($funnel_types);
     <script>
         (function() {
             function fetchAndUpdateStorage() {
-                fetch('archives-landing.php?action=get_storage_data')
+                fetch("archives-landing.php?action=get_storage_data")
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
@@ -1394,16 +1397,16 @@ $funnel_types = array_values($funnel_types);
                             const totalText = data.totalText;
                             const fileCount = data.fileCount;
 
-                            ['mobile', 'desktop'].forEach(prefix => {
-                                const bar = document.getElementById(prefix + '-storage-bar');
-                                const pctEl = document.getElementById(prefix + '-storage-pct');
-                                const textEl = document.getElementById(prefix + '-storage-text');
-                                const filesEl = document.getElementById(prefix + '-storage-files');
+                            ["mobile", "desktop"].forEach(prefix => {
+                                const bar = document.getElementById(prefix + \'-storage-bar\');
+                                const pctEl = document.getElementById(prefix + \'-storage-pct\');
+                                const textEl = document.getElementById(prefix + \'-storage-text\');
+                                const filesEl = document.getElementById(prefix + \'-storage-files\');
                                 
-                                if (bar) bar.style.width = pct + '%';
-                                if (pctEl) pctEl.textContent = pct + '%';
-                                if (textEl) textEl.textContent = usedText + ' of ' + totalText;
-                                if (filesEl) filesEl.textContent = fileCount + ' files tracked';
+                                if (bar) bar.style.width = pct + \'%\';
+                                if (pctEl) pctEl.textContent = pct + \'%\';
+                                if (textEl) textEl.textContent = usedText + \' of \' + totalText;
+                                if (filesEl) filesEl.textContent = fileCount + \' files tracked\';
                             });
                         }
                     }).catch(err => console.warn('Storage fetch error:', err));
@@ -1418,3 +1421,4 @@ $funnel_types = array_values($funnel_types);
     </script>
 \n</body>
 </html>
+HTML;

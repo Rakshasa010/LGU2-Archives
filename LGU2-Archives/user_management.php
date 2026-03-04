@@ -20,9 +20,6 @@ if (!$is_admin) {
     exit();
 }
 
-// Auto backup removed. Using manual toggle for Google Drive backup instead.
-
-
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -223,20 +220,18 @@ if ($q = $conn->query($qStr)) {
                 </a>
             </div>
             
-            <!-- Centralized Storage Overview (Mobile) -->
+            <!-- Storage Bar -->
             <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
-                <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-red-100 font-medium">Capacity Used</span>
-                        <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
+                <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-red-100">Storage Usage</span>
+                        <span class="text-xs font-bold text-white">2%</span>
                     </div>
-                    <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
-                        <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="mobile-storage-bar" style="width: 0%;"></div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
+                        <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
                     </div>
-                    <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
-                    <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
-                    <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
+                    <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
                 </div>
             </div>
         </nav>
@@ -313,22 +308,22 @@ if ($q = $conn->query($qStr)) {
                     </a>
                 </div>
                 
-                <!-- Centralized Storage Overview (Mobile) -->
-            <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
-                <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-red-100 font-medium">Capacity Used</span>
-                        <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
+                <!-- Centralized Storage Overview (Desktop) -->
+                <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
+                    <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
+                    <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all cursor-pointer" title="Click to view storage details">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs text-red-100 font-medium">Capacity Used</span>
+                            <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="desktop-storage-pct">0%</span>
+                        </div>
+                        <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                            <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="desktop-storage-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="text-xs text-red-100/80" id="desktop-storage-text">0 B of 50 GB</div>
+                        <div class="mt-2 text-xs text-red-100/60" id="desktop-storage-files">0 files tracked</div>
+                        <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
                     </div>
-                    <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
-                        <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="mobile-storage-bar" style="width: 0%;"></div>
-                    </div>
-                    <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
-                    <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
-                    <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
                 </div>
-            </div>
             </nav>
         </aside>
 
@@ -448,17 +443,7 @@ if ($q = $conn->query($qStr)) {
                     <p class="text-red-100 text-sm">Download or restore a complete .sql snapshot of the system structure and data.</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <div class="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-lg border border-white/20">
-                    <div class="flex flex-col">
-                        <span class="text-sm font-semibold">G-Drive Backup Sync</span>
-                        <span class="text-[10px] text-red-100" title="hambebe0995@archives-backup-489112.iam.gserviceaccount.com">hambebe0995@archives...</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="gdriveToggle" class="sr-only peer" onchange="triggerGDriveBackup(this)">
-                        <div class="w-11 h-6 bg-red-950/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                    </label>
-                </div>
+            <div class="flex gap-3">
                 <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
                     <i class="bi bi-download mr-2"></i> Download Backup
                 </a>
@@ -685,24 +670,16 @@ if ($q = $conn->query($qStr)) {
             }
         }
 
-        // Trigger manual Google Drive Backup via Toggle
-        function triggerGDriveBackup(toggleBtn) {
-            if (!toggleBtn.checked) return;
-
-            alert('Starting Google Drive Backup Sync. Please wait...');
-
-            fetch('../auto_backup.php')
-                .then(response => response.text())
-                .then(text => {
-                    alert('Backup Status:\n' + text.trim());
-                    // Turn toggle back off since it is a one-time trigger action
-                    setTimeout(() => { toggleBtn.checked = false; }, 1000);
-                })
-                .catch(err => {
-                    alert('Error executing backup:\n' + err);
-                    toggleBtn.checked = false;
-                });
-        }
+        // automatically click the backup button at most once per hour
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('downloadBackupBtn');
+            if (!btn) return;
+            const last = localStorage.getItem('lastBackupClick') || 0;
+            const now = Date.now();
+            if (now - last > 3600 * 1000) { // 1 hour
+                btn.click();
+                localStorage.setItem('lastBackupClick', now);
+            }
         });
         </script>
 
