@@ -87,6 +87,13 @@
     persistMode(mode);
     updateAllToggleIcons();
     broadcastChange(mode);
+
+    // Save preference to the database
+    fetch('save_theme.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dark_mode: mode === 'dark' })
+    }).catch(function (e) { console.error("Failed to save theme:", e); });
   }
 
   function attachHandlers() {

@@ -969,6 +969,8 @@ $conn->close();
                 let viewer = '';
                 if (['pdf'].includes(ext)) {
                     viewer = `<div class="space-y-4"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><iframe src="${data.previewUrl}" class="w-full h-[70vh] rounded-lg border"></iframe></div>`;
+                } else if (['mp4','webm','ogg','avi','mov'].includes(ext)) {
+                    viewer = `<div class="space-y-4 text-center"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><video controls class="w-full max-h-[70vh] rounded-lg border"><source src="${data.previewUrl}"></video></div>`;
                 } else if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) {
                     viewer = `<div class="space-y-4 text-center"><div class="border-b pb-2 text-xl font-semibold">${decodeURIComponent(title)}</div><img src="${data.previewUrl}" class="max-h-[70vh] w-auto inline-block rounded-lg border" alt="Preview"/></div>`;
                 } else if (['txt','csv','json','xml','md','log'].includes(ext)) {

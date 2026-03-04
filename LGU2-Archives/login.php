@@ -71,11 +71,14 @@
                 $nt->close();
             }
             $_SESSION['otp_pending'] = false;
-            unset($_SESSION['otp_code'], $_SESSION['otp_expires'], $_SESSION['otp_user_id']);
+            $_SESSION['dark_mode'] = (int)($_SESSION['otp_dark_mode'] ?? 0);
+            $themeScript = $_SESSION['dark_mode'] === 1 ? "localStorage.setItem('theme', 'dark'); localStorage.setItem('archive-theme', 'dark');" : "localStorage.setItem('theme', 'light'); localStorage.setItem('archive-theme', 'light');";
+            
+            unset($_SESSION['otp_code'], $_SESSION['otp_expires'], $_SESSION['otp_user_id'], $_SESSION['otp_dark_mode']);
             if ($must === 1) {
-                header("Location: profile.php?force=1");
+                echo "<script>$themeScript window.location.href = 'profile.php?force=1';</script>";
             } else {
-                header("Location: archives-landing.php");
+                echo "<script>$themeScript window.location.href = 'archives-landing.php';</script>";
             }
             exit();
         }
@@ -83,7 +86,7 @@
         include 'authdatabase.php';
         $google_email = trim($_POST['google_email']);
         
-        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, email, full_name, username FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, email, full_name, username, dark_mode FROM users WHERE email = ?");
         $stmt->bind_param("s", $google_email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -109,7 +112,8 @@
                     'email' => $google_email,
                     'username' => $temp_username,
                     'full_name' => $full_name,
-                    'must_change_password' => 0
+                    'must_change_password' => 0,
+                    'dark_mode' => 0
                 ];
             } else {
                 $error = "Failed to register new Google account.";
@@ -122,6 +126,7 @@
             $_SESSION['otp_expires'] = time() + 180;
             $_SESSION['otp_user_id'] = (int)$user['id'];
             $_SESSION['otp_must_change'] = (int)($user['must_change_password'] ?? 0);
+            $_SESSION['otp_dark_mode'] = (int)($user['dark_mode'] ?? 0);
             $_SESSION['otp_pending'] = true;
             
             $toEmail = $google_email;
@@ -167,7 +172,7 @@
         $password = $_POST['password'];
 
         // Check for lockout
-        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, failed_attempts, lockout_until, email, full_name FROM users WHERE username = ?");
+        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, failed_attempts, lockout_until, email, full_name, dark_mode FROM users WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -197,6 +202,7 @@
                         $_SESSION['otp_expires'] = time() + 60;
                         $_SESSION['otp_user_id'] = (int)$user['id'];
                         $_SESSION['otp_must_change'] = (int)($user['must_change_password'] ?? 0);
+                        $_SESSION['otp_dark_mode'] = (int)($user['dark_mode'] ?? 0);
                         $_SESSION['otp_pending'] = true;
                         $toEmail = trim((string)($user['email'] ?? $username));
                         $cfgFile = __DIR__ . '/mail_config.php';

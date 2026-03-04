@@ -107,6 +107,12 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_picture");
 }
 
+// Add dark_mode column to users table
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'dark_mode'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN dark_mode TINYINT(1) NOT NULL DEFAULT 0 AFTER must_change_password");
+}
+
 // Add last_activity column if it doesn't exist
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'last_activity'");
 if ($check_column->num_rows == 0) {

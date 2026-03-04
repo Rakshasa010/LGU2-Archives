@@ -136,18 +136,21 @@ $mock_user_id = 1; // Assuming admin user is ID 1
         include 'authdatabase.php';
         
         // Find the first active user to simulate login, or user id 1
-        $result = $conn->query("SELECT id FROM users WHERE status = 'active' LIMIT 1");
+        $result = $conn->query("SELECT id, dark_mode FROM users WHERE status = 'active' LIMIT 1");
         if ($result && $result->num_rows > 0) {
             $user = $result->fetch_assoc();
             $_SESSION['user_id'] = $user['id'];
+            $_SESSION['dark_mode'] = (int)$user['dark_mode'];
         } else {
             $_SESSION['user_id'] = $mock_user_id; // fallback
+            $_SESSION['dark_mode'] = 0;
         }
         
         $_SESSION['last_activity'] = time();
 
         // Redirect to archives-landing
-        echo "<script>window.location.href = 'archives-landing.php';</script>";
+        $themeScript = ($_SESSION['dark_mode'] ?? 0) === 1 ? "localStorage.setItem('theme', 'dark'); localStorage.setItem('archive-theme', 'dark');" : "localStorage.setItem('theme', 'light'); localStorage.setItem('archive-theme', 'light');";
+        echo "<script>$themeScript window.location.href = 'archives-landing.php';</script>";
         exit;
     }
     ?>

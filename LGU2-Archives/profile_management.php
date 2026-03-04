@@ -128,18 +128,20 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                 </a>
             </div>
             
-            <!-- Storage Bar -->
+            <!-- Centralized Storage Overview (Mobile) -->
             <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
-                <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-red-100">Storage Usage</span>
-                        <span class="text-xs font-bold text-white">2%</span>
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
+                <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs text-red-100 font-medium">Capacity Used</span>
+                        <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
                     </div>
-                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
-                        <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                        <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="mobile-storage-bar" style="width: 0%;"></div>
                     </div>
-                    <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
+                    <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
+                    <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
+                    <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
                 </div>
             </div>
             </nav>
@@ -211,20 +213,22 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                         </a>
                     </div>
 
-                    <!-- Storage Bar -->
-                    <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
-                        <div class="text-xs font-semibold text-red-200 mb-2 px-2">Storage Status</div>
-                        <div class="bg-red-900/40 backdrop-blur rounded-lg p-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs text-red-100">Storage Usage</span>
-                                <span class="text-xs font-bold text-white">2%</span>
-                            </div>
-                            <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
-                                <div class="bg-white h-full rounded-full" style="width: 2%;"></div>
-                            </div>
-                            <div class="text-xs text-red-100">1.0 GB of 50.0 GB</div>
-                        </div>
+                    <!-- Centralized Storage Overview (Mobile) -->
+            <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
+                <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
+                <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs text-red-100 font-medium">Capacity Used</span>
+                        <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
                     </div>
+                    <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                        <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="mobile-storage-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
+                    <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
+                    <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
+                </div>
+            </div>
                 </nav>
             </aside>
     <!-- Main Content (scrollable on mobile) -->
@@ -586,6 +590,41 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/archives.js"></script>
-</body>
+
+    <script>
+        (function() {
+            function fetchAndUpdateStorage() {
+                fetch('archives-landing.php?action=get_storage_data')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const pct = data.percentage;
+                            const usedText = data.usedText;
+                            const totalText = data.totalText;
+                            const fileCount = data.fileCount;
+
+                            ['mobile', 'desktop'].forEach(prefix => {
+                                const bar = document.getElementById(prefix + '-storage-bar');
+                                const pctEl = document.getElementById(prefix + '-storage-pct');
+                                const textEl = document.getElementById(prefix + '-storage-text');
+                                const filesEl = document.getElementById(prefix + '-storage-files');
+                                
+                                if (bar) bar.style.width = pct + '%';
+                                if (pctEl) pctEl.textContent = pct + '%';
+                                if (textEl) textEl.textContent = usedText + ' of ' + totalText;
+                                if (filesEl) filesEl.textContent = fileCount + ' files tracked';
+                            });
+                        }
+                    }).catch(err => console.warn('Storage fetch error:', err));
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fetchAndUpdateStorage);
+            } else {
+                fetchAndUpdateStorage();
+            }
+            setInterval(fetchAndUpdateStorage, 60000);
+        })();
+    </script>
+\n</body>
 </html>
  
