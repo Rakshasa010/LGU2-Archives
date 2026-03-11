@@ -1,32 +1,9 @@
 <?php
-// Database configuration – local vs Cloud SQL
-// set $useCloud = true when you want to connect against the remote instance
-$useCloud   = false; // change to true to use cloud connection
-
-// local XAMPP settings
-$local_host     = "localhost";
-$local_user     = "las_adminsql";
-$local_pass     = "lasadminsql123";
-$local_dbname   = "las_lgu2_archives";
-
-// cloud settings (set these after you finish step 1 & 2 in accounts.md)
-$cloud_host     = "34.143.152.82"; // Cloud SQL public IP
-$cloud_user     = "php_user";
-$cloud_pass     = "YOUR_PASSWORD_HERE";
-$cloud_dbname   = "my_database"; // or las_lgu2_archives if you imported
-
-// pick configuration
-if ($useCloud) {
-    $servername = $cloud_host;
-    $username   = $cloud_user;
-    $password   = $cloud_pass;
-    $dbname     = $cloud_dbname;
-} else {
-    $servername = $local_host;
-    $username   = $local_user;
-    $password   = $local_pass;
-    $dbname     = $local_dbname;
-}
+// Database configuration for XAMPP MySQL
+$servername = "localhost";
+$username = "las_adminsql";
+$password = "lasadminsql123";  // Default XAMPP MySQL password is empty
+$dbname = "las_lgu2_archives";  // Database name
 
 // Create connection
 $conn = new mysqli($servername, $username, $password);
@@ -36,11 +13,9 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Create database if it doesn't exist (only applies to local)
-if (!$useCloud) {
-    $sql = "CREATE DATABASE IF NOT EXISTS $dbname";
-    $conn->query($sql);
-}
+// Create database if it doesn't exist
+$sql = "CREATE DATABASE IF NOT EXISTS $dbname";
+$conn->query($sql);
 
 // Select the database
 $conn->select_db($dbname);
@@ -107,12 +82,6 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_picture");
 }
 
-// Add dark_mode column to users table
-$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'dark_mode'");
-if ($check_column->num_rows == 0) {
-    $conn->query("ALTER TABLE users ADD COLUMN dark_mode TINYINT(1) NOT NULL DEFAULT 0 AFTER must_change_password");
-}
-
 // Add last_activity column if it doesn't exist
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'last_activity'");
 if ($check_column->num_rows == 0) {
@@ -171,23 +140,45 @@ $conn->query($files_sql);
 // Create notifications table
 $notif_sql = "CREATE TABLE IF NOT EXISTS notifications (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
-    user_id INT(11) NOT NULL,
-    message TEXT NOT NULL,
+    user_id INT(11) NULL,
+    message TEXT NULL,
+    time VARCHAR(20) NULL,
+    date DATE NULL,
+    content VARCHAR(255) NULL,
+    about VARCHAR(100) NULL,
+    link VARCHAR(255) NULL,
+    record_id INT(11) NULL,
+    role VARCHAR(20) NULL,
     status ENUM('unread','read') NOT NULL DEFAULT 'unread',
     ip_address VARCHAR(45) NULL,
     user_agent VARCHAR(255) NULL,
     action VARCHAR(50) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)";
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status),
+    INDEX idx_date (date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 $conn->query($notif_sql);
 
-// Add new columns if they don't exist
-$check_cols = $conn->query("SHOW COLUMNS FROM notifications LIKE 'ip_address'");
-if ($check_cols->num_rows == 0) {
-    $conn->query("ALTER TABLE notifications ADD COLUMN ip_address VARCHAR(45) NULL AFTER status");
-    $conn->query("ALTER TABLE notifications ADD COLUMN user_agent VARCHAR(255) NULL AFTER ip_address");
-    $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
+// Migration: Add missing columns if they don't exist
+$cols_to_add = [
+    'time' => "VARCHAR(20) NULL",
+    'date' => "DATE NULL",
+    'content' => "VARCHAR(255) NULL",
+    'about' => "VARCHAR(100) NULL",
+    'link' => "VARCHAR(255) NULL",
+    'record_id' => "INT(11) NULL",
+    'role' => "VARCHAR(20) NULL",
+    'user_id' => "INT(11) NULL",
+    'message' => "TEXT NULL"
+];
+
+foreach ($cols_to_add as $col => $def) {
+    if ($conn->query("SHOW COLUMNS FROM notifications LIKE '$col'")->num_rows == 0) {
+        $conn->query("ALTER TABLE notifications ADD COLUMN $col $def");
+    }
 }
+
 
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");

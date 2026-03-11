@@ -85,6 +85,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($action === 'upload_files_bulk') {
         header('Content-Type: application/json');
+        
+        // Check if POST was truncated due to post_max_size
+        if (empty($_FILES) && empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+            $max_size = ini_get('post_max_size');
+            echo json_encode(['success' => false, 'message' => "Total upload size exceeds the limit ($max_size)."]);
+            exit();
+        }
+
         if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
             $author = $_POST['fileAuthor'] ?? null;
             $fdate = $_POST['fileDate'] ?? null;
@@ -92,29 +100,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($fdate === '') $fdate = null;
 
             $uploadedFiles = [];
+            $errors = [];
             $target_dir = "uploads/archives/" . $current_folder_id . "/";
             if (!file_exists($target_dir)) { @mkdir($target_dir, 0777, true); }
 
-            $colCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'author'");
-            if ($colCheck && $colCheck->num_rows == 0) {
-                $conn->query("ALTER TABLE archive_files ADD COLUMN author VARCHAR(255) DEFAULT NULL, ADD COLUMN file_date DATE DEFAULT NULL, ADD COLUMN unique_number VARCHAR(100) DEFAULT NULL, ADD COLUMN version INT DEFAULT 1, ADD COLUMN parent_version_id INT NULL");
+            // Ensure columns exist (granular maintenance)
+            $cols_needed = [
+                'author' => "VARCHAR(255) DEFAULT NULL",
+                'file_date' => "DATE DEFAULT NULL",
+                'unique_number' => "VARCHAR(100) DEFAULT NULL",
+                'version' => "INT DEFAULT 1",
+                'parent_version_id' => "INT NULL"
+            ];
+            foreach ($cols_needed as $col => $def) {
+                if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
+                    $conn->query("ALTER TABLE archive_files ADD COLUMN $col $def");
+                }
             }
             
-            // Ensure version tracking columns exist
-            $versionCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'version'");
-            if (!$versionCheck || $versionCheck->num_rows == 0) {
-                $conn->query("ALTER TABLE archive_files ADD COLUMN version INT DEFAULT 1");
+            $log_file = 'uploads/archives/upload_log.txt';
+            function log_upload_error($msg) {
+                global $log_file;
+                @file_put_contents($log_file, date('[Y-m-d H:i:s] ') . $msg . PHP_EOL, FILE_APPEND);
             }
-            $parentCheck = $conn->query("SHOW COLUMNS FROM archive_files LIKE 'parent_version_id'");
-            if (!$parentCheck || $parentCheck->num_rows == 0) {
-                $conn->query("ALTER TABLE archive_files ADD COLUMN parent_version_id INT NULL");
-            }
-            
-            $conn->query("CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, time VARCHAR(20) NOT NULL, date DATE NOT NULL, content VARCHAR(255) NOT NULL, about VARCHAR(100) NOT NULL, status ENUM('unread','read') NOT NULL DEFAULT 'unread', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
 
+            
             $count = count($_FILES['files']['name']);
             for ($i = 0; $i < $count; $i++) {
-                if ($_FILES['files']['error'][$i] === UPLOAD_ERR_OK) {
+                $errCode = $_FILES['files']['error'][$i];
+                if ($errCode === UPLOAD_ERR_OK) {
                     $name = $_FILES['files']['name'][$i];
                     $tmp_name = $_FILES['files']['tmp_name'][$i];
                     
@@ -146,22 +160,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $conn->query("UPDATE archive_files SET unique_number = '$unq' WHERE id = $new_id");
                             }
 
-                            // log analytics event for upload
                             $bytes = @filesize($file_path) ?: 0;
                             $ext = strtolower(pathinfo($final_name, PATHINFO_EXTENSION));
-                            $rtype = '';
-                            if (in_array($ext, ['mp4','webm','ogg'])) {
-                                $rtype = 'video';
-                            } elseif ($ext === 'pdf') {
-                                $rtype = 'pdf';
-                            } elseif (in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
-                                $rtype = 'image';
-                            } else {
-                                $rtype = $ext ?: 'unknown';
-                            }
+                            $rtype = 'other';
+                            if (in_array($ext, ['mp4','webm','ogg'])) $rtype = 'video';
+                            elseif ($ext === 'pdf') $rtype = 'pdf';
+                            elseif (in_array($ext, ['jpg','jpeg','png','gif','webp'])) $rtype = 'image';
+                            
                             if ($ev = $conn->prepare("INSERT INTO analytics_events (event_type, user_id, record_id, record_title, record_type, bytes) VALUES (?,?,?,?,?,?)")) {
                                 $etype = 'upload';
-                                $uid = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+                                $uid = $_SESSION['user_id'] ?? null;
                                 $ev->bind_param('sisssi', $etype, $uid, $new_id, $final_name, $rtype, $bytes);
                                 $ev->execute();
                                 $ev->close();
@@ -174,11 +182,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'author' => $author,
                                 'file_date' => $fdate,
                                 'unique_number' => $unq,
-                                'size' => @filesize($file_path) ?: 0,
+                                'size' => $bytes,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'folder_id' => $current_folder_id
                             ];
+                        } else {
+                            $db_err = $stmt->error;
+                            log_upload_error("Database insertion failed for $name: $db_err");
+                            $errors[] = "Database error for " . $_FILES['files']['name'][$i] . " ($db_err)";
                         }
+                    } else {
+                        log_upload_error("Failed to move uploaded file $tmp_name to $file_path. Check permissions for $target_dir");
+                        $errors[] = "Failed to move uploaded file: " . $_FILES['files']['name'][$i];
+                    }
+                } else {
+                    switch ($errCode) {
+                        case UPLOAD_ERR_INI_SIZE:   $errors[] = "{$_FILES['files']['name'][$i]}: File exceeds server limit."; break;
+                        case UPLOAD_ERR_FORM_SIZE:  $errors[] = "{$_FILES['files']['name'][$i]}: File exceeds form limit."; break;
+                        case UPLOAD_ERR_PARTIAL:    $errors[] = "{$_FILES['files']['name'][$i]}: Upload was unstable/interrupted. Please try again."; break;
+                        case UPLOAD_ERR_NO_FILE:    $errors[] = "{$_FILES['files']['name'][$i]}: No file was uploaded."; break;
+                        case UPLOAD_ERR_NO_TMP_DIR: $errors[] = "{$_FILES['files']['name'][$i]}: Missing temporary folder on server."; break;
+                        case UPLOAD_ERR_CANT_WRITE: $errors[] = "{$_FILES['files']['name'][$i]}: Failed to write to disk."; break;
+                        default: 
+                            $err_msg = "Unknown upload error ($errCode).";
+                            log_upload_error("Upload error for {$_FILES['files']['name'][$i]}: code $errCode");
+                            $errors[] = "{$_FILES['files']['name'][$i]}: $err_msg"; 
+                            break;
                     }
                 }
             }
@@ -192,12 +221,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
                     $ins->execute(); $ins->close();
                 }
-                echo json_encode(['success' => true, 'files' => $uploadedFiles]);
+                echo json_encode([
+                    'success' => true, 
+                    'files' => $uploadedFiles,
+                    'errors' => $errors
+                ]);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to upload files']);
+                $msg = !empty($errors) ? implode(' ', $errors) : 'Failed to upload files';
+                echo json_encode(['success' => false, 'message' => $msg]);
             }
         } else {
-            echo json_encode(['success' => false, 'message' => 'No files provided']);
+            echo json_encode(['success' => false, 'message' => 'No files provided or invalid request structure.']);
         }
         exit();
     }
@@ -817,29 +851,35 @@ $conn->close();
 
         let isUploading = false;
         async function handleUpload(e) {
-            e.preventDefault();
+            if(e) e.preventDefault();
             if (isUploading) return;
-            isUploading = true;
+            
             const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files.length) {
+            if (!fileInput || !fileInput.files.length) {
                 openNotification('Please select a file to upload.', 'error');
-                try { fileInput.focus(); fileInput.click(); } catch(_) {}
-                isUploading = false;
+                if(fileInput) { try { fileInput.focus(); } catch(_) {} }
                 return;
             }
+
             if (fileInput.files.length > 3) {
                 openNotification('Please select up to 3 files.', 'error');
-                isUploading = false;
                 return;
+            }
+
+            isUploading = true;
+            const uploadBtn = document.getElementById('uploadBtn');
+            const originalBtnText = uploadBtn ? uploadBtn.textContent : 'Upload';
+            if(uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<i class="bi bi-arrow-repeat animate-spin"></i> Uploading...';
             }
 
             const progress = document.getElementById('upload-progress');
             if (progress) {
                 progress.classList.remove('hidden');
-                progress.textContent = `Uploading ${fileInput.files.length} file(s)...`;
+                progress.textContent = `Starting upload of ${fileInput.files.length} file(s)...`;
             }
 
-            let successCount = 0;
             const formData = new FormData();
             formData.append('action', 'upload_files_bulk');
             formData.append('fileAuthor', document.getElementById('fileAuthor')?.value || '');
@@ -851,33 +891,78 @@ $conn->close();
             }
 
             try {
-                const response = await fetch('folder_view.php?id=<?php echo $current_folder_id; ?>', {
-                    method: 'POST', body: formData
-                });
-                const data = await response.json();
-                if (data.success && data.files) {
-                    successCount = data.files.length;
-                    
-                    // Add files to page dynamically
-                    addUploadedFilesToPage(data.files);
-                    
-                    // Close modal and reset form
-                    closeUploadModal();
-                    document.getElementById('uploadForm').reset();
-                    if (fileInput) fileInput.value = '';
-                    updateFilePreview({ files: [] });
-                    
-                    openNotification(`${successCount} file(s) uploaded successfully!`, 'success');
-                } else {
-                    openNotification(data.message || 'Failed to upload files', 'error');
-                }
+                // Use XMLHttpRequest for progress tracking
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'folder_view.php?id=<?php echo $current_folder_id; ?>', true);
+
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable && progress) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progress.textContent = `Uploading: ${percent}% completed...`;
+                    }
+                };
+
+                xhr.onload = function() {
+                    isUploading = false;
+                    if(uploadBtn) {
+                        uploadBtn.disabled = false;
+                        uploadBtn.textContent = originalBtnText;
+                    }
+                    if (progress) progress.classList.add('hidden');
+
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            if (data.success && data.files) {
+                                addUploadedFilesToPage(data.files);
+                                closeUploadModal();
+                                document.getElementById('uploadForm').reset();
+                                if (fileInput) fileInput.value = '';
+                                // clear preview list correctly
+                                updateFilePreview([]);
+                                
+                                let msg = `${data.files.length} file(s) uploaded successfully!`;
+                                if (data.errors && data.errors.length > 0) {
+                                    msg += " Note: Some files had issues: " + data.errors.join(' ');
+                                    // treat any file-level errors as warnings so they stand out
+                                    openNotification(msg, 'warning');
+                                } else {
+                                    openNotification(msg, 'success');
+                                }
+                            } else {
+                                openNotification(data.message || 'Failed to upload files', 'error');
+                            }
+                        } catch(err) {
+                            console.error('JSON Parse Error:', err, xhr.responseText);
+                            openNotification('Server error: Invalid response format.', 'error');
+                        }
+                    } else {
+                        openNotification('Server returned error: ' + xhr.status, 'error');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    isUploading = false;
+                    if(uploadBtn) {
+                        uploadBtn.disabled = false;
+                        uploadBtn.textContent = originalBtnText;
+                    }
+                    if (progress) progress.classList.add('hidden');
+                    openNotification('Network error occurred. The internet connection might be unstable.', 'error');
+                };
+
+                xhr.send(formData);
+
             } catch (e) {
                 console.error(e);
-                openNotification('Network error during upload', 'error');
+                isUploading = false;
+                if(uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = originalBtnText;
+                }
+                if (progress) progress.classList.add('hidden');
+                openNotification('An unexpected error occurred.', 'error');
             }
-
-            if (progress) progress.classList.add('hidden');
-            isUploading = false;
         }
 
         function addUploadedFilesToPage(files) {
@@ -1162,12 +1247,19 @@ $conn->close();
             const msg = document.getElementById('notificationMessage');
             const icon = document.getElementById('notificationIcon');
             if (!modal || !title || !msg || !icon) return;
+            // support three notification types: success, warning, error
             if (type === 'error') {
                 title.textContent = 'Error';
                 msg.textContent = message || 'Something went wrong.';
                 icon.className = 'flex-none rounded-full p-2 bg-red-100 dark:bg-red-900/30';
                 icon.innerHTML = '<i class="bi bi-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>';
+            } else if (type === 'warning') {
+                title.textContent = 'Warning';
+                msg.textContent = message || 'There were some issues.';
+                icon.className = 'flex-none rounded-full p-2 bg-yellow-100 dark:bg-yellow-900/30';
+                icon.innerHTML = '<i class="bi bi-exclamation-circle text-yellow-600 dark:text-yellow-400 text-xl"></i>';
             } else {
+                // default to success
                 title.textContent = 'Uploaded!';
                 msg.textContent = message || 'Your file(s) have been uploaded.';
                 icon.className = 'flex-none rounded-full p-2 bg-green-100 dark:bg-green-900/30';

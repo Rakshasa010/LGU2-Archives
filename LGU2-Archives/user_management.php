@@ -425,7 +425,7 @@ if ($q = $conn->query($qStr)) {
             </nav>
 
 
-    <div class="max-w-5xl mx-auto p-6"> 
+    <div class="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6"> 
         <?php if ($message !== ''): ?>
             <div class="mb-4 p-3 rounded-lg border <?php echo strpos($message, 'Failed') === false ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'; ?>">
                 <?php echo htmlspecialchars($message); ?>
@@ -443,17 +443,17 @@ if ($q = $conn->query($qStr)) {
                     <p class="text-red-100 text-sm">Download or restore a complete .sql snapshot of the system structure and data.</p>
                 </div>
             </div>
-            <div class="flex gap-3">
-                <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-md">
+            <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
+                <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="w-full sm:w-auto px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shadow-md">
                     <i class="bi bi-download mr-2"></i> Download Backup
                 </a>
-                <button onclick="openRestoreModal()" class="px-5 py-2.5 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center shadow-md border border-white/20">
+                <button onclick="openRestoreModal()" class="w-full sm:w-auto px-5 py-2.5 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center shadow-md border border-white/20">
                     <i class="bi bi-upload mr-2"></i> Restore Database
                 </button>
             </div>
         </div>
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div class="font-semibold">Pending Approvals</div>
                 <span class="text-sm text-gray-600 dark:text-gray-400"><?php echo count($pending); ?> pending</span>
             </div>
@@ -461,25 +461,25 @@ if ($q = $conn->query($qStr)) {
                 <table class="min-w-full">
                     <thead class="bg-gray-50 dark:bg-slate-700/50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                         <?php if (empty($pending)): ?>
                             <tr>
-                                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No pending users</td>
+                                <td colspan="5" class="px-4 sm:px-6 py-8 text-center text-sm text-gray-600 dark:text-gray-400">No pending users</td>
                             </tr>
                         <?php else: foreach ($pending as $u): ?>
                             <tr>
-                                <td class="px-6 py-4 text-sm font-semibold text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($u['full_name']); ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['email']); ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['created_at']); ?></td>
-                                <td class="px-6 py-4">
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm font-semibold text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($u['full_name']); ?></td>
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['email']); ?></td>
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['created_at']); ?></td>
+                                <td class="px-4 sm:px-6 py-3 sm:py-4">
                                     <form method="post" class="inline-block">
                                         <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
                                         <input type="hidden" name="action" value="approve">
@@ -500,11 +500,11 @@ if ($q = $conn->query($qStr)) {
         
         <!-- Active/Inactive Users List -->
         <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div class="font-semibold text-gray-800 dark:text-gray-200">User List</div>
-                <div class="flex items-center space-x-4">
+                <div class="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-2 sm:gap-4">
                     <span class="text-sm text-gray-600 dark:text-gray-400" id="userCount"><?php echo count($all_users); ?> users</span>
-                    <select id="roleFilter" class="text-sm border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-200 p-2">
+                    <select id="roleFilter" class="w-full sm:w-auto text-sm border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-200 p-2">
                         <option value="all">All Roles</option>
                         <option value="admin">Admins</option>
                         <option value="user">Users</option>
@@ -515,12 +515,12 @@ if ($q = $conn->query($qStr)) {
                 <table class="min-w-full" id="userTable">
                     <thead class="bg-gray-50 dark:bg-slate-700/50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Active</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User Name</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User Email</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Active</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
@@ -530,7 +530,7 @@ if ($q = $conn->query($qStr)) {
                             </tr>
                         <?php else: foreach ($all_users as $u): ?>
                             <tr class="user-row hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer" data-role="<?php echo isset($u['role']) ? strtolower($u['role']) : 'user'; ?>" onclick="toggleUserDetails(<?php echo (int)$u['id']; ?>)">
-                                <td class="px-6 py-4">
+                                <td class="px-4 sm:px-6 py-3 sm:py-4">
                                     <div class="flex items-center gap-3">
                                         <i id="icon-<?php echo (int)$u['id']; ?>" class="bi bi-chevron-right text-gray-400 text-sm transition-transform duration-200"></i>
                                         <?php
@@ -552,20 +552,20 @@ if ($q = $conn->query($qStr)) {
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm">
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm">
                                     <?php if (!empty($u['email'])): ?>
                                         <a href="mailto:<?php echo htmlspecialchars($u['email']); ?>" class="text-blue-600 hover:underline dark:text-blue-400"><?php echo htmlspecialchars($u['email']); ?></a>
                                     <?php else: ?>
                                         <span class="text-gray-500">—</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
-                                <td class="px-6 py-4 text-sm">
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-700 dark:text-gray-300"><?php echo htmlspecialchars($u['username']); ?></td>
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm">
                                     <span class="px-2 py-1 text-xs rounded-full <?php echo $u['status']==='active'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'; ?>">
                                         <?php echo ucfirst($u['status']); ?>
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-700 dark:text-gray-300">
                                     <?php 
                                     if (!empty($u['last_activity'])) {
                                         $last_activity = strtotime($u['last_activity']);
@@ -585,7 +585,7 @@ if ($q = $conn->query($qStr)) {
                                     }
                                     ?>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-4 sm:px-6 py-3 sm:py-4">
                                     <?php if ((int)$u['id'] !== $user_id): // Prevent deleting self ?>
                                     <form method="post" class="inline-block" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to delete this user?');">
                                         <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
