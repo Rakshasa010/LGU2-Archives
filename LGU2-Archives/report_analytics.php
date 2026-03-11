@@ -6,6 +6,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require 'authdatabase.php';
+require_once __DIR__ . '/includes/storage_shared.php';
 
 $user_id = $_SESSION['user_id'];
 $user_data = null;
@@ -18,17 +19,6 @@ $stmt->close();
 
 $display_name = $user_data['full_name'] ?? 'User';
 $profile_picture = $user_data['profile_picture'] ?? null;
-
-// Helper to get directory size (bytes)
-function dir_size($path) {
-    $size = 0;
-    if (!is_dir($path)) return 0;
-    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS));
-    foreach ($it as $file) {
-        $size += $file->getSize();
-    }
-    return $size;
-}
 
 // Fetch stats from DB
 $stats = [];
@@ -174,14 +164,8 @@ if ($folder_query) {
 
 // Calculate uploads directory size (will show profile pictures and any other uploads)
 $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
-$uploads_bytes = dir_size($uploads_path);
-
-function format_bytes($bytes) {
-    if ($bytes === 0) return '0 B';
-    $units = ['B','KB','MB','GB','TB'];
-    $e = floor(log($bytes, 1024));
-    return round($bytes / pow(1024, $e), 2) . ' ' . $units[$e];
-}
+$uploads_metrics = storage_dir_metrics($uploads_path);
+$uploads_bytes = $uploads_metrics['bytes'];
 
 $exportQuery = $_GET;
 $exportQuery['export'] = 'csv';
@@ -229,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
             echo "Summary\n";
             echo "Total Records: " . (string)($stats['total_records'] ?? 0) . "\n";
             echo "Total Downloads: " . (string)($stats['downloads'] ?? 0) . "\n";
-            echo "Uploads Folder Size: " . format_bytes($uploads_bytes) . "\n\n";
+            echo "Uploads Folder Size: " . storage_format_bytes($uploads_bytes) . "\n\n";
             echo "Downloads by Type\n";
             foreach (($stats['downloads_by_type'] ?? []) as $k => $v) echo $k . ": " . (string)$v . "\n";
             echo "\nDownloads by Format\n";
@@ -253,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
             $html .= '<h2>Summary</h2><table><tr><th>Metric</th><th>Value</th></tr>';
             $html .= '<tr><td>Total Records</td><td>'.(int)($stats['total_records'] ?? 0).'</td></tr>';
             $html .= '<tr><td>Total Downloads</td><td>'.(int)($stats['downloads'] ?? 0).'</td></tr>';
-            $html .= '<tr><td>Uploads Folder Size</td><td>'.htmlspecialchars(format_bytes($uploads_bytes)).'</td></tr></table>';
+            $html .= '<tr><td>Uploads Folder Size</td><td>'.htmlspecialchars(storage_format_bytes($uploads_bytes)).'</td></tr></table>';
             $html .= '<h2>Downloads by Type</h2><table><tr><th>Type</th><th>Count</th></tr>';
             foreach (($stats['downloads_by_type'] ?? []) as $k=>$v) $html .= '<tr><td>'.htmlspecialchars($k).'</td><td>'.(int)$v.'</td></tr>';
             $html .= '</table><h2>Downloads by Format</h2><table><tr><th>Format</th><th>Count</th></tr>';
@@ -335,7 +319,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     fputcsv($out, ['Summary']);
     fputcsv($out, ['Total Records', (string)($stats['total_records'] ?? 0)]);
     fputcsv($out, ['Total Downloads', (string)($stats['downloads'] ?? 0)]);
-    fputcsv($out, ['Uploads Folder Size', format_bytes($uploads_bytes)]);
+    fputcsv($out, ['Uploads Folder Size', storage_format_bytes($uploads_bytes)]);
     fputcsv($out, []);
     fputcsv($out, ['Downloads by Type']);
     fputcsv($out, ['Type', 'Count']);
@@ -814,7 +798,7 @@ $funnel_types = array_values($funnel_types);
                                     <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300 flex items-center justify-center"><i class="bi bi-hdd"></i></div>
                                     <div>
                                         <div class="text-xs text-gray-500">Uploads Folder Size</div>
-                                        <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo format_bytes($uploads_bytes); ?></div>
+                                        <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo storage_format_bytes($uploads_bytes); ?></div>
                                     </div>
                                 </div>
                             </div>

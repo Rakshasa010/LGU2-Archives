@@ -33,6 +33,7 @@
     
     // Get user information
     require 'authdatabase.php';
+    require_once __DIR__ . '/includes/storage_shared.php';
     $user_id = $_SESSION['user_id'];
     $user_data = null;
     
@@ -48,16 +49,11 @@
     
     // Helper function for storage display - DEFINE EARLY
     function fmt_bytes($bytes) {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= (1 << (10 * $pow));
-        return round($bytes, 1) . ' ' . $units[$pow];
+        return storage_format_bytes($bytes);
     }
     
     // SHARED function: Calculate storage metrics
-    function calculateStorageMetrics($conn) {
+    function calculateStorageMetrics($conn, $uploadsMetrics = null) {
         $capacityBytes = 50 * 1024 * 1024 * 1024; // 50 GB
         $totalBytes = 0;
         $fileCount = 0;
@@ -93,7 +89,13 @@
         usort($storageTop, function($a, $b) { return $b['size'] - $a['size']; });
         $storageTop = array_slice($storageTop, 0, 15);
 
-        $pct = min(100, round(($totalBytes / $capacityBytes) * 100, 1));
+        if (is_array($uploadsMetrics)) {
+            if (isset($uploadsMetrics['capacityBytes'])) $capacityBytes = (int)$uploadsMetrics['capacityBytes'];
+            if (isset($uploadsMetrics['bytes'])) $totalBytes = (int)$uploadsMetrics['bytes'];
+            if (isset($uploadsMetrics['fileCount'])) $fileCount = (int)$uploadsMetrics['fileCount'];
+        }
+
+        $pct = ($capacityBytes > 0) ? min(100, round(($totalBytes / $capacityBytes) * 100, 1)) : 0;
 
         return [
             'pct' => $pct,
@@ -107,8 +109,11 @@
     }
     
     // Handle AJAX storage data request
+    $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
+    $uploads_metrics = storage_dir_metrics($uploads_path);
+
     if (isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
-        $storage = calculateStorageMetrics($conn);
+        $storage = calculateStorageMetrics($conn, $uploads_metrics);
         header('Content-Type: application/json');
         echo json_encode([
             'success' => true,
@@ -124,7 +129,7 @@
     }
     
     // Calculate storage for initial page load
-    $storage = calculateStorageMetrics($conn);
+    $storage = calculateStorageMetrics($conn, $uploads_metrics);
     $pct = $storage['pct'];
     $totalBytes = $storage['totalBytes'];
     $capacityBytes = $storage['capacityBytes'];
