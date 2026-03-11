@@ -34,6 +34,20 @@ $stmt->close();
 
 $display_name = $user_data['full_name'] ?? 'User';
 $profile_picture = $user_data['profile_picture'] ?? null;
+function map_export_link($title, $location = '') {
+    $loc = strtolower(trim((string)$location));
+    $t = strtolower(trim((string)$title));
+    if ($loc === 'billing') return 'billing.php';
+    if ($loc === 'meeting records') return 'meeting-records.php';
+    if ($loc === 'ordinances & resolutions') return 'ordinances-resolution.php';
+    if ($loc === 'public hearings') return 'public-hearings.php';
+    if (strpos($t, 'ordinance') !== false || strpos($t, 'resolution') !== false) return 'ordinances-resolution.php';
+    if (strpos($t, 'meeting') !== false || strpos($t, 'session') !== false) return 'meeting-records.php';
+    if (strpos($t, 'public hearing') !== false || strpos($t, 'hearing') !== false) return 'public-hearings.php';
+    if (strpos($t, 'billing') !== false) return 'billing.php';
+    return 'storage.php';
+}
+
 // Centralized notifications: load recent Export Request items
 $conn->query("CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -41,43 +55,215 @@ $conn->query("CREATE TABLE IF NOT EXISTS notifications (
     date DATE NOT NULL,
     content TEXT NOT NULL,
     about VARCHAR(80) NOT NULL,
-    status ENUM('unread','read') NOT NULL DEFAULT 'unread'
+    status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+    link VARCHAR(255) DEFAULT NULL,
+    file_name VARCHAR(255) DEFAULT NULL,
+    file_version VARCHAR(60) DEFAULT NULL,
+    needed_date DATE DEFAULT NULL,
+    request_note TEXT,
+    purpose VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
+$notif_cols = [
+    'created_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    'link' => "VARCHAR(255) DEFAULT NULL",
+    'file_name' => "VARCHAR(255) DEFAULT NULL",
+    'file_version' => "VARCHAR(60) DEFAULT NULL",
+    'needed_date' => "DATE DEFAULT NULL",
+    'request_note' => "TEXT",
+    'purpose' => "VARCHAR(255) DEFAULT NULL"
+];
+foreach ($notif_cols as $col => $def) {
+    $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
+    if ($exists && $exists->num_rows === 0) {
+        $conn->query("ALTER TABLE notifications ADD COLUMN $col $def");
+    }
+}
+
+$export_notice = null;
+$export_error = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_request'])) {
+    $file_name = trim((string)($_POST['file_name'] ?? ''));
+    $file_version = trim((string)($_POST['file_version'] ?? 'Latest'));
+    $needed_date = trim((string)($_POST['needed_date'] ?? ''));
+    $request_note = trim((string)($_POST['request_note'] ?? ''));
+    $purpose = trim((string)($_POST['purpose'] ?? ''));
+    $location = trim((string)($_POST['location'] ?? ''));
+
+    if ($file_name === '') {
+        $export_error = "File name is required.";
+    } else {
+        $link = map_export_link($file_name, $location);
+        $ntime = date('h:i A');
+        $ndate = date('Y-m-d');
+        $about = 'Export Request';
+        $status = 'unread';
+        $needed_date = $needed_date !== '' ? $needed_date : null;
+        $request_note = $request_note !== '' ? $request_note : null;
+        $purpose = $purpose !== '' ? $purpose : null;
+
+        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link) VALUES (?,?,?,?,?,?,?,?,?,?,?)")) {
+            $ins->bind_param("sssssssssss", $ntime, $ndate, $file_name, $about, $status, $file_name, $file_version, $needed_date, $request_note, $purpose, $link);
+            if ($ins->execute()) {
+                $export_notice = "Export request created for " . $file_name . ".";
+            } else {
+                $export_error = "Failed to save export request.";
+            }
+            $ins->close();
+        } else {
+            $export_error = "Unable to prepare export request.";
+        }
+    }
+}
+
 $mock_notifications = [];
 $unread_count = 0;
-$resN = $conn->query("SELECT time, date, content, about, status FROM notifications WHERE about = 'Export Request' ORDER BY date DESC, id DESC LIMIT 50");
+$resN = $conn->query("SELECT id, time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link FROM notifications WHERE about = 'Export Request' ORDER BY date DESC, id DESC LIMIT 50");
 if ($resN) {
     while ($rowN = $resN->fetch_assoc()) {
+        $rowN['file_name'] = $rowN['file_name'] ?? $rowN['content'];
+        $rowN['file_version'] = $rowN['file_version'] ?? 'Latest';
+        $rowN['needed_date'] = $rowN['needed_date'] ?? $rowN['date'];
+        $rowN['request_note'] = $rowN['request_note'] ?? 'No additional notes provided.';
+        $rowN['purpose'] = $rowN['purpose'] ?? 'General reference';
+        if (empty($rowN['link'])) $rowN['link'] = map_export_link($rowN['file_name'] ?? $rowN['content']);
         $mock_notifications[] = $rowN;
         if (isset($rowN['status']) && $rowN['status'] === 'unread') $unread_count++;
     }
 }
 if (count($mock_notifications) < 10) {
+    $today = date('Y-m-d');
     $base = [
-        ['Ordinance No. 12-2025 (PDF)', '08:15 AM', 'Export Request', 'unread'],
-        ['Resolution 34 Series 2024 (DOCX)', '09:40 AM', 'Export Request', 'read'],
-        ['Billing Report Q1 (XLSX)', '10:05 AM', 'Export Request', 'unread'],
-        ['Public Hearing Minutes Jan (PDF)', '11:22 AM', 'Export Request', 'unread'],
-        ['Meeting Attendance List (CSV)', '01:10 PM', 'Export Request', 'read'],
-        ['Annual Summary 2025 (PDF)', '02:55 PM', 'Export Request', 'unread'],
-        ['Session Agenda 03-12 (DOC)', '03:30 PM', 'Export Request', 'read'],
-        ['Records Index Update (TXT)', '04:05 PM', 'Export Request', 'unread'],
-        ['Audit Findings Draft (PDF)', '04:45 PM', 'Export Request', 'unread'],
-        ['Metadata Export Batch #7 (JSON)', '05:20 PM', 'Export Request', 'read'],
-        ['Supplemental Report (PDF)', '06:05 PM', 'Export Request', 'unread'],
+        [
+            'content' => 'Ordinance No. 12-2025 (PDF)',
+            'time' => '08:15 AM',
+            'status' => 'unread',
+            'file_version' => 'v2',
+            'needed_date' => date('Y-m-d', strtotime('+2 days')),
+            'request_note' => 'Need final signed copy for committee review.',
+            'purpose' => 'Council packet',
+            'link' => 'ordinances-resolution.php'
+        ],
+        [
+            'content' => 'Resolution 34 Series 2024 (DOCX)',
+            'time' => '09:40 AM',
+            'status' => 'read',
+            'file_version' => 'v1',
+            'needed_date' => date('Y-m-d', strtotime('+3 days')),
+            'request_note' => 'Include attachments and appendices.',
+            'purpose' => 'Legal validation',
+            'link' => 'ordinances-resolution.php'
+        ],
+        [
+            'content' => 'Billing Report Q1 (XLSX)',
+            'time' => '10:05 AM',
+            'status' => 'unread',
+            'file_version' => 'Latest',
+            'needed_date' => date('Y-m-d', strtotime('+1 day')),
+            'request_note' => 'Please export with summaries tab included.',
+            'purpose' => 'Finance review',
+            'link' => 'billing.php'
+        ],
+        [
+            'content' => 'Public Hearing Minutes Jan (PDF)',
+            'time' => '11:22 AM',
+            'status' => 'unread',
+            'file_version' => 'v3',
+            'needed_date' => date('Y-m-d', strtotime('+4 days')),
+            'request_note' => 'For public disclosure request.',
+            'purpose' => 'Public access',
+            'link' => 'public-hearings.php'
+        ],
+        [
+            'content' => 'Meeting Attendance List (CSV)',
+            'time' => '01:10 PM',
+            'status' => 'read',
+            'file_version' => 'v5',
+            'needed_date' => date('Y-m-d', strtotime('+2 days')),
+            'request_note' => 'Verify participants list before sending.',
+            'purpose' => 'Compliance',
+            'link' => 'meeting-records.php'
+        ],
+        [
+            'content' => 'Annual Summary 2025 (PDF)',
+            'time' => '02:55 PM',
+            'status' => 'unread',
+            'file_version' => 'Final',
+            'needed_date' => date('Y-m-d', strtotime('+5 days')),
+            'request_note' => 'Latest approved version only.',
+            'purpose' => 'Executive briefing',
+            'link' => 'storage.php'
+        ],
+        [
+            'content' => 'Session Agenda 03-12 (DOC)',
+            'time' => '03:30 PM',
+            'status' => 'read',
+            'file_version' => 'v1',
+            'needed_date' => date('Y-m-d', strtotime('+1 day')),
+            'request_note' => 'Include agenda revisions.',
+            'purpose' => 'Meeting prep',
+            'link' => 'meeting-records.php'
+        ],
+        [
+            'content' => 'Records Index Update (TXT)',
+            'time' => '04:05 PM',
+            'status' => 'unread',
+            'file_version' => 'Latest',
+            'needed_date' => date('Y-m-d', strtotime('+3 days')),
+            'request_note' => 'Include filenames and dates.',
+            'purpose' => 'Indexing',
+            'link' => 'storage.php'
+        ],
+        [
+            'content' => 'Audit Findings Draft (PDF)',
+            'time' => '04:45 PM',
+            'status' => 'unread',
+            'file_version' => 'Draft',
+            'needed_date' => date('Y-m-d', strtotime('+6 days')),
+            'request_note' => 'Redact sensitive sections.',
+            'purpose' => 'Audit review',
+            'link' => 'storage.php'
+        ],
+        [
+            'content' => 'Metadata Export Batch #7 (JSON)',
+            'time' => '05:20 PM',
+            'status' => 'read',
+            'file_version' => 'Latest',
+            'needed_date' => date('Y-m-d', strtotime('+2 days')),
+            'request_note' => 'Ensure JSON schema v2.',
+            'purpose' => 'System sync',
+            'link' => 'storage.php'
+        ],
+        [
+            'content' => 'Supplemental Report (PDF)',
+            'time' => '06:05 PM',
+            'status' => 'unread',
+            'file_version' => 'v2',
+            'needed_date' => date('Y-m-d', strtotime('+4 days')),
+            'request_note' => 'Include annex pages.',
+            'purpose' => 'Council packet',
+            'link' => 'storage.php'
+        ],
     ];
     $today = date('Y-m-d');
     $needed = 10 - count($mock_notifications);
     for ($i = 0; $i < $needed; $i++) {
         $pick = $base[$i % count($base)];
         $mock_notifications[] = [
-            'time' => $pick[1],
+            'id' => null,
+            'time' => $pick['time'],
             'date' => $today,
-            'content' => $pick[0],
-            'about' => $pick[2],
-            'status' => $pick[3],
+            'content' => $pick['content'],
+            'about' => 'Export Request',
+            'status' => $pick['status'],
+            'file_name' => $pick['content'],
+            'file_version' => $pick['file_version'] ?? 'Latest',
+            'needed_date' => $pick['needed_date'] ?? $today,
+            'request_note' => $pick['request_note'] ?? 'No additional notes provided.',
+            'purpose' => $pick['purpose'] ?? 'General reference',
+            'link' => $pick['link'] ?? map_export_link($pick['content']),
         ];
-        if ($pick[3] === 'unread') $unread_count++;
+        if ($pick['status'] === 'unread') $unread_count++;
     }
 }
 ?>
@@ -397,7 +583,7 @@ if (count($mock_notifications) < 10) {
 						</div>
 						<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="export-list">
 							<?php foreach ($mock_notifications as $n): ?>
-                                <div class="export-item rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow relative" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo htmlspecialchars($n['content']); ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
+                                <div class="export-item rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow relative cursor-pointer" role="button" tabindex="0" data-id="<?php echo htmlspecialchars($n['id'] ?? ''); ?>" data-link="<?php echo htmlspecialchars($n['link'] ?? ''); ?>" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
                                     <div class="flex items-start justify-between mb-3">
                                         <div class="flex items-center gap-2">
                                             <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
@@ -406,8 +592,8 @@ if (count($mock_notifications) < 10) {
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div class="flex items-center gap-1.5">
-                                                <span class="w-2.5 h-2.5 rounded-full <?php echo $n['status'] === 'unread' ? 'bg-red-500' : 'bg-gray-400'; ?>"></span>
-                                                <span class="text-[10px] font-bold uppercase tracking-wider <?php echo $n['status'] === 'unread' ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'; ?>">
+                                                <span class="status-dot w-2.5 h-2.5 rounded-full <?php echo $n['status'] === 'unread' ? 'bg-red-500' : 'bg-gray-400'; ?>"></span>
+                                                <span class="status-text text-[10px] font-bold uppercase tracking-wider <?php echo $n['status'] === 'unread' ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'; ?>">
                                                     <?php echo htmlspecialchars(ucfirst($n['status'])); ?>
                                                 </span>
                                             </div>
@@ -416,25 +602,41 @@ if (count($mock_notifications) < 10) {
                                             </button>
                                             <div class="hidden absolute right-4 top-12 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-lg rounded-lg z-10 w-32 py-1 export-menu">
                                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 view-btn">View Details</button>
-                                               <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 send-to-btn" data-content="<?php echo htmlspecialchars($n['content']); ?>">Send To</button>
+                                               <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 send-to-btn" data-content="<?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>">Send To</button>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" title="<?php echo htmlspecialchars($n['content']); ?>">
-                                        <?php echo htmlspecialchars($n['content']); ?>
+                                    <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" title="<?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>">
+                                        <?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         <?php echo htmlspecialchars($n['about']); ?>
+                                    </div>
+
+                                    <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                        <div><span class="font-semibold text-gray-800 dark:text-gray-200">Version:</span> <?php echo htmlspecialchars($n['file_version']); ?></div>
+                                        <div><span class="font-semibold text-gray-800 dark:text-gray-200">Needed By:</span> <?php echo htmlspecialchars($n['needed_date']); ?></div>
+                                        <div class="col-span-2"><span class="font-semibold text-gray-800 dark:text-gray-200">Request Note:</span> <?php echo htmlspecialchars($n['request_note']); ?></div>
+                                        <div class="col-span-2"><span class="font-semibold text-gray-800 dark:text-gray-200">Purpose:</span> <?php echo htmlspecialchars($n['purpose']); ?></div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <a href="<?php echo htmlspecialchars($n['link'] ?? 'storage.php'); ?>" class="open-link inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 hover:underline">
+                                            <i class="bi bi-box-arrow-up-right"></i> Open Location
+                                        </a>
                                     </div>
                                     
                                     <div class="mt-4 pt-3 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center text-xs text-gray-400 dark:text-gray-500">
                                         <span><?php echo htmlspecialchars($n['date']); ?></span>
                                         <span><?php echo htmlspecialchars($n['time']); ?></span>
                                     </div>
-                                    <div class="export-details hidden mt-3 bg-gray-50 dark:bg-slate-900 rounded p-2 text-xs border border-gray-200 dark:border-slate-600">
-                                        <div class="text-gray-800 dark:text-gray-200 mb-1">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?></div>
-                                        <div class="break-words text-gray-600 dark:text-gray-400"><?php echo htmlspecialchars($n['content']); ?></div>
+                                    <div class="export-details hidden mt-3 bg-gray-50 dark:bg-slate-900 rounded p-3 text-xs border border-gray-200 dark:border-slate-600 space-y-1">
+                                        <div class="text-gray-800 dark:text-gray-200">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?></div>
+                                        <div class="text-gray-600 dark:text-gray-400">File: <?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?></div>
+                                        <div class="text-gray-600 dark:text-gray-400">Version: <?php echo htmlspecialchars($n['file_version']); ?></div>
+                                        <div class="text-gray-600 dark:text-gray-400">Needed By: <?php echo htmlspecialchars($n['needed_date']); ?></div>
+                                        <div class="text-gray-600 dark:text-gray-400">Request Note: <?php echo htmlspecialchars($n['request_note']); ?></div>
+                                        <div class="text-gray-600 dark:text-gray-400">Purpose: <?php echo htmlspecialchars($n['purpose']); ?></div>
                                     </div>
                                 </div>
 							<?php endforeach; ?>
@@ -460,13 +662,73 @@ if (count($mock_notifications) < 10) {
                 <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     <i class="bi bi-collection text-red-600 dark:text-red-400"></i> Bulk Export
                 </button>
-                <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                <button id="open-export-request" type="button" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     <i class="bi bi-file-earmark-plus text-red-600 dark:text-red-400"></i> New Export
                 </button>
             </div>
             <button class="w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg flex items-center justify-center focus:outline-none transition-transform hover:scale-105">
                 <i class="bi bi-plus-lg text-2xl transition-transform duration-300 group-hover:rotate-45"></i>
             </button>
+        </div>
+
+        <div id="export-request-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative max-w-2xl mx-auto mt-16 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-md bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300">
+                        <i class="bi bi-file-earmark-plus"></i>
+                    </div>
+                    <div>
+                        <div class="text-base font-semibold text-gray-900 dark:text-gray-100">New Export Request</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Provide the exact file and export details.</div>
+                    </div>
+                </div>
+                <?php if (!empty($export_error)): ?>
+                    <div class="mb-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg px-3 py-2">
+                        <?php echo htmlspecialchars($export_error); ?>
+                    </div>
+                <?php endif; ?>
+                <form action="export.php" method="POST" class="space-y-4">
+                    <input type="hidden" name="export_request" value="1">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">File Name</label>
+                            <input type="text" name="file_name" required value="<?php echo htmlspecialchars($_POST['file_name'] ?? ''); ?>" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Version</label>
+                            <input type="text" name="file_version" value="<?php echo htmlspecialchars($_POST['file_version'] ?? 'Latest'); ?>" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Needed Date</label>
+                            <input type="date" name="needed_date" value="<?php echo htmlspecialchars($_POST['needed_date'] ?? ''); ?>" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Location</label>
+                            <select name="location" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
+                                <option value="">Auto-detect</option>
+                                <option value="Billing" <?php echo (($_POST['location'] ?? '') === 'Billing') ? 'selected' : ''; ?>>Billing</option>
+                                <option value="Meeting Records" <?php echo (($_POST['location'] ?? '') === 'Meeting Records') ? 'selected' : ''; ?>>Meeting Records</option>
+                                <option value="Ordinances & Resolutions" <?php echo (($_POST['location'] ?? '') === 'Ordinances & Resolutions') ? 'selected' : ''; ?>>Ordinances & Resolutions</option>
+                                <option value="Public Hearings" <?php echo (($_POST['location'] ?? '') === 'Public Hearings') ? 'selected' : ''; ?>>Public Hearings</option>
+                                <option value="Storage" <?php echo (($_POST['location'] ?? '') === 'Storage') ? 'selected' : ''; ?>>Storage</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Request Note</label>
+                        <textarea name="request_note" rows="3" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"><?php echo htmlspecialchars($_POST['request_note'] ?? ''); ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Purpose</label>
+                        <input type="text" name="purpose" value="<?php echo htmlspecialchars($_POST['purpose'] ?? ''); ?>" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button id="export-request-cancel" type="button" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-sm rounded-lg bg-red-700 hover:bg-red-800 text-white">Create Request</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
 		<div id="send-to-modal" class="fixed inset-0 z-50 hidden">
@@ -511,6 +773,9 @@ if (count($mock_notifications) < 10) {
 	<script>
 		(function () {
 			const list = document.getElementById('export-list');
+			const exportModal = document.getElementById('export-request-modal');
+			const openExportBtn = document.getElementById('open-export-request');
+			const exportCancel = document.getElementById('export-request-cancel');
 			const sendToModal = document.getElementById('send-to-modal');
 			const sendToFile = document.getElementById('send-to-file');
 			const sendToCancel = document.getElementById('send-to-cancel');
@@ -528,6 +793,24 @@ if (count($mock_notifications) < 10) {
 			document.addEventListener('click', function(){
 				document.querySelectorAll('.export-menu').forEach(el => el.classList.add('hidden'));
 			});
+			function openExportModal() {
+				if (!exportModal) return;
+				exportModal.classList.remove('hidden');
+				document.body.style.overflow = 'hidden';
+			}
+			function closeExportModal() {
+				if (!exportModal) return;
+				exportModal.classList.add('hidden');
+				document.body.style.overflow = '';
+			}
+			if (openExportBtn) openExportBtn.addEventListener('click', openExportModal);
+			if (exportCancel) exportCancel.addEventListener('click', closeExportModal);
+			<?php if (!empty($export_error)): ?>
+			openExportModal();
+			<?php endif; ?>
+			<?php if (!empty($export_notice)): ?>
+			try { UI_ENH.toast('<?php echo htmlspecialchars($export_notice, ENT_QUOTES); ?>', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
+			<?php endif; ?>
 
 			function updateBtnsStyle() {
 			    [allBtn, unreadBtn, todayBtn, weekBtn].forEach(b => {
@@ -598,6 +881,40 @@ if (count($mock_notifications) < 10) {
 			const mo = new MutationObserver(() => updateUnreadBtnStyle());
 			mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 			apply();
+			function setItemStatus(item, status) {
+				if (!item) return;
+				status = (status === 'read') ? 'read' : 'unread';
+				item.setAttribute('data-status', status);
+				const dot = item.querySelector('.status-dot');
+				const text = item.querySelector('.status-text');
+				if (dot) {
+					dot.classList.toggle('bg-red-500', status === 'unread');
+					dot.classList.toggle('bg-gray-400', status === 'read');
+				}
+				if (text) {
+					text.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+					text.classList.toggle('text-red-600', status === 'unread');
+					text.classList.toggle('dark:text-red-400', status === 'unread');
+					text.classList.toggle('text-gray-500', status === 'read');
+					text.classList.toggle('dark:text-gray-400', status === 'read');
+				}
+			}
+			function markRead(item) {
+				if (!item) return;
+				const cur = item.getAttribute('data-status') || 'unread';
+				if (cur === 'read') return;
+				setItemStatus(item, 'read');
+				const id = item.getAttribute('data-id');
+				if (id) {
+					try {
+						fetch('notifications_update.php', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body: 'id=' + encodeURIComponent(id) + '&status=read'
+						}).then(function () { });
+					} catch (e) { }
+				}
+			}
 			list.addEventListener('click', function (e) {
 				const vb = e.target.closest('.view-btn');
 				if (vb) {
@@ -608,14 +925,39 @@ if (count($mock_notifications) < 10) {
 					const hidden = det.classList.contains('hidden');
 					det.classList.toggle('hidden');
 					vb.textContent = hidden ? 'Hide' : 'View';
+					markRead(item);
 					return;
 				}
 				const btn = e.target.closest('.send-to-btn');
-				if (!btn) return;
-				sendFile = btn.getAttribute('data-content') || '';
-				sendToFile.textContent = sendFile;
-				sendToModal.classList.remove('hidden');
-				document.body.style.overflow = 'hidden';
+				if (btn) {
+					const item = btn.closest('.export-item');
+					if (item) markRead(item);
+					sendFile = btn.getAttribute('data-content') || '';
+					sendToFile.textContent = sendFile;
+					sendToModal.classList.remove('hidden');
+					document.body.style.overflow = 'hidden';
+					return;
+				}
+				const openLink = e.target.closest('.open-link');
+				if (openLink) {
+					const item = openLink.closest('.export-item');
+					if (item) markRead(item);
+					return;
+				}
+				if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea')) return;
+				const item = e.target.closest('.export-item');
+				if (!item) return;
+				markRead(item);
+				const link = item.getAttribute('data-link');
+				if (link) window.location.href = link;
+			});
+			list.addEventListener('keydown', function (e) {
+				if (e.key !== 'Enter') return;
+				const item = e.target.closest('.export-item');
+				if (!item) return;
+				markRead(item);
+				const link = item.getAttribute('data-link');
+				if (link) window.location.href = link;
 			});
 			sendToCancel.addEventListener('click', function () {
 				sendToModal.classList.add('hidden');

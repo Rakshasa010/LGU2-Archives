@@ -27,3 +27,31 @@
 
 /* Utility to hide after loaded */
 .loaded { color: inherit; }
+
+/* Section skeleton overlay (MVP) */
+.skeleton-shell {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #eef2f7;
+  z-index: 5;
+  opacity: 0.95;
+}
+.dark .skeleton-shell::before {
+  background: #0f172a;
+}
+.skeleton-shell::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  height: 100%;
+  width: 150%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+  animation: shimmer 1.2s infinite;
+  z-index: 6;
+}

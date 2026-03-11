@@ -63,7 +63,21 @@
             if ($nt) {
                 $ntime = date('h:i A');
                 $ndate = date('Y-m-d');
-                $ncontent = "User login verified via OTP";
+                $label = "User ID #" . $uid;
+                if ($userStmt = $conn->prepare("SELECT full_name, username FROM users WHERE id = ?")) {
+                    $userStmt->bind_param("i", $uid);
+                    $userStmt->execute();
+                    if ($userRes = $userStmt->get_result()) {
+                        if ($urow = $userRes->fetch_assoc()) {
+                            $parts = [];
+                            if (!empty($urow['full_name'])) $parts[] = $urow['full_name'];
+                            if (!empty($urow['username'])) $parts[] = '@' . $urow['username'];
+                            if (!empty($parts)) $label = implode(' ', $parts);
+                        }
+                    }
+                    $userStmt->close();
+                }
+                $ncontent = "User login verified via OTP: " . $label;
                 $nabout = "Login";
                 $nstatus = "unread";
                 $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
@@ -156,7 +170,14 @@
                     $mailer->addAddress($toEmail, ($user['full_name'] ?? '') ?: 'Google User');
                     $mailer->Subject = 'Your Verification Code';
                     $mailer->isHTML(true);
-                    $mailer->Body = '<p>Your OTP code is <strong>' . htmlspecialchars((string)$otp) . '</strong>.</p><p>It expires in 3 minutes.</p>';
+                    $otpHtml = htmlspecialchars((string)$otp);
+                    $mailer->Body = '<div style="font-family:Arial,sans-serif;background:#f5f6f8;padding:24px;border-radius:12px;">
+                        <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:24px;border:1px solid #e5e7eb;">
+                            <div style="font-size:16px;color:#111827;margin-bottom:8px;">Your One-Time Password (OTP)</div>
+                            <div style="font-size:28px;letter-spacing:8px;font-weight:700;color:#dc2626;background:#fff7ed;border:1px dashed #fca5a5;padding:14px 16px;text-align:center;border-radius:10px;margin:12px 0;">' . $otpHtml . '</div>
+                            <div style="font-size:13px;color:#6b7280;">This code expires in <strong>3 minutes</strong>. If you did not request this, you can ignore this email.</div>
+                        </div>
+                    </div>';
                     $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 3 minutes.';
                     try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
                 }
@@ -230,7 +251,14 @@
                                 $mailer->addAddress($toEmail, ($user['full_name'] ?? '') ?: $username);
                                 $mailer->Subject = 'Your One-Time Password';
                                 $mailer->isHTML(true);
-                                $mailer->Body = '<p>Your OTP code is <strong>' . htmlspecialchars((string)$otp) . '</strong>.</p><p>It expires in 1 minute.</p>';
+                                $otpHtml = htmlspecialchars((string)$otp);
+                                $mailer->Body = '<div style="font-family:Arial,sans-serif;background:#f5f6f8;padding:24px;border-radius:12px;">
+                                    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:24px;border:1px solid #e5e7eb;">
+                                        <div style="font-size:16px;color:#111827;margin-bottom:8px;">Your One-Time Password (OTP)</div>
+                                        <div style="font-size:28px;letter-spacing:8px;font-weight:700;color:#dc2626;background:#fff7ed;border:1px dashed #fca5a5;padding:14px 16px;text-align:center;border-radius:10px;margin:12px 0;">' . $otpHtml . '</div>
+                                        <div style="font-size:13px;color:#6b7280;">This code expires in <strong>1 minute</strong>. If you did not request this, you can ignore this email.</div>
+                                    </div>
+                                </div>';
                                 $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 1 minute.';
                                 try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
                             }
@@ -402,8 +430,17 @@
             <form action="login.php" method="POST" class="space-y-5">
                 <input type="hidden" name="verify_otp" value="1">
                 <div>
-                    <label for="otp" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">OTP Code</label>
-                    <input type="text" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 text-center text-2xl font-bold tracking-widest transition-colors" placeholder="000000">
+                    <label for="otp-1" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">OTP Code</label>
+                    <div class="flex items-center justify-between gap-2 sm:gap-3">
+                        <input type="text" id="otp-1" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="OTP digit 1" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 2" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 3" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 4" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 5" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 6" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
+                    </div>
+                    <input type="hidden" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required>
+                    <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Tip: paste the full code, it will fill automatically.</div>
                 </div>
                 <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl">Verify Code</button>
                 <a href="login.php" class="block text-center text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-semibold">← Start Over</a>
@@ -419,6 +456,53 @@
                         if (remain > 0) setTimeout(tick, 1000);
                     }
                     tick();
+                })();
+            </script>
+            <script>
+                (function(){
+                    var digits = Array.prototype.slice.call(document.querySelectorAll('.otp-digit'));
+                    var hidden = document.getElementById('otp');
+                    if (!digits.length || !hidden) return;
+
+                    function syncHidden() {
+                        hidden.value = digits.map(function (d) { return d.value.replace(/[^0-9]/g, ''); }).join('');
+                    }
+
+                    digits.forEach(function (input, idx) {
+                        input.addEventListener('input', function () {
+                            var val = input.value.replace(/[^0-9]/g, '');
+                            input.value = val.slice(0, 1);
+                            if (val.length > 1) {
+                                var chars = val.split('');
+                                for (var i = 0; i < chars.length && (idx + i) < digits.length; i++) {
+                                    digits[idx + i].value = chars[i];
+                                }
+                                var nextIdx = Math.min(idx + chars.length, digits.length - 1);
+                                digits[nextIdx].focus();
+                            } else if (val && digits[idx + 1]) {
+                                digits[idx + 1].focus();
+                            }
+                            syncHidden();
+                        });
+                        input.addEventListener('keydown', function (e) {
+                            if (e.key === 'Backspace' && !input.value && digits[idx - 1]) {
+                                digits[idx - 1].focus();
+                            }
+                        });
+                        input.addEventListener('paste', function (e) {
+                            var text = (e.clipboardData || window.clipboardData).getData('text');
+                            if (!text) return;
+                            var cleaned = text.replace(/[^0-9]/g, '').slice(0, digits.length);
+                            if (!cleaned) return;
+                            e.preventDefault();
+                            cleaned.split('').forEach(function (ch, i) {
+                                if (digits[i]) digits[i].value = ch;
+                            });
+                            digits[Math.min(cleaned.length, digits.length) - 1].focus();
+                            syncHidden();
+                        });
+                    });
+                    syncHidden();
                 })();
             </script>
         <?php endif; ?>

@@ -39,10 +39,25 @@
         status ENUM('unread','read') NOT NULL DEFAULT 'unread',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+    $notif_cols = [
+        'created_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        'link' => "VARCHAR(255) DEFAULT NULL",
+        'file_name' => "VARCHAR(255) DEFAULT NULL",
+        'file_version' => "VARCHAR(60) DEFAULT NULL",
+        'needed_date' => "DATE DEFAULT NULL",
+        'request_note' => "TEXT",
+        'purpose' => "VARCHAR(255) DEFAULT NULL"
+    ];
+    foreach ($notif_cols as $col => $def) {
+        $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
+        if ($exists && $exists->num_rows === 0) {
+            $conn->query("ALTER TABLE notifications ADD COLUMN $col $def");
+        }
+    }
 
     // Load notifications from DB
     $notifications = [];
-    if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at FROM notifications ORDER BY date DESC, id DESC")) {
+    if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
             $notifications[] = $row;
         }

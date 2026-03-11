@@ -1,0 +1,38 @@
+/* Global theme transition + storage overview glow (MVP) */
+:root.theme-animating,
+:root.theme-animating body {
+  transition: background-color 360ms ease, color 360ms ease;
+}
+
+:root.theme-animating *,
+:root.theme-animating *::before,
+:root.theme-animating *::after {
+  transition:
+    background-color 360ms ease,
+    color 360ms ease,
+    border-color 360ms ease,
+    box-shadow 360ms ease,
+    fill 360ms ease,
+    stroke 360ms ease,
+    opacity 360ms ease;
+}
+
+.storage-overview-card {
+  transition: box-shadow 360ms ease, background 360ms ease, border-color 360ms ease;
+}
+
+:root.theme-animating .storage-overview-card {
+  animation: storageGlow 600ms ease;
+}
+
+@keyframes storageGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(220, 38, 38, 0);
+  }
+  50% {
+    box-shadow: 0 10px 30px rgba(220, 38, 38, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
