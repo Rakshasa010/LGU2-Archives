@@ -168,6 +168,28 @@ if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
 }
 
+// Create confidential_vault table for secure file storage
+$vault_sql = "CREATE TABLE IF NOT EXISTS confidential_vault (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    pin_hash VARCHAR(255) NOT NULL,
+    created_by INT(11) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
+$conn->query($vault_sql);
+
+// Create confidential_files table for files in the vault
+$vault_files_sql = "CREATE TABLE IF NOT EXISTS confidential_files (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    vault_id INT(11) NOT NULL DEFAULT 1,
+    name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    moved_by INT(11) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_vault_id (vault_id)
+)";
+$conn->query($vault_files_sql);
+
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
 

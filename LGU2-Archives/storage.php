@@ -316,6 +316,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($ins) {
             $ins->bind_param("si", $pin_hash, $uid);
             if ($ins->execute()) {
+                // Log to audit
+                $ntime = date('h:i A');
+                $ndate = date('Y-m-d');
+                $ncontent = 'Confidential vault created by user #' . $uid;
+                $nabout = 'Vault';
+                $nstatus = 'unread';
+                
+                if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                    $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                    $notif->execute();
+                    $notif->close();
+                }
+                
                 echo json_encode(['success' => true, 'message' => 'Vault created successfully']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to create vault']);
@@ -345,6 +358,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (password_verify($pin, $row['pin_hash'])) {
             $_SESSION['vault_unlocked'] = true;
             $_SESSION['vault_unlock_time'] = time();
+            
+            // Log to audit
+            $uid = (int)$_SESSION['user_id'];
+            $ntime = date('h:i A');
+            $ndate = date('Y-m-d');
+            $ncontent = 'Vault unlocked by user #' . $uid;
+            $nabout = 'Vault';
+            $nstatus = 'unread';
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                $notif->execute();
+                $notif->close();
+            }
+            
             echo json_encode(['success' => true, 'message' => 'Vault unlocked']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Incorrect PIN']);
@@ -354,6 +382,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action === 'vault_lock') {
+        // Log to audit before clearing session
+        $uid = (int)$_SESSION['user_id'];
+        $ntime = date('h:i A');
+        $ndate = date('Y-m-d');
+        $ncontent = 'Vault locked by user #' . $uid;
+        $nabout = 'Vault';
+        $nstatus = 'unread';
+        
+        if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+            $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            $notif->execute();
+            $notif->close();
+        }
+        
         unset($_SESSION['vault_unlocked']);
         unset($_SESSION['vault_unlock_time']);
         echo json_encode(['success' => true, 'message' => 'Vault locked']);

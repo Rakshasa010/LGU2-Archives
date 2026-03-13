@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -14,37 +18,45 @@ $vault_unlocked = isset($_SESSION['vault_unlocked']) && $_SESSION['vault_unlocke
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     
-    $raw = file_get_contents('php://input');
-    $payload = json_decode($raw, true);
-    $action = $payload['action'] ?? '';
-    
-    if ($action === 'move_to_vault') {
-        if (!$vault_unlocked) {
-            echo json_encode(['success' => false, 'message' => 'Vault is locked']);
-            exit();
-        }
+    try {
+        $raw = file_get_contents('php://input');
+        $payload = json_decode($raw, true);
+        $action = $payload['action'] ?? '';
         
-        $file_id = (int)($payload['file_id'] ?? 0);
-        $source_type = $payload['source_type'] ?? ''; // 'archive' or 'legislative'
-        
-        if ($file_id <= 0) {
-            echo json_encode(['success' => false, 'message' => 'Invalid file ID']);
-            exit();
-        }
-        
-        $uid = (int)$_SESSION['user_id'];
-        
-        // Get file info based on source type
-        if ($source_type === 'archive') {
-            $stmt = $conn->prepare("SELECT name, file_path FROM archive_files WHERE id = ?");
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid source type']);
-            exit();
-        }
-        
-        $stmt->bind_param("i", $file_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        if ($action === 'move_to_vault') {
+            if (!$vault_unlocked) {
+                echo json_encode(['success' => false, 'message' => 'Vault is locked']);
+                exit();
+            }
+            
+            $file_id = (int)($payload['file_id'] ?? 0);
+            $source_type = $payload['source_type'] ?? ''; // 'archive' or 'legislative'
+            
+            if ($file_id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Invalid file ID']);
+                exit();
+            }
+            
+            $uid = (int)$_SESSION['user_id'];
+            
+            // Get file info based on source type
+            if ($source_type === 'archive') {
+                $stmt = $conn->prepare("SELECT name, file_path FROM archive_files WHERE id = ?");
+            } elseif ($source_type === 'legislative') {
+                $stmt = $conn->prepare("SELECT title as name, file_path FROM legislative_records WHERE id = ?");
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Invalid source type']);
+                exit();
+            }
+            
+            if (!$stmt) {
+                echo json_encode(['success' => false, 'message' => 'Database prepare error: ' . $conn->error]);
+                exit();
+            }
+            
+            $stmt->bind_param("i", $file_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
         
         if ($result->num_rows === 0) {
             echo json_encode(['success' => false, 'message' => 'File not found']);
@@ -66,6 +78,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $del->bind_param("i", $file_id);
                 $del->execute();
                 $del->close();
+            } elseif ($source_type === 'legislative') {
+                $del = $conn->prepare("DELETE FROM legislative_records WHERE id = ?");
+                $del->bind_param("i", $file_id);
+                $del->execute();
+                $del->close();
+            }
+            
+            // Log to audit logs / notifications
+            $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                time VARCHAR(20) NOT NULL,
+                date DATE NOT NULL,
+                content VARCHAR(255) NOT NULL,
+                about VARCHAR(100) NOT NULL,
+                status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            
+            $ntime = date('h:i A');
+            $ndate = date('Y-m-d');
+            $ncontent = 'File moved to vault: ' . $file['name'] . ' by user #' . $uid;
+            $nabout = 'Vault';
+            $nstatus = 'unread';
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                $notif->execute();
+                $notif->close();
+            }
+            
+            // Also log to analytics_events if table exists
+            $check_analytics = $conn->query("SHOW TABLES LIKE 'analytics_events'");
+            if ($check_analytics && $check_analytics->num_rows > 0) {
+                $event_type = 'vault_move';
+                $record_title = $file['name'];
+                $record_type = 'confidential';
+                
+                if ($analytics = $conn->prepare("INSERT INTO analytics_events (event_type, user_id, record_title, record_type) VALUES (?, ?, ?, ?)")) {
+                    $analytics->bind_param('siss', $event_type, $uid, $record_title, $record_type);
+                    $analytics->execute();
+                    $analytics->close();
+                }
             }
             
             echo json_encode(['success' => true, 'message' => 'File moved to vault']);
@@ -90,8 +144,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         
+        $uid = (int)$_SESSION['user_id'];
+        
         // Get file info
-        $stmt = $conn->prepare("SELECT file_path FROM confidential_files WHERE id = ?");
+        $stmt = $conn->prepare("SELECT name, file_path FROM confidential_files WHERE id = ?");
         $stmt->bind_param("i", $file_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -116,12 +172,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $del->bind_param("i", $file_id);
         
         if ($del->execute()) {
+            // Log to audit logs / notifications
+            $ntime = date('h:i A');
+            $ndate = date('Y-m-d');
+            $ncontent = 'File removed from vault: ' . $file['name'] . ' by user #' . $uid;
+            $nabout = 'Vault';
+            $nstatus = 'unread';
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                $notif->execute();
+                $notif->close();
+            }
+            
+            // Also log to analytics_events if table exists
+            $check_analytics = $conn->query("SHOW TABLES LIKE 'analytics_events'");
+            if ($check_analytics && $check_analytics->num_rows > 0) {
+                $event_type = 'vault_remove';
+                $record_title = $file['name'];
+                $record_type = 'confidential';
+                
+                if ($analytics = $conn->prepare("INSERT INTO analytics_events (event_type, user_id, record_title, record_type) VALUES (?, ?, ?, ?)")) {
+                    $analytics->bind_param('siss', $event_type, $uid, $record_title, $record_type);
+                    $analytics->execute();
+                    $analytics->close();
+                }
+            }
+            
             echo json_encode(['success' => true, 'message' => 'File removed from vault']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to remove file']);
         }
         
         $del->close();
+        exit();
+    }
+    
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
         exit();
     }
 }

@@ -311,8 +311,11 @@ $conn->close();
                                             <button onclick="openDownloadPopup(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', '<?php echo addslashes(htmlspecialchars($record['type'])); ?>', '<?php echo addslashes(htmlspecialchars($record['month'])); ?>', '<?php echo addslashes(htmlspecialchars($record['year'])); ?>', '<?php echo addslashes(htmlspecialchars($record['author'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
                                                 <i class="bi bi-download text-emerald-500"></i> Download
                                             </button>
-                                            <button onclick="openVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                                            <button onclick="openVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
                                                 <i class="bi bi-clock-history text-orange-500"></i> History
+                                            </button>
+                                            <button onclick="moveToVault(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>', 'legislative'); document.getElementById('record-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                                <i class="bi bi-shield-lock-fill text-red-500"></i> Move to Vault
                                             </button>
                                         </div>
                                     </div>
@@ -574,8 +577,11 @@ $conn->close();
                                 <button onclick="openDownloadPopup(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}', '${fileData.type.replace(/'/g, "\\'")}', '${fileData.month.replace(/'/g, "\\'")}', '${fileData.year}', '${fileData.author.replace(/'/g, "\\'")}'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
                                     <i class="bi bi-download text-emerald-500"></i> Download
                                 </button>
-                                <button onclick="openVersionHistory(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                                <button onclick="openVersionHistory(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700">
                                     <i class="bi bi-clock-history text-orange-500"></i> History
+                                </button>
+                                <button onclick="moveToVault(${fileData.id}, '${fileData.title.replace(/'/g, "\\'")}', 'legislative'); document.getElementById('record-menu-${fileData.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                    <i class="bi bi-shield-lock-fill text-red-500"></i> Move to Vault
                                 </button>
                             </div>
                         </div>
@@ -854,6 +860,106 @@ $conn->close();
                 sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
             });
         }
+        
+        // Move to Vault functionality
+        function moveToVault(fileId, fileName, sourceType) {
+            console.log('moveToVault called:', { fileId, fileName, sourceType });
+            
+            // Check if vault is unlocked
+            fetch('storage.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'vault_check_status' })
+            })
+            .then(r => {
+                console.log('Vault status response:', r);
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                }
+                return r.json();
+            })
+            .then(data => {
+                console.log('Vault status data:', data);
+                if (!data.success) {
+                    showToast('Unable to check vault status: ' + (data.message || 'Unknown error'), 'error');
+                    return;
+                }
+                
+                if (!data.vault_exists) {
+                    showToast('Vault not set up. Please set up the vault from Storage page first.', 'error');
+                    return;
+                }
+                
+                if (!data.is_unlocked) {
+                    showToast('Vault is locked. Please unlock it from Storage page first.', 'error');
+                    return;
+                }
+                
+                // Vault is unlocked, proceed with move
+                if (confirm('Move "' + fileName + '" to the confidential vault?\n\nThis will remove it from this folder and place it in the secure vault.')) {
+                    console.log('Moving file to vault...');
+                    fetch('confidential_vault.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            action: 'move_to_vault', 
+                            file_id: fileId,
+                            source_type: sourceType
+                        })
+                    })
+                    .then(r => {
+                        console.log('Move response:', r);
+                        if (!r.ok) {
+                            throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                        }
+                        return r.json();
+                    })
+                    .then(result => {
+                        console.log('Move result:', result);
+                        if (result.success) {
+                            showToast(result.message || 'File moved to vault successfully', 'success');
+                            // Remove file card from UI
+                            const fileCard = document.querySelector(`[data-id="${fileId}"]`);
+                            if (fileCard) {
+                                fileCard.style.opacity = '0';
+                                fileCard.style.transform = 'scale(0.9)';
+                                setTimeout(() => fileCard.remove(), 300);
+                            }
+                        } else {
+                            showToast(result.message || 'Failed to move file to vault', 'error');
+                        }
+                    })
+                    .catch(e => {
+                        console.error('Move to vault error:', e);
+                        showToast('Connection error: ' + e.message, 'error');
+                    });
+                }
+            })
+            .catch(e => {
+                console.error('Vault status check error:', e);
+                showToast('Connection error: ' + e.message, 'error');
+            });
+        }
+        
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            
+            toast.textContent = message;
+            toast.className = 'fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl transition-all z-50 font-semibold';
+            toast.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600');
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(1rem)';
+            }, 3000);
+        }
     </script>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold"></div>
+    
 </body>
 </html>
