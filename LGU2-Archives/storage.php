@@ -292,6 +292,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->close();
         exit();
     }
+    
+    // Vault operations
+    if ($action === 'vault_setup') {
+        $pin = isset($payload['pin']) ? trim((string)$payload['pin']) : '';
+        if (!preg_match('/^\d{6}$/', $pin)) {
+            echo json_encode(['success' => false, 'message' => 'PIN must be exactly 6 digits']);
+            $conn->close();
+            exit();
+        }
+        $uid = (int)$_SESSION['user_id'];
+        $pin_hash = password_hash($pin, PASSWORD_DEFAULT);
+        
+        // Check if vault already exists
+        $check = $conn->query("SELECT id FROM confidential_vault LIMIT 1");
+        if ($check && $check->num_rows > 0) {
+            echo json_encode(['success' => false, 'message' => 'Vault already exists']);
+            $conn->close();
+            exit();
+        }
+        
+        $ins = $conn->prepare("INSERT INTO confidential_vault (pin_hash, created_by) VALUES (?, ?)");
+        if ($ins) {
+            $ins->bind_param("si", $pin_hash, $uid);
+            if ($ins->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Vault created successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to create vault']);
+            }
+            $ins->close();
+        }
+        $conn->close();
+        exit();
+    }
+    
+    if ($action === 'vault_unlock') {
+        $pin = isset($payload['pin']) ? trim((string)$payload['pin']) : '';
+        if (!preg_match('/^\d{6}$/', $pin)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid PIN format']);
+            $conn->close();
+            exit();
+        }
+        
+        $vault = $conn->query("SELECT id, pin_hash FROM confidential_vault LIMIT 1");
+        if (!$vault || $vault->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Vault not found']);
+            $conn->close();
+            exit();
+        }
+        
+        $row = $vault->fetch_assoc();
+        if (password_verify($pin, $row['pin_hash'])) {
+            $_SESSION['vault_unlocked'] = true;
+            $_SESSION['vault_unlock_time'] = time();
+            echo json_encode(['success' => true, 'message' => 'Vault unlocked']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Incorrect PIN']);
+        }
+        $conn->close();
+        exit();
+    }
+    
+    if ($action === 'vault_lock') {
+        unset($_SESSION['vault_unlocked']);
+        unset($_SESSION['vault_unlock_time']);
+        echo json_encode(['success' => true, 'message' => 'Vault locked']);
+        $conn->close();
+        exit();
+    }
+    
+    if ($action === 'vault_get_files') {
+        if (!isset($_SESSION['vault_unlocked']) || $_SESSION['vault_unlocked'] !== true) {
+            echo json_encode(['success' => false, 'message' => 'Vault is locked']);
+            $conn->close();
+            exit();
+        }
+        
+        $files = [];
+        $result = $conn->query("SELECT id, name, file_path, created_at FROM confidential_files ORDER BY created_at DESC");
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $files[] = $row;
+            }
+        }
+        echo json_encode(['success' => true, 'files' => $files]);
+        $conn->close();
+        exit();
+    }
+    
+    if ($action === 'vault_check_status') {
+        $vault_exists = false;
+        $is_unlocked = isset($_SESSION['vault_unlocked']) && $_SESSION['vault_unlocked'] === true;
+        
+        $check = $conn->query("SELECT id FROM confidential_vault LIMIT 1");
+        if ($check && $check->num_rows > 0) {
+            $vault_exists = true;
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'vault_exists' => $vault_exists,
+            'is_unlocked' => $is_unlocked
+        ]);
+        $conn->close();
+        exit();
+    }
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
     $conn->close();
     exit();
@@ -825,9 +930,113 @@ if (isset($_SESSION['user_id'])) {
                 <?php endforeach; ?>
             </div>
         </div>
+        
+                    <!-- Confidential Files Vault Section -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
+                                    <i class="bi bi-shield-lock-fill text-red-600 dark:text-red-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Confidential Files</h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Secure vault with 6-digit PIN protection</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="vault-lock-btn" class="hidden px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold transition-colors">
+                                    <i class="bi bi-lock-fill mr-1"></i>Lock Vault
+                                </button>
+                                <a href="confidential_vault.php" id="vault-view-btn" class="hidden px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+                                    <i class="bi bi-eye-fill mr-1"></i>View Files
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Vault Locked State -->
+                        <div id="vault-locked-state" class="hidden">
+                            <div class="flex flex-col items-center justify-center py-12">
+                                <div class="bg-red-50 dark:bg-red-900/20 p-6 rounded-full mb-4">
+                                    <i class="bi bi-shield-lock text-red-600 dark:text-red-400 text-5xl"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Vault is Locked</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Enter your 6-digit PIN to access confidential files</p>
+                                <button id="vault-unlock-btn" class="px-6 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
+                                    <i class="bi bi-unlock-fill mr-2"></i>Unlock Vault
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Vault Setup State -->
+                        <div id="vault-setup-state" class="hidden">
+                            <div class="flex flex-col items-center justify-center py-12">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-full mb-4">
+                                    <i class="bi bi-shield-plus text-blue-600 dark:text-blue-400 text-5xl"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Setup Confidential Vault</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Create a 6-digit PIN to secure your confidential files</p>
+                                <button id="vault-setup-btn" class="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors">
+                                    <i class="bi bi-gear-fill mr-2"></i>Setup Vault
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Vault Unlocked State -->
+                        <div id="vault-unlocked-state" class="hidden">
+                            <div class="mb-4 px-4 py-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="bi bi-shield-check text-green-600 dark:text-green-400"></i>
+                                    <span class="text-sm text-green-700 dark:text-green-300 font-medium">Vault is unlocked</span>
+                                </div>
+                                <span class="text-xs text-green-600 dark:text-green-400" id="vault-file-count">0 files</span>
+                            </div>
+                            <div id="vault-files-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <!-- Files will be loaded here -->
+                            </div>
+                            <div id="vault-empty-state" class="hidden flex flex-col items-center justify-center py-8">
+                                <i class="bi bi-inbox text-gray-400 dark:text-gray-600 text-4xl mb-2"></i>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No confidential files yet</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Move files here from other folders</p>
+                            </div>
+                        </div>
+                    </div>
                     </div>
                 </div>
             </main>
+        
+        <!-- Vault PIN Modal -->
+        <div id="vault-pin-modal" class="hidden fixed inset-0 z-50">
+            <div id="vault-pin-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+                <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
+                    <div class="text-center mb-6">
+                        <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="bi bi-shield-lock-fill text-red-600 dark:text-red-400 text-3xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1" id="vault-modal-title">Enter PIN</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400" id="vault-modal-subtitle">Enter your 6-digit PIN</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="flex justify-center gap-2 mb-4">
+                            <input type="password" maxlength="1" class="vault-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                            <input type="password" maxlength="1" class="vault-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                            <input type="password" maxlength="1" class="vault-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                            <input type="password" maxlength="1" class="vault-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                            <input type="password" maxlength="1" class="vault-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                            <input type="password" maxlength="1" class="vault-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                        </div>
+                        <div id="vault-pin-error" class="text-xs text-red-600 dark:text-red-400 text-center hidden"></div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2">
+                        <button id="vault-pin-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                        <button id="vault-pin-confirm" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div id="create-folder-modal" class="hidden fixed inset-0 z-50">
             <div id="create-folder-backdrop" class="absolute inset-0 bg-black/50"></div>
             <div class="relative z-10 flex min-h-full items-center justify-center p-4">
@@ -1665,6 +1874,268 @@ if (isset($_SESSION['user_id'])) {
             }
         })();
     </script>
+    
+    <script>
+        // Confidential Vault Management
+        (function(){
+            const vaultLockedState = document.getElementById('vault-locked-state');
+            const vaultSetupState = document.getElementById('vault-setup-state');
+            const vaultUnlockedState = document.getElementById('vault-unlocked-state');
+            const vaultLockBtn = document.getElementById('vault-lock-btn');
+            const vaultUnlockBtn = document.getElementById('vault-unlock-btn');
+            const vaultSetupBtn = document.getElementById('vault-setup-btn');
+            const vaultPinModal = document.getElementById('vault-pin-modal');
+            const vaultPinBackdrop = document.getElementById('vault-pin-backdrop');
+            const vaultPinCancel = document.getElementById('vault-pin-cancel');
+            const vaultPinConfirm = document.getElementById('vault-pin-confirm');
+            const vaultPinInputs = document.querySelectorAll('.vault-pin-input');
+            const vaultPinError = document.getElementById('vault-pin-error');
+            const vaultModalTitle = document.getElementById('vault-modal-title');
+            const vaultModalSubtitle = document.getElementById('vault-modal-subtitle');
+            const vaultFilesGrid = document.getElementById('vault-files-grid');
+            const vaultEmptyState = document.getElementById('vault-empty-state');
+            const vaultFileCount = document.getElementById('vault-file-count');
+            const vaultViewBtn = document.getElementById('vault-view-btn');
+            
+            let vaultMode = 'unlock'; // 'unlock' or 'setup'
+            
+            function showToastVault(msg, type) {
+                if (typeof showToast === 'function') {
+                    showToast(msg, type);
+                }
+            }
+            
+            function checkVaultStatus() {
+                fetch('storage.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'vault_check_status' })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (!data.vault_exists) {
+                            showVaultSetup();
+                        } else if (data.is_unlocked) {
+                            showVaultUnlocked();
+                            loadVaultFiles();
+                        } else {
+                            showVaultLocked();
+                        }
+                    }
+                })
+                .catch(e => console.error('Vault status check failed:', e));
+            }
+            
+            function showVaultSetup() {
+                vaultSetupState.classList.remove('hidden');
+                vaultLockedState.classList.add('hidden');
+                vaultUnlockedState.classList.add('hidden');
+                vaultLockBtn.classList.add('hidden');
+                vaultViewBtn?.classList.add('hidden');
+            }
+            
+            function showVaultLocked() {
+                vaultLockedState.classList.remove('hidden');
+                vaultSetupState.classList.add('hidden');
+                vaultUnlockedState.classList.add('hidden');
+                vaultLockBtn.classList.add('hidden');
+                vaultViewBtn?.classList.add('hidden');
+            }
+            
+            function showVaultUnlocked() {
+                vaultUnlockedState.classList.remove('hidden');
+                vaultLockedState.classList.add('hidden');
+                vaultSetupState.classList.add('hidden');
+                vaultLockBtn.classList.remove('hidden');
+                vaultViewBtn?.classList.remove('hidden');
+            }
+            
+            function openPinModal(mode) {
+                vaultMode = mode;
+                if (mode === 'setup') {
+                    vaultModalTitle.textContent = 'Setup Vault PIN';
+                    vaultModalSubtitle.textContent = 'Create a 6-digit PIN to secure your vault';
+                } else {
+                    vaultModalTitle.textContent = 'Enter PIN';
+                    vaultModalSubtitle.textContent = 'Enter your 6-digit PIN to unlock';
+                }
+                
+                vaultPinInputs.forEach(input => input.value = '');
+                vaultPinError.classList.add('hidden');
+                vaultPinModal.classList.remove('hidden');
+                setTimeout(() => vaultPinInputs[0].focus(), 100);
+            }
+            
+            function closePinModal() {
+                vaultPinModal.classList.add('hidden');
+                vaultPinInputs.forEach(input => input.value = '');
+                vaultPinError.classList.add('hidden');
+            }
+            
+            function getPin() {
+                return Array.from(vaultPinInputs).map(input => input.value).join('');
+            }
+            
+            function handlePinInput(e, index) {
+                const input = e.target;
+                const value = input.value;
+                
+                if (value && /^\d$/.test(value)) {
+                    if (index < vaultPinInputs.length - 1) {
+                        vaultPinInputs[index + 1].focus();
+                    }
+                } else if (!value) {
+                    input.value = '';
+                }
+            }
+            
+            function handlePinKeydown(e, index) {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    vaultPinInputs[index - 1].focus();
+                } else if (e.key === 'Enter') {
+                    vaultPinConfirm.click();
+                }
+            }
+            
+            vaultPinInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => handlePinInput(e, index));
+                input.addEventListener('keydown', (e) => handlePinKeydown(e, index));
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const paste = (e.clipboardData || window.clipboardData).getData('text');
+                    const digits = paste.replace(/\D/g, '').slice(0, 6);
+                    digits.split('').forEach((digit, i) => {
+                        if (vaultPinInputs[i]) {
+                            vaultPinInputs[i].value = digit;
+                        }
+                    });
+                    if (digits.length > 0) {
+                        const lastIndex = Math.min(digits.length, vaultPinInputs.length) - 1;
+                        vaultPinInputs[lastIndex].focus();
+                    }
+                });
+            });
+            
+            vaultSetupBtn?.addEventListener('click', () => openPinModal('setup'));
+            vaultUnlockBtn?.addEventListener('click', () => openPinModal('unlock'));
+            vaultPinCancel?.addEventListener('click', closePinModal);
+            vaultPinBackdrop?.addEventListener('click', closePinModal);
+            
+            vaultPinConfirm?.addEventListener('click', () => {
+                const pin = getPin();
+                if (!/^\d{6}$/.test(pin)) {
+                    vaultPinError.textContent = 'Please enter all 6 digits';
+                    vaultPinError.classList.remove('hidden');
+                    return;
+                }
+                
+                const action = vaultMode === 'setup' ? 'vault_setup' : 'vault_unlock';
+                
+                fetch('storage.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: action, pin: pin })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        closePinModal();
+                        showToastVault(data.message, 'success');
+                        if (action === 'vault_setup' || action === 'vault_unlock') {
+                            showVaultUnlocked();
+                            loadVaultFiles();
+                        }
+                    } else {
+                        vaultPinError.textContent = data.message || 'Operation failed';
+                        vaultPinError.classList.remove('hidden');
+                    }
+                })
+                .catch(e => {
+                    vaultPinError.textContent = 'Connection error';
+                    vaultPinError.classList.remove('hidden');
+                });
+            });
+            
+            vaultLockBtn?.addEventListener('click', () => {
+                fetch('storage.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'vault_lock' })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToastVault('Vault locked', 'success');
+                        showVaultLocked();
+                    }
+                })
+                .catch(e => console.error('Lock failed:', e));
+            });
+            
+            function loadVaultFiles() {
+                fetch('storage.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'vault_get_files' })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const files = data.files || [];
+                        vaultFileCount.textContent = files.length + (files.length === 1 ? ' file' : ' files');
+                        
+                        if (files.length === 0) {
+                            vaultFilesGrid.innerHTML = '';
+                            vaultEmptyState.classList.remove('hidden');
+                        } else {
+                            vaultEmptyState.classList.add('hidden');
+                            renderVaultFiles(files);
+                        }
+                    }
+                })
+                .catch(e => console.error('Load files failed:', e));
+            }
+            
+            function renderVaultFiles(files) {
+                vaultFilesGrid.innerHTML = files.map(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    let icon = 'bi-file-earmark';
+                    if (['pdf'].includes(ext)) icon = 'bi-file-earmark-pdf';
+                    else if (['doc', 'docx'].includes(ext)) icon = 'bi-file-earmark-word';
+                    else if (['xls', 'xlsx'].includes(ext)) icon = 'bi-file-earmark-excel';
+                    else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) icon = 'bi-file-earmark-image';
+                    
+                    return `
+                        <div class="flex items-center justify-between bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-all group">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <div class="text-red-600 dark:text-red-400 text-2xl">
+                                    <i class="bi ${icon}"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">${escapeHtml(file.name)}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">${new Date(file.created_at).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // Initialize on page load
+            checkVaultStatus();
+        })();
+    </script>
+    
     <script>
         (function(){
             var modal = document.getElementById('year-export-modal');
