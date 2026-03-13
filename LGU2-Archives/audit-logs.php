@@ -39,10 +39,25 @@
         status ENUM('unread','read') NOT NULL DEFAULT 'unread',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+    $notif_cols = [
+        'created_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        'link' => "VARCHAR(255) DEFAULT NULL",
+        'file_name' => "VARCHAR(255) DEFAULT NULL",
+        'file_version' => "VARCHAR(60) DEFAULT NULL",
+        'needed_date' => "DATE DEFAULT NULL",
+        'request_note' => "TEXT",
+        'purpose' => "VARCHAR(255) DEFAULT NULL"
+    ];
+    foreach ($notif_cols as $col => $def) {
+        $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
+        if ($exists && $exists->num_rows === 0) {
+            $conn->query("ALTER TABLE notifications ADD COLUMN $col $def");
+        }
+    }
 
     // Load notifications from DB
     $notifications = [];
-    if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at FROM notifications ORDER BY date DESC, id DESC")) {
+    if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
             $notifications[] = $row;
         }
@@ -346,45 +361,45 @@
 
                                 <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4">
                                     <div class="flex flex-col gap-4 mb-4">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <button id="filter-all" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
-                                            <button id="filter-unread" class="px-3 py-2 rounded-lg bg-red-50 dark:bg-slate-700 text-red-700 dark:text-red-300 text-sm font-semibold hover:bg-red-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Unread</button>
-                                            <select id="filter-status" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                        <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
+                                            <button id="filter-all" class="w-full sm:w-auto px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
+                                            <button id="filter-unread" class="w-full sm:w-auto px-3 py-2 rounded-lg bg-red-50 dark:bg-slate-700 text-red-700 dark:text-red-300 text-sm font-semibold hover:bg-red-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Unread</button>
+                                            <select id="filter-status" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="">Status</option>
                                                 <option value="unread">Unread</option>
                                                 <option value="read">Read</option>
                                             </select>
-                                            <select id="filter-about" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <select id="filter-about" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="">About</option>
                                             </select>
-                                            <div class="flex items-center gap-1 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-700 p-1">
-                                                <button type="button" id="date-preset-today" class="px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Today</button>
-                                                <button type="button" id="date-preset-week" class="px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Week</button>
-                                                <button type="button" id="date-preset-month" class="px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Month</button>
+                                            <div class="w-full sm:w-auto flex items-center gap-1 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-700 p-1">
+                                                <button type="button" id="date-preset-today" class="flex-1 sm:flex-none px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Today</button>
+                                                <button type="button" id="date-preset-week" class="flex-1 sm:flex-none px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Week</button>
+                                                <button type="button" id="date-preset-month" class="flex-1 sm:flex-none px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Month</button>
                                             </div>
-                                            <input id="filter-from" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            <input id="filter-to" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            <select id="page-size" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <input id="filter-from" type="date" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <input id="filter-to" type="date" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <select id="page-size" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
                                                 <option value="10">10</option>
                                                 <option value="25">25</option>
                                                 <option value="50">50</option>
                                             </select>
-                                            <span id="unread-count" class="ml-2 text-sm text-gray-600 dark:text-slate-400"></span>
+                                            <span id="unread-count" class="w-full sm:w-auto sm:ml-2 text-sm text-gray-600 dark:text-slate-400"></span>
                                         </div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <input id="searchInput" type="search" placeholder="Search notifications" class="flex-1 min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            <a href="?" class="text-sm text-red-600 dark:text-red-400 hover:underline font-medium">Reset</a>
-                                            <div id="paginationControls" class="flex items-center gap-2">
-                                                <button id="page-prev" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Prev</button>
+                                        <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
+                                            <input id="searchInput" type="search" placeholder="Search notifications" class="w-full sm:flex-1 min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <a href="?" class="w-full sm:w-auto text-center text-sm text-red-600 dark:text-red-400 hover:underline font-medium">Reset</a>
+                                            <div id="paginationControls" class="w-full sm:w-auto flex items-center gap-2">
+                                                <button id="page-prev" class="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Prev</button>
                                                 <span id="page-info" class="text-sm text-gray-600 dark:text-slate-400 px-2">1</span>
-                                                <button id="page-next" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Next</button>
+                                                <button id="page-next" class="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Next</button>
                                             </div>
-                                            <button id="mark-all-read" class="ml-auto px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Mark all as read</button>
+                                            <button id="mark-all-read" class="w-full sm:w-auto sm:ml-auto px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Mark all as read</button>
                                         </div>
                                     </div>
 
                                     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-600/80">
-                                    <table id="auditTable" class="w-full text-left table-auto">
+                                    <table id="auditTable" class="w-full min-w-[720px] text-left table-auto">
                                         <thead>
                                             <tr class="text-sm text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/80 border-b border-gray-200 dark:border-slate-600">
                                                 <th class="px-3 py-3 font-semibold">#</th>

@@ -6,6 +6,30 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 require 'authdatabase.php';
+$conn->query("CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    time VARCHAR(20) NOT NULL,
+    date DATE NOT NULL,
+    content VARCHAR(255) NOT NULL,
+    about VARCHAR(100) NOT NULL,
+    status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+$notif_cols = [
+    'created_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    'link' => "VARCHAR(255) DEFAULT NULL",
+    'file_name' => "VARCHAR(255) DEFAULT NULL",
+    'file_version' => "VARCHAR(60) DEFAULT NULL",
+    'needed_date' => "DATE DEFAULT NULL",
+    'request_note' => "TEXT",
+    'purpose' => "VARCHAR(255) DEFAULT NULL"
+];
+foreach ($notif_cols as $col => $def) {
+    $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
+    if ($exists && $exists->num_rows === 0) {
+        $conn->query("ALTER TABLE notifications ADD COLUMN $col $def");
+    }
+}
 $status = isset($_GET['status']) ? $_GET['status'] : '';
 $about = isset($_GET['about']) ? $_GET['about'] : '';
 $from = isset($_GET['from']) ? $_GET['from'] : '';
@@ -47,7 +71,7 @@ $total = 0;
 if ($res && ($row = $res->fetch_assoc())) $total = intval($row['cnt']);
 $stmt->close();
 $offset = ($page - 1) * $page_size;
-$sql_items = 'SELECT id, time, date, content, about, status, created_at, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
+$sql_items = 'SELECT id, time, date, content, about, status, created_at, link, file_name, file_version, needed_date, request_note, purpose, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
 $params_items = $params;
 $types_items = $types . 'ii';
 $params_items[] = $offset;

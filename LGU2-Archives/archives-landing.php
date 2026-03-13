@@ -33,6 +33,7 @@
     
     // Get user information
     require 'authdatabase.php';
+    require_once __DIR__ . '/includes/storage_shared.php';
     $user_id = $_SESSION['user_id'];
     $user_data = null;
     
@@ -48,16 +49,11 @@
     
     // Helper function for storage display - DEFINE EARLY
     function fmt_bytes($bytes) {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= (1 << (10 * $pow));
-        return round($bytes, 1) . ' ' . $units[$pow];
+        return storage_format_bytes($bytes);
     }
     
     // SHARED function: Calculate storage metrics
-    function calculateStorageMetrics($conn) {
+    function calculateStorageMetrics($conn, $uploadsMetrics = null) {
         $capacityBytes = 50 * 1024 * 1024 * 1024; // 50 GB
         $totalBytes = 0;
         $fileCount = 0;
@@ -93,7 +89,13 @@
         usort($storageTop, function($a, $b) { return $b['size'] - $a['size']; });
         $storageTop = array_slice($storageTop, 0, 15);
 
-        $pct = min(100, round(($totalBytes / $capacityBytes) * 100, 1));
+        if (is_array($uploadsMetrics)) {
+            if (isset($uploadsMetrics['capacityBytes'])) $capacityBytes = (int)$uploadsMetrics['capacityBytes'];
+            if (isset($uploadsMetrics['bytes'])) $totalBytes = (int)$uploadsMetrics['bytes'];
+            if (isset($uploadsMetrics['fileCount'])) $fileCount = (int)$uploadsMetrics['fileCount'];
+        }
+
+        $pct = ($capacityBytes > 0) ? min(100, round(($totalBytes / $capacityBytes) * 100, 1)) : 0;
 
         return [
             'pct' => $pct,
@@ -107,8 +109,11 @@
     }
     
     // Handle AJAX storage data request
+    $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
+    $uploads_metrics = storage_dir_metrics($uploads_path);
+
     if (isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
-        $storage = calculateStorageMetrics($conn);
+        $storage = calculateStorageMetrics($conn, $uploads_metrics);
         header('Content-Type: application/json');
         echo json_encode([
             'success' => true,
@@ -116,14 +121,15 @@
             'usedText' => $storage['usedText'],
             'totalText' => $storage['totalText'],
             'fileCount' => $storage['fileCount'],
-            'bytes' => $storage['totalBytes']
+            'bytes' => $storage['totalBytes'],
+            'capacityBytes' => $storage['capacityBytes']
         ]);
         $conn->close();
         exit();
     }
     
     // Calculate storage for initial page load
-    $storage = calculateStorageMetrics($conn);
+    $storage = calculateStorageMetrics($conn, $uploads_metrics);
     $pct = $storage['pct'];
     $totalBytes = $storage['totalBytes'];
     $capacityBytes = $storage['capacityBytes'];
@@ -1522,49 +1528,94 @@
             }catch(e){console.warn('Chart init error',e);}
         })();
 
-        // Update sidebar storage bars with real-time data
-        (function updateSidebarStorage() {
-            function fetchAndUpdate() {
-                fetch('archives-landing.php?action=get_storage_data')
+        // Shared storage API + unified updates (sidebar + dashboard)
+        (function initStorageSync() {
+            function fmtBytes(bytes) {
+                if (!isFinite(bytes) || bytes < 0) return '0 B';
+                const units = ['B','KB','MB','GB','TB'];
+                let idx = 0;
+                let val = bytes;
+                while (val >= 1024 && idx < units.length - 1) {
+                    val /= 1024;
+                    idx++;
+                }
+                return (Math.round(val * 10) / 10) + ' ' + units[idx];
+            }
+            function applyStorageData(data) {
+                if (!data || !data.success) return;
+                const pct = data.percentage ?? 0;
+                const usedText = data.usedText ?? '0 B';
+                const totalText = data.totalText ?? '50 GB';
+                const fileCount = data.fileCount ?? 0;
+                const usedBytes = data.bytes ?? 0;
+                const capacityBytes = data.capacityBytes ?? (50 * 1024 * 1024 * 1024);
+                const availableBytes = Math.max(0, capacityBytes - usedBytes);
+                const availableText = fmtBytes(availableBytes);
+
+                // Sidebar (mobile + desktop)
+                const mobileBar = document.getElementById('mobile-storage-bar');
+                const mobilePct = document.getElementById('mobile-storage-pct');
+                const mobileText = document.getElementById('mobile-storage-text');
+                const mobileFiles = document.getElementById('mobile-storage-files');
+                if (mobileBar) mobileBar.style.width = pct + '%';
+                if (mobilePct) mobilePct.textContent = pct + '%';
+                if (mobileText) mobileText.textContent = usedText + ' of ' + totalText;
+                if (mobileFiles) mobileFiles.textContent = fileCount + ' files tracked';
+
+                const desktopBar = document.getElementById('desktop-storage-bar');
+                const desktopPct = document.getElementById('desktop-storage-pct');
+                const desktopText = document.getElementById('desktop-storage-text');
+                const desktopFiles = document.getElementById('desktop-storage-files');
+                if (desktopBar) desktopBar.style.width = pct + '%';
+                if (desktopPct) desktopPct.textContent = pct + '%';
+                if (desktopText) desktopText.textContent = usedText + ' of ' + totalText;
+                if (desktopFiles) desktopFiles.textContent = fileCount + ' files tracked';
+
+                // Dashboard overview
+                const pctEl = document.getElementById('storagePercentage');
+                const usedEl = document.getElementById('storageUsed');
+                const totalEl = document.getElementById('storageTotal');
+                const statusEl = document.getElementById('storageStatus');
+                const detailUsed = document.getElementById('detailUsed');
+                const detailAvailable = document.getElementById('detailAvailable');
+                const detailTotal = document.getElementById('detailTotal');
+                const usedBar = document.getElementById('usedSpaceBar');
+                const availBar = document.getElementById('availableSpaceBar');
+                const donutProgress = document.getElementById('donutProgress');
+                const lastUpdate = document.getElementById('lastUpdateTime');
+
+                if (pctEl) pctEl.textContent = pct + '%';
+                if (usedEl) usedEl.textContent = usedText;
+                if (totalEl) totalEl.textContent = 'of ' + totalText;
+                if (detailUsed) detailUsed.textContent = usedText;
+                if (detailAvailable) detailAvailable.textContent = availableText;
+                if (detailTotal) detailTotal.textContent = totalText;
+                if (usedBar) usedBar.style.width = pct + '%';
+                if (availBar) availBar.style.width = Math.max(0, 100 - pct) + '%';
+                if (donutProgress) {
+                    const circumference = 565.48;
+                    const offset = circumference - (pct / 100) * circumference;
+                    donutProgress.style.strokeDashoffset = offset;
+                }
+                if (lastUpdate) lastUpdate.textContent = 'just now';
+
+                if (statusEl) {
+                    let status = 'Optimal';
+                    if (pct >= 90) status = 'Critical';
+                    else if (pct >= 75) status = 'Warning';
+                    statusEl.textContent = status;
+                }
+            }
+            function fetchStorageData() {
+                return fetch('archives-landing.php?action=get_storage_data')
                     .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            const pct = data.percentage;
-                            const usedText = data.usedText;
-                            const totalText = data.totalText;
-                            const fileCount = data.fileCount;
-
-                            // Update mobile sidebar
-                            const mobileBar = document.getElementById('mobile-storage-bar');
-                            const mobilePct = document.getElementById('mobile-storage-pct');
-                            const mobileText = document.getElementById('mobile-storage-text');
-                            const mobileFiles = document.getElementById('mobile-storage-files');
-                            
-                            if (mobileBar) mobileBar.style.width = pct + '%';
-                            if (mobilePct) mobilePct.textContent = pct + '%';
-                            if (mobileText) mobileText.textContent = usedText + ' of ' + totalText;
-                            if (mobileFiles) mobileFiles.textContent = fileCount + ' files tracked';
-
-                            // Update desktop sidebar
-                            const desktopBar = document.getElementById('desktop-storage-bar');
-                            const desktopPct = document.getElementById('desktop-storage-pct');
-                            const desktopText = document.getElementById('desktop-storage-text');
-                            const desktopFiles = document.getElementById('desktop-storage-files');
-                            
-                            if (desktopBar) desktopBar.style.width = pct + '%';
-                            if (desktopPct) desktopPct.textContent = pct + '%';
-                            if (desktopText) desktopText.textContent = usedText + ' of ' + totalText;
-                            if (desktopFiles) desktopFiles.textContent = fileCount + ' files tracked';
-
-                            console.log('Sidebar storage updated:', {pct, usedText, totalText, fileCount});
-                        }
-                    })
-                    .catch(err => console.warn('Storage update error:', err));
+                    .then(data => { applyStorageData(data); return data; })
+                    .catch(err => { console.warn('Storage update error:', err); });
             }
 
-            fetchAndUpdate();
-            // Refresh every 60 seconds
-            setInterval(fetchAndUpdate, 60000);
+            window.fetchStorageData = fetchStorageData;
+            fetchStorageData();
+            setInterval(fetchStorageData, 60000);
         })();
 
         // Storage Overview Button Handlers & Skeleton Loading
@@ -1608,40 +1659,15 @@
                     const originalHTML = refreshBtn.innerHTML;
                     refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise mr-1 animate-spin"></i>Refreshing...';
                     refreshBtn.disabled = true;
-                    
-                    fetch('archives-landing.php?action=get_storage_data')
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Update all display elements
-                                const pct = data.percentage;
-                                document.getElementById('storagePercentage').textContent = pct + '%';
-                                document.getElementById('storageUsed').textContent = data.usedText;
-                                document.getElementById('detailUsed').textContent = data.usedText;
-                                document.getElementById('storagePercentage').textContent = pct + '%';
-                                
-                                // Update donut chart
-                                const circumference = 565.48;
-                                const offset = circumference - (pct / 100) * circumference;
-                                document.getElementById('donutProgress').style.strokeDashoffset = offset;
-                                
-                                // Update progress bars
-                                const bars = document.querySelectorAll('[id*="SpaceBar"]');
-                                bars.forEach(bar => bar.style.width = pct + '%');
-                                
-                                // Update timestamp
-                                document.getElementById('lastUpdateTime').textContent = 'just now';
-                                
-                                // Show success toast
-                                const successToast = document.createElement('div');
-                                successToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
-                                successToast.textContent = '✓ Storage data refreshed';
-                                document.body.appendChild(successToast);
-                                setTimeout(() => successToast.remove(), 3000);
-                            }
+                    Promise.resolve(window.fetchStorageData && window.fetchStorageData())
+                        .then(function(){
+                            const successToast = document.createElement('div');
+                            successToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
+                            successToast.textContent = '✓ Storage data refreshed';
+                            document.body.appendChild(successToast);
+                            setTimeout(() => successToast.remove(), 3000);
                         })
-                        .catch(err => console.error('Refresh error:', err))
-                        .finally(() => {
+                        .finally(function(){
                             refreshBtn.innerHTML = originalHTML;
                             refreshBtn.disabled = false;
                         });

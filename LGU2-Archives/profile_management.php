@@ -456,7 +456,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                             </svg>
                             Profile Picture
                         </label>
-                        <div class="flex items-center space-x-6">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                             <div class="flex-shrink-0">
                                 <?php if ($user['profile_picture'] && file_exists($user['profile_picture'])): ?>
                                     <img src="<?php echo htmlspecialchars($user['profile_picture']); ?>" alt="Current Profile Picture" class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600">
