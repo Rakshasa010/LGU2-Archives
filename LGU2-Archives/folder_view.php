@@ -342,9 +342,9 @@ $conn->close();
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-4">
-                    <a href="<?php echo $parent_folder ? "folder_view.php?id=" . $parent_folder['id'] : "storage.php"; ?>" class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                        <i class="bi bi-arrow-left text-xl"></i>
-                        <span class="font-semibold">Back to <?php echo $parent_folder ? htmlspecialchars($parent_folder['name']) : "Main Storage"; ?></span>
+                    <a href="<?php echo $parent_folder ? "folder_view.php?id=" . $parent_folder['id'] : "storage.php"; ?>" class="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 text-red-600 dark:text-red-400 rounded-full hover:shadow-md transition-all font-semibold border border-red-100 dark:border-red-900/30">
+                        <i class="bi bi-arrow-left text-lg"></i>
+                        <span>Back to <?php echo $parent_folder ? htmlspecialchars($parent_folder['name']) : "Main Storage"; ?></span>
                     </a>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -370,26 +370,15 @@ $conn->close();
         </div>
 
         <!-- Actions -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <button id="create-subfolder-btn" type="button" onclick="openCreateFolderModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
-                <div class="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full group-hover:scale-110 transition-transform">
-                    <i class="bi bi-folder-plus text-2xl text-blue-600 dark:text-blue-400"></i>
-                </div>
-                <div>
-                    <div class="font-semibold text-gray-800 dark:text-gray-200">Create Subfolder</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">Add a new folder here</div>
-                </div>
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+            <button id="create-subfolder-btn" type="button" onclick="openCreateFolderModal()" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200">
+                <i class="bi bi-folder-plus text-blue-600 dark:text-blue-400 text-lg"></i>
+                Create Subfolder
             </button>
-            <button id="upload-file-btn" type="button" onclick="openUploadModal()" class="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all group text-left">
-                <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-full group-hover:scale-110 transition-transform">
-                    <i class="bi bi-cloud-upload text-2xl text-green-600 dark:text-green-400"></i>
-                </div>
-                <div>
-                    <div class="font-semibold text-gray-800 dark:text-gray-200">Upload File</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">Upload documents to this folder</div>
-                </div>
+            <button id="upload-file-btn" type="button" onclick="openUploadModal()" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200">
+                <i class="bi bi-cloud-upload text-green-600 dark:text-green-400 text-lg"></i>
+                Upload File
             </button>
-            
         </div>
 
         <!-- Content List -->

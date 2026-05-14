@@ -448,65 +448,100 @@
 
             <!-- Main Content Area -->
             <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
-                <!-- Content Header -->
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                    <div class="flex items-center justify-between">
-                        <h1 class="text-3xl font-bold text-red-600 dark:text-red-400">Document Archives</h1>
+                <!-- 
+                  Removed 'max-w-7xl mx-auto' to allow full screen scaling, 
+                  and replaced with 'w-full' plus expanded responsive padding to maximize screen usage while keeping content breathing room.
+                -->
+                <div class="w-full px-4 sm:px-8 lg:px-12 xl:px-16 py-6 lg:py-8 space-y-8">
+                    <!-- 
+                      Removed grid gap-6 lg:grid-cols-[2.2fr_1fr].
+                      This grid previously left a massive blank right column because there was no second item,
+                      squishing the main content to the left side artificially. 
+                    -->
+                    <div class="w-full block">
+                        <!-- Increased section padding to compliment the expanded screen space -->
+                        <section class="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 sm:p-8 lg:p-10">
+                            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                                <!-- Added left side border accent (the "leftside" of the header) -->
+                                <div class="min-w-0 border-l-[6px] border-red-600 dark:border-red-500 pl-4 sm:pl-6 rounded-l-sm">
+                                    <h1 class="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-400 tracking-tight">Document Archives</h1>
+                                    <p class="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+                                        Advanced search for ordinances, resolutions, hearings, sessions and archive records 
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 grid gap-4 lg:grid-cols-[1.7fr_auto] items-end">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Advanced search for</p>
+                                    <div class="relative">
+                                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <input type="text" id="legislativeSearchInput" class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-2xl bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all" placeholder="Search archives, ordinances, hearings, sessions, authors, file names..." autocomplete="off">
+                                    </div>
+                                </div>
+                                <button id="legislativeSearchBtn" class="h-14 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-red-500/10">
+                                    Search
+                                </button>
+                            </div>
+
+                            <div class="mt-4 sm:flex sm:items-center sm:justify-between gap-3">
+                                <div class="flex flex-wrap items-center gap-2 text-sm">
+                                    <span class="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Filters</span>
+                                    <button type="button" data-filter="legislative" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Legislative</button>
+                                    <button type="button" data-filter="archive_files" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Archive Files</button>
+                                    <button type="button" data-filter="folders" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Folders</button>
+                                    <button type="button" data-filter="authors" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Authors</button>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <label for="searchSortSelect" class="text-xs text-gray-500 dark:text-gray-400">Sort</label>
+                                    <select id="searchSortSelect" class="rounded-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-gray-800 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                                        <option value="relevance">Relevance</option>
+                                        <option value="newest">Newest first</option>
+                                        <option value="date">Date</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="relative mt-3">
+                                <div id="searchPopup" class="hidden absolute left-0 right-0 top-full mt-3 z-50 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden">
+                                    <div class="p-4 space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Recent searches</p>
+                                                <p id="recentSearchCount" class="text-[11px] text-gray-500 dark:text-gray-400">Quick access to your last searches</p>
+                                            </div>
+                                            <button id="clearRecentBtn" type="button" class="text-xs text-red-600 dark:text-red-400 hover:underline">Clear all</button>
+                                        </div>
+                                        <div id="recentSearchesList" class="flex flex-wrap gap-2"></div>
+
+                                        <div id="searchResultsPanel" class="hidden">
+                                            <div class="flex items-center justify-between gap-3 border-b border-gray-200 dark:border-slate-700 pb-3">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-gray-900 dark:text-white" id="searchResultsCount">0 results found</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400" id="searchResultsSubtitle">Showing filtered archive matches</p>
+                                                </div>
+                                                <button id="clearSearchBtn" type="button" class="rounded-full border border-gray-200 dark:border-slate-700 px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Clear</button>
+                                            </div>
+                                            <div id="searchResultsList" class="space-y-2 max-h-80 overflow-y-auto"></div>
+                                            <div id="searchRelated" class="hidden pt-4 border-t border-gray-200 dark:border-slate-700">
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Related topics</div>
+                                                <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
+                                            </div>
+                                        </div>
+
+                                        <div id="searchEmptyState" class="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <p class="font-semibold text-gray-900 dark:text-white">Search Document Archives</p>
+                                            <p>Start typing to find ordinances, folders, archive files or authors. Results will appear directly below.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                </div>
 
-                <!-- Document Archives Search Section -->
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div class="space-y-6">
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-gray-200">Archives</h2>
-                            <p class="text-gray-600 dark:text-gray-400 mb-4">Advanced Search</p>
-                            
-                            <!-- Search Bar -->
-                                <div class="flex flex-col sm:flex-row gap-3 mb-3">
-                                <div class="flex-1 relative">
-                                    <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    <input type="text" id="legislativeSearchInput" 
-                                           class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
-                                           placeholder="Search for ordinances, resolutions, billing, public hearings, meetings, sessions..." 
-                                           autocomplete="off">
-                                </div>
-                                <button id="legislativeSearchBtn" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg">Search</button>
-                            </div>
-
-                            <!-- Display of current search term -->
-                            <div id="searchTermDisplay" class="mb-6 text-sm text-gray-600 dark:text-gray-400 hidden">
-                                Showing results for: <span id="searchTermText" class="font-semibold text-gray-900 dark:text-gray-100"></span>
-                            </div>
-
-                            <!-- Search Results Container -->
-                            <div id="legislativeSearchResults" class="hidden">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 id="searchResultsCount" class="text-lg font-semibold text-gray-800 dark:text-gray-200">0 results found</h3>
-                                    <button id="clearSearchBtn" class="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">Clear</button>
-                                </div>
-                                <div id="searchRelated" class="mb-3 hidden">
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Related topics</div>
-                                    <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
-                                </div>
-                                <div id="searchResultsList" class="space-y-3">
-                                    <!-- Results will be dynamically inserted here -->
-                                </div>
-                            </div>
-
-                            <!-- Empty State -->
-                            <div id="legislativeEmptyState" class="text-center py-12">
-                                <svg class="w-20 h-20 mx-auto mb-4 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                                <div class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Search Document Archives</div>
-                                <div class="text-gray-600 dark:text-gray-400">Enter keywords to search for ordinances, resolutions, billing documents, public hearings, meetings, and legislative sessions</div>
-                            </div>
-                        </div>
-
-                        <!-- Storage Overview Section (Synced with storage.php) -->
+                    <!-- Storage Overview Section (Synced with storage.php) -->
                         <div class="bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8 mb-8 hover:shadow-2xl transition-all duration-300" id="storage-overview">
                             <!-- Skeleton Loader (hidden on load) -->
                             <div id="storage-skeleton" class="hidden">
@@ -687,7 +722,7 @@
                         </div>
 
                         <!-- Quick Analytics -->
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
                             <?php
                             require 'authdatabase.php';
                             $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
@@ -861,43 +896,43 @@
                                     <button id="qa-apply" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-                                <div class="lg:col-span-2 p-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                                    <div class="flex items-center justify-between mb-2">
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-3">
+                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                                    <div class="flex items-center justify-between mb-1">
                                         <div class="text-sm opacity-80">Downloads</div>
                                         <div class="text-xs opacity-80">Last 14 days</div>
                                     </div>
-                                    <div class="text-2xl font-bold mb-2"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsBar" height="120"></canvas>
+                                    <div class="text-xl md:text-2xl font-bold mb-1"><?php echo $qa_downloads; ?></div>
+                                    <canvas id="qaDownloadsBar" height="60"></canvas>
                                 </div>
-                                <div class="p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Records</div>
-                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"><?php echo $qa_total_records; ?></div>
-                                    <canvas id="qaRecordsMini" height="80"></canvas>
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Records</div>
+                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_total_records; ?></div>
+                                    <canvas id="qaRecordsMini" height="50"></canvas>
                                 </div>
-                                <div class="p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Downloads</div>
-                                    <div class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsMini" height="80"></canvas>
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Downloads</div>
+                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_downloads; ?></div>
+                                    <canvas id="qaDownloadsMini" height="50"></canvas>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                                <div class="lg:col-span-2 p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Records Trend</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">Last 14 days</div>
+                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records Trend</div>
+                                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 14 days</div>
                                     </div>
-                                    <canvas id="qaRecordsLine" height="140"></canvas>
+                                    <canvas id="qaRecordsLine" height="90"></canvas>
                                 </div>
-                                <div class="lg:col-span-2 p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</div>
+                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records by Type</div>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-xs text-gray-600 dark:text-gray-400"><?php echo count($qa_by_type); ?> types</span>
-                                        <button id="rbt-toggle" class="text-[11px] px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
+                                        <span class="text-[11px] text-gray-600 dark:text-gray-400"><?php echo count($qa_by_type); ?> types</span>
+                                        <button id="rbt-toggle" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
                                     </div>
                                 </div>
-                                    <canvas id="qaRecordsByType" height="180"></canvas>
+                                    <canvas id="qaRecordsByType" height="100"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -938,11 +973,11 @@
                             }
                         }
                         ?>
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
                             <div class="flex items-center justify-between mb-3">
-                                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Folders & Uploads</h2>
+                                <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">Folders & Uploads</h2>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
                                 <div class="lg:col-span-1">
                                     <div class="flex items-center justify-between mb-2">
                                         <div class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</div>
@@ -971,14 +1006,14 @@
                                                 $link = 'public-hearings.php';
                                             }
                                             ?>
-                                            <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>" class="file-card block bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 hover:shadow-md transition-all">
+                                            <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>" class="file-card block bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700 py-1.5 px-3 hover:shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-slate-700">
                                                 <div class="flex items-center justify-between">
                                                     <div class="min-w-0">
-                                                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['name']); ?></div>
-                                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($u['folder_name']); ?> • <?php echo htmlspecialchars($u['created_at']); ?></div>
+                                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['name']); ?></div>
+                                                        <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($u['folder_name']); ?> • <?php echo htmlspecialchars($u['created_at']); ?></div>
                                                     </div>
-                                                    <div class="ml-3 text-gray-400">
-                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    <div class="ml-2 text-gray-400">
+                                                        <i class="bi bi-chevron-right text-xs"></i>
                                                     </div>
                                                 </div>
                                             </a>
@@ -989,11 +1024,11 @@
                                     </div>
                                 </div>
                                 <div class="lg:col-span-2">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">Last 30 days</div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Uploads by Folder</div>
+                                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 30 days</div>
                                     </div>
-                                    <canvas id="uploadsByFolderChart" height="180"></canvas>
+                                    <canvas id="uploadsByFolderChart" height="100"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -1008,9 +1043,9 @@
                            
 
                         <!-- Latest Archives Section (dynamic: shows recent files visited) -->
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Latest Archive Files Visit</h2>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">Latest Archive Files Visit</h2>
                                 <button id="latest-files-toggle" type="button" class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors" aria-expanded="true" aria-controls="latestFilesList">
                                     <span id="latest-files-toggle-text">Hide List</span>
                                     <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-xs"></i>
@@ -1749,6 +1784,325 @@ For detailed information, visit the Storage Overview dashboard.`;
                     }, 1200);
                 });
             }
+        })();
+    </script>
+    <script>
+        (function() {
+            var input = document.getElementById('legislativeSearchInput');
+            var button = document.getElementById('legislativeSearchBtn');
+            var clearBtn = document.getElementById('clearSearchBtn');
+            var searchPopup = document.getElementById('searchPopup');
+            var recentSearchesList = document.getElementById('recentSearchesList');
+            var clearRecentBtn = document.getElementById('clearRecentBtn');
+            var searchResultsPanel = document.getElementById('searchResultsPanel');
+            var searchEmptyState = document.getElementById('searchEmptyState');
+            var searchResultsCount = document.getElementById('searchResultsCount');
+            var searchResultsList = document.getElementById('searchResultsList');
+            var searchRelated = document.getElementById('searchRelated');
+            var searchRelatedChips = document.getElementById('searchRelatedChips');
+            var filterButtons = document.querySelectorAll('.search-filter-chip');
+            var sortSelect = document.getElementById('searchSortSelect');
+            var activeFilters = [];
+            var recentStorageKey = 'archivesRecentSearches';
+
+            function getRecentSearches() {
+                try {
+                    var raw = localStorage.getItem(recentStorageKey) || '[]';
+                    var parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveRecentSearch(term) {
+                if (!term) return;
+                var searches = getRecentSearches().filter(function(item) { return item !== term; });
+                searches.unshift(term);
+                searches = searches.slice(0, 5);
+                localStorage.setItem(recentStorageKey, JSON.stringify(searches));
+                renderRecentSearches();
+            }
+
+            function clearRecentSearches() {
+                localStorage.removeItem(recentStorageKey);
+                renderRecentSearches();
+            }
+
+            function renderRecentSearches() {
+                if (!recentSearchesList) return;
+                var searches = getRecentSearches();
+                recentSearchesList.innerHTML = '';
+                if (searches.length === 0) {
+                    recentSearchesList.innerHTML = '<span class="text-sm text-gray-500 dark:text-gray-400">No recent searches yet.</span>';
+                    return;
+                }
+                searches.forEach(function(term) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors';
+                    btn.textContent = term;
+                    btn.addEventListener('click', function() {
+                        if (input) {
+                            input.value = term;
+                            performSearch(term);
+                        }
+                    });
+                    recentSearchesList.appendChild(btn);
+                });
+            }
+
+            function getSelectedFilters() {
+                return activeFilters.slice();
+            }
+
+            function updateFilterUI() {
+                filterButtons.forEach(function(button) {
+                    var filter = button.getAttribute('data-filter');
+                    if (activeFilters.indexOf(filter) >= 0) {
+                        button.classList.add('bg-red-600', 'text-white');
+                        button.classList.remove('bg-gray-100', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-gray-200');
+                    } else {
+                        button.classList.remove('bg-red-600', 'text-white');
+                        button.classList.add('bg-gray-100', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-gray-200');
+                    }
+                });
+            }
+
+            function toggleFilter(filter) {
+                var index = activeFilters.indexOf(filter);
+                if (index >= 0) {
+                    activeFilters.splice(index, 1);
+                } else {
+                    activeFilters.push(filter);
+                }
+                updateFilterUI();
+            }
+
+            function showPopup() {
+                if (searchPopup) searchPopup.classList.remove('hidden');
+            }
+
+            function hidePopup() {
+                if (searchPopup) searchPopup.classList.add('hidden');
+            }
+
+            function toggleResultState(showResults) {
+                if (!searchResultsPanel || !searchEmptyState) return;
+                if (showResults) {
+                    searchResultsPanel.classList.remove('hidden');
+                    searchEmptyState.classList.add('hidden');
+                } else {
+                    searchResultsPanel.classList.add('hidden');
+                    searchEmptyState.classList.remove('hidden');
+                }
+            }
+
+            function renderRelated(items) {
+                if (!searchRelated || !searchRelatedChips) return;
+                searchRelatedChips.innerHTML = '';
+                if (!Array.isArray(items) || items.length === 0) {
+                    searchRelated.classList.add('hidden');
+                    return;
+                }
+                searchRelated.classList.remove('hidden');
+                items.slice(0, 6).forEach(function(item) {
+                    var chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors';
+                    chip.textContent = item.label;
+                    chip.addEventListener('click', function() {
+                        if (input) {
+                            input.value = item.query || item.label;
+                            performSearch(input.value.trim());
+                        }
+                    });
+                    searchRelatedChips.appendChild(chip);
+                });
+            }
+
+            function normalizeDate(item) {
+                if (item.created_at) {
+                    return new Date(item.created_at).getTime() || 0;
+                }
+                if (item.year) {
+                    var month = item.month ? new Date(item.month + ' 1, ' + item.year).getTime() : 0;
+                    return month || (item.year * 1000);
+                }
+                return 0;
+            }
+
+            function sortEntries(entries, term) {
+                var mode = sortSelect ? sortSelect.value : 'relevance';
+                if (mode === 'newest' || mode === 'date') {
+                    return entries.slice().sort(function(a, b) {
+                        return normalizeDate(b) - normalizeDate(a);
+                    });
+                }
+                return entries.slice().sort(function(a, b) {
+                    var titleA = (a.title || '').toLowerCase();
+                    var titleB = (b.title || '').toLowerCase();
+                    var termLower = term.toLowerCase();
+                    var score = function(item) {
+                        var value = (item.title || '').toLowerCase();
+                        if (value === termLower) return 3;
+                        if (value.startsWith(termLower)) return 2;
+                        if (value.includes(termLower)) return 1;
+                        return 0;
+                    };
+                    return score(b) - score(a);
+                });
+            }
+
+            function buildResultLink(item) {
+                if (item.source === 'legislative') {
+                    return 'download.php?id=' + encodeURIComponent(item.id);
+                }
+                if (item.kind === 'folder') {
+                    return 'folder_view.php?id=' + encodeURIComponent(item.id);
+                }
+                if (item.kind === 'file' && item.folder_id) {
+                    return 'folder_view.php?id=' + encodeURIComponent(item.folder_id) + '&highlight=' + encodeURIComponent(item.id);
+                }
+                return '#';
+            }
+
+            function renderSearchResults(data, term) {
+                if (!searchResultsList || !searchResultsCount) return;
+                var entries = Array.isArray(data.results) ? data.results : [];
+                entries = sortEntries(entries, term);
+                searchResultsList.innerHTML = '';
+                if (entries.length === 0) {
+                    searchResultsCount.textContent = 'No results found';
+                    toggleResultState(false);
+                    renderRelated(data.related || []);
+                    return;
+                }
+                searchResultsCount.textContent = entries.length + ' results found';
+                toggleResultState(true);
+                entries.slice(0, 15).forEach(function(item) {
+                    var meta = [];
+                    if (item.source === 'legislative') {
+                        if (item.author) meta.push(item.author);
+                        if (item.month && item.year) meta.push(item.month + ' ' + item.year);
+                        else if (item.year) meta.push(item.year);
+                    } else if (item.source === 'archive') {
+                        if (item.type) meta.push(item.type);
+                        if (item.folder_name) meta.push('Folder: ' + item.folder_name);
+                    }
+                    var link = buildResultLink(item);
+                    var anchor = document.createElement('a');
+                    anchor.href = link;
+                    anchor.className = 'block rounded-2xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-3 transition hover:shadow-md';
+                    anchor.innerHTML = '<div class="flex items-start justify-between gap-3">' +
+                                       '<div class="min-w-0">' +
+                                       '<p class="text-sm font-semibold text-gray-900 dark:text-white truncate">' + (item.title || 'Untitled') + '</p>' +
+                                       '<p class="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">' + (meta.filter(Boolean).join(' • ') || item.type || item.source || '') + '</p>' +
+                                       '</div>' +
+                                       '<span class="whitespace-nowrap rounded-full bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-200 px-2 py-1 text-[10px] uppercase tracking-[0.18em] font-semibold">' + (item.type || item.source || '').toUpperCase() + '</span>' +
+                                       '</div>';
+                    searchResultsList.appendChild(anchor);
+                });
+                renderRelated(data.related || []);
+            }
+
+            function performSearch(term) {
+                if (!input || !button) return;
+                if (!term) {
+                    input.focus();
+                    return;
+                }
+                addSearchTerm(term);
+                showPopup();
+                toggleResultState(true);
+                if (searchResultsCount) searchResultsCount.textContent = 'Searching...';
+                if (searchResultsList) searchResultsList.innerHTML = '<div class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Loading results…</div>';
+                var data = 'search=' + encodeURIComponent(term) + '&filters=' + encodeURIComponent(JSON.stringify(getSelectedFilters()));
+                fetch('search_records.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: data
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        if (searchResultsCount) searchResultsCount.textContent = 'Search failed';
+                        if (searchResultsList) searchResultsList.innerHTML = '<div class="py-6 text-center text-sm text-red-600 dark:text-red-400">Unable to fetch results.</div>';
+                        renderRelated([]);
+                        return;
+                    }
+                    renderSearchResults(data, term);
+                })
+                .catch(function() {
+                    if (searchResultsCount) searchResultsCount.textContent = 'Search error';
+                    if (searchResultsList) searchResultsList.innerHTML = '<div class="py-6 text-center text-sm text-red-600 dark:text-red-400">Network error. Try again.</div>';
+                    renderRelated([]);
+                });
+            }
+
+            function addSearchTerm(term) {
+                saveRecentSearch(term);
+            }
+
+            if (button && input) {
+                button.addEventListener('click', function() {
+                    performSearch(input.value.trim());
+                });
+            }
+
+            if (input) {
+                input.addEventListener('focus', function() {
+                    renderRecentSearches();
+                    showPopup();
+                    toggleResultState(false);
+                });
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        performSearch(input.value.trim());
+                    }
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    if (input) input.value = '';
+                    toggleResultState(false);
+                    renderRecentSearches();
+                });
+            }
+
+            if (clearRecentBtn) {
+                clearRecentBtn.addEventListener('click', function() {
+                    clearRecentSearches();
+                });
+            }
+
+            filterButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var filter = button.getAttribute('data-filter');
+                    toggleFilter(filter);
+                });
+            });
+
+            if (sortSelect) {
+                sortSelect.addEventListener('change', function() {
+                    if (input && input.value.trim()) {
+                        performSearch(input.value.trim());
+                    }
+                });
+            }
+
+            document.addEventListener('click', function(event) {
+                if (!searchPopup || !input) return;
+                if (searchPopup.contains(event.target) || event.target === input || event.target === button) return;
+                hidePopup();
+            });
+
+            renderRecentSearches();
+            updateFilterUI();
         })();
     </script>
     <script>

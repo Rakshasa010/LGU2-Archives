@@ -562,92 +562,167 @@ if (count($mock_notifications) < 10) {
                 </div>
             </nav>
 
-			<main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
-				<div class="max-w-5xl mx-auto space-y-6">
-					<div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-						<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-							<div>
-								<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Export Requests</h3>
-								<p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Minimal, focused list of recent export activity.</p>
-							</div>
-							<div class="flex items-center gap-2">
-								<div class="relative">
-									<input id="export-search" type="text" class="peer w-56 sm:w-64 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Search requests">
-									<i class="bi bi-search absolute right-3 top-2.5 text-gray-400 dark:text-gray-300"></i>
-								</div>
-								<button id="filter-all" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-700 text-white border border-transparent dark:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="true">All</button>
-								<button id="filter-unread" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="false">Unread</button>
-								<button id="filter-today" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="false">Today</button>
-								<button id="filter-week" class="px-3 py-2 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white border border-transparent dark:bg-red-700 dark:hover:bg-red-800 dark:text-white filter-btn transition-colors" aria-pressed="false">This Week</button>
+			<style>
+				@keyframes fadeInUp {
+					from { opacity: 0; transform: translateY(12px); }
+					to { opacity: 1; transform: translateY(0); }
+				}
+			</style>
+			<main class="flex-1 overflow-y-auto bg-[#fafafa] dark:bg-[#0f1117]">
+				<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-[1400px] mx-auto">
+                    <?php
+                    $totalreqs = count($mock_notifications);
+                    $unreadreqs = 0;
+                    $readreqs = 0;
+                    $duetodayreqs = 0;
+                    $todayStr = date('Y-m-d');
+                    foreach($mock_notifications as $nn) {
+                        if ($nn['status'] === 'unread') $unreadreqs++;
+                        else $readreqs++;
+                        if (($nn['needed_date'] ?? '') === $todayStr) $duetodayreqs++;
+                    }
+                    ?>
+					<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
+						<div>
+							<h3 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">Export Requests</h3>
+							<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Minimal, focused list of recent export activity.</p>
+						</div>
+						<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                            <div class="relative w-full sm:w-auto">
+                                <input id="export-search" type="text" class="peer w-full sm:w-64 pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-sm transition-colors" placeholder="Search requests...">
+                                <i class="bi bi-search absolute left-3 top-2.5 text-gray-400 dark:text-gray-500 text-sm"></i>
+                            </div>
+							<div class="flex bg-gray-200/50 dark:bg-slate-800/80 rounded-lg p-1 border border-gray-200 dark:border-slate-700/50 shadow-sm w-full sm:w-auto overflow-x-auto">
+								<button id="filter-all" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">All</button>
+								<button id="filter-unread" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">Unread</button>
+								<button id="filter-today" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">Today</button>
+								<button id="filter-week" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">This Week</button>
 							</div>
 						</div>
-						<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="export-list">
-							<?php foreach ($mock_notifications as $n): ?>
-                                <div class="export-item rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow relative cursor-pointer" role="button" tabindex="0" data-id="<?php echo htmlspecialchars($n['id'] ?? ''); ?>" data-link="<?php echo htmlspecialchars($n['link'] ?? ''); ?>" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
-                                    <div class="flex items-start justify-between mb-3">
-                                        <div class="flex items-center gap-2">
-                                            <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
-                                                <i class="bi bi-file-earmark-zip text-lg"></i>
-                                            </div>
-                                        </div>
+					</div>
+
+                    <!-- STATS BAR -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm transition-colors">
+                            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2"><i class="bi bi-inbox text-gray-400"></i> Total requests</div>
+                            <div class="text-3xl font-bold text-gray-900 dark:text-white"><?php echo $totalreqs; ?></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm transition-colors">
+                            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2"><i class="bi bi-envelope-exclamation text-red-500"></i> Unread</div>
+                            <div class="text-3xl font-bold text-red-500"><?php echo $unreadreqs; ?></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm transition-colors">
+                            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2"><i class="bi bi-envelope-check text-blue-500"></i> Read</div>
+                            <div class="text-3xl font-bold text-blue-500"><?php echo $readreqs; ?></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm transition-colors">
+                            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2"><i class="bi bi-calendar-event text-amber-500"></i> Due today</div>
+                            <div class="text-3xl font-bold text-amber-500"><?php echo $duetodayreqs; ?></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="export-list">
+                        <?php foreach ($mock_notifications as $index => $n): ?>
+                            <?php
+                            $fname = htmlspecialchars($n['file_name'] ?? $n['content']);
+                            $typeIcon = 'bi-file-earmark-text';
+                            $typeBg = 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400';
+                            $fup = strtoupper($fname);
+                            if (strpos($fup, '.PDF') !== false || strpos($fup, '(PDF)') !== false) {
+                                $typeIcon = 'bi-file-earmark-pdf';
+                                $typeBg = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+                            } elseif (strpos($fup, '.DOC') !== false || strpos($fup, '(DOC') !== false) {
+                                $typeIcon = 'bi-file-earmark-word';
+                                $typeBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+                            } elseif (strpos($fup, '.XLS') !== false || strpos($fup, '(XLS') !== false || strpos($fup, '.CSV') !== false || strpos($fup, '(CSV)') !== false) {
+                                $typeIcon = 'bi-file-earmark-spreadsheet';
+                                $typeBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
+                            }
+
+                            $isUnread = $n['status'] === 'unread';
+                            ?>
+                            <div class="export-item flex flex-col justify-between rounded-xl border <?php echo $isUnread ? 'border-l-[3px] border-l-red-500 border-y-gray-200 border-r-gray-200 dark:border-y-slate-700 dark:border-r-slate-700' : 'border-gray-200 dark:border-slate-700'; ?> bg-white dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md relative cursor-pointer group" style="animation: fadeInUp 0.4s ease-out forwards; animation-delay: <?php echo $index * 0.05; ?>s; opacity: 0;" tabindex="0" data-id="<?php echo htmlspecialchars($n['id'] ?? ''); ?>" data-link="<?php echo htmlspecialchars($n['link'] ?? ''); ?>" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo $fname; ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
+                                
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-4">
                                         <div class="flex items-center gap-3">
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="status-dot w-2.5 h-2.5 rounded-full <?php echo $n['status'] === 'unread' ? 'bg-red-500' : 'bg-gray-400'; ?>"></span>
-                                                <span class="status-text text-[10px] font-bold uppercase tracking-wider <?php echo $n['status'] === 'unread' ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'; ?>">
-                                                    <?php echo htmlspecialchars(ucfirst($n['status'])); ?>
-                                                </span>
+                                            <div class="w-10 h-10 rounded-lg <?php echo $typeBg; ?> flex items-center justify-center transition-colors">
+                                                <i class="bi <?php echo $typeIcon; ?> text-lg"></i>
                                             </div>
-                                            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none" onclick="document.querySelectorAll('.export-menu').forEach(i => {if(i !== this.nextElementSibling) i.classList.add('hidden');}); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();">
+                                            <?php if ($isUnread): ?>
+                                                <span class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Unread
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600/50 text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Read
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="relative">
+                                            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" onclick="document.querySelectorAll('.export-menu').forEach(i => {if(i !== this.nextElementSibling) i.classList.add('hidden');}); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();">
                                                 <i class="bi bi-three-dots-vertical"></i>
                                             </button>
-                                            <div class="hidden absolute right-4 top-12 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-lg rounded-lg z-10 w-32 py-1 export-menu">
-                                               <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 view-btn">View Details</button>
-                                               <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 send-to-btn" data-content="<?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>">Send To</button>
+                                            <div class="hidden absolute right-0 top-8 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-xl rounded-lg z-10 w-36 py-1 export-menu">
+                                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 view-btn font-medium transition-colors">View Details</button>
+                                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 send-to-btn font-medium transition-colors" data-content="<?php echo $fname; ?>">Send To</button>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <div class="truncate text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" title="<?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>">
-                                        <?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?>
+                                    <div class="text-[15px] font-bold text-gray-900 dark:text-white leading-tight mb-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" title="<?php echo $fname; ?>">
+                                        <?php echo $fname; ?>
                                     </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                                         <?php echo htmlspecialchars($n['about']); ?>
                                     </div>
 
-                                    <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                        <div><span class="font-semibold text-gray-800 dark:text-gray-200">Version:</span> <?php echo htmlspecialchars($n['file_version']); ?></div>
-                                        <div><span class="font-semibold text-gray-800 dark:text-gray-200">Needed By:</span> <?php echo htmlspecialchars($n['needed_date']); ?></div>
-                                        <div class="col-span-2"><span class="font-semibold text-gray-800 dark:text-gray-200">Request Note:</span> <?php echo htmlspecialchars($n['request_note']); ?></div>
-                                        <div class="col-span-2"><span class="font-semibold text-gray-800 dark:text-gray-200">Purpose:</span> <?php echo htmlspecialchars($n['purpose']); ?></div>
+                                    <div class="grid grid-cols-2 gap-y-3 gap-x-3 text-[11px] mb-4">
+                                        <div class="flex flex-col"><span class="text-gray-500 dark:text-gray-400 mb-0.5">Version</span> <span class="font-semibold text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($n['file_version']); ?></span></div>
+                                        <div class="flex flex-col"><span class="text-gray-500 dark:text-gray-400 mb-0.5">Needed By</span> <span class="font-semibold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($n['needed_date']); ?></span></div>
                                     </div>
-                                    <div class="mt-3">
-                                        <a href="<?php echo htmlspecialchars($n['link'] ?? 'storage.php'); ?>" class="open-link inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 hover:underline">
-                                            <i class="bi bi-box-arrow-up-right"></i> Open Location
-                                        </a>
+
+                                    <div class="bg-gray-50 dark:bg-slate-900/60 rounded-lg p-3 border border-gray-100 dark:border-slate-700/50 mb-4">
+                                        <div class="text-[10px] text-gray-400 dark:text-gray-500/80 uppercase tracking-widest font-semibold mb-1">Request Note</div>
+                                        <div class="text-xs text-gray-800 dark:text-gray-300 font-medium leading-relaxed max-h-16 overflow-y-auto custom-scrollbar"><?php echo htmlspecialchars($n['request_note']); ?></div>
+                                    </div>
+
+                                    <div class="flex items-center justify-between mb-4 mt-auto">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50">
+                                            <i class="bi bi-tag-fill text-slate-400 dark:text-slate-500 text-[10px]"></i> <?php echo htmlspecialchars($n['purpose']); ?>
+                                        </span>
                                     </div>
                                     
-                                    <div class="mt-4 pt-3 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center text-xs text-gray-400 dark:text-gray-500">
-                                        <span><?php echo htmlspecialchars($n['date']); ?></span>
-                                        <span><?php echo htmlspecialchars($n['time']); ?></span>
-                                    </div>
-                                    <div class="export-details hidden mt-3 bg-gray-50 dark:bg-slate-900 rounded p-3 text-xs border border-gray-200 dark:border-slate-600 space-y-1">
-                                        <div class="text-gray-800 dark:text-gray-200">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?></div>
-                                        <div class="text-gray-600 dark:text-gray-400">File: <?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?></div>
-                                        <div class="text-gray-600 dark:text-gray-400">Version: <?php echo htmlspecialchars($n['file_version']); ?></div>
-                                        <div class="text-gray-600 dark:text-gray-400">Needed By: <?php echo htmlspecialchars($n['needed_date']); ?></div>
-                                        <div class="text-gray-600 dark:text-gray-400">Request Note: <?php echo htmlspecialchars($n['request_note']); ?></div>
-                                        <div class="text-gray-600 dark:text-gray-400">Purpose: <?php echo htmlspecialchars($n['purpose']); ?></div>
+                                    <div class="mb-5">
+                                        <a href="<?php echo htmlspecialchars($n['link'] ?? 'storage.php'); ?>" class="open-link inline-flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors">
+                                            <i class="bi bi-box-arrow-right"></i> Open Location
+                                        </a>
                                     </div>
                                 </div>
-							<?php endforeach; ?>
-						</div>
-						<div id="export-empty" class="hidden mt-6 rounded-lg border border-dashed border-gray-300 dark:border-slate-600 p-6 text-center">
-							<div class="mx-auto w-10 h-10 rounded-md bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-gray-300">
-								<i class="bi bi-inbox"></i>
-							</div>
-							<p class="mt-3 text-sm text-gray-600 dark:text-gray-400">No matching export requests.</p>
-						</div>
-					</div>
+                                
+                                <div class="mt-auto pt-3 border-t border-gray-100 dark:border-slate-700/60 flex justify-between items-center text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                                    <span><?php echo htmlspecialchars($n['date']); ?></span>
+                                    <span><?php echo htmlspecialchars($n['time']); ?></span>
+                                </div>
+                                
+                                <div class="export-details hidden mt-2 bg-gray-50 dark:bg-slate-900 rounded p-2 text-[11px] border border-gray-200 dark:border-slate-600 space-y-1">
+                                    <div class="text-gray-800 dark:text-gray-200">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?></div>
+                                    <div class="text-gray-600 dark:text-gray-400">File: <?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?></div>
+                                    <div class="text-gray-600 dark:text-gray-400">Version: <?php echo htmlspecialchars($n['file_version']); ?></div>
+                                    <div class="text-gray-600 dark:text-gray-400">Needed By: <?php echo htmlspecialchars($n['needed_date']); ?></div>
+                                    <div class="text-gray-600 dark:text-gray-400">Request Note: <?php echo htmlspecialchars($n['request_note']); ?></div>
+                                    <div class="text-gray-600 dark:text-gray-400">Purpose: <?php echo htmlspecialchars($n['purpose']); ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div id="export-empty" class="hidden mt-6 rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-10 text-center shadow-sm">
+                        <div class="mx-auto w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 dark:text-red-400 border border-red-100 dark:border-red-900/50">
+                            <i class="bi bi-inbox text-xl"></i>
+                        </div>
+                        <h4 class="mt-4 text-base font-bold text-gray-900 dark:text-gray-100">No requests found</h4>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No matching export requests fit this filter.</p>
+                    </div>
 				</div>
 			</main>
 		</div>

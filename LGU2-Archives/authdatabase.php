@@ -58,6 +58,7 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
     status ENUM('pending','active','rejected') NOT NULL DEFAULT 'active',
     profile_picture VARCHAR(255) DEFAULT NULL,
     must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+    dark_mode TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )";
@@ -80,6 +81,12 @@ if ($check_column->num_rows == 0) {
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'must_change_password'");
 if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER profile_picture");
+}
+
+// Add dark_mode column if it doesn't exist
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'dark_mode'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN dark_mode TINYINT(1) NOT NULL DEFAULT 0 AFTER must_change_password");
 }
 
 // Add last_activity column if it doesn't exist
@@ -122,10 +129,19 @@ $folders_sql = "CREATE TABLE IF NOT EXISTS archive_folders (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
+    parent_id INT(11) NULL,
     created_by INT(11) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_parent_id (parent_id)
 )";
 $conn->query($folders_sql);
+
+// Add parent_id column if it doesn't exist (support nested folder metadata)
+$check_column = $conn->query("SHOW COLUMNS FROM archive_folders LIKE 'parent_id'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE archive_folders ADD COLUMN parent_id INT(11) NULL AFTER slug");
+    $conn->query("ALTER TABLE archive_folders ADD INDEX idx_parent_id (parent_id)");
+}
 
 $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,

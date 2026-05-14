@@ -881,9 +881,7 @@ if (isset($_SESSION['user_id'])) {
                             </div>
                         </div>
                     </div>
-                    <div class="mb-4 px-4 py-3 bg-yellow-50 dark:bg-amber-900/20 rounded-lg border border-yellow-200 dark:border-amber-800 text-xs text-yellow-700 dark:text-amber-200">
-                        Retention policy: Main Storage retains files for 5 years.
-                    </div>
+        
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200"> Archives Folders</h2>
@@ -895,78 +893,78 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
             <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-all group">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="text-orange-600 dark:text-orange-400 flex-shrink-0 group-hover:scale-110 transition-transform relative text-4xl leading-none">
+                <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-orange-500/50 transition-all group h-40">
+                    <div class="flex items-start justify-between">
+                        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
                         </div>
-                        <div class="min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-gray-100 text-base truncate">Ordinances & Resolutions</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 archive-meta mt-0.5 truncate" data-archive-meta="ordinances-resolution">in My Drive</div>
+                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
+                            <i class="bi bi-three-dots"></i>
                         </div>
                     </div>
-                    <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2" onclick="event.preventDefault();">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="min-w-0 mt-4">
+                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Ordinances & Res...</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="ordinances-resolution">Calculating...</div>
                     </div>
                 </a>
-                <a href="billing.php" data-archive="billing" class="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-all group">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="text-green-600 dark:text-green-400 flex-shrink-0 group-hover:scale-110 transition-transform relative text-4xl leading-none">
+                <a href="billing.php" data-archive="billing" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-green-500/50 transition-all group h-40">
+                    <div class="flex items-start justify-between">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center text-green-600 dark:text-green-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
                         </div>
-                        <div class="min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-gray-100 text-base truncate">Billing</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 archive-meta mt-0.5 truncate" data-archive-meta="billing">in My Drive</div>
+                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
+                            <i class="bi bi-three-dots"></i>
                         </div>
                     </div>
-                    <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2" onclick="event.preventDefault();">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="min-w-0 mt-4">
+                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Billing</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="billing">Calculating...</div>
                     </div>
                 </a>
-                <a href="public-hearings.php" data-archive="public-hearings" class="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-all group">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="text-blue-600 dark:text-blue-400 flex-shrink-0 group-hover:scale-110 transition-transform relative text-4xl leading-none">
+                <a href="public-hearings.php" data-archive="public-hearings" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-blue-500/50 transition-all group h-40">
+                    <div class="flex items-start justify-between">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
                         </div>
-                        <div class="min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-gray-100 text-base truncate">Public Hearings</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 archive-meta mt-0.5 truncate" data-archive-meta="public-hearings">in My Drive</div>
+                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
+                            <i class="bi bi-three-dots"></i>
                         </div>
                     </div>
-                    <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2" onclick="event.preventDefault();">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="min-w-0 mt-4">
+                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Public Hearings</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="public-hearings">Calculating...</div>
                     </div>
                 </a>
-                <a href="meeting-records.php" data-archive="meeting-records" class="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-all group">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="text-indigo-600 dark:text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform relative text-4xl leading-none">
+                <a href="meeting-records.php" data-archive="meeting-records" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-indigo-500/50 transition-all group h-40">
+                    <div class="flex items-start justify-between">
+                        <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
                         </div>
-                        <div class="min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-gray-100 text-base truncate">Meeting Records</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 archive-meta mt-0.5 truncate" data-archive-meta="meeting-records">in My Drive</div>
+                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
+                            <i class="bi bi-three-dots"></i>
                         </div>
                     </div>
-                    <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2" onclick="event.preventDefault();">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="min-w-0 mt-4">
+                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Meeting Records</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="meeting-records">Calculating...</div>
                     </div>
                 </a>
                 <?php foreach ($archive_folders as $folder): ?>
-                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md transition-all group">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="text-slate-600 dark:text-slate-400 flex-shrink-0 group-hover:scale-110 transition-transform relative text-4xl leading-none">
+                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40">
+                    <div class="flex items-start justify-between">
+                        <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
                             <i class="bi bi-folder-fill"></i>
-                            <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1">
+                            <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10">
                                 <i class="bi bi-person-fill"></i>
                             </div>
                         </div>
-                        <div class="min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-gray-100 text-base truncate"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 archive-meta mt-0.5 truncate" data-archive-meta="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">in My Drive</div>
+                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
+                            <i class="bi bi-three-dots"></i>
                         </div>
                     </div>
-                    <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2" onclick="event.preventDefault();">
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="min-w-0 mt-4">
+                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">Calculating...</div>
                     </div>
                 </a>
                 <?php endforeach; ?>
@@ -974,71 +972,79 @@ if (isset($_SESSION['user_id'])) {
         </div>
         
                     <!-- Confidential Files Vault Section -->
-                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center gap-3">
-                                <div class="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
-                                    <i class="bi bi-shield-lock-fill text-red-600 dark:text-red-400 text-2xl"></i>
+                    <div class="bg-[#1e232d] shadow-2xl rounded-2xl border border-slate-700 p-8 mb-8 mt-4 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-red-600/5 to-transparent pointer-events-none"></div>
+                        <div class="absolute right-0 top-0 w-32 h-32 bg-red-600/10 rounded-full blur-3xl -mr-10 -mt-10 transition-all duration-1000 group-hover:bg-red-500/20 group-hover:scale-150 pointer-events-none"></div>
+
+                        <div class="relative z-10 flex flex-col md:flex-row items-center justify-between">
+                            <div class="flex items-center gap-4 mb-4 md:mb-0">
+                                <div class="w-14 h-14 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-center text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                                    <i class="bi bi-shield-lock-fill text-2xl"></i>
                                 </div>
                                 <div>
-                                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Confidential Files</h2>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">Secure vault with 6-digit PIN protection</p>
+                                    <h2 class="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">Confidential Vault <span id="vault-badge" class="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] uppercase font-bold border border-red-500/30">Locked</span></h2>
+                                    <p class="text-sm text-slate-400">High-security encrypted namespace</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button id="vault-lock-btn" class="hidden px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold transition-colors">
-                                    <i class="bi bi-lock-fill mr-1"></i>Lock Vault
+                                <button id="vault-lock-btn" class="hidden px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm font-semibold transition-colors border border-white/10 backdrop-blur-sm shadow-sm">
+                                    <i class="bi bi-lock-fill mr-2"></i>Lock Vault
                                 </button>
-                                <a href="confidential_vault.php" id="vault-view-btn" class="hidden px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
-                                    <i class="bi bi-eye-fill mr-1"></i>View Files
+                                <a href="confidential_vault.php" id="vault-view-btn" class="hidden px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                                    <i class="bi bi-eye-fill mr-2"></i>View Files
                                 </a>
                             </div>
                         </div>
                         
                         <!-- Vault Locked State -->
-                        <div id="vault-locked-state" class="hidden">
-                            <div class="flex flex-col items-center justify-center py-12">
-                                <div class="bg-red-50 dark:bg-red-900/20 p-6 rounded-full mb-4">
-                                    <i class="bi bi-shield-lock text-red-600 dark:text-red-400 text-5xl"></i>
+                        <div id="vault-locked-state" class="hidden relative z-10 mt-6 border-t border-slate-800 pt-8">
+                            <div class="flex flex-col items-center justify-center py-6">
+                                <div class="flex gap-2 mb-6">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-slate-700 animate-pulse" style="animation-delay: 0ms"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-slate-700 animate-pulse" style="animation-delay: 150ms"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-slate-700 animate-pulse" style="animation-delay: 300ms"></div>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-slate-700 animate-pulse" style="animation-delay: 450ms"></div>
                                 </div>
-                                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Vault is Locked</h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Enter your 6-digit PIN to access confidential files</p>
-                                <button id="vault-unlock-btn" class="px-6 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
-                                    <i class="bi bi-unlock-fill mr-2"></i>Unlock Vault
+                                <h3 class="text-lg font-bold text-slate-200 mb-2">Authentication Required</h3>
+                                <p class="text-sm text-slate-400 mb-6 text-center max-w-sm">Enter your 6-digit secure PIN code to establish encrypted payload connection.</p>
+                                <button id="vault-unlock-btn" class="px-8 py-3 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 text-white font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+                                    <i class="bi bi-key-fill mr-2 text-slate-400"></i>Authenticate PIN
                                 </button>
                             </div>
                         </div>
                         
                         <!-- Vault Setup State -->
-                        <div id="vault-setup-state" class="hidden">
-                            <div class="flex flex-col items-center justify-center py-12">
-                                <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-full mb-4">
-                                    <i class="bi bi-shield-plus text-blue-600 dark:text-blue-400 text-5xl"></i>
+                        <div id="vault-setup-state" class="hidden relative z-10 mt-6 border-t border-slate-800 pt-8">
+                            <div class="flex flex-col items-center justify-center py-6">
+                                <div class="bg-blue-500/10 p-5 rounded-full mb-4 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                                    <i class="bi bi-shield-plus text-blue-400 text-4xl"></i>
                                 </div>
-                                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Setup Confidential Vault</h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Create a 6-digit PIN to secure your confidential files</p>
-                                <button id="vault-setup-btn" class="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors">
+                                <h3 class="text-lg font-bold text-white mb-2">Initialize Secure Vault</h3>
+                                <p class="text-sm text-slate-400 mb-6 text-center max-w-sm">Create a master 6-digit PIN to establish the encrypted container.</p>
+                                <button id="vault-setup-btn" class="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:-translate-y-0.5">
                                     <i class="bi bi-gear-fill mr-2"></i>Setup Vault
                                 </button>
                             </div>
                         </div>
                         
                         <!-- Vault Unlocked State -->
-                        <div id="vault-unlocked-state" class="hidden">
-                            <div class="mb-4 px-4 py-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <i class="bi bi-shield-check text-green-600 dark:text-green-400"></i>
-                                    <span class="text-sm text-green-700 dark:text-green-300 font-medium">Vault is unlocked</span>
+                        <div id="vault-unlocked-state" class="hidden relative z-10 mt-6 border-t border-slate-800 pt-8">
+                            <div class="mb-5 px-5 py-3 bg-red-900/10 rounded-lg border border-red-500/20 flex items-center justify-between shadow-inner">
+                                <div class="flex items-center gap-3">
+                                    <i class="bi bi-shield-check text-red-500 text-lg"></i>
+                                    <span class="text-sm text-red-300 font-bold uppercase tracking-widest">Decrypted Access</span>
                                 </div>
-                                <span class="text-xs text-green-600 dark:text-green-400" id="vault-file-count">0 files</span>
+                                <span class="text-xs font-bold text-red-400 px-3 py-1 bg-red-500/20 rounded-full" id="vault-file-count">0 assets</span>
                             </div>
                             <div id="vault-files-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 <!-- Files will be loaded here -->
                             </div>
-                            <div id="vault-empty-state" class="hidden flex flex-col items-center justify-center py-8">
-                                <i class="bi bi-inbox text-gray-400 dark:text-gray-600 text-4xl mb-2"></i>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">No confidential files yet</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Move files here from other folders</p>
+                            <div id="vault-empty-state" class="hidden flex flex-col items-center justify-center py-12">
+                                <div class="w-20 h-20 rounded-full bg-slate-800/80 flex items-center justify-center border border-slate-700 mb-4 shadow-inner">
+                                    <i class="bi bi-inbox text-slate-600 text-4xl"></i>
+                                </div>
+                                <p class="text-base text-slate-300 font-bold">Encrypted volume is empty</p>
+                                <p class="text-sm text-slate-500 mt-1">Transfer sensitive records to populate this container.</p>
                             </div>
                         </div>
                     </div>
@@ -1776,13 +1782,24 @@ if (isset($_SESSION['user_id'])) {
         (function(){
             function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
             function yearCard(year){
+                var now = new Date().getFullYear();
+                var isActive = (year === now);
                 var el = document.createElement('div');
-                el.className = 'p-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50';
-                el.innerHTML = '<div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">'+year+'</div>'
-                    + '<div class="text-xs text-gray-600 dark:text-gray-400 mb-3">Jan 1 - Dec 31</div>'
-                    + '<div class="flex gap-2">'
-                    + '<button data-year="'+year+'" class="view-year-btn px-3 py-1.5 text-xs rounded-md bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">View</button>'
-                    + '<button data-year="'+year+'" class="export-year-btn px-3 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-700 text-white">Export ZIP</button>'
+                
+                var topBorder = isActive ? 'border-red-500' : 'border-gray-300 dark:border-slate-600';
+                var headerColor = isActive ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200';
+                var bgClass = isActive ? 'bg-red-50 dark:bg-red-900/10' : 'bg-gray-50 dark:bg-slate-700/50';
+                
+                el.className = 'flex flex-col justify-between p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-md transition-all relative overflow-hidden group h-40';
+                
+                var activeBadge = isActive ? '<span class="absolute top-4 right-4 flex items-center gap-1.5 text-[10px] uppercase font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full ring-1 ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Active</span>' : '';
+                
+                el.innerHTML = activeBadge
+                    + '<div class="text-2xl font-bold ' + headerColor + ' mb-1">' + year + '</div>'
+                    + '<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Files tracked & archived</div>'
+                    + '<div class="flex gap-2 mt-auto">'
+                    + '<button data-year="'+year+'" class="view-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm transition-colors group-hover:border-gray-300 dark:group-hover:border-slate-500 relative overflow-hidden">View</button>'
+                    + '<button data-year="'+year+'" class="export-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)] transition-colors">Export ZIP</button>'
                     + '</div>';
                 return el;
             }

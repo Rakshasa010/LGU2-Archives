@@ -51,14 +51,19 @@ if ($folder_res) {
 
 // Fetch Files
 $files = [];
-$file_sql = "SELECT id, title, type, month, year, author, created_at, last_accessed, version, parent_version_id FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND parent_version_id IS NULL";
+$file_sql = "SELECT id, title, type, month, year, author, created_at, last_accessed, parent_version_id FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND parent_version_id IS NULL";
 if ($current_folder_id) {
     $file_sql .= " AND folder_id = $current_folder_id";
 } else {
     $file_sql .= " AND folder_id IS NULL";
 }
-$file_sql .= " ORDER BY year DESC, month DESC, created_at DESC";
-$file_res = $conn->query($file_sql);
+$file_sql .= " ORDER BY `year` DESC, `month` DESC, `created_at` DESC";
+try {
+    $file_res = $conn->query($file_sql);
+} catch (Exception $e) {
+    $file_res = false;
+    error_log("SQL Error in ordinances-resolution: " . $e->getMessage());
+}
 if ($file_res) {
     while ($row = $file_res->fetch_assoc()) {
         $files[] = $row;
@@ -170,9 +175,9 @@ $conn->close();
                     <button id="mobile-menu-btn" class="mobile-toggle md:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                         <i class="bi bi-list text-2xl"></i>
                     </button>
-                    <a href="archives-landing.php" class="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                        <span class="text-xl">←</span>
-                        <span class="font-semibold">Back to Archives</span>
+                    <a href="storage.php" class="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 text-red-600 dark:text-red-400 rounded-full hover:shadow-md transition-all font-semibold border border-red-100 dark:border-red-900/30">
+                        <i class="bi bi-arrow-left text-lg"></i>
+                        <span>Back to Archives</span>
                     </a>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -202,19 +207,15 @@ $conn->close();
         </div>
 
         <!-- Quick Actions -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <div onclick="createFolder()" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-xl transition-all cursor-pointer group">
-                <div class="mb-3 group-hover:scale-110 transition-transform">
-                    <i class="bi bi-folder-plus text-4xl text-blue-600 dark:text-blue-400"></i>
-                </div>
-                <div class="font-semibold text-gray-800 dark:text-gray-200">Create Folder</div>
-            </div>
-            <div onclick="uploadFile()" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-xl transition-all cursor-pointer group">
-                <div class="mb-3 group-hover:scale-110 transition-transform">
-                    <i class="bi bi-cloud-upload text-4xl text-green-600 dark:text-green-400"></i>
-                </div>
-                <div class="font-semibold text-gray-800 dark:text-gray-200">Upload File</div>
-            </div>
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+            <button onclick="createFolder()" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200">
+                <i class="bi bi-folder-plus text-blue-600 dark:text-blue-400 text-lg"></i>
+                Create Folder
+            </button>
+            <button onclick="uploadFile()" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200">
+                <i class="bi bi-cloud-upload text-green-600 dark:text-green-400 text-lg"></i>
+                Upload File
+            </button>
         </div>
 
         <!-- Back Button if in folder -->
@@ -346,6 +347,19 @@ $conn->close();
             </div>
         </div>
     </main>
+
+    <!-- Create Folder Modal -->
+    <div id="createFolderModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[101]" onclick="closeCreateFolderModal()"></div>
+        <div class="relative z-[102] bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Create New Folder</h3>
+            <input type="text" id="newFolderName" placeholder="Folder Name" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 mb-4 focus:ring-2 focus:ring-red-500 outline-none" onkeydown="if(event.key==='Enter') submitCreateFolder()">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeCreateFolderModal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancel</button>
+                <button onclick="submitCreateFolder()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Create</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Upload Modal -->
     <div id="uploadModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
@@ -493,7 +507,19 @@ $conn->close();
 
         // Create Folder
         function createFolder() {
-            const name = prompt("Enter folder name:");
+            const modal = document.getElementById('createFolderModal');
+            if(modal) {
+                modal.classList.remove('hidden');
+                document.getElementById('newFolderName').focus();
+            }
+        }
+        function closeCreateFolderModal() {
+            document.getElementById('createFolderModal').classList.add('hidden');
+            document.getElementById('newFolderName').value = '';
+        }
+        function submitCreateFolder() {
+            const nameInput = document.getElementById('newFolderName');
+            const name = (nameInput && nameInput.value || '').trim();
             if (name) {
                 const formData = new FormData();
                 formData.append('action', 'create_folder');
@@ -510,6 +536,7 @@ $conn->close();
                         try { UI_ENH.toast(d.message || 'Operation failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
                     }
                 });
+                closeCreateFolderModal();
             }
         }
 

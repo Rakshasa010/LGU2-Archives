@@ -3,6 +3,18 @@ header('Content-Type: application/json');
 include 'authdatabase.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
     $raw = trim($_POST['search']);
+    $filters = [];
+    if (isset($_POST['filters'])) {
+        $decoded = json_decode($_POST['filters'], true);
+        if (is_array($decoded)) {
+            $filters = array_filter(array_map('strtolower', $decoded));
+        }
+    }
+    $author_only = in_array('authors', $filters) && !in_array('legislative', $filters);
+    $include_legislative = empty($filters) || in_array('legislative', $filters) || in_array('authors', $filters);
+    $include_archive_files = empty($filters) || in_array('archive_files', $filters);
+    $include_folders = empty($filters) || in_array('folders', $filters);
+
     if ($raw === '') {
         echo json_encode(['results' => [], 'related' => []]);
         $conn->close();
@@ -13,71 +25,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
     $wide = '%' . implode('%', preg_split('//u', $letters, -1, PREG_SPLIT_NO_EMPTY)) . '%';
     $results = [];
     $related = [];
-    $sql = "SELECT id, title, type, month, year, author FROM legislative_records
-            WHERE title LIKE ? OR type LIKE ? OR month LIKE ? OR year LIKE ? OR author LIKE ? OR title LIKE ?
-            ORDER BY year DESC, month DESC, title ASC";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssssss", $like, $like, $like, $like, $like, $wide);
-    if ($stmt->execute()) {
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-            $results[] = [
-                'id' => $row['id'],
-                'title' => $row['title'],
-                'type' => $row['type'],
-                'month' => $row['month'],
-                'year' => $row['year'],
-                'author' => $row['author'],
-                'source' => 'legislative'
-            ];
+
+    if ($include_legislative) {
+        if ($author_only) {
+            $sql = "SELECT id, title, type, month, year, author FROM legislative_records WHERE author LIKE ? ORDER BY year DESC, month DESC, title ASC";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("s", $like);
+        } else {
+            $sql = "SELECT id, title, type, month, year, author FROM legislative_records
+                    WHERE title LIKE ? OR type LIKE ? OR month LIKE ? OR year LIKE ? OR author LIKE ? OR title LIKE ?
+                    ORDER BY year DESC, month DESC, title ASC";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssssss", $like, $like, $like, $like, $like, $wide);
         }
-    }
-    $stmt->close();
-    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE name LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT 20");
-    $stmt->bind_param("ss", $like, $wide);
-    if ($stmt->execute()) {
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-            $results[] = [
-                'id' => $row['id'],
-                'title' => $row['name'],
-                'type' => 'Archive Folder',
-                'month' => date('M', strtotime($row['created_at'])),
-                'year' => date('Y', strtotime($row['created_at'])),
-                'author' => '',
-                'source' => 'archive',
-                'kind' => 'folder',
-                'folder_id' => (int)$row['id'],
-                'folder_name' => $row['name']
-            ];
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $results[] = [
+                    'id' => $row['id'],
+                    'title' => $row['title'],
+                    'type' => $row['type'],
+                    'month' => $row['month'],
+                    'year' => $row['year'],
+                    'author' => $row['author'],
+                    'source' => 'legislative'
+                ];
+            }
         }
+        $stmt->close();
     }
-    $stmt->close();
-    $stmt = $conn->prepare("SELECT f.id AS folder_id, f.name AS folder_name, af.id, af.name, af.created_at 
-                            FROM archive_files af 
-                            INNER JOIN archive_folders f ON af.folder_id = f.id 
-                            WHERE af.created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR) 
-                              AND (af.name LIKE ? OR af.name LIKE ? OR f.name LIKE ?) 
-                            ORDER BY af.created_at DESC LIMIT 50");
-    $stmt->bind_param("sss", $like, $wide, $like);
-    if ($stmt->execute()) {
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-            $results[] = [
-                'id' => $row['id'],
-                'title' => $row['name'],
-                'type' => 'Archive File',
-                'month' => date('M', strtotime($row['created_at'])),
-                'year' => date('Y', strtotime($row['created_at'])),
-                'author' => '',
-                'source' => 'archive',
-                'kind' => 'file',
-                'folder_id' => (int)$row['folder_id'],
-                'folder_name' => $row['folder_name']
-            ];
+    if ($include_folders) {
+        $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE name LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT 20");
+        $stmt->bind_param("ss", $like, $wide);
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $results[] = [
+                    'id' => $row['id'],
+                    'title' => $row['name'],
+                    'type' => 'Archive Folder',
+                    'month' => date('M', strtotime($row['created_at'])),
+                    'year' => date('Y', strtotime($row['created_at'])),
+                    'author' => '',
+                    'source' => 'archive',
+                    'kind' => 'folder',
+                    'folder_id' => (int)$row['id'],
+                    'folder_name' => $row['name']
+                ];
+            }
         }
+        $stmt->close();
     }
-    $stmt->close();
+    if ($include_archive_files) {
+        $stmt = $conn->prepare("SELECT f.id AS folder_id, f.name AS folder_name, af.id, af.name, af.created_at 
+                                FROM archive_files af 
+                                INNER JOIN archive_folders f ON af.folder_id = f.id 
+                                WHERE af.created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR) 
+                                  AND (af.name LIKE ? OR af.name LIKE ? OR f.name LIKE ?) 
+                                ORDER BY af.created_at DESC LIMIT 50");
+        $stmt->bind_param("sss", $like, $wide, $like);
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $results[] = [
+                    'id' => $row['id'],
+                    'title' => $row['name'],
+                    'type' => 'Archive File',
+                    'month' => date('M', strtotime($row['created_at'])),
+                    'year' => date('Y', strtotime($row['created_at'])),
+                    'author' => '',
+                    'source' => 'archive',
+                    'kind' => 'file',
+                    'folder_id' => (int)$row['folder_id'],
+                    'folder_name' => $row['folder_name']
+                ];
+            }
+        }
+        $stmt->close();
+    }
     $stmt = $conn->prepare("SELECT DISTINCT type FROM legislative_records WHERE type IS NOT NULL AND type <> '' AND type LIKE ? LIMIT 6");
     $stmt->bind_param("s", $like);
     if ($stmt->execute()) {

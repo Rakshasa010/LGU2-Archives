@@ -57,9 +57,19 @@
 
     // Load notifications from DB
     $notifications = [];
+    $total_logs = 0;
+    $unread_count = 0;
+    $logins_today = 0;
+    $registrations_all = 0;
+    $today_str = date('Y-m-d');
+    
     if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
             $notifications[] = $row;
+            $total_logs++;
+            if (strtolower($row['status']) === 'unread') $unread_count++;
+            if (stripos($row['about'], 'Login') !== false && $row['date'] === $today_str) $logins_today++;
+            if (stripos($row['about'], 'Register') !== false || stripos($row['about'], 'Registration') !== false) $registrations_all++;
         }
     }
 
@@ -352,99 +362,154 @@
                 <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         <div class="space-y-6">
-                            <div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600/80 ring-1 ring-gray-200 dark:ring-slate-700 transition-all p-4 sm:p-6">
-                                <div class="flex items-center justify-between mb-6">
+                            <!-- Stats Bar -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300"><i class="bi bi-file-earmark-text text-xl"></i></div>
+                                    <div><div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $total_logs; ?></div><div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Logs</div></div>
+                                </div>
+                                <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-red-200 dark:border-red-900/50 shadow-sm flex items-center gap-4 relative overflow-hidden group">
+                                    <div class="absolute inset-0 bg-red-50 dark:bg-red-900/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                                    <div class="w-12 h-12 bg-red-100 dark:bg-red-900/40 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 relative z-10"><i class="bi bi-bell-fill text-xl"></i></div>
+                                    <div class="relative z-10"><div class="text-2xl font-bold text-red-600 dark:text-red-400"><?php echo $unread_count; ?></div><div class="text-xs text-red-500 dark:text-red-400/80 font-semibold">Unread Alerts</div></div>
+                                </div>
+                                <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center text-blue-600 dark:bg-blue-400"><i class="bi bi-door-open-fill text-xl"></i></div>
+                                    <div><div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $logins_today; ?></div><div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Logins Today</div></div>
+                                </div>
+                                <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400"><i class="bi bi-person-plus-fill text-xl"></i></div>
+                                    <div><div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $registrations_all; ?></div><div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Registrations (All-time)</div></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-slate-800/95 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600/80 ring-1 ring-gray-200 dark:ring-slate-700 transition-all p-4 sm:p-6 pb-2">
+                                <div class="flex items-center justify-between mb-4">
                                     <div class="flex items-center space-x-3">
                                         <h1 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">Audit Logs</h1>
                                     </div>
+                                    <div class="flex items-center gap-2">
+                                        <button id="mark-all-read" class="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-slate-700 text-red-600 dark:text-red-400 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 border border-red-200 dark:border-slate-600 shadow-sm hover:bg-red-100 dark:hover:bg-slate-600">Mark all read</button>
+                                    </div>
                                 </div>
 
-                                <div class="bg-gray-50/50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-600/80 shadow-inner dark:shadow-none backdrop-blur-sm ring-1 ring-gray-200/50 dark:ring-slate-700/50 p-4">
-                                    <div class="flex flex-col gap-4 mb-4">
-                                        <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
-                                            <button id="filter-all" class="w-full sm:w-auto px-3 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">All</button>
-                                            <button id="filter-unread" class="w-full sm:w-auto px-3 py-2 rounded-lg bg-red-50 dark:bg-slate-700 text-red-700 dark:text-red-300 text-sm font-semibold hover:bg-red-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Unread</button>
-                                            <select id="filter-status" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                                <option value="">Status</option>
-                                                <option value="unread">Unread</option>
-                                                <option value="read">Read</option>
-                                            </select>
-                                            <select id="filter-about" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                                <option value="">About</option>
-                                            </select>
-                                            <div class="w-full sm:w-auto flex items-center gap-1 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-700 p-1">
-                                                <button type="button" id="date-preset-today" class="flex-1 sm:flex-none px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Today</button>
-                                                <button type="button" id="date-preset-week" class="flex-1 sm:flex-none px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Week</button>
-                                                <button type="button" id="date-preset-month" class="flex-1 sm:flex-none px-2 py-1.5 rounded text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">This Month</button>
-                                            </div>
-                                            <input id="filter-from" type="date" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            <input id="filter-to" type="date" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            <select id="page-size" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                                <option value="10">10</option>
-                                                <option value="25">25</option>
-                                                <option value="50">50</option>
-                                            </select>
-                                            <span id="unread-count" class="w-full sm:w-auto sm:ml-2 text-sm text-gray-600 dark:text-slate-400"></span>
+                                <!-- Smarter filter bar -->
+                                <div class="bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm p-3 mb-6 flex flex-col lg:flex-row gap-3 lg:items-center">
+                                    <div class="relative flex-1">
+                                        <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                        <input id="searchInput" type="search" placeholder="Search audit logs by content, user, or date..." class="w-full pl-9 pr-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 focus:border-red-500 dark:focus:border-red-500 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors shadow-sm">
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <select id="filter-about" class="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:border-red-400 shadow-sm">
+                                            <option value="">All Categories</option>
+                                        </select>
+                                        <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 hidden md:block mx-1"></div>
+                                        <div class="flex items-center gap-1 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 p-0.5 shadow-sm">
+                                            <button type="button" id="date-preset-today" class="px-2.5 py-1.5 rounded text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">Today</button>
+                                            <div class="w-px h-3 bg-gray-300 dark:bg-slate-600"></div>
+                                            <button type="button" id="date-preset-week" class="px-2.5 py-1.5 rounded text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">7 Days</button>
                                         </div>
-                                        <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
-                                            <input id="searchInput" type="search" placeholder="Search notifications" class="w-full sm:flex-1 min-w-[140px] px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                                            <a href="?" class="w-full sm:w-auto text-center text-sm text-red-600 dark:text-red-400 hover:underline font-medium">Reset</a>
-                                            <div id="paginationControls" class="w-full sm:w-auto flex items-center gap-2">
-                                                <button id="page-prev" class="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Prev</button>
-                                                <span id="page-info" class="text-sm text-gray-600 dark:text-slate-400 px-2">1</span>
-                                                <button id="page-next" class="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 text-sm hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Next</button>
-                                            </div>
-                                            <button id="mark-all-read" class="w-full sm:w-auto sm:ml-auto px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">Mark all as read</button>
+                                        <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 hidden lg:block mx-1"></div>
+                                        <select id="page-size" class="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:border-red-400 shadow-sm">
+                                            <option value="10">10 / page</option>
+                                            <option value="25">25 / page</option>
+                                            <option value="50">50 / page</option>
+                                        </select>
+                                        <div id="paginationControls" class="flex items-center bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm overflow-hidden">
+                                            <button id="page-prev" class="px-3 py-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border-r border-gray-200 dark:border-slate-600"><i class="bi bi-chevron-left text-xs"></i></button>
+                                            <span id="page-info" class="text-xs font-bold text-gray-700 dark:text-gray-300 px-3 py-1.5">1</span>
+                                            <button id="page-next" class="px-3 py-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border-l border-gray-200 dark:border-slate-600"><i class="bi bi-chevron-right text-xs"></i></button>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-600/80">
+                                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-600 shadow-sm">
                                     <table id="auditTable" class="w-full min-w-[720px] text-left table-auto">
                                         <thead>
-                                            <tr class="text-sm text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/80 border-b border-gray-200 dark:border-slate-600">
-                                                <th class="px-3 py-3 font-semibold">#</th>
-                                                <th class="px-3 py-3 font-semibold">Time</th>
-                                                <th class="px-3 py-3 font-semibold">Date</th>
-                                                <th class="px-3 py-3 font-semibold">Content</th>
-                                                <th class="px-3 py-3 font-semibold">About</th>
-                                                <th class="px-3 py-3 font-semibold">Action</th>
+                                            <tr class="text-xs uppercase tracking-wider text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-600">
+                                                <th class="px-4 py-3 font-bold w-12 text-center">#</th>
+                                                <th class="px-4 py-3 font-bold w-36">Time & Date</th>
+                                                <th class="px-4 py-3 font-bold">Content</th>
+                                                <th class="px-4 py-3 font-bold w-48">Category</th>
+                                                <th class="px-4 py-3 font-bold w-16 text-center"><i class="bi bi-check2-all text-lg"></i></th>
                                             </tr>
                                         </thead>
-                                        <tbody id="notesBody" class="divide-y divide-gray-200 dark:divide-slate-600">
+                                        <tbody id="notesBody" class="divide-y divide-gray-100 dark:divide-slate-700/50 block md:table-row-group">
+                                        <?php 
+                                        if (!function_exists('time_elapsed_string')) {
+                                            function time_elapsed_string($datetime, $full = false) {
+                                                $now = new DateTime();
+                                                try { $ago = new DateTime($datetime); } catch (Exception $e) { return ''; }
+                                                $diff = $now->diff($ago);
+                                                $diff->w = floor($diff->d / 7);
+                                                $diff->d -= $diff->w * 7;
+                                                $string = array('y' => 'yr','m' => 'mo','w' => 'wk','d' => 'd','h' => 'h','i' => 'm','s' => 's');
+                                                foreach ($string as $k => &$v) {
+                                                    if ($diff->$k) { $v = $diff->$k . $v; } else { unset($string[$k]); }
+                                                }
+                                                if (!$full) $string = array_slice($string, 0, 1);
+                                                return $string ? implode(', ', $string) . ' ago' : 'just now';
+                                            }
+                                        }
+                                        ?>
                                         <?php foreach ($notifications as $note): ?>
-                                            <?php $isSelected = ($selectedId !== null && $selectedId === (int)$note['id']); ?>
-                                            <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isSelected ? 'highlight' : ''; ?> bg-white dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo (int)$note['id']; ?></td>
-                                                <td class="px-3 py-3 text-sm">
-                                                    <?php
-                                                    $createdTs = isset($note['created_at']) ? strtotime($note['created_at']) : null;
-                                                    $dispTime = $createdTs ? date('h:i A', $createdTs) : ($note['time'] ?? '');
-                                                    $dispDate = $createdTs ? date('Y-m-d', $createdTs) : ($note['date'] ?? '');
-                                                    $ms = $createdTs ? ($createdTs * 1000) : 0;
-                                                    ?>
-                                                    <span class="note-time" data-ts="<?php echo (int)$ms; ?>" data-base="<?php echo htmlspecialchars($dispTime); ?>" title="Created: <?php echo htmlspecialchars($note['created_at'] ?? $dispDate); ?> • Status: <?php echo htmlspecialchars($note['status'] ?? ''); ?>">
-                                                        <?php echo htmlspecialchars($dispTime); ?>
-                                                        <span class="text-gray-500"></span>
-                                                    </span>
+                                            <?php 
+                                            $isSelected = ($selectedId !== null && $selectedId === (int)$note['id']); 
+                                            $isUnread = strtolower($note['status']) === 'unread';
+                                            
+                                            // Handle Time Calculation
+                                            $createdTs = isset($note['created_at']) ? strtotime($note['created_at']) : null;
+                                            $dispTime = $createdTs ? date('h:i A', $createdTs) : ($note['time'] ?? '');
+                                            $dispDate = $createdTs ? date('Y-m-d', $createdTs) : ($note['date'] ?? '');
+                                            
+                                            $relativeTime = $createdTs ? time_elapsed_string('@'.$createdTs) : '';
+                                            
+                                            // Decorate Username in Content
+                                            $safeContent = htmlspecialchars($note['content']);
+                                            $safeContent = preg_replace('/\bUser\s+([a-zA-Z0-9\s\.\-]+?)(?=\s+(logged|requested|failed|registered|updated|created|deleted|viewed|unlocked|action|is)|\b)/i', 'User <span class="font-bold text-blue-600 dark:text-blue-400">$1</span>', $safeContent);
+                                            
+                                            // Decorate Badges
+                                            $about = $note['about'];
+                                            $badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
+                                            if (stripos($about, 'Login') !== false) {
+                                                $badgeColor = 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50';
+                                            } elseif (stripos($about, 'Register') !== false || stripos($about, 'Registration') !== false) {
+                                                $badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
+                                            }
+                                            ?>
+                                            <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isUnread ? 'bg-[#fff5f5] dark:bg-red-900/20 border-l-[3px] border-l-red-500' : 'bg-white dark:bg-slate-800 border-l-[3px] border-l-transparent text-gray-700 dark:text-slate-300'; ?> hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors md:table-row flex flex-col md:flex-row mb-2 md:mb-0 border border-gray-100 dark:border-slate-700/50 md:border-0 rounded-lg md:rounded-none shadow-sm md:shadow-none">
+                                                <td class="px-4 py-3 text-sm font-medium opacity-70 text-center"><span class="md:hidden font-bold inline-block w-20 text-left">ID</span><?php echo (int)$note['id']; ?></td>
+                                                <td class="px-4 py-3">
+                                                    <span class="md:hidden font-bold inline-block w-20 text-left mb-1">Time</span>
+                                                    <div class="inline-block align-top">
+                                                        <div class="text-sm font-bold text-gray-900 dark:text-gray-100" title="<?php echo htmlspecialchars($dispDate); ?>"><?php echo htmlspecialchars($dispTime); ?></div>
+                                                        <div class="text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-search="<?php echo htmlspecialchars($dispDate); ?>"><?php echo $relativeTime; ?></div>
+                                                    </div>
                                                 </td>
-                                                <td class="px-3 py-3 text-sm text-gray-700 dark:text-slate-200"><?php echo htmlspecialchars($dispDate); ?></td>
-                                                <td class="px-3 py-3 text-sm">
+                                                <td class="px-4 py-3 text-sm leading-relaxed">
+                                                    <span class="md:hidden font-bold block w-20 text-left mb-1">Content</span>
                                                     <?php if (!empty($note['link'])): ?>
-                                                        <a href="<?php echo htmlspecialchars($note['link']); ?>" class="text-gray-800 dark:text-slate-100 hover:underline block"><?php echo htmlspecialchars($note['content']); ?></a>
+                                                        <a href="<?php echo htmlspecialchars($note['link']); ?>" class="text-gray-900 dark:text-slate-100 hover:text-red-600 dark:hover:text-red-400 block"><?php echo $safeContent; ?></a>
                                                     <?php else: ?>
-                                                        <span class="text-gray-800 dark:text-slate-100 block"><?php echo htmlspecialchars($note['content']); ?></span>
+                                                        <span class="block"><?php echo $safeContent; ?></span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td class="px-3 py-3 text-sm text-gray-600 dark:text-slate-400"><?php echo htmlspecialchars($note['about']); ?></td>
-                                                <td class="px-3 py-3 text-sm">
+                                                <td class="px-4 py-3 text-sm">
+                                                    <span class="md:hidden font-bold inline-block w-20 text-left">Cat.</span>
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold <?php echo $badgeColor; ?>"><?php echo htmlspecialchars($about); ?></span>
+                                                    <span class="hidden" data-search="<?php echo htmlspecialchars($about); ?>"></span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-center">
                                                     <?php $isReadBtn = strtolower($note['status']) === 'read'; ?>
-                                                    <button class="mark-read-btn px-3 py-2 text-xs font-semibold rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 <?php echo $isReadBtn ? 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 border-gray-200 dark:border-slate-600 highlight-mark-read' : 'bg-red-600 hover:bg-red-700 text-white border-red-700'; ?>" type="button" data-status="<?php echo htmlspecialchars($note['status']); ?>"><?php echo $isReadBtn ? 'Read' : 'Mark Read'; ?></button>
+                                                    <button class="mark-read-btn inline-flex items-center justify-center w-8 h-8 rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-red-500 <?php echo $isReadBtn ? 'bg-white dark:bg-slate-700 text-gray-400 dark:text-slate-400 border-gray-200 dark:border-slate-600 highlight-mark-read cursor-default' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 hover:bg-red-600 hover:text-white dark:hover:bg-red-600'; ?>" type="button" data-status="<?php echo htmlspecialchars($note['status']); ?>" title="<?php echo $isReadBtn ? 'Read' : 'Mark as Read'; ?>">
+                                                        <i class="<?php echo $isReadBtn ? 'bi bi-check2-all' : 'bi bi-check2'; ?> text-lg"></i>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                         </tbody>
                                     </table>
-                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>

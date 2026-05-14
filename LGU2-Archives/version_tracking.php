@@ -255,10 +255,10 @@ $conn->close();
             </nav>
         </aside>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Main Content (Outer Wrapper with 2nd Sidebar) -->
+        <div class="flex-1 flex flex-col overflow-hidden bg-[#171a21]">
             <!-- Header / Navbar -->
-            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
+            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 z-40 transition-colors duration-200 w-full flex-shrink-0">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side: Toggle buttons and Logo -->
@@ -269,7 +269,6 @@ $conn->close();
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
                         </div>
-                        
                         
                         <!-- Page Title & Breadcrumb -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
@@ -290,7 +289,7 @@ $conn->close();
                                 </svg>
                             </button>
                         
-                            <!-- Notification Dropdown (placed beside theme toggle) -->
+                            <!-- Notification Dropdown -->
                             <div class="relative">
                                 <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
                                     <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
@@ -313,7 +312,7 @@ $conn->close();
                                 </div>
                             </div>
 
-                            <!-- User Profile Dropdown (moved right of notification) -->
+                            <!-- User Profile Dropdown -->
                              <div class="relative">
                                 <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
                                 <?php if ($profile_picture && file_exists('uploads/profile_pictures/' . $profile_picture)): ?>
@@ -348,54 +347,133 @@ $conn->close();
                     </div>
                 </div>
             </nav>
-
-            <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div class="mb-8 pb-6 border-b border-gray-200 dark:border-slate-700">
-                        <h1 class="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">Version Tracking</h1>
-                        <p class="text-gray-600 dark:text-gray-400">Browse folders and view mock version history of files</p>
+            <div class="flex-1 flex overflow-hidden bg-gray-50 dark:bg-[#171a21] transition-colors duration-200">
+            
+            <!-- Secondary Dark Menu (Version Tracking Context) -->
+            <aside class="w-64 bg-white dark:bg-[#1e232d] flex flex-col flex-shrink-0 border-r border-gray-200 dark:border-[#242934] hidden md:flex text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                <div class="flex-1 overflow-y-auto p-5">
+                    <h2 class="text-xs font-bold tracking-widest text-gray-500 dark:text-[#727a8a] mb-5 mt-2 uppercase px-1">Version Tracking</h2>
+                    <div class="relative mb-8">
+                        <i class="bi bi-search absolute left-3 top-2.5 text-gray-400 dark:text-gray-500"></i>
+                        <input type="text" placeholder="Search folders..." class="w-full bg-gray-100 dark:bg-[#141820] text-sm text-gray-800 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 rounded-md pl-9 pr-3 py-2 border border-transparent dark:border-[#242934] focus:outline-none focus:ring-1 focus:ring-red-500 dark:focus:border-gray-500 transition-colors shadow-inner">
                     </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <div class="lg:col-span-1">
-                            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4">
-                                <div class="font-semibold text-gray-800 dark:text-gray-100 mb-2">Folders</div>
-                                <div id="vt-folders-list" class="space-y-2">
-                                    <button type="button" onclick="viewFolder('ordRes','Ordinances & Resolutions')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
-                                        <span class="flex items-center gap-2"><i class="bi bi-folder text-orange-600"></i><span>Ordinances & Resolutions</span></span>
-                                        <i class="bi bi-chevron-right text-gray-400"></i>
-                                    </button>
-                                    <button type="button" onclick="viewFolder('billing','Billing')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
-                                        <span class="flex items-center gap-2"><i class="bi bi-folder2-open text-emerald-600"></i><span>Billing</span></span>
-                                        <i class="bi bi-chevron-right text-gray-400"></i>
-                                    </button>
-                                    <button type="button" onclick="viewFolder('publicHearing','Public Hearings')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
-                                        <span class="flex items-center gap-2"><i class="bi bi-folder2 text-blue-600"></i><span>Public Hearings</span></span>
-                                        <i class="bi bi-chevron-right text-gray-400"></i>
-                                    </button>
-                                    <button type="button" onclick="viewFolder('meeting','Meeting/Sessions Records')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
-                                        <span class="flex items-center gap-2"><i class="bi bi-journal-text text-purple-600"></i><span>Meeting/Sessions Records</span></span>
-                                        <i class="bi bi-chevron-right text-gray-400"></i>
-                                    </button>
-                                </div>
+                    
+                    <div class="mb-3 text-[10px] font-bold tracking-widest text-gray-500 dark:text-[#5c6370] uppercase px-1">Folders</div>
+                    <div class="space-y-0.5" id="vt-folders-list">
+                        <button type="button" onclick="viewFolder('ordRes','Ordinances & Resolutions')" class="w-full flex items-center justify-between px-2 py-2 rounded bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-100 hover:bg-gray-100 dark:hover:bg-[#2a303c] transition-colors group">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded flex items-center justify-center bg-red-100 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 group-hover:bg-red-200 dark:group-hover:bg-red-500/20 transition-colors"><i class="bi bi-file-earmark-text text-red-600 dark:text-red-400 text-[10px]"></i></div>
+                                <span class="text-[13px] font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">Ordinances &amp; Resos</span>
                             </div>
-                        </div>
-                        <div class="lg:col-span-3">
-                            <div id="filesPanel" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div id="filesPanelTitle" class="font-semibold text-base md:text-lg tracking-tight text-gray-800 dark:text-gray-200">Files</div>
-                                        <div id="filesPanelMeta" class="text-xs md:text-sm text-gray-500 dark:text-gray-400"></div>
-                                    </div>
-                                    <button type="button" onclick="clearFolder()" class="px-3 py-1.5 text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded hover:bg-red-100 dark:hover:bg-red-800/40">Close</button>
-                                </div>
-                                <div id="filesPanelList" class="space-y-3">
-                                    <div class="text-sm text-gray-500">Select a folder on the left</div>
-                                </div>
+                        </button>
+                        <button type="button" onclick="viewFolder('billing','Billing')" class="w-full flex items-center justify-between px-2 py-2 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2a303c] transition-colors group">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors"><i class="bi bi-receipt text-emerald-600 dark:text-emerald-400 text-[10px]"></i></div>
+                                <span class="text-[13px] font-medium">Billing</span>
                             </div>
-                        </div>
+                        </button>
+                        <button type="button" onclick="viewFolder('publicHearing','Public Hearings')" class="w-full flex items-center justify-between px-2 py-2 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2a303c] transition-colors group">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors"><i class="bi bi-megaphone text-blue-600 dark:text-blue-400 text-[10px]"></i></div>
+                                <span class="text-[13px] font-medium">Public Hearings</span>
+                            </div>
+                        </button>
+                        <button type="button" onclick="viewFolder('meeting','Meeting/Sessions')" class="w-full flex items-center justify-between px-2 py-2 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2a303c] transition-colors group">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded flex items-center justify-center bg-purple-50 dark:bg-purple-500/10 border border-purple-100 dark:border-purple-500/20 group-hover:bg-purple-100 dark:group-hover:bg-purple-500/20 transition-colors"><i class="bi bi-journal-text text-purple-600 dark:text-purple-400 text-[10px]"></i></div>
+                                <span class="text-[13px] font-medium">Meeting/Sessions</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 mb-3 text-[10px] font-bold tracking-widest text-gray-500 dark:text-[#5c6370] uppercase px-1">Recent</div>
+                    <div class="space-y-1.5 px-2" id="vt-recent-list">
+                        <!-- Loaded dynamically -->
+                        <div class="py-2 text-xs text-gray-400 italic">No recent items</div>
                     </div>
                 </div>
-            </main>
+            </aside>
+
+            <!-- Main Panel -->
+            <div class="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-[#171a21] transition-colors duration-200" id="mainContentArea">
+                <!-- Topbar -->
+                <div class="flex flex-wrap items-center justify-between px-6 lg:px-10 py-5 border-b border-gray-200 dark:border-[#242934] bg-white dark:bg-[#1a1e27] z-10 w-full sticky top-0 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                        <button id="mobile-menu-btn" class="md:hidden text-gray-500 hover:text-gray-800 dark:hover:text-white p-2 focus:outline-none transition-colors">
+                            <i class="bi bi-list text-2xl"></i>
+                        </button>
+                        <div class="flex items-center text-sm font-medium text-gray-500 dark:text-[#727a8a]">
+                            <span>Files</span>
+                            <i class="bi bi-chevron-right text-[9px] mx-3 opacity-60"></i>
+                            <span class="text-gray-800 dark:text-gray-200 tracking-wide font-semibold" id="breadcrumbFolder">Dashboard</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <button class="px-3 py-1.5 border border-gray-200 dark:border-[#3b4253] bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-[#2a303c] text-gray-600 dark:text-gray-300 rounded text-xs font-semibold flex items-center gap-2 transition-colors">
+                            <i class="bi bi-funnel"></i> Filter
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Main Content Body -->
+                <div class="flex-1 overflow-y-auto w-full p-6 lg:p-10 hide-scrollbar" id="dynamicContent">
+                    
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10" id="statsBar" style="display:none;">
+                        <div class="bg-white dark:bg-[#1e232d] shadow border border-gray-100 dark:border-[#2c3240] rounded-xl p-5 hover:border-gray-200 dark:hover:border-[#3b4253] transition-colors relative overflow-hidden group">
+                            <!-- Subtle glow background effect -->
+                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-50 dark:bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-100 dark:group-hover:bg-red-500/10 transition-colors"></div>
+                            
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)] dark:shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+                                <span class="text-xs text-gray-500 dark:text-[#8a92a3] tracking-wide">Total files</span>
+                            </div>
+                            <div class="text-3xl font-light text-gray-900 dark:text-white mb-0.5 tracking-tight" id="statTotalFiles">0</div>
+                            <div class="text-[11px] text-gray-400 dark:text-[#5c6370]" id="statTotalSub">across this folder</div>
+                        </div>
+                        <div class="bg-white dark:bg-[#1e232d] shadow border border-gray-100 dark:border-[#2c3240] rounded-xl p-5 hover:border-gray-200 dark:hover:border-[#3b4253] transition-colors relative overflow-hidden group">
+                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 dark:bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-100 dark:group-hover:bg-blue-500/10 transition-colors"></div>
+                            
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)] dark:shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+                                <span class="text-xs text-gray-500 dark:text-[#8a92a3] tracking-wide">Active versions</span>
+                            </div>
+                            <div class="text-3xl font-light text-gray-900 dark:text-white mb-0.5 tracking-tight" id="statActive">0</div>
+                            <div class="text-[11px] text-gray-400 dark:text-[#5c6370]">this folder</div>
+                        </div>
+                        <div class="bg-white dark:bg-[#1e232d] shadow border border-gray-100 dark:border-[#2c3240] rounded-xl p-5 hover:border-gray-200 dark:hover:border-[#3b4253] transition-colors relative overflow-hidden group">
+                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10 transition-colors"></div>
+                            
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)] dark:shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                                <span class="text-xs text-gray-500 dark:text-[#8a92a3] tracking-wide">Updated today</span>
+                            </div>
+                            <div class="text-3xl font-light text-gray-900 dark:text-white mb-0.5 tracking-tight" id="statToday">0</div>
+                            <div class="text-[11px] text-gray-400 dark:text-[#5c6370]">recent updates</div>
+                        </div>
+                    </div>
+
+                    <!-- File Grid Section -->
+                    <div id="gridSection" style="display:none;">
+                        <h3 class="text-[17px] font-semibold text-gray-900 dark:text-gray-100 mb-6 tracking-tight" id="gridTitle">0 files</h3>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6" id="filesGrid">
+                            <!-- JS populated cards go here -->
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="flex flex-col items-center justify-center py-32 text-center h-full">
+                        <div class="w-20 h-20 bg-white dark:bg-[#1e232d] rounded-2xl flex items-center justify-center mb-6 shadow border border-gray-100 dark:border-[#2a303c]">
+                            <i class="bi bi-stack text-3xl text-red-500/70"></i>
+                        </div>
+                        <h3 class="text-xl font-medium text-gray-800 dark:text-gray-200">Select a folder</h3>
+                        <p class="text-sm text-gray-500 dark:text-[#727a8a] mt-2 max-w-xs leading-relaxed">Choose a category from the sidebar to view file version tracks and metrics.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
     </div>
 
@@ -414,14 +492,16 @@ $conn->close();
 
     <script>
         function viewFolder(key, label) {
-            var panel = document.getElementById('filesPanel');
-            var title = document.getElementById('filesPanelTitle');
-            var meta = document.getElementById('filesPanelMeta');
-            var list = document.getElementById('filesPanelList');
-            title.textContent = label;
-            list.innerHTML = '<div class="text-center py-4 text-gray-500">Loading files...</div>';
-            panel.classList.remove('hidden');
-
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('statsBar').style.display = 'grid';
+            document.getElementById('gridSection').style.display = 'block';
+            
+            document.getElementById('breadcrumbFolder').textContent = label;
+            document.getElementById('gridTitle').textContent = 'Loading...';
+            
+            var grid = document.getElementById('filesGrid');
+            grid.innerHTML = '';
+            
             var typesToFetch = [];
             if (key === 'ordRes') typesToFetch = ['Ordinance', 'Resolution'];
             else if (key === 'billing') typesToFetch = ['Billing'];
@@ -439,63 +519,61 @@ $conn->close();
                     return new Date(b.created_at) - new Date(a.created_at);
                 });
 
-                meta.textContent = (allFiles.length ? allFiles.length + ' files' : 'No files');
-                list.innerHTML = '';
+                document.getElementById('gridTitle').textContent = allFiles.length + ' files in ' + label;
+                document.getElementById('statTotalFiles').textContent = allFiles.length;
+                document.getElementById('statTotalSub').textContent = 'across this folder';
+                document.getElementById('statActive').textContent = allFiles.filter(f => f.version && f.version > 1).length;
                 
+                let todayCount = 0;
+                let todayStr = new Date().toISOString().split('T')[0];
+                allFiles.forEach(f => {
+                    if (f.created_at && f.created_at.startsWith(todayStr)) todayCount++;
+                });
+                document.getElementById('statToday').textContent = todayCount;
+
                 if (!allFiles.length) {
-                    var empty = document.createElement('div');
-                    empty.className = 'text-sm text-gray-500 dark:text-gray-400 text-center py-4';
-                    empty.textContent = 'No files found';
-                    list.appendChild(empty);
+                    grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">No files found</div>';
                 } else {
                     allFiles.forEach(function(record){
-                        var row = document.createElement('div');
-                        row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
-                        var left = document.createElement('div');
-                        left.className = 'min-w-0';
-                        var titleEl = document.createElement('div');
-                        titleEl.className = 'font-medium text-gray-800 dark:text-white truncate';
-                        titleEl.textContent = record.title;
-                        var metaEl = document.createElement('div');
-                        metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
-                        var badge = document.createElement('span');
-                        badge.className = 'px-2 py-0.5 rounded text-[11px]';
                         var type = String(record.type||'');
-                        var cls = type === 'Billing' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
-                                  type === 'Public Hearing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-                                  type === 'Meeting' ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300' :
-                                  'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
-                        badge.className += ' ' + cls;
-                        badge.textContent = type;
-                        var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
-                        var dateEl = document.createElement('span'); dateEl.textContent = String(record.month||'') + ' ' + String(record.year||'');
-                        var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
-                        var authEl = document.createElement('span'); authEl.textContent = record.author || 'Unknown';
-                        metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(authEl);
-                        left.appendChild(titleEl); left.appendChild(metaEl);
-                        var btn = document.createElement('button');
-                        btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
-                        var countSpan = document.createElement('span');
-                        countSpan.className = 'ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full';
-                        countSpan.textContent = '…';
-                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span>';
-                        btn.appendChild(countSpan);
-                        btn.addEventListener('click', function(){
-                            openVersionHistory(record);
-                        });
-                        row.appendChild(left);
-                        row.appendChild(btn);
-                        list.appendChild(row);
-                        fetch('legislative_api.php?action=get_versions&id=' + encodeURIComponent(record.id))
-                            .then(function(r){ return r.json(); })
-                            .then(function(d){
-                                if (d && d.success && Array.isArray(d.versions)) {
-                                    countSpan.textContent = String(d.versions.length);
-                                } else {
-                                    countSpan.textContent = '0';
-                                }
-                            })
-                            .catch(function(){ countSpan.textContent = '0'; });
+                        var theme = {
+                            bg: 'bg-red-500/10', border: 'border-red-500/20', iconColor: 'text-red-400', icon: 'bi-file-earmark-text', pill: 'bg-red-500/20 text-red-300 border-red-500/30'
+                        };
+                        if (type === 'Billing') {
+                            theme = { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', iconColor: 'text-emerald-400', icon: 'bi-receipt', pill: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+                        } else if (type === 'Public Hearing') {
+                            theme = { bg: 'bg-blue-500/10', border: 'border-blue-500/20', iconColor: 'text-blue-400', icon: 'bi-megaphone', pill: 'bg-blue-500/20 text-blue-300 border-blue-500/30' };
+                        } else if (type === 'Meeting') {
+                            theme = { bg: 'bg-purple-500/10', border: 'border-purple-500/20', iconColor: 'text-purple-400', icon: 'bi-journal-text', pill: 'bg-purple-500/20 text-purple-300 border-purple-500/30' };
+                        }
+
+                        var dateStr = String(record.month||'') + ' ' + String(record.year||'');
+                        if(!dateStr.trim() && record.created_at) {
+                            var d = new Date(record.created_at);
+                            dateStr = d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                        }
+
+                        var verStr = record.version ? 'v' + record.version : 'v1.0';
+
+                        card.className = 'bg-white dark:bg-[#1e232d] shadow-lg rounded-xl border border-gray-100 dark:border-[#2a303c] overflow-hidden hover:border-gray-200 dark:hover:border-[#3b4253] hover:shadow-xl transition-all duration-200 group cursor-pointer flex flex-col h-full';
+                        card.onclick = function() { openVersionHistory(record); };
+
+                        card.innerHTML = `
+                            <div class="h-32 w-full ${theme.bg} ${theme.border} flex items-center justify-center p-4 relative overflow-hidden">
+                                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-[#1e232d] opacity-50"></div>
+                                <div class="w-16 h-16 rounded-xl bg-white dark:bg-[#1e232d] shadow border border-gray-100 dark:border-[#2a303c] flex items-center justify-center z-10 group-hover:scale-105 transition-transform duration-300">
+                                    <i class="bi ${theme.icon} text-2xl ${theme.iconColor}"></i>
+                                </div>
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col">
+                                <div class="font-medium text-[13px] text-gray-800 dark:text-gray-200 truncate mb-1" title="${record.title}">${record.title}</div>
+                                <div class="mt-auto flex items-center justify-between pt-3">
+                                    <div class="text-[11px] text-gray-500 dark:text-[#727a8a]">${dateStr}</div>
+                                    <div class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${theme.pill}">${verStr}</div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
                     });
                 }
             });
@@ -505,10 +583,14 @@ $conn->close();
             if (!list) return;
             fetch('archives_api.php?action=list_folders').then(function(r){ return r.json(); }).then(function(d){
                 var folders = (d && d.success) ? (d.folders || []) : [];
+                // Not generating Folders here automatically anymore because we hardcoded them to match design perfectly in HTML.
+                // But if they are dynamic we can append them. Given the strict design, we keep the dynamic ones appended at bottom with grey styles.
                 var html = folders.map(function(f){
-                    return '<button type="button" data-id="'+String(f.id)+'" data-name="'+String(f.name)+'" class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">'
-                         + '<span class="flex items-center gap-2"><i class="bi bi-folder text-red-600"></i><span>'+String(f.name)+'</span></span>'
-                         + '<i class="bi bi-chevron-right text-gray-400"></i></button>';
+                    return '<button type="button" data-id="'+String(f.id)+'" data-name="'+String(f.name)+'" class="w-full flex items-center justify-between px-2 py-2 rounded text-gray-400 hover:text-gray-200 hover:bg-[#2a303c] transition-colors group">'
+                         + '<div class="flex items-center gap-2">'
+                         + '<div class="w-5 h-5 rounded flex items-center justify-center bg-gray-500/10 border border-gray-500/20 group-hover:bg-gray-500/20 group-hover:border-gray-500/30 transition-colors"><i class="bi bi-folder-fill text-gray-500 text-[10px]"></i></div>'
+                         + '<span class="text-[13px] font-medium">'+String(f.name)+'</span>'
+                         + '</div></button>';
                 }).join('');
                 list.insertAdjacentHTML('beforeend', html);
                 Array.prototype.forEach.call(list.querySelectorAll('button[data-id]'), function(btn){
@@ -518,73 +600,111 @@ $conn->close();
                     });
                 });
             }).catch(function(){});
+
+            // Fetch Recent Files for sidebar
+            var typesToFetch = ['Ordinance', 'Resolution', 'Billing', 'Public Hearing', 'Meeting'];
+            var promises = typesToFetch.map(function(t) {
+                return fetch('legislative_api.php?action=get_files&type=' + encodeURIComponent(t))
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){ return d.success ? d.files : []; });
+            });
+            Promise.all(promises).then(function(results) {
+                var allFiles = results.flat().sort(function(a, b) {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+                var recList = document.getElementById('vt-recent-list');
+                if(!recList) return;
+                if(!allFiles.length) {
+                    recList.innerHTML = '<div class="py-2 text-xs text-gray-400 italic">No recent items found</div>';
+                    return;
+                }
+                recList.innerHTML = '';
+                allFiles.slice(0, 5).forEach(function(f){
+                    var type = String(f.type||'');
+                    var dotColor = 'bg-red-500'; var shadowColor = 'dark:shadow-[0_0_8px_rgba(239,68,68,0.5)] shadow-[0_0_2px_rgba(239,68,68,0.3)]';
+                    if (type === 'Billing') { dotColor = 'bg-emerald-500'; shadowColor = 'dark:shadow-[0_0_8px_rgba(16,185,129,0.5)] shadow-[0_0_2px_rgba(16,185,129,0.3)]'; }
+                    else if (type === 'Public Hearing') { dotColor = 'bg-blue-500'; shadowColor = 'dark:shadow-[0_0_8px_rgba(59,130,246,0.5)] shadow-[0_0_2px_rgba(59,130,246,0.3)]'; }
+                    else if (type === 'Meeting') { dotColor = 'bg-purple-500'; shadowColor = 'dark:shadow-[0_0_8px_rgba(168,85,247,0.5)] shadow-[0_0_2px_rgba(168,85,247,0.3)]'; }
+                    
+                    var dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : 'Recently';
+                    
+                    var item = document.createElement('div');
+                    item.className = 'flex items-center justify-between group cursor-pointer py-1';
+                    item.onclick = function() { openVersionHistory(f); };
+                    item.innerHTML = '<div class="flex items-center gap-2.5 min-w-0 pr-1">'
+                        + '<div class="w-[6px] h-[6px] rounded-full ' + dotColor + ' flex-shrink-0 ' + shadowColor + '"></div>'
+                        + '<span class="text-xs font-medium text-gray-600 dark:text-[#8a92a3] group-hover:text-gray-900 dark:group-hover:text-gray-200 truncate transition-colors" title="' + (f.title||f.name) + '">' + (f.title||f.name) + '</span>'
+                        + '</div>'
+                        + '<span class="text-[10px] text-gray-400 dark:text-[#5c6370] flex-shrink-0">' + dateStr + '</span>';
+                    recList.appendChild(item);
+                });
+            });
         })();
         function clearFolder() {
-            var panel = document.getElementById('filesPanel');
-            var list = document.getElementById('filesPanelList');
-            list.innerHTML = '';
-            panel.classList.add('hidden');
+            document.getElementById('emptyState').style.display = 'flex';
+            document.getElementById('statsBar').style.display = 'none';
+            document.getElementById('gridSection').style.display = 'none';
+            document.getElementById('breadcrumbFolder').textContent = 'Dashboard';
         }
         function viewArchiveFolder(folder) {
-            var panel = document.getElementById('filesPanel');
-            var title = document.getElementById('filesPanelTitle');
-            var meta = document.getElementById('filesPanelMeta');
-            var list = document.getElementById('filesPanelList');
-            title.textContent = folder.name;
-            list.innerHTML = '<div class="text-center py-4 text-gray-500">Loading files...</div>';
-            panel.classList.remove('hidden');
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('statsBar').style.display = 'grid';
+            document.getElementById('gridSection').style.display = 'block';
+            
+            document.getElementById('breadcrumbFolder').textContent = folder.name;
+            document.getElementById('gridTitle').textContent = 'Loading...';
+            
+            var grid = document.getElementById('filesGrid');
+            grid.innerHTML = '';
+            
             fetch('archives_api.php?action=get_files&folder_id=' + encodeURIComponent(folder.id))
             .then(function(r){ return r.json(); })
             .then(function(d){
                 var files = (d && d.success) ? (d.files || []) : [];
-                meta.textContent = files.length ? (files.length + ' files') : 'No files';
-                list.innerHTML = '';
+                document.getElementById('gridTitle').textContent = files.length + ' files in ' + folder.name;
+                document.getElementById('statTotalFiles').textContent = files.length;
+                document.getElementById('statTotalSub').textContent = 'in archive folder';
+                document.getElementById('statActive').textContent = files.filter(f => f.version && f.version > 1).length;
+                
+                let todayCount = 0;
+                let todayStr = new Date().toISOString().split('T')[0];
+                files.forEach(f => {
+                    if (f.created_at && f.created_at.startsWith(todayStr)) todayCount++;
+                });
+                document.getElementById('statToday').textContent = todayCount;
+
                 if (!files.length) {
-                    var empty = document.createElement('div');
-                    empty.className = 'text-sm text-gray-500 dark:text-gray-400 text-center py-4';
-                    empty.textContent = 'No files found';
-                    list.appendChild(empty);
+                    grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">No shadow files found</div>';
                 } else {
                     files.forEach(function(f){
-                        var row = document.createElement('div');
-                        row.className = 'flex items-start justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-600';
-                        var left = document.createElement('div');
-                        left.className = 'min-w-0';
-                        var titleEl = document.createElement('div');
-                        titleEl.className = 'font-medium text-gray-800 dark:text-white truncate';
-                        titleEl.textContent = f.title;
-                        var metaEl = document.createElement('div');
-                        metaEl.className = 'text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5';
-                        var badge = document.createElement('span');
-                        badge.className = 'px-2 py-0.5 rounded text-[11px] bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
-                        badge.textContent = 'Archive';
-                        var sep1 = document.createElement('span'); sep1.className = 'mx-1.5'; sep1.textContent = '•';
-                        var dateEl = document.createElement('span'); dateEl.textContent = (f.created_at || '');
-                        var sep2 = document.createElement('span'); sep2.className = 'mx-1.5'; sep2.textContent = '•';
-                        var verEl = document.createElement('span'); verEl.textContent = 'v' + String(f.version || 1);
-                        metaEl.appendChild(badge); metaEl.appendChild(sep1); metaEl.appendChild(dateEl); metaEl.appendChild(sep2); metaEl.appendChild(verEl);
-                        left.appendChild(titleEl); left.appendChild(metaEl);
-                        var btn = document.createElement('button');
-                        btn.className = 'ml-4 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-600 flex items-center space-x-1';
-                        var countSpan = document.createElement('span');
-                        countSpan.className = 'ml-1 bg-gray-200 dark:bg-gray-600 px-1.5 rounded-full';
-                        countSpan.textContent = '…';
-                        btn.innerHTML = '<i class="bi bi-clock-history"></i><span>History</span>';
-                        btn.appendChild(countSpan);
-                        btn.addEventListener('click', function(){
-                            openArchiveVersionHistory(f);
-                        });
-                        row.appendChild(left);
-                        row.appendChild(btn);
-                        list.appendChild(row);
-                        fetch('archives_api.php?action=get_versions&id=' + encodeURIComponent(f.id))
-                            .then(function(r){ return r.json(); })
-                            .then(function(d){ countSpan.textContent = (d && d.success && d.versions) ? String(d.versions.length) : '0'; })
-                            .catch(function(){ countSpan.textContent = '0'; });
+                        var theme = { bg: 'bg-orange-500/10', border: 'border-orange-500/20', iconColor: 'text-orange-400', icon: 'bi-archive', pill: 'bg-orange-500/20 text-orange-300 border-orange-500/30' };
+                        var verStr = f.version ? 'v' + f.version : 'v1.0';
+
+                        var card = document.createElement('div');
+                        card.className = 'bg-white dark:bg-[#1e232d] shadow-lg rounded-xl border border-gray-100 dark:border-[#2a303c] overflow-hidden hover:border-gray-200 dark:hover:border-[#3b4253] hover:shadow-xl transition-all duration-200 group cursor-pointer flex flex-col h-full';
+                        card.onclick = function() { openArchiveVersionHistory(f); };
+
+                        card.innerHTML = `
+                            <div class="h-32 w-full ${theme.bg} ${theme.border} flex items-center justify-center p-4 relative overflow-hidden">
+                                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-[#1e232d] opacity-50"></div>
+                                <div class="w-16 h-16 rounded-xl bg-white dark:bg-[#1e232d] shadow border border-gray-100 dark:border-[#2a303c] flex items-center justify-center z-10 group-hover:scale-105 transition-transform duration-300">
+                                    <i class="bi ${theme.icon} text-2xl ${theme.iconColor}"></i>
+                                </div>
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col">
+                                <div class="font-medium text-[13px] text-gray-800 dark:text-gray-200 truncate mb-1" title="${f.title}">${f.title}</div>
+                                <div class="mt-auto flex items-center justify-between pt-3">
+                                    <div class="text-[11px] text-gray-500 dark:text-[#727a8a] truncate pr-2">${f.created_at || 'Unknown'}</div>
+                                    <div class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${theme.pill} flex-shrink-0">${verStr}</div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
                     });
                 }
             });
         }
+
         function openArchiveVersionHistory(file) {
             var list = document.getElementById('vm-list');
             var header = document.getElementById('vm-title');
