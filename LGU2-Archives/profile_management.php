@@ -489,6 +489,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                         echo $upload_message;
                     }
                 } // This properly closes the main POST if block
+                }
                 ?>
 
                 <form action="profile_management.php" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -777,4 +778,3 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
     </script>
 </body>
 </html>
- 

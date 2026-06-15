@@ -392,6 +392,7 @@ $conn->close();
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
                         <input type="file" id="fileInput" name="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt,text/plain" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
                     </div>
+                    <div id="upload-progress" class="hidden mt-3 text-sm text-gray-600">Uploading: <span id="upload-progress-text">0%</span></div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('uploadModal')" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Upload</button>
@@ -648,60 +649,79 @@ $conn->close();
             const formData = new FormData(this);
             formData.append('action', 'upload_file');
             formData.append('type', 'Ordinance'); 
-            
-            fetch('legislative_api.php', { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(d => {
-                if(d.success) {
-                    // Close modal and show success message
-                    closeModal('uploadModal');
-                    try { UI_ENH.toast('Uploaded!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
-                    
-                    // Fetch the uploaded file data and add to page
-                    fetch('legislative_api.php?action=get_file&id=' + d.id)
-                    .then(r2 => r2.json())
-                    .then(fileData => {
-                        if(fileData.success) {
-                            addUploadedFileToList(fileData.file);
-                        }
-                    })
-                    .catch(err => console.error('Failed to fetch file data:', err));
-                    
-                } else if (d.duplicate) {
-                    if (confirm(d.message)) {
-                        // User wants to create new version
-                        formData.append('force_version', '1');
-                        formData.append('parent_id', d.existing_id);
-                        fetch('legislative_api.php', { method: 'POST', body: formData })
-                        .then(r2 => r2.json())
-                        .then(d2 => {
-                            if(d2.success) {
-                                closeModal('uploadModal');
-                                try { UI_ENH.toast('New version created!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
-                                
-                                // Fetch the new version data and add to page
-                                fetch('legislative_api.php?action=get_file&id=' + d2.id)
-                                .then(r3 => r3.json())
-                                .then(fileData => {
-                                    if(fileData.success) {
-                                        addUploadedFileToList(fileData.file);
-                                    }
-                                })
-                                .catch(err => console.error('Failed to fetch file data:', err));
-                                
-                            } else {
-                                try { UI_ENH.toast(d2.message || 'Failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
-                            }
-                        });
-                    }
-                } else {
-                    try { UI_ENH.toast(d.message || 'Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+
+            const xhr = new XMLHttpRequest();
+            const progEl = document.getElementById('upload-progress');
+            const progText = document.getElementById('upload-progress-text');
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            if (progEl) { progEl.classList.remove('hidden'); progText.textContent = '0%'; }
+
+            xhr.open('POST', 'legislative_api.php', true);
+            xhr.withCredentials = true;
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable && progText) {
+                    const p = Math.round((e.loaded / e.total) * 100);
+                    progText.textContent = p + '%';
                 }
-            })
-            .catch(err => {
-                console.error('Upload error:', err);
-                try { UI_ENH.toast('Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
-            });
+            };
+            xhr.onload = function() {
+                if (progEl) progEl.classList.add('hidden');
+                if (submitBtn) submitBtn.disabled = false;
+                try {
+                    const d = JSON.parse(xhr.responseText || '{}');
+                    if (d && d.success) {
+                        closeModal('uploadModal');
+                        try { UI_ENH.toast('Uploaded!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
+
+                        // Fetch the uploaded file data and add to page
+                        fetch('legislative_api.php?action=get_file&id=' + d.id, { credentials: 'same-origin' })
+                        .then(r2 => r2.json())
+                        .then(fileData => {
+                            if(fileData.success) addUploadedFileToList(fileData.file);
+                        }).catch(err => console.error('Failed to fetch file data:', err));
+
+                    } else if (d && d.duplicate) {
+                        if (confirm(d.message)) {
+                            formData.append('force_version', '1');
+                            formData.append('parent_id', d.existing_id);
+                            // send another XHR for version creation
+                            const xhr2 = new XMLHttpRequest();
+                            xhr2.open('POST', 'legislative_api.php', true);
+                            xhr2.withCredentials = true;
+                            xhr2.onload = function() {
+                                try {
+                                    const d2 = JSON.parse(xhr2.responseText || '{}');
+                                    if (d2 && d2.success) {
+                                        closeModal('uploadModal');
+                                        try { UI_ENH.toast('New version created!', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
+                                        fetch('legislative_api.php?action=get_file&id=' + d2.id, { credentials: 'same-origin' })
+                                        .then(r3 => r3.json())
+                                        .then(fileData => { if (fileData.success) addUploadedFileToList(fileData.file); })
+                                        .catch(err => console.error('Failed to fetch file data:', err));
+                                    } else {
+                                        try { UI_ENH.toast((d2 && d2.message) || 'Failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+                                    }
+                                } catch(err) { console.error('Version response parse error', err); }
+                            };
+                            xhr2.onerror = function() { try { UI_ENH.toast('Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {} };
+                            xhr2.send(formData);
+                        }
+                    } else {
+                        try { UI_ENH.toast((d && d.message) || 'Upload failed', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+                    }
+                } catch(err) {
+                    console.error('Upload parse error:', err, xhr.responseText);
+                    try { UI_ENH.toast('Upload failed: ' + (xhr.responseText || err.message), {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+                }
+            };
+            xhr.onerror = function() {
+                if (progEl) progEl.classList.add('hidden');
+                if (submitBtn) submitBtn.disabled = false;
+                console.error('XHR network error', xhr);
+                try { UI_ENH.toast('Network error during upload', {background:'linear-gradient(90deg,#dc2626,#c53030)'}); } catch(e) {}
+            };
+            xhr.send(formData);
         });
 
         function openVersionHistory(id, title) {

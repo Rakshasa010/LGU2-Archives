@@ -22,6 +22,17 @@ function ensure_structure($conn) {
         $conn->query("ALTER TABLE legislative_records ADD COLUMN folder_id INT NULL");
         $conn->query("ALTER TABLE legislative_records ADD CONSTRAINT fk_leg_folder FOREIGN KEY (folder_id) REFERENCES legislative_folders(id) ON DELETE SET NULL");
     }
+    // Add version and parent_version_id columns if missing (for versioning support)
+    $checkVer = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'version'");
+    if ($checkVer->num_rows == 0) {
+        // add version column with default 1
+        $conn->query("ALTER TABLE legislative_records ADD COLUMN version INT NOT NULL DEFAULT 1");
+    }
+    $checkParent = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'parent_version_id'");
+    if ($checkParent->num_rows == 0) {
+        $conn->query("ALTER TABLE legislative_records ADD COLUMN parent_version_id INT NULL");
+        // optional FK omitted to avoid circular issues on older schemas
+    }
 }
 
 // Initialize structure

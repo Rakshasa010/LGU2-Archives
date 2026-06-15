@@ -389,6 +389,7 @@ $conn->close();
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
                         <input type="file" id="fileInput" name="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt,text/plain" required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
                     </div>
+                    <div id="upload-progress" class="hidden mt-3 text-sm text-gray-600">Uploading: <span id="upload-progress-text">0%</span></div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('uploadModal')" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Upload</button>
@@ -705,37 +706,54 @@ $conn->close();
             const formData = new FormData(this);
             formData.append('action', 'upload_file');
             formData.append('type', 'Public Hearing'); 
-            
-            fetch('legislative_api.php', { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(d => {
-                if(d.success) {
-                    closeModal('uploadModal');
-                    openNotification('Your file has been uploaded.', 'success', 'Uploaded');
-                    
-                    // Fetch the uploaded file data and add to page
-                    fetch('legislative_api.php?action=get_file&id=' + d.id)
-                    .then(r2 => r2.json())
-                    .then(fileData => {
-                        if(fileData.success) {
-                            addUploadedFileToList(fileData.file);
-                        }
-                    })
-                    .catch(err => console.error('Failed to fetch file data:', err));
-                    
-                } else if (d.duplicate) {
-                    window.__pendingUploadFD = formData;
-                    window.__pendingUploadExistingId = d.existing_id;
-                    document.getElementById('versionConfirmMessage').textContent = d.message || 'File already exists. Create new version?';
-                    openModal('versionConfirmModal');
-                } else {
-                    openNotification(d.message || 'Upload failed.', 'error', 'Error');
+
+            const xhr = new XMLHttpRequest();
+            const progEl = document.getElementById('upload-progress');
+            const progText = document.getElementById('upload-progress-text');
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+            if (progEl) { progEl.classList.remove('hidden'); progText.textContent = '0%'; }
+
+            xhr.open('POST', 'legislative_api.php', true);
+            xhr.withCredentials = true;
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable && progText) {
+                    const p = Math.round((e.loaded / e.total) * 100);
+                    progText.textContent = p + '%';
                 }
-            })
-            .catch(err => {
-                console.error('Upload error:', err);
-                openNotification('Upload failed.', 'error', 'Error');
-            });
+            };
+            xhr.onload = function() {
+                if (progEl) progEl.classList.add('hidden');
+                if (submitBtn) submitBtn.disabled = false;
+                try {
+                    const d = JSON.parse(xhr.responseText || '{}');
+                    if (d && d.success) {
+                        closeModal('uploadModal');
+                        openNotification('Your file has been uploaded.', 'success', 'Uploaded');
+                        fetch('legislative_api.php?action=get_file&id=' + d.id, { credentials: 'same-origin' })
+                        .then(r2 => r2.json())
+                        .then(fileData => { if (fileData.success) addUploadedFileToList(fileData.file); })
+                        .catch(err => console.error('Failed to fetch file data:', err));
+                    } else if (d && d.duplicate) {
+                        window.__pendingUploadFD = formData;
+                        window.__pendingUploadExistingId = d.existing_id;
+                        document.getElementById('versionConfirmMessage').textContent = d.message || 'File already exists. Create new version?';
+                        openModal('versionConfirmModal');
+                    } else {
+                        openNotification((d && d.message) || 'Upload failed.', 'error', 'Error');
+                    }
+                } catch(err) {
+                    console.error('Upload parse error:', err, xhr.responseText);
+                    openNotification('Upload failed: ' + (xhr.responseText || err.message), 'error', 'Error');
+                }
+            };
+            xhr.onerror = function() {
+                if (progEl) progEl.classList.add('hidden');
+                if (submitBtn) submitBtn.disabled = false;
+                console.error('XHR network error', xhr);
+                openNotification('Network error during upload.', 'error', 'Error');
+            };
+            xhr.send(formData);
         });
 
         function openVersionHistory(id, title) {
