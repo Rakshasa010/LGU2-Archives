@@ -120,52 +120,14 @@ $conn->close();
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-    
-    <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
-    <!-- Mobile Sidebar -->
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
-        <div class="p-4 border-b border-red-700/50 sidebar-header">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3 sidebar-logo">
-                    <div class="bg-white rounded-full p-1.5 shadow-lg">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold tracking-tight">LAS</h1>
-                        <p class="text-xs text-red-200">City of Valenzuela</p>
-                    </div>
-                </div>
-                <button id="close-mobile-sidebar" class="text-white/80 p-2 hover:bg-red-700/50 hover:text-white rounded-lg transition-all duration-200 hover:rotate-90" aria-label="Close sidebar">
-                    <i class="bi bi-x-lg text-xl"></i>
-                </button>
-            </div>
-        </div>
-        <nav class="flex-1 py-4 px-3 overflow-y-auto">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-speedometer2 mr-3 text-lg"></i>
-                <span>Dashboard Archives</span>
-            </a>
-            <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-folder mr-3 text-lg"></i>
-                <span>Main Storage Archives</span>
-            </a>
-            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-cloud-upload mr-3 text-lg"></i>
-                <span>Export</span>
-            </a>
-            <?php if (isset($is_admin) && $is_admin): ?>
-            <a href="recent_deleted.php" class="hidden"></a>
-            <?php endif; ?>
-            <div class="mt-4 pt-4 border-t border-red-700/50">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-graph-up mr-3 text-lg"></i>
-                    <span>Reports & Analytics</span>
-                </a>
-            </div>
-        </nav>
-    </div>
+    <?php
+    $sidebar_active_page = 'storage';
+    $sidebar_include_overlay = true;
+    require_once 'includes/sidebar-centralized.php';
+    ?>
+
+    <div class="flex min-h-screen">
+        <div class="flex-1 min-h-0">
 
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
@@ -1023,5 +985,7 @@ $conn->close();
     <!-- Toast Notification -->
     <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold"></div>
 
+</div>
+</div>
 </body>
 </html>
