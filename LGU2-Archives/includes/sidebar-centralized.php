@@ -48,40 +48,17 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
 }
-
-/* Sidebar scroll isolation */
-#sidebar {
-    overscroll-behavior: contain;
-}
-
-#sidebar nav {
-    overscroll-behavior: contain;
-}
-
-/* Custom scrollbar for sidebar */
-#sidebar nav::-webkit-scrollbar {
-    width: 6px;
-}
-
-#sidebar nav::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-#sidebar nav::-webkit-scrollbar-thumb {
-    background: rgba(220, 38, 38, 0.3);
-    border-radius: 3px;
-}
-
-#sidebar nav::-webkit-scrollbar-thumb:hover {
-    background: rgba(220, 38, 38, 0.5);
-}
-
 @media (min-width: 768px) {
     #sidebar {
         width: 16rem;
         min-width: 16rem;
     }
     
+}
+@media (max-width: 767px) {
+    body {
+        padding-left: 0 !important;
+    }
 }
 </style>
 <div id="mobile-sidebar" class="sticky inset-y-0 left-0 h-screen transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-[0_25px_70px_rgba(0,0,0,0.35)] visible">
@@ -202,20 +179,13 @@ html, body {
             document.documentElement.style.margin = '0';
             document.documentElement.style.padding = '0';
             document.body.style.margin = '0';
-            document.body.style.padding = '0'; // Remove any padding from body
             
-            // Apply margin to main content containers on md+ (desktop)
+            // Apply padding to body on md+ (desktop) where sidebar is visible and fixed
             if(w >= 768){
-                var mainContainers = document.querySelectorAll('.flex.min-h-screen > .flex-1, .main-content-area');
-                mainContainers.forEach(function(container) {
-                    container.style.marginLeft = '16rem';
-                });
+                document.body.style.paddingLeft = '16rem';
             } else {
-                // Remove margin on small screens
-                var allContainers = document.querySelectorAll('.flex.min-h-screen > .flex-1, .main-content-area');
-                allContainers.forEach(function(container) {
-                    container.style.marginLeft = '0';
-                });
+                // remove padding on small screens where sidebar is hidden
+                document.body.style.paddingLeft = '0';
             }
         }catch(e){ console && console.warn && console.warn('sidebar layout adjust failed', e); }
     }
