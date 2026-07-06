@@ -396,7 +396,6 @@ $conn->close();
             </header>
 
             <!-- Main Content -->
-            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Folder Title -->
         <div class="mb-8 pb-6 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
             <div>
