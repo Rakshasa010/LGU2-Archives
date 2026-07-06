@@ -81,11 +81,7 @@ html, body {
         width: 16rem;
         min-width: 16rem;
     }
-    /* Add margin to main content containers instead of body padding */
-    .flex.min-h-screen > .flex-1,
-    .main-content-area {
-        margin-left: 16rem !important;
-    }
+    
 }
 </style>
 <div id="mobile-sidebar" class="sticky inset-y-0 left-0 h-screen transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-[0_25px_70px_rgba(0,0,0,0.35)] visible">
