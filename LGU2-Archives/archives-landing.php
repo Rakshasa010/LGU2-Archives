@@ -269,185 +269,255 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                   Removed 'max-w-7xl mx-auto' to allow full screen scaling, 
                   and replaced with 'w-full' plus expanded responsive padding to maximize screen usage while keeping content breathing room.
                 -->
-                                <div class="w-full px-4 sm:px-8 lg:px-12 xl:px-16 py-6 lg:py-8">
-                                        <!-- Responsive two-column layout: main content + right widgets -->
-                                        <div class="grid gap-8 lg:grid-cols-[2.2fr_1fr] items-start">
-                                                <div class="w-full">
-                                                <!-- Main content panel -->
-                                                <section class="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 sm:p-8 lg:p-10">
-                            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                                <!-- Added left side border accent (the "leftside" of the header) -->
-                                <div class="min-w-0 border-l-[6px] border-red-600 dark:border-red-500 pl-4 sm:pl-6 rounded-l-sm">
-                                    <h1 class="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-400 tracking-tight">Document Archives</h1>
-                                    <p class="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
-                                        Advanced search for ordinances, resolutions, hearings, sessions and archive records 
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="mt-6 grid gap-4 lg:grid-cols-[1.7fr_auto] items-end">
-                                <div class="min-w-0">
-                                    <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Advanced search for</p>
-                                    <div class="relative">
-                                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                        <input type="text" id="legislativeSearchInput" class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-2xl bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all" placeholder="Search archives, ordinances, hearings, sessions, authors, file names..." autocomplete="off">
-                                    </div>
-                                </div>
-                                <button id="legislativeSearchBtn" class="h-14 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-red-500/10">
-                                    Search
-                                </button>
-                            </div>
-
-                            <div class="mt-4 sm:flex sm:items-center sm:justify-between gap-3">
-                                <div class="flex flex-wrap items-center gap-2 text-sm">
-                                    <span class="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Filters</span>
-                                    <button type="button" data-filter="legislative" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Legislative</button>
-                                    <button type="button" data-filter="archive_files" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Archive Files</button>
-                                    <button type="button" data-filter="folders" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Folders</button>
-                                    <button type="button" data-filter="authors" class="search-filter-chip rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Authors</button>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <label for="searchSortSelect" class="text-xs text-gray-500 dark:text-gray-400">Sort</label>
-                                    <select id="searchSortSelect" class="rounded-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-gray-800 dark:text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                                        <option value="relevance">Relevance</option>
-                                        <option value="newest">Newest first</option>
-                                        <option value="date">Date</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="relative mt-3">
-                                <div id="searchPopup" class="hidden absolute left-0 right-0 top-full mt-3 z-50 rounded-3xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden">
-                                    <div class="p-4 space-y-4">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <p class="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Recent searches</p>
-                                                <p id="recentSearchCount" class="text-[11px] text-gray-500 dark:text-gray-400">Quick access to your last searches</p>
-                                            </div>
-                                            <button id="clearRecentBtn" type="button" class="text-xs text-red-600 dark:text-red-400 hover:underline">Clear all</button>
-                                        </div>
-                                        <div id="recentSearchesList" class="flex flex-wrap gap-2"></div>
-
-                                        <div id="searchResultsPanel" class="hidden">
-                                            <div class="flex items-center justify-between gap-3 border-b border-gray-200 dark:border-slate-700 pb-3">
-                                                <div>
-                                                    <p class="text-sm font-semibold text-gray-900 dark:text-white" id="searchResultsCount">0 results found</p>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400" id="searchResultsSubtitle">Showing filtered archive matches</p>
-                                                </div>
-                                                <button id="clearSearchBtn" type="button" class="rounded-full border border-gray-200 dark:border-slate-700 px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Clear</button>
-                                            </div>
-                                            <div id="searchResultsList" class="space-y-2 max-h-80 overflow-y-auto"></div>
-                                            <div id="searchRelated" class="hidden pt-4 border-t border-gray-200 dark:border-slate-700">
-                                                <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Related topics</div>
-                                                <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
-                                            </div>
-                                        </div>
-
-                                        <div id="searchEmptyState" class="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-                                            <p class="font-semibold text-gray-900 dark:text-white">Search Document Archives</p>
-                                            <p>Start typing to find ordinances, folders, archive files or authors. Results will appear directly below.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                                <div class="w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+                    <!-- Enhanced Header Section -->
+                    <div class="mb-8">
+                        <div class="text-center lg:text-left">
+                            <h1 class="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-red-600 via-red-700 to-red-800 bg-clip-text text-transparent mb-3">
+                                Document Archives
+                            </h1>
+                            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0">
+                                Advanced search and management for ordinances, resolutions, hearings, sessions, and archive records
+                            </p>
+                        </div>
                     </div>
 
-                    <!-- Storage Overview Section (Synced with storage.php) -->
-                        <aside id="storage-overview" class="bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8 hover:shadow-2xl transition-all duration-300 self-start lg:sticky lg:top-20">
-                            <!-- Skeleton Loader (hidden on load) -->
-                            <div id="storage-skeleton" class="hidden">
-                                <div class="mb-8">
-                                    <div class="flex items-center justify-between">
+                    <!-- Responsive Layout: Search + Storage Overview -->
+                    <div class="grid gap-6 lg:gap-8 xl:grid-cols-[1fr_400px] 2xl:grid-cols-[1fr_450px] items-start">
+                        
+                        <!-- Main Search Section -->
+                        <div class="w-full">
+                            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+                                <!-- Search Header -->
+                                <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                            <i class="bi bi-search text-red-600 dark:text-red-400 text-lg"></i>
+                                        </div>
                                         <div>
-                                            <div class="h-10 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-slate-700 dark:to-slate-600 rounded-lg w-64 mb-3 animate-pulse"></div>
-                                            <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-96 animate-pulse"></div>
+                                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Advanced Search</h2>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">Find documents across all archives</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                                    <div class="lg:col-span-1 flex justify-center">
-                                        <div class="w-72 h-72 bg-gray-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
-                                    </div>
-                                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div class="bg-gray-200 dark:bg-slate-700 rounded-xl p-6 h-40 animate-pulse"></div>
-                                        <div class="bg-gray-200 dark:bg-slate-700 rounded-xl p-6 h-40 animate-pulse"></div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Storage Content (shown after load) -->
-                            <div id="storage-content">
-                            <!-- Header -->
-                            <div class="mb-8">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <h2 class="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">Storage Overview</h2>
-                                        <p class="text-gray-600 dark:text-gray-400 text-sm">Real-time storage analytics and space management</p>
+                                <!-- Search Content -->
+                                <div class="p-6">
+                                    <!-- Search Input -->
+                                    <div class="relative mb-6">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                        <input type="text" id="legislativeSearchInput" 
+                                               class="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200" 
+                                               placeholder="Search archives, ordinances, hearings, sessions, authors..."
+                                               autocomplete="off">
+                                        <button id="legislativeSearchBtn" 
+                                                class="absolute right-2 top-2 bottom-2 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg">
+                                            Search
+                                        </button>
                                     </div>
-                                    <div class="hidden md:flex items-center gap-2">
-                                        <button class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" id="storage-details-btn">
-                                            <i class="bi bi-info-circle mr-1"></i>Details
-                                        </button>
-                                        <button class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors" id="storage-refresh-btn">
-                                            <i class="bi bi-arrow-clockwise mr-1"></i>Refresh
-                                        </button>
+
+                                    <!-- Filter Chips -->
+                                    <div class="mb-6">
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
+                                            <div class="flex flex-wrap gap-2">
+                                                <button type="button" data-filter="legislative" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-file-text mr-2"></i>Legislative
+                                                </button>
+                                                <button type="button" data-filter="archive_files" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-file-earmark mr-2"></i>Archive Files
+                                                </button>
+                                                <button type="button" data-filter="folders" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-folder mr-2"></i>Folders
+                                                </button>
+                                                <button type="button" data-filter="authors" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-person mr-2"></i>Authors
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Sort Options -->
+                                        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                                            <div class="flex items-center gap-3">
+                                                <label for="searchSortSelect" class="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</label>
+                                                <select id="searchSortSelect" class="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                                    <option value="relevance">Relevance</option>
+                                                    <option value="newest">Newest first</option>
+                                                    <option value="date">Date</option>
+                                                </select>
+                                            </div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                <i class="bi bi-info-circle mr-1"></i>
+                                                <span id="searchResultCount">Ready to search</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Search Results Section -->
+                                    <div class="relative">
+                                        <div id="searchPopup" class="hidden mt-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden">
+                                            <div class="p-6">
+                                                <!-- Recent Searches -->
+                                                <div class="mb-6">
+                                                    <div class="flex items-center justify-between mb-3">
+                                                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                            <i class="bi bi-clock-history text-gray-500"></i>
+                                                            Recent searches
+                                                        </h3>
+                                                        <button id="clearRecentBtn" type="button" class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">
+                                                            Clear all
+                                                        </button>
+                                                    </div>
+                                                    <div id="recentSearchesList" class="flex flex-wrap gap-2"></div>
+                                                </div>
+
+                                                <!-- Search Results -->
+                                                <div id="searchResultsPanel" class="hidden">
+                                                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-slate-600">
+                                                        <div>
+                                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="searchResultsCount">0 results found</h3>
+                                                            <p class="text-sm text-gray-600 dark:text-gray-400" id="searchResultsSubtitle">Showing filtered archive matches</p>
+                                                        </div>
+                                                        <button id="clearSearchBtn" type="button" class="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                            Clear search
+                                                        </button>
+                                                    </div>
+                                                    <div id="searchResultsList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                                                    
+                                                    <!-- Related Topics -->
+                                                    <div id="searchRelated" class="hidden mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
+                                                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Related topics</h4>
+                                                        <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Empty State -->
+                                                <div id="searchEmptyState" class="text-center py-8">
+                                                    <div class="w-16 h-16 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                        <i class="bi bi-search text-2xl text-gray-500 dark:text-gray-400"></i>
+                                                    </div>
+                                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Search Document Archives</h3>
+                                                    <p class="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">Start typing to find ordinances, folders, archive files, or authors. Results will appear here.</p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Main Grid: Chart + Metrics -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                                <!-- Chart Container -->
-                                <div class="lg:col-span-1 flex justify-center items-center">
-                                    <div class="relative w-72 h-72">
-                                        <svg id="storageDonut" class="w-full h-full filter drop-shadow-lg" viewBox="0 0 240 240">
-                                            <!-- Background circle -->
-                                            <circle class="stroke-gray-200 dark:stroke-slate-700" cx="120" cy="120" r="90" fill="none" stroke-width="20" opacity="0.5" />
-                                            <!-- Progress circle -->
-                                            <defs>
-                                                <linearGradient id="storageGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                    <stop offset="0%" style="stop-color:#dc2626;stop-opacity:1" />
-                                                    <stop offset="100%" style="stop-color:#ea580c;stop-opacity:1" />
-                                                </linearGradient>
-                                            </defs>
-                                            <circle id="donutProgress" class="stroke-red-600 dark:stroke-red-500" cx="120" cy="120" r="90" fill="none" stroke-width="20" 
-                                                    stroke-linecap="round" stroke-dasharray="565.48" stroke-dashoffset="565.48" />
-                                        </svg>
-                                        <!-- Center text -->
-                                        <div class="absolute inset-0 flex items-center justify-center">
-                                            <div class="text-center">
-                                                <div class="text-5xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2" id="storagePercentage"><?php echo $pct; ?>%</div>
-                                                <div class="text-lg font-semibold text-gray-800 dark:text-gray-100" id="storageUsed"><?php echo fmt_bytes($totalBytes); ?></div>
-                                                <div class="text-xs text-gray-600 dark:text-gray-400" id="storageTotal">of 50 GB</div>
-                                                <div class="mt-2 px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded-full inline-block">
-                                                    <span class="text-xs font-semibold text-red-700 dark:text-red-300" id="storageStatus">Optimal</span>
+                        </div>
+
+                        <!-- Storage Overview Section -->
+                        <aside class="w-full">
+                            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden sticky top-6">
+                                <!-- Storage Header -->
+                                <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                                <i class="bi bi-hdd-stack text-red-600 dark:text-red-400 text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Storage Overview</h2>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">Real-time analytics</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" id="storage-details-btn" title="Details">
+                                                <i class="bi bi-info-circle"></i>
+                                            </button>
+                                            <button class="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" id="storage-refresh-btn" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Storage Content -->
+                                <div class="p-6">
+                                    <!-- Skeleton Loader -->
+                                    <div id="storage-skeleton" class="hidden">
+                                        <div class="animate-pulse">
+                                            <div class="w-48 h-48 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
+                                            <div class="space-y-3">
+                                                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded"></div>
+                                                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4"></div>
+                                                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Storage Chart and Stats -->
+                                    <div id="storage-content" class="text-center">
+                                        <!-- Donut Chart -->
+                                        <div class="relative w-48 h-48 mx-auto mb-6">
+                                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                                <!-- Background circle -->
+                                                <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="12" class="text-gray-200 dark:text-slate-700" opacity="0.3"/>
+                                                <!-- Progress circle -->
+                                                <circle id="donutProgress" cx="100" cy="100" r="80" fill="none" stroke-width="12" 
+                                                        class="text-red-500" stroke-linecap="round" 
+                                                        stroke-dasharray="502.65" stroke-dashoffset="502.65"
+                                                        style="transition: stroke-dashoffset 1s ease-in-out"/>
+                                            </svg>
+                                            <!-- Center content -->
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="text-center">
+                                                    <div class="text-3xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent" id="storagePercentage"><?php echo $pct; ?>%</div>
+                                                    <div class="text-sm text-gray-600 dark:text-gray-400">Used</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Storage Stats -->
+                                        <div class="space-y-4">
+                                            <!-- Used Space -->
+                                            <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Used Space</span>
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400"><?php echo (int)$fileCount; ?> files</span>
+                                                </div>
+                                                <div class="text-2xl font-bold text-red-600 dark:text-red-400 mb-2" id="storageUsed"><?php echo fmt_bytes($totalBytes); ?></div>
+                                                <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                                                    <div class="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500" style="width: <?php echo $pct; ?>%;"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Available Space -->
+                                            <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Space</span>
+                                                    <span class="text-sm text-green-600 dark:text-green-400">
+                                                        <i class="bi bi-check-circle mr-1"></i><?php echo $pct < 80 ? 'Optimal' : ($pct < 90 ? 'Good' : 'Critical'); ?>
+                                                    </span>
+                                                </div>
+                                                <div class="text-2xl font-bold text-green-600 dark:text-green-400"><?php echo fmt_bytes(53687091200 - $totalBytes); ?></div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400">of 50 GB total</div>
+                                            </div>
+
+                                            <!-- Quick Actions -->
+                                            <div class="pt-4 border-t border-gray-100 dark:border-slate-700">
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <a href="storage.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium">
+                                                        <i class="bi bi-folder"></i>
+                                                        Browse
+                                                    </a>
+                                                    <a href="export.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium">
+                                                        <i class="bi bi-download"></i>
+                                                        Export
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Metrics Cards -->
-                                <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 auto-rows-max">
-                                    <!-- Used Space Card -->
-                                    <div class="group bg-white dark:bg-slate-700/50 rounded-xl p-6 border-2 border-red-200 dark:border-red-900/50 hover:border-red-400 dark:hover:border-red-700 transition-all shadow-md hover:shadow-lg">
-                                        <div class="flex items-start justify-between mb-3">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                    <span class="w-4 h-4 rounded-full bg-gradient-to-br from-red-500 to-red-600"></span>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">Used Space</p>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo (int)$fileCount; ?> files</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="text-3xl font-bold text-red-600 dark:text-red-400 mb-1" id="detailUsed"><?php echo fmt_bytes($totalBytes); ?></div>
-                                        <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
-                                            <div class="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500" id="usedSpaceBar" style="width: <?php echo $pct; ?>%;"></div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
                                         </div>
                                     </div>
                                     
