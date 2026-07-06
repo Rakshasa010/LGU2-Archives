@@ -61,7 +61,7 @@ html, body {
     }
 }
 </style>
-<div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-[0_25px_70px_rgba(0,0,0,0.35)] visible">
+<div id="mobile-sidebar" class="sticky inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-[0_25px_70px_rgba(0,0,0,0.35)] visible">
     <div class="p-4 border-b border-white/10 sidebar-header bg-white/5 backdrop-blur-sm">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3 sidebar-logo">
@@ -115,7 +115,7 @@ html, body {
     </nav>
 </div>
 <?php if ($sidebar_layout === 'full'): ?>
-<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed left-0 top-0 z-50 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
+<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen sticky left-0 top-0 z-50 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
     <div class="p-6 border-b border-white/10 sidebar-logo bg-white/5 backdrop-blur-sm">
         <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
             <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
