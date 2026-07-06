@@ -152,14 +152,14 @@ if ($q = $conn->query($qStr)) {
         
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <?php
-    $sidebar_active_page = 'user-management';
-    $sidebar_include_overlay = true;
-    require_once 'includes/sidebar-centralized.php';
-    ?>
-
     <div class="flex min-h-screen">
-        <div class="flex-1 min-h-0">
+        <?php
+        $sidebar_active_page = 'user-management';
+        $sidebar_include_overlay = true;
+        require_once 'includes/sidebar-centralized.php';
+        ?>
+        
+        <div class="flex-1 min-h-0 lg:ml-64">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -251,7 +251,8 @@ if ($q = $conn->query($qStr)) {
             </nav>
 
             <!-- Main Content Container -->
-            <?php if ($message !== ''): ?>
+            <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-10"> 
+        <?php if ($message !== ''): ?>
             <div class="mb-4 p-3 rounded-lg border <?php echo strpos($message, 'Failed') === false ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'; ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
