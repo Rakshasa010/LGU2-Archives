@@ -367,6 +367,14 @@ $conn->close();
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
+    <?php
+    $sidebar_active_page = 'storage';
+    $sidebar_include_overlay = true;
+    require_once 'includes/sidebar-centralized.php';
+    ?>
+
+    <div class="flex min-h-screen">
+        <div class="flex-1 min-h-0">
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1628,6 +1636,8 @@ $conn->close();
     <script src="assets/js/highlight-record.js"></script>
     
     <!-- Toast Notification -->
+    </div>
+    </div>
     <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold"></div>
     
     <?php include 'includes/footer_scripts.php'; ?>

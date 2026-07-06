@@ -611,177 +611,13 @@ if (isset($_SESSION['user_id'])) {
     $display_name = $user_data['full_name'] ?? 'User';
     $profile_picture = $user_data['profile_picture'] ?? null;
     ?>
-    
-    <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300 ease-out"></div>
-    
-    <!-- Mobile Sidebar -->
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-red-800 to-red-900 text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-2xl">
-        <!-- Mobile sidebar header -->
-        <div class="p-4 border-b border-red-700/50 sidebar-header">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3 sidebar-logo">
-                    <div class="bg-white rounded-full p-1.5 shadow-lg">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold tracking-tight">LAS</h1>
-                        <p class="text-xs text-red-200">City of Valenzuela</p>
-                    </div>
-                </div>
-                <button id="close-mobile-sidebar" class="text-white/80 p-2 hover:bg-red-700/50 hover:text-white rounded-lg transition-all duration-200 hover:rotate-90">
-                    <i class="bi bi-x-lg text-xl"></i>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Mobile Navigation Menu -->
-        <nav class="flex-1 py-4 px-3 overflow-y-auto">
-            <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-speedometer2 mr-3 text-lg"></i>
-                <span>Dashboard Archives</span>
-            </a>
-            
-            <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
-                <i class="bi bi-folder mr-3 text-lg"></i>
-                <span>Main Storage Archives</span>
-            </a>
-            
-            <?php if (isset($is_admin) && $is_admin): ?>
-            <a href="recent_deleted.php" class="hidden"></a>
-            <?php endif; ?>
-            
-            <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                <i class="bi bi-cloud-upload mr-3 text-lg"></i>
-                <span>Export</span>
-            </a>
-            
-            <!-- ANALYTICS Section -->
-            <div class="mt-4 pt-4 border-t border-red-700/50">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-graph-up mr-3 text-lg"></i>
-                    <span>Reports & Analytics</span>
-                </a>
-            </div>
-            
-            <!-- ADMINISTRATION Section -->
-            <div class="mt-4 pt-4 border-t border-red-700/50">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                    <i class="bi bi-shield-check mr-3 text-lg"></i>
-                    <span>Audit Logs</span>
-                </a>
-            </div>
-            
-            <!-- Centralized Storage Overview (Mobile) -->
-            <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
-                <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
-                <div class="bg-gradient-to-br from-red-900/60 to-red-800/30 backdrop-blur rounded-xl p-3 border border-red-700/50">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-red-100 font-medium">Capacity Used</span>
-                        <span class="text-xs font-bold text-white" id="mobile-storage-percent"><?php echo $pct; ?>%</span>
-                    </div>
-                    <div class="w-full bg-red-900/60 rounded-full h-2 overflow-hidden mb-2">
-                        <div class="bg-white h-full rounded-full" id="mobile-storage-bar" style="width: <?php echo $pct; ?>%;"></div>
-                    </div>
-                    <div class="text-xs text-red-100"><span id="mobile-storage-used"><?php echo fmt_bytes($totalBytes); ?></span> of <span id="mobile-storage-total"><?php echo fmt_bytes($capacityBytes); ?></span></div>
-                    <div class="text-xs text-red-100 mt-1" id="mobile-storage-files"><?php echo (int)$fileCount; ?> files tracked</div>
-                    <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
-                </div>
-            </div>
-        </nav>
-    </div>
-    
-    <div class="flex h-screen overflow-hidden">
-        <!-- Desktop Sidebar -->
-        <aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-red-800 to-red-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 -translate-x-full md:translate-x-0">
-            <!-- Logo Section -->
-            <div class="p-6 border-b border-red-700 sidebar-logo">
-                <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
-                    <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" style="width: 100%; height: 100%;" class="object-contain">
-                    </div>
-                    <div class="transform transition-all duration-300 group-hover:translate-x-1 sidebar-text">
-                        <h1 class="text-lg font-bold">LAS</h1>
-                        <p class="text-xs text-red-200">City of Valenzuela</p>
-                    </div>
-                </a>
-            </div>
-            
-            <!-- Navigation Menu -->
-            <nav class="flex-1 overflow-y-auto py-4">
-                <div class="px-4 space-y-1">
-                    <a href="archives-landing.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-speedometer2 mr-3"></i>
-                        <span class="sidebar-text">Dashboard Archives</span>
-                    </a>
-                    
-                    <a href="storage.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1 bg-red-700">
-                        <i class="bi bi-folder mr-3"></i>
-                        <span class="sidebar-text">Main Storage Archives</span>
-                    </a>
 
-                    <a href="export.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-cloud-upload mr-3"></i>
-                        <span class="sidebar-text">Export</span>
-                    </a>
-                    
-                    <?php if (isset($is_admin) && $is_admin): ?>
-                    <a href="recent_deleted.php" class="hidden"></a>
-                    <?php endif; ?>
-
-                    <a href="version_tracking.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-book mr-3"></i>
-                        <span class="sidebar-text">Version Tracking</span>
-                    </a>
-                </div>
-                
-                <!-- ANALYTICS Section -->
-                <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
-                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
-                    <a href="report_analytics.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-graph-up mr-3"></i>
-                        <span class="sidebar-text">Reports & Analytics</span>
-                    </a>
-                </div>
-                
-                <!-- ADMINISTRATION Section -->
-                <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
-                    <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
-                    <?php if ($is_admin): ?>
-                    <a href="user_management.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-people mr-3"></i>
-                        <span class="sidebar-text">User Management</span>
-                    </a>
-                    <?php endif; ?>
-
-                    
-
-                    <a href="audit-logs.php" class="flex items-center px-4 py-3 text-white hover:bg-red-700/70 rounded-lg mb-1 transition-all duration-200 hover:translate-x-1">
-                        <i class="bi bi-shield-check mr-3"></i>
-                        <span class="sidebar-text">Audit Logs</span>
-                    </a>
-                </div>
-                
-                <!-- Centralized Storage Overview (Desktop) -->
-                <div class="mt-6 pt-4 mx-4 border-t border-red-700/50">
-                    <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
-                    <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all cursor-pointer" title="Click to view storage details">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="text-xs text-red-100 font-medium">Capacity Used</span>
-                            <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="desktop-storage-pct"><?php echo $pct; ?>%</span>
-                        </div>
-                        <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
-                            <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="desktop-storage-bar" style="width: <?php echo $pct; ?>%;"></div>
-                        </div>
-                        <div class="text-xs text-red-100/80" id="desktop-storage-text"><?php echo fmt_bytes($totalBytes); ?> of <?php echo fmt_bytes($capacityBytes); ?></div>
-                        <div class="mt-2 text-xs text-red-100/60" id="desktop-storage-files"><?php echo (int)$fileCount; ?> files tracked</div>
-                        <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
-                    </div>
-                </div>
-            </nav>
-        </aside>
+    <div class="flex min-h-screen">
+    <?php
+    $sidebar_active_page = 'storage';
+    $sidebar_include_overlay = true;
+    require_once 'includes/sidebar-centralized.php';
+    ?>
 
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
@@ -2261,6 +2097,8 @@ if (isset($_SESSION['user_id'])) {
             });
         })();
     </script>
+        </div>
+    </div>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>
