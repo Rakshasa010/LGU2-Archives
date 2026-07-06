@@ -48,12 +48,43 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
 }
+
+/* Sidebar scroll isolation */
+#sidebar {
+    overscroll-behavior: contain;
+}
+
+#sidebar nav {
+    overscroll-behavior: contain;
+}
+
+/* Custom scrollbar for sidebar */
+#sidebar nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#sidebar nav::-webkit-scrollbar-thumb {
+    background: rgba(220, 38, 38, 0.3);
+    border-radius: 3px;
+}
+
+#sidebar nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(220, 38, 38, 0.5);
+}
+
 @media (min-width: 768px) {
     #sidebar {
         width: 16rem;
         min-width: 16rem;
     }
-    
+    /* Ensure main content has proper left margin for fixed sidebar */
+    body {
+        padding-left: 16rem !important;
+    }
 }
 @media (max-width: 767px) {
     body {
@@ -115,7 +146,7 @@ html, body {
     </nav>
 </div>
 <?php if ($sidebar_layout === 'full'): ?>
-<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen sticky left-0 top-0 z-50 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
+<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed left-0 top-0 z-50 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex overflow-hidden">
     <div class="p-6 border-b border-white/10 sidebar-logo bg-white/5 backdrop-blur-sm">
         <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
             <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
@@ -127,7 +158,7 @@ html, body {
             </div>
         </a>
     </div>
-    <nav class="flex-1 py-4 overflow-y-auto">
+    <nav class="flex-1 py-4 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-red-600/50 scrollbar-track-transparent">
         <div class="px-4 space-y-1">
             <?php echo $sidebar_link('archives-landing.php', 'bi bi-speedometer2', 'Dashboard Archives', 'dashboard', true); ?>
             <?php echo $sidebar_link('storage.php', 'bi bi-folder', 'Main Storage Archives', 'storage', true); ?>
@@ -189,7 +220,58 @@ html, body {
             }
         }catch(e){ console && console.warn && console.warn('sidebar layout adjust failed', e); }
     }
+    
+    // Prevent sidebar from scrolling with main content
+    function preventSidebarScroll(){
+        var sidebar = document.getElementById('sidebar');
+        if(!sidebar) return;
+        
+        // Prevent wheel events on sidebar from bubbling to parent
+        sidebar.addEventListener('wheel', function(e) {
+            var nav = sidebar.querySelector('nav');
+            if (!nav) return;
+            
+            var navRect = nav.getBoundingClientRect();
+            var sidebarRect = sidebar.getBoundingClientRect();
+            
+            // Only allow scrolling if the wheel event is within the nav area
+            if (e.target.closest('nav')) {
+                // Check if nav content overflows
+                if (nav.scrollHeight > nav.clientHeight) {
+                    // Allow scrolling within nav bounds
+                    var atTop = nav.scrollTop === 0;
+                    var atBottom = nav.scrollTop >= (nav.scrollHeight - nav.clientHeight);
+                    
+                    if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
+                        e.preventDefault();
+                    }
+                } else {
+                    // If nav doesn't overflow, prevent scrolling
+                    e.preventDefault();
+                }
+            } else {
+                // Prevent scrolling outside of nav area
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Prevent touch scrolling on sidebar (for mobile)
+        sidebar.addEventListener('touchmove', function(e) {
+            if (!e.target.closest('nav')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+    
     window.addEventListener('resize', adjustMainOffset);
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adjustMainOffset); else adjustMainOffset();
+    if(document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            adjustMainOffset();
+            preventSidebarScroll();
+        });
+    } else {
+        adjustMainOffset();
+        preventSidebarScroll();
+    }
 })();
 </script>
