@@ -251,8 +251,7 @@ if ($q = $conn->query($qStr)) {
             </nav>
 
             <!-- Main Content Container -->
-            <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-10"> 
-        <?php if ($message !== ''): ?>
+            <?php if ($message !== ''): ?>
             <div class="mb-4 p-3 rounded-lg border <?php echo strpos($message, 'Failed') === false ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'; ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
