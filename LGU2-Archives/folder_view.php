@@ -367,7 +367,7 @@ $conn->close();
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <div class="flex min-h-screen">
+    <div class="flex min-h-0">
         <?php
         $sidebar_active_page = 'storage';
         $sidebar_include_overlay = true;
