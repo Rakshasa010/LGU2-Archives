@@ -114,7 +114,7 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
     </nav>
 </div>
 <?php if ($sidebar_layout === 'full'): ?>
-<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed left-0 top-0 z-30 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
+<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed left-0 top-0 z-50 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
     <div class="p-6 border-b border-white/10 sidebar-logo bg-white/5 backdrop-blur-sm">
         <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
             <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
