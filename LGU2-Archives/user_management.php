@@ -159,10 +159,10 @@ if ($q = $conn->query($qStr)) {
         require_once 'includes/sidebar-centralized.php';
         ?>
         
-        <div class="flex-1 min-h-0 lg:ml-64">
-            <!-- Header / Navbar -->
-            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
-                <div class="px-4 sm:px-6 lg:px-8">
+        <div class="flex-1 min-h-0 flex flex-col">
+            <!-- Header / Navbar - Fixed at top -->
+            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 fixed top-0 left-0 right-0 z-40 transition-colors duration-200">
+                <div class="px-4 sm:px-6 lg:px-8 lg:pl-72">
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
@@ -251,7 +251,7 @@ if ($q = $conn->query($qStr)) {
             </nav>
 
             <!-- Main Content Container -->
-            <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-10"> 
+            <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-10 pt-20"> 
         <?php if ($message !== ''): ?>
             <div class="mb-4 p-3 rounded-lg border <?php echo strpos($message, 'Failed') === false ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'; ?>">
                 <?php echo htmlspecialchars($message); ?>
