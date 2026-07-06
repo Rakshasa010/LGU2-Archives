@@ -375,27 +375,28 @@ $conn->close();
 
     <div class="flex min-h-screen">
         <div class="flex-1 min-h-0">
-    <!-- Header -->
-    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-4">
-                    <a href="<?php echo $is_legislative ? "storage.php" : ($parent_folder ? "folder_view.php?id=" . $parent_folder['id'] : "storage.php"); ?>" class="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 text-red-600 dark:text-red-400 rounded-full hover:shadow-md transition-all font-semibold border border-red-100 dark:border-red-900/30">
-                        <i class="bi bi-arrow-left text-lg"></i>
-                        <span>Back to <?php echo $parent_folder ? htmlspecialchars($parent_folder['name']) : "Main Storage"; ?></span>
-                    </a>
+            <!-- Header -->
+            <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-between h-16">
+                        <div class="flex items-center space-x-4">
+                            <a href="<?php echo $is_legislative ? "storage.php" : ($parent_folder ? "folder_view.php?id=" . $parent_folder['id'] : "storage.php"); ?>" class="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 text-red-600 dark:text-red-400 rounded-full hover:shadow-md transition-all font-semibold border border-red-100 dark:border-red-900/30">
+                                <i class="bi bi-arrow-left text-lg"></i>
+                                <span>Back to <?php echo $parent_folder ? htmlspecialchars($parent_folder['name']) : "Main Storage"; ?></span>
+                            </a>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                             <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                                <i class="bi bi-moon-stars text-gray-700 dark:text-gray-300 hidden dark:block"></i>
+                                <i class="bi bi-sun text-gray-700 dark:text-gray-300 block dark:hidden"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex items-center space-x-3">
-                     <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
-                        <i class="bi bi-moon-stars text-gray-700 dark:text-gray-300 hidden dark:block"></i>
-                        <i class="bi bi-sun text-gray-700 dark:text-gray-300 block dark:hidden"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
+            </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Main Content -->
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Folder Title -->
         <div class="mb-8 pb-6 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
             <div>
@@ -639,8 +640,6 @@ $conn->close();
                         .catch(error => console.error('Error loading viewer:', error));
                 }
             </script>
-        </div>
-        </div>
             </main>
         </div>
     </div>
@@ -1636,8 +1635,6 @@ $conn->close();
     <script src="assets/js/highlight-record.js"></script>
     
     <!-- Toast Notification -->
-    </div>
-    </div>
     <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold"></div>
     
     <?php include 'includes/footer_scripts.php'; ?>

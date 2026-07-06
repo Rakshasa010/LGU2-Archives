@@ -160,24 +160,17 @@ if ($q = $conn->query($qStr)) {
 
     <div class="flex min-h-screen">
         <div class="flex-1 min-h-0">
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
-                            <!-- Sidebar Toggle Button (Desktop) -->
-
                             <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
-                            
-                            
                         </div>
-                        
                         
                         <!-- Page Title & Breadcrumb -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
@@ -257,8 +250,8 @@ if ($q = $conn->query($qStr)) {
                 </div>
             </nav>
 
-
-    <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-10"> 
+            <!-- Main Content Container -->
+            <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-10"> 
         <?php if ($message !== ''): ?>
             <div class="mb-4 p-3 rounded-lg border <?php echo strpos($message, 'Failed') === false ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'; ?>">
                 <?php echo htmlspecialchars($message); ?>
@@ -537,14 +530,14 @@ if ($q = $conn->query($qStr)) {
     })();
     </script>
 
-        <div class="mt-6">
-            <a href="archives-landing.php" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700">
-                <span class="mr-2">←</span> Back to Archives
-            </a>
+            <div class="mt-6">
+                <a href="archives-landing.php" class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <span class="mr-2">←</span> Back to Archives
+                </a>
+            </div>
         </div>
     </div>
-    </div>
-    </div>
+</div>
 
     <!-- Restore Database Modal -->
     <div id="restoreModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
