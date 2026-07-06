@@ -81,14 +81,10 @@ html, body {
         width: 16rem;
         min-width: 16rem;
     }
-    /* Ensure main content has proper left margin for fixed sidebar */
-    body {
-        padding-left: 16rem !important;
-    }
-}
-@media (max-width: 767px) {
-    body {
-        padding-left: 0 !important;
+    /* Add margin to main content containers instead of body padding */
+    .flex.min-h-screen > .flex-1,
+    .main-content-area {
+        margin-left: 16rem !important;
     }
 }
 </style>
@@ -210,13 +206,20 @@ html, body {
             document.documentElement.style.margin = '0';
             document.documentElement.style.padding = '0';
             document.body.style.margin = '0';
+            document.body.style.padding = '0'; // Remove any padding from body
             
-            // Apply padding to body on md+ (desktop) where sidebar is visible and fixed
+            // Apply margin to main content containers on md+ (desktop)
             if(w >= 768){
-                document.body.style.paddingLeft = '16rem';
+                var mainContainers = document.querySelectorAll('.flex.min-h-screen > .flex-1, .main-content-area');
+                mainContainers.forEach(function(container) {
+                    container.style.marginLeft = '16rem';
+                });
             } else {
-                // remove padding on small screens where sidebar is hidden
-                document.body.style.paddingLeft = '0';
+                // Remove margin on small screens
+                var allContainers = document.querySelectorAll('.flex.min-h-screen > .flex-1, .main-content-area');
+                allContainers.forEach(function(container) {
+                    container.style.marginLeft = '0';
+                });
             }
         }catch(e){ console && console.warn && console.warn('sidebar layout adjust failed', e); }
     }
