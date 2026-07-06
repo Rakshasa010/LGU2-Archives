@@ -437,7 +437,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 </div>
 
                                 <!-- Storage Content -->
-                                <div class="w-full">
+                                <div class="p-6">
                                     <!-- Skeleton Loader -->
                                     <div id="storage-skeleton" class="hidden">
                                         <div class="animate-pulse">
