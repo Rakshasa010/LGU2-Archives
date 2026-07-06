@@ -43,6 +43,11 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
 <?php endif; ?>
 <style>
+/* Reset default margins and padding */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
 @media (min-width: 768px) {
     #sidebar {
         width: 16rem;
@@ -50,13 +55,12 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
     }
     /* Ensure main content has proper left margin for fixed sidebar */
     body {
-        padding-left: 16rem;
+        padding-left: 16rem !important;
     }
-    /* Reset for mobile */
 }
 @media (max-width: 767px) {
     body {
-        padding-left: 0;
+        padding-left: 0 !important;
     }
 }
 </style>
@@ -173,6 +177,12 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
             var aside = document.getElementById('sidebar');
             if(!aside) return;
             var w = window.innerWidth || document.documentElement.clientWidth;
+            
+            // Reset any default margins/padding first
+            document.documentElement.style.margin = '0';
+            document.documentElement.style.padding = '0';
+            document.body.style.margin = '0';
+            
             // Apply padding to body on md+ (desktop) where sidebar is visible and fixed
             if(w >= 768){
                 document.body.style.paddingLeft = '16rem';
