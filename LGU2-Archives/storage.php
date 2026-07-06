@@ -495,6 +495,35 @@ if (isset($_SESSION['user_id'])) {
 }
     $stmt->close();
 
+    // Ensure legislative folders exist and get their IDs
+    $legislative_folders = [];
+    $folder_types = [
+        'Ordinance' => 'Ordinances & Resolutions',
+        'Resolution' => 'Ordinances & Resolutions',
+        'Billing' => 'Billing',
+        'Public Hearing' => 'Public Hearings',
+        'Meeting' => 'Meeting Records'
+    ];
+
+    foreach ($folder_types as $type => $name) {
+        // Check if folder exists
+        $checkStmt = $conn->prepare("SELECT id FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
+        $checkStmt->bind_param("s", $type);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+        if ($folder = $checkResult->fetch_assoc()) {
+            $legislative_folders[$type] = $folder['id'];
+        } else {
+            // Create folder if it doesn't exist
+            $insertStmt = $conn->prepare("INSERT INTO legislative_folders (name, type, parent_id) VALUES (?, ?, NULL)");
+            $insertStmt->bind_param("ss", $name, $type);
+            $insertStmt->execute();
+            $legislative_folders[$type] = $conn->insert_id;
+            $insertStmt->close();
+        }
+        $checkStmt->close();
+    }
+
     // helper methods and shared storage logic (copied from archives-landing.php)
     function fmt_bytes($bytes) {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -893,7 +922,7 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
             <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <a href="ordinances-resolution.php" data-archive="ordinances-resolution" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-orange-500/50 transition-all group h-40">
+                <a href="folder_view.php?id=<?php echo $legislative_folders['Ordinance']; ?>&legislative=true" data-archive="ordinances-resolution" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-orange-500/50 transition-all group h-40">
                     <div class="flex items-start justify-between">
                         <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
@@ -907,7 +936,7 @@ if (isset($_SESSION['user_id'])) {
                         <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="ordinances-resolution">Calculating...</div>
                     </div>
                 </a>
-                <a href="billing.php" data-archive="billing" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-green-500/50 transition-all group h-40">
+                <a href="folder_view.php?id=<?php echo $legislative_folders['Billing']; ?>&legislative=true" data-archive="billing" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-green-500/50 transition-all group h-40">
                     <div class="flex items-start justify-between">
                         <div class="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center text-green-600 dark:text-green-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
@@ -921,7 +950,7 @@ if (isset($_SESSION['user_id'])) {
                         <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="billing">Calculating...</div>
                     </div>
                 </a>
-                <a href="public-hearings.php" data-archive="public-hearings" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-blue-500/50 transition-all group h-40">
+                <a href="folder_view.php?id=<?php echo $legislative_folders['Public Hearing']; ?>&legislative=true" data-archive="public-hearings" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-blue-500/50 transition-all group h-40">
                     <div class="flex items-start justify-between">
                         <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
@@ -935,7 +964,7 @@ if (isset($_SESSION['user_id'])) {
                         <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="public-hearings">Calculating...</div>
                     </div>
                 </a>
-                <a href="meeting-records.php" data-archive="meeting-records" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-indigo-500/50 transition-all group h-40">
+                <a href="folder_view.php?id=<?php echo $legislative_folders['Meeting']; ?>&legislative=true" data-archive="meeting-records" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-indigo-500/50 transition-all group h-40">
                     <div class="flex items-start justify-between">
                         <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl group-hover:scale-110 transition-transform">
                             <i class="bi bi-folder-fill"></i>
