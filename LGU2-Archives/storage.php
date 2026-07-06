@@ -621,9 +621,9 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header / Navbar - Fixed at top -->
-            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 fixed top-0 left-0 right-0 z-40 transition-colors duration-200">
-                <div class="px-4 sm:px-6 lg:px-8 lg:pl-72">
+            <!-- Header / Navbar -->
+            <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
+                <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side -->
                         <div class="flex items-center">
@@ -713,7 +713,7 @@ if (isset($_SESSION['user_id'])) {
             <!-- Main Content -->
             <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
                 <!-- Content Wrapper with Max Width -->
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div class="space-y-6">
                
                     <!-- Recent Archives Section -->

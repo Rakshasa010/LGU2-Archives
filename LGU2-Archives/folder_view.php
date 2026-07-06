@@ -374,10 +374,10 @@ $conn->close();
         require_once 'includes/sidebar-centralized.php';
         ?>
 
-        <div class="flex-1 min-h-0 flex flex-col">
-            <!-- Header - Fixed at top -->
-            <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:pl-72">
+        <div class="flex-1 min-h-0">
+            <!-- Header -->
+            <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center justify-between h-16">
                         <div class="flex items-center space-x-4">
                             <a href="<?php echo $is_legislative ? "storage.php" : ($parent_folder ? "folder_view.php?id=" . $parent_folder['id'] : "storage.php"); ?>" class="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 text-red-600 dark:text-red-400 rounded-full hover:shadow-md transition-all font-semibold border border-red-100 dark:border-red-900/30">
@@ -396,7 +396,7 @@ $conn->close();
             </header>
 
             <!-- Main Content -->
-            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Folder Title -->
         <div class="mb-8 pb-6 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
             <div>

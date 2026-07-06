@@ -48,14 +48,15 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
         width: 16rem;
         min-width: 16rem;
     }
-    #sidebar + .flex-1,
-    #sidebar ~ .flex-1 {
-        margin-left: 16rem !important;
-        min-width: 0;
+    /* Ensure main content has proper left margin for fixed sidebar */
+    body {
+        padding-left: 16rem;
     }
-    #sidebar + .flex-1 .flex-1,
-    #sidebar ~ .flex-1 .flex-1 {
-        min-width: 0;
+    /* Reset for mobile */
+}
+@media (max-width: 767px) {
+    body {
+        padding-left: 0;
     }
 }
 </style>
@@ -113,7 +114,7 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
     </nav>
 </div>
 <?php if ($sidebar_layout === 'full'): ?>
-<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed md:relative z-30 translate-x-0 md:translate-x-0 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl">
+<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed left-0 top-0 z-30 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
     <div class="p-6 border-b border-white/10 sidebar-logo bg-white/5 backdrop-blur-sm">
         <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
             <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
@@ -172,24 +173,12 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
             var aside = document.getElementById('sidebar');
             if(!aside) return;
             var w = window.innerWidth || document.documentElement.clientWidth;
-            // Apply offset only on md+ (desktop) where sidebar is visible and fixed
+            // Apply padding to body on md+ (desktop) where sidebar is visible and fixed
             if(w >= 768){
-                var sidebarWidth = aside.getBoundingClientRect().width || 256;
-                // find the main content container: common patterns used in pages
-                var candidate = document.querySelector('.flex.min-h-screen > .flex-1, .flex-1.min-h-0, body > .flex > .flex-1');
-                if(candidate){
-                    candidate.style.marginLeft = sidebarWidth + 'px';
-                } else {
-                    // fallback: apply to first .flex-1 that is not the sidebar
-                    var all = Array.from(document.querySelectorAll('.flex-1'));
-                    for(var i=0;i<all.length;i++){
-                        if(!all[i].closest('#sidebar')){ all[i].style.marginLeft = sidebarWidth + 'px'; break; }
-                    }
-                }
+                document.body.style.paddingLeft = '16rem';
             } else {
-                // remove any previously applied offset on small screens
-                var all = Array.from(document.querySelectorAll('.flex-1'));
-                all.forEach(function(el){ if(el.style) el.style.marginLeft = ''; });
+                // remove padding on small screens where sidebar is hidden
+                document.body.style.paddingLeft = '0';
             }
         }catch(e){ console && console.warn && console.warn('sidebar layout adjust failed', e); }
     }

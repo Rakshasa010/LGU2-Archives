@@ -165,10 +165,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         $sidebar_include_overlay = true;
         require_once 'includes/sidebar-centralized.php';
         ?>
-        <div class="flex-1 min-h-0 flex flex-col">
-            <!-- Header / Navbar - Fixed at top -->
-            <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] fixed top-0 left-0 right-0 z-40 transition-colors duration-200">
-                <div class="px-4 sm:px-6 lg:px-8 lg:pl-72">
+        <div class="flex-1 min-h-0">
+            <!-- Header / Navbar -->
+            <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sticky top-0 z-40 transition-colors duration-200">
+                <div class="px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side: Toggle buttons and Logo -->
                         <div class="flex items-center">
@@ -269,7 +269,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                   Removed 'max-w-7xl mx-auto' to allow full screen scaling, 
                   and replaced with 'w-full' plus expanded responsive padding to maximize screen usage while keeping content breathing room.
                 -->
-                                <div class="w-full px-4 sm:px-8 lg:px-12 xl:px-16 py-6 lg:py-8 pt-20">
+                                <div class="w-full px-4 sm:px-8 lg:px-12 xl:px-16 py-6 lg:py-8">
                                         <!-- Responsive two-column layout: main content + right widgets -->
                                         <div class="grid gap-8 lg:grid-cols-[2.2fr_1fr] items-start">
                                                 <div class="w-full">
