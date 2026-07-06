@@ -53,10 +53,7 @@ html, body {
         width: 16rem;
         min-width: 16rem;
     }
-    /* Ensure main content has proper left margin for fixed sidebar */
-    body {
-        padding-left: 16rem !important;
-    }
+    
 }
 @media (max-width: 767px) {
     body {
