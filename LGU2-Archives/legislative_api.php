@@ -283,6 +283,30 @@ switch ($action) {
         echo json_encode(['success' => true, 'files' => $files]);
         break;
 
+    case 'get_archive_files':
+        $folder_id = isset($_GET['folder_id']) ? (int)$_GET['folder_id'] : 0;
+        if (!$folder_id) {
+            echo json_encode(['success' => false, 'message' => 'Invalid folder ID']);
+            exit;
+        }
+        
+        $sql = "SELECT id, name, file_path, author, created_at, version 
+                FROM archive_files 
+                WHERE folder_id = ?
+                ORDER BY created_at DESC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $folder_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $files = [];
+        while ($row = $result->fetch_assoc()) {
+            $files[] = $row;
+        }
+        
+        echo json_encode(['success' => true, 'files' => $files]);
+        break;
+
     case 'get_contents':
         // For dynamic loading (optional, currently pages fetch via PHP)
         break;

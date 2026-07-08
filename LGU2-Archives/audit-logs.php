@@ -97,7 +97,7 @@
         <link rel="stylesheet" href="assets/css/audit-logs.css">
     </head>
 
-        <div class="flex h-screen overflow-hidden">
+        <div class="flex min-h-screen">
             <?php
             $sidebar_active_page = 'audit-logs';
             $sidebar_include_overlay = true;
@@ -105,7 +105,7 @@
             ?>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex-1 min-w-0">
                 <!-- Header / Navbar -->
                 <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
