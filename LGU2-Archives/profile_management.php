@@ -39,6 +39,15 @@ $stmt->close();
 $display_name = $user['full_name'] ?? 'User';
 $profile_picture = $user['profile_picture'] ?? null;
 $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
+
+// Fetch archive folders for sidebar
+$archive_folders = [];
+$folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+if ($folders_result && $folders_result->num_rows > 0) {
+    while ($row = $folders_result->fetch_assoc()) {
+        $archive_folders[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full">

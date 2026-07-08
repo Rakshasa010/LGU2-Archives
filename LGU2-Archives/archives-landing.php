@@ -269,7 +269,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                   Removed 'max-w-7xl mx-auto' to allow full screen scaling, 
                   and replaced with 'w-full' plus expanded responsive padding to maximize screen usage while keeping content breathing room.
                 -->
-                                <div class="w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+                <div class="w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
                     <!-- Enhanced Header Section -->
                     <div class="mb-8">
                         <div class="text-center lg:text-left">
@@ -517,97 +517,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </aside>
                     </div>
-                </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Available Space Card -->
-                                    <div class="group bg-white dark:bg-slate-700/50 rounded-xl p-6 border-2 border-green-200 dark:border-green-900/50 hover:border-green-400 dark:hover:border-green-700 transition-all shadow-md hover:shadow-lg">
-                                        <div class="flex items-start justify-between mb-3">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                    <span class="w-4 h-4 rounded-full bg-gradient-to-br from-green-500 to-green-600"></span>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">Available</p>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">Free space</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-1" id="detailAvailable"><?php echo fmt_bytes($capacityBytes - $totalBytes); ?></div>
-                                        <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
-                                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500" id="availableSpaceBar" style="width: <?php echo round((($capacityBytes - $totalBytes) / $capacityBytes) * 100, 1); ?>%;"></div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Total Storage Card -->
-                                    <div class="sm:col-span-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-6 border-2 border-red-300 dark:border-red-800/50 hover:border-red-400 dark:hover:border-red-700 transition-all shadow-md hover:shadow-lg">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium mb-1">Total Storage Capacity</p>
-                                                <div class="flex items-baseline gap-2">
-                                                    <span class="text-4xl font-bold text-red-600 dark:text-red-400" id="detailTotal">50 GB</span>
-                                                    <span class="text-xs text-gray-600 dark:text-gray-400">Max allocation</span>
-                                                </div>
-                                            </div>
-                                            <div class="text-right">
-                                                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Quota Usage</div>
-                                                <div class="inline-block px-4 py-2 bg-white dark:bg-slate-700/50 rounded-lg border border-red-200 dark:border-red-800">
-                                                    <span class="font-semibold text-red-600 dark:text-red-400" id="quotaPercentage"><?php echo $pct; ?>%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Action Bar & Last Update -->
-                            <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-gray-200 dark:border-slate-700">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">
-                                    Last updated: <span id="lastUpdateTime" class="font-semibold">just now</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button class="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 transition-colors" id="storage-export-btn">
-                                        <i class="bi bi-download mr-2"></i>Export Report
-                                    </button>
-                                </div>
-                            </div>
-                            </div>
-                        </aside>
-                    </div>
-                        <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">
-                            <div class="flex items-center justify-center min-h-screen px-4">
-                                <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
-                                <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200 dark:border-slate-700">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div class="text-lg font-semibold text-gray-800 dark:text-gray-100">Storage Details</div>
-                                        <button id="storageDetailsClose" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button>
-                                    </div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Largest files</div>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-left text-sm">
-                                            <thead class="text-xs text-gray-500">
-                                                <tr><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Source</th><th class="py-2 pr-3">Size</th></tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
-                                                <?php foreach ($storageTop as $it): ?>
-                                                <tr>
-                                                    <td class="py-2 pr-3 break-all"><?php echo htmlspecialchars($it['name'] ?? basename($it['path'])); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($it['src'] ?? ''); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo fmt_bytes($it['size'] ?? 0); ?></td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                                <?php if (empty($storageTop)): ?>
-                                                <tr><td colspan="3" class="py-3 text-gray-500">No files found</td></tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Quick Analytics -->
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
+                    <!-- Quick Analytics -->
+                    <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
                             <?php
                             require 'authdatabase.php';
                             $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
@@ -960,6 +872,39 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 </div>
 
             </main>
+        </div>
+    </div>
+
+    <!-- Storage Details Modal -->
+    <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100">Storage Details</div>
+                    <button id="storageDetailsClose" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button>
+                </div>
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Largest files</div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs text-gray-500">
+                            <tr><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Source</th><th class="py-2 pr-3">Size</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                            <?php foreach ($storageTop as $it): ?>
+                            <tr>
+                                <td class="py-2 pr-3 break-all"><?php echo htmlspecialchars($it['name'] ?? basename($it['path'])); ?></td>
+                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($it['src'] ?? ''); ?></td>
+                                <td class="py-2 pr-3 whitespace-nowrap"><?php echo fmt_bytes($it['size'] ?? 0); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            <?php if (empty($storageTop)): ?>
+                            <tr><td colspan="3" class="py-3 text-gray-500">No files found</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 

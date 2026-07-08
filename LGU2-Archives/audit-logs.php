@@ -73,6 +73,15 @@
         }
     }
 
+    // Fetch archive folders for sidebar
+    $archive_folders = [];
+    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+    if ($folders_result && $folders_result->num_rows > 0) {
+        while ($row = $folders_result->fetch_assoc()) {
+            $archive_folders[] = $row;
+        }
+    }
+
     $conn->close();
 
     $display_name = $user_data['full_name'] ?? 'User';

@@ -48,7 +48,7 @@ function map_export_link($title, $location = '') {
     return 'storage.php';
 }
 
-// Centralized notifications: load recent Export Request items
+// Centralized notifications: load recent Request Copy items
 $conn->query("CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     time VARCHAR(20) NOT NULL,
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_request'])) {
         $link = map_export_link($file_name, $location);
         $ntime = date('h:i A');
         $ndate = date('Y-m-d');
-        $about = 'Export Request';
+        $about = 'Request Copy';
         $status = 'unread';
         $needed_date = $needed_date !== '' ? $needed_date : null;
         $request_note = $request_note !== '' ? $request_note : null;
@@ -105,20 +105,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_request'])) {
         if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link) VALUES (?,?,?,?,?,?,?,?,?,?,?)")) {
             $ins->bind_param("sssssssssss", $ntime, $ndate, $file_name, $about, $status, $file_name, $file_version, $needed_date, $request_note, $purpose, $link);
             if ($ins->execute()) {
-                $export_notice = "Export request created for " . $file_name . ".";
+                $export_notice = "Request Copy created for " . $file_name . ".";
             } else {
-                $export_error = "Failed to save export request.";
+                $export_error = "Failed to save Request Copy.";
             }
             $ins->close();
         } else {
-            $export_error = "Unable to prepare export request.";
+            $export_error = "Unable to prepare Request Copy.";
         }
+    }
+}
+
+// Fetch archive folders for sidebar
+$archive_folders = [];
+$folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+if ($folders_result && $folders_result->num_rows > 0) {
+    while ($row = $folders_result->fetch_assoc()) {
+        $archive_folders[] = $row;
     }
 }
 
 $mock_notifications = [];
 $unread_count = 0;
-$resN = $conn->query("SELECT id, time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link FROM notifications WHERE about = 'Export Request' ORDER BY date DESC, id DESC LIMIT 50");
+$resN = $conn->query("SELECT id, time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link FROM notifications WHERE about = 'Request Copy' ORDER BY date DESC, id DESC LIMIT 50");
 if ($resN) {
     while ($rowN = $resN->fetch_assoc()) {
         $rowN['file_name'] = $rowN['file_name'] ?? $rowN['content'];
@@ -254,7 +263,7 @@ if (count($mock_notifications) < 10) {
             'time' => $pick['time'],
             'date' => $today,
             'content' => $pick['content'],
-            'about' => 'Export Request',
+            'about' => 'Request Copy',
             'status' => $pick['status'],
             'file_name' => $pick['content'],
             'file_version' => $pick['file_version'] ?? 'Latest',
@@ -272,7 +281,7 @@ if (count($mock_notifications) < 10) {
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>Export - Document Management | City of Valenzuela</title>
+	<title>Request Copy - Document Management | City of Valenzuela</title>
 	<link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 	<link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
 	<script src="https://cdn.tailwindcss.com"></script>
@@ -316,7 +325,7 @@ if (count($mock_notifications) < 10) {
                         <!-- Page Title & Breadcrumb -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
-                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Export</h2>
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Request Copy</h2>
                             </div>
                         </div>
                         
@@ -339,7 +348,7 @@ if (count($mock_notifications) < 10) {
                                     <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
                                 </button>
 
-                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-50">
                                     <div class="p-4">
                                         <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
                                         <div id="notif-list" class="space-y-2">
@@ -375,7 +384,7 @@ if (count($mock_notifications) < 10) {
                             </button>
                             
                                 <!-- Profile Dropdown -->
-                                <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
+                                <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
                                     <div class="py-2">
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Account Settings
@@ -398,7 +407,7 @@ if (count($mock_notifications) < 10) {
 				}
 			</style>
 			<main class="flex-1 overflow-y-auto bg-[#fafafa] dark:bg-[#0f1117]">
-				<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-[1400px] mx-auto">
+				<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-[1600px] mx-auto">
                     <?php
                     $totalreqs = count($mock_notifications);
                     $unreadreqs = 0;
@@ -413,20 +422,14 @@ if (count($mock_notifications) < 10) {
                     ?>
 					<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
 						<div>
-							<h3 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">Export Requests</h3>
-							<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Minimal, focused list of recent export activity.</p>
+							<h3 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">Request Copy Requests</h3>
+							<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Minimal, focused list of recent requests.</p>
 						</div>
 						<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <div class="relative w-full sm:w-auto">
-                                <input id="export-search" type="text" class="peer w-full sm:w-64 pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-sm transition-colors" placeholder="Search requests...">
+                                <input id="request-search" type="text" class="peer w-full sm:w-64 pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 shadow-sm transition-colors" placeholder="Search requests...">
                                 <i class="bi bi-search absolute left-3 top-2.5 text-gray-400 dark:text-gray-500 text-sm"></i>
                             </div>
-							<div class="flex bg-gray-200/50 dark:bg-slate-800/80 rounded-lg p-1 border border-gray-200 dark:border-slate-700/50 shadow-sm w-full sm:w-auto overflow-x-auto">
-								<button id="filter-all" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">All</button>
-								<button id="filter-unread" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">Unread</button>
-								<button id="filter-today" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">Today</button>
-								<button id="filter-week" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md text-gray-600 dark:text-gray-400 filter-btn transition-colors hover:text-gray-900 dark:hover:text-gray-100 whitespace-nowrap" aria-pressed="false">This Week</button>
-							</div>
 						</div>
 					</div>
 
@@ -450,107 +453,166 @@ if (count($mock_notifications) < 10) {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="export-list">
-                        <?php foreach ($mock_notifications as $index => $n): ?>
-                            <?php
-                            $fname = htmlspecialchars($n['file_name'] ?? $n['content']);
-                            $typeIcon = 'bi-file-earmark-text';
-                            $typeBg = 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400';
-                            $fup = strtoupper($fname);
-                            if (strpos($fup, '.PDF') !== false || strpos($fup, '(PDF)') !== false) {
-                                $typeIcon = 'bi-file-earmark-pdf';
-                                $typeBg = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
-                            } elseif (strpos($fup, '.DOC') !== false || strpos($fup, '(DOC') !== false) {
-                                $typeIcon = 'bi-file-earmark-word';
-                                $typeBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
-                            } elseif (strpos($fup, '.XLS') !== false || strpos($fup, '(XLS') !== false || strpos($fup, '.CSV') !== false || strpos($fup, '(CSV)') !== false) {
-                                $typeIcon = 'bi-file-earmark-spreadsheet';
-                                $typeBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
-                            }
-
-                            $isUnread = $n['status'] === 'unread';
-                            ?>
-                            <div class="export-item flex flex-col justify-between rounded-xl border <?php echo $isUnread ? 'border-l-[3px] border-l-red-500 border-y-gray-200 border-r-gray-200 dark:border-y-slate-700 dark:border-r-slate-700' : 'border-gray-200 dark:border-slate-700'; ?> bg-white dark:bg-slate-800 p-5 shadow-sm transition-all hover:shadow-md relative cursor-pointer group" style="animation: fadeInUp 0.4s ease-out forwards; animation-delay: <?php echo $index * 0.05; ?>s; opacity: 0;" tabindex="0" data-id="<?php echo htmlspecialchars($n['id'] ?? ''); ?>" data-link="<?php echo htmlspecialchars($n['link'] ?? ''); ?>" data-status="<?php echo htmlspecialchars($n['status']); ?>" data-content="<?php echo $fname; ?>" data-date="<?php echo htmlspecialchars($n['date']); ?>">
-                                
-                                <div class="flex-1">
-                                    <div class="flex items-start justify-between mb-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-lg <?php echo $typeBg; ?> flex items-center justify-center transition-colors">
-                                                <i class="bi <?php echo $typeIcon; ?> text-lg"></i>
-                                            </div>
-                                            <?php if ($isUnread): ?>
-                                                <span class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Unread
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600/50 text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Read
-                                                </span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="relative">
-                                            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" onclick="document.querySelectorAll('.export-menu').forEach(i => {if(i !== this.nextElementSibling) i.classList.add('hidden');}); this.nextElementSibling.classList.toggle('hidden'); event.stopPropagation();">
-                                                <i class="bi bi-three-dots-vertical"></i>
-                                            </button>
-                                            <div class="hidden absolute right-0 top-8 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-xl rounded-lg z-10 w-36 py-1 export-menu">
-                                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 view-btn font-medium transition-colors">View Details</button>
-                                                <button class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 send-to-btn font-medium transition-colors" data-content="<?php echo $fname; ?>">Send To</button>
-                                            </div>
-                                        </div>
+                    <!-- FILTER + SORT BAR -->
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <!-- Type Filter -->
+                            <div class="relative">
+                                <button id="filter-type-btn" class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" aria-haspopup="true" aria-expanded="false">
+                                    <i class="bi bi-file-earmark"></i>
+                                    Type
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </button>
+                                <div id="filter-type-menu" class="hidden absolute left-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-30">
+                                    <div class="py-1">
+                                        <button class="type-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-type="all">All Types</button>
+                                        <button class="type-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-type="pdf">PDF</button>
+                                        <button class="type-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-type="doc">DOC/DOCX</button>
+                                        <button class="type-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-type="xls">XLS/XLSX/CSV</button>
+                                        <button class="type-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-type="other">Other</button>
                                     </div>
-                                    
-                                    <div class="text-[15px] font-bold text-gray-900 dark:text-white leading-tight mb-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" title="<?php echo $fname; ?>">
-                                        <?php echo $fname; ?>
-                                    </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                                        <?php echo htmlspecialchars($n['about']); ?>
-                                    </div>
-
-                                    <div class="grid grid-cols-2 gap-y-3 gap-x-3 text-[11px] mb-4">
-                                        <div class="flex flex-col"><span class="text-gray-500 dark:text-gray-400 mb-0.5">Version</span> <span class="font-semibold text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($n['file_version']); ?></span></div>
-                                        <div class="flex flex-col"><span class="text-gray-500 dark:text-gray-400 mb-0.5">Needed By</span> <span class="font-semibold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($n['needed_date']); ?></span></div>
-                                    </div>
-
-                                    <div class="bg-gray-50 dark:bg-slate-900/60 rounded-lg p-3 border border-gray-100 dark:border-slate-700/50 mb-4">
-                                        <div class="text-[10px] text-gray-400 dark:text-gray-500/80 uppercase tracking-widest font-semibold mb-1">Request Note</div>
-                                        <div class="text-xs text-gray-800 dark:text-gray-300 font-medium leading-relaxed max-h-16 overflow-y-auto custom-scrollbar"><?php echo htmlspecialchars($n['request_note']); ?></div>
-                                    </div>
-
-                                    <div class="flex items-center justify-between mb-4 mt-auto">
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50">
-                                            <i class="bi bi-tag-fill text-slate-400 dark:text-slate-500 text-[10px]"></i> <?php echo htmlspecialchars($n['purpose']); ?>
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="mb-5">
-                                        <a href="<?php echo htmlspecialchars($n['link'] ?? 'storage.php'); ?>" class="open-link inline-flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors">
-                                            <i class="bi bi-box-arrow-right"></i> Open Location
-                                        </a>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-auto pt-3 border-t border-gray-100 dark:border-slate-700/60 flex justify-between items-center text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                                    <span><?php echo htmlspecialchars($n['date']); ?></span>
-                                    <span><?php echo htmlspecialchars($n['time']); ?></span>
-                                </div>
-                                
-                                <div class="export-details hidden mt-2 bg-gray-50 dark:bg-slate-900 rounded p-2 text-[11px] border border-gray-200 dark:border-slate-600 space-y-1">
-                                    <div class="text-gray-800 dark:text-gray-200">Status: <?php echo htmlspecialchars(ucfirst($n['status'])); ?></div>
-                                    <div class="text-gray-600 dark:text-gray-400">File: <?php echo htmlspecialchars($n['file_name'] ?? $n['content']); ?></div>
-                                    <div class="text-gray-600 dark:text-gray-400">Version: <?php echo htmlspecialchars($n['file_version']); ?></div>
-                                    <div class="text-gray-600 dark:text-gray-400">Needed By: <?php echo htmlspecialchars($n['needed_date']); ?></div>
-                                    <div class="text-gray-600 dark:text-gray-400">Request Note: <?php echo htmlspecialchars($n['request_note']); ?></div>
-                                    <div class="text-gray-600 dark:text-gray-400">Purpose: <?php echo htmlspecialchars($n['purpose']); ?></div>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <div id="export-empty" class="hidden mt-6 rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-10 text-center shadow-sm">
-                        <div class="mx-auto w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 dark:text-red-400 border border-red-100 dark:border-red-900/50">
-                            <i class="bi bi-inbox text-xl"></i>
+
+                            <!-- Status Filter -->
+                            <div class="relative">
+                                <button id="filter-status-btn" class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" aria-haspopup="true" aria-expanded="false">
+                                    <i class="bi bi-circle"></i>
+                                    Status
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </button>
+                                <div id="filter-status-menu" class="hidden absolute left-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-30">
+                                    <div class="py-1">
+                                        <button class="status-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-status="all">All</button>
+                                        <button class="status-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-status="unread">Unread</button>
+                                        <button class="status-filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-status="read">Read</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Date Grouping -->
+                            <div class="relative">
+                                <button id="group-date-btn" class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" aria-haspopup="true" aria-expanded="false">
+                                    <i class="bi bi-calendar3"></i>
+                                    <span id="group-date-label">Daily</span>
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </button>
+                                <div id="group-date-menu" class="hidden absolute left-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-30">
+                                    <div class="py-1">
+                                        <button class="group-date-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-group="daily">Daily</button>
+                                        <button class="group-date-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-group="monthly">Monthly</button>
+                                        <button class="group-date-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-group="yearly">Yearly</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h4 class="mt-4 text-base font-bold text-gray-900 dark:text-gray-100">No requests found</h4>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No matching export requests fit this filter.</p>
+
+                        <!-- Sort -->
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <button id="sort-btn" class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" aria-haspopup="true" aria-expanded="false">
+                                    <i class="bi bi-sort-alpha-down"></i>
+                                    <span id="sort-label">Name</span>
+                                    <i class="bi bi-chevron-down text-xs"></i>
+                                </button>
+                                <div id="sort-menu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-30">
+                                    <div class="py-1">
+                                        <button class="sort-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-sort="name">Name</button>
+                                        <button class="sort-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-sort="date">Date</button>
+                                        <button class="sort-option block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700" data-sort="status">Status</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="sort-direction-btn" class="p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" title="Toggle sort direction">
+                                <i id="sort-direction-icon" class="bi bi-arrow-down-up text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- REQUEST GRID -->
+                    <div id="request-grid-container">
+                        <div id="request-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <?php foreach ($mock_notifications as $index => $n): ?>
+                                <?php
+                                $fname = htmlspecialchars($n['file_name'] ?? $n['content']);
+                                $typeIcon = 'bi-file-earmark';
+                                $typeBg = 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400';
+                                $fileType = 'other';
+                                $fup = strtoupper($fname);
+                                if (strpos($fup, '.PDF') !== false || strpos($fup, '(PDF)') !== false) {
+                                    $typeIcon = 'bi-file-earmark-pdf';
+                                    $typeBg = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+                                    $fileType = 'pdf';
+                                } elseif (strpos($fup, '.DOC') !== false || strpos($fup, '(DOC)') !== false || strpos($fup, '.DOCX') !== false || strpos($fup, '(DOCX)') !== false) {
+                                    $typeIcon = 'bi-file-earmark-word';
+                                    $typeBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+                                    $fileType = 'doc';
+                                } elseif (strpos($fup, '.XLS') !== false || strpos($fup, '(XLS)') !== false || strpos($fup, '.XLSX') !== false || strpos($fup, '(XLSX)') !== false || strpos($fup, '.CSV') !== false || strpos($fup, '(CSV)') !== false) {
+                                    $typeIcon = 'bi-file-earmark-spreadsheet';
+                                    $typeBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
+                                    $fileType = 'xls';
+                                }
+
+                                $isUnread = $n['status'] === 'unread';
+                                ?>
+                                <div class="request-item relative bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm transition-all duration-200 cursor-pointer group"
+                                     data-id="<?php echo htmlspecialchars($n['id'] ?? ''); ?>"
+                                     data-link="<?php echo htmlspecialchars($n['link'] ?? ''); ?>"
+                                     data-status="<?php echo htmlspecialchars($n['status']); ?>"
+                                     data-content="<?php echo $fname; ?>"
+                                     data-date="<?php echo htmlspecialchars($n['date']); ?>"
+                                     data-type="<?php echo $fileType; ?>"
+                                     data-file-name="<?php echo $fname; ?>"
+                                     data-file-version="<?php echo htmlspecialchars($n['file_version']); ?>"
+                                     data-needed-date="<?php echo htmlspecialchars($n['needed_date']); ?>"
+                                     data-request-note="<?php echo htmlspecialchars($n['request_note']); ?>"
+                                     data-purpose="<?php echo htmlspecialchars($n['purpose']); ?>"
+                                     data-submitted-date="<?php echo htmlspecialchars($n['date']); ?>"
+                                     data-submitted-time="<?php echo htmlspecialchars($n['time']); ?>"
+                                     aria-label="<?php echo $fname; ?> - <?php echo $isUnread ? 'Unread' : 'Read'; ?>"
+                                     tabindex="0"
+                                     style="animation: fadeInUp 0.3s ease-out forwards; animation-delay: <?php echo $index * 0.03; ?>s; opacity: 0;"
+                                >
+                                    <!-- Status Dot -->
+                                    <div class="absolute top-3 left-3 z-10">
+                                        <span class="w-3 h-3 rounded-full <?php echo $isUnread ? 'bg-red-500' : 'bg-gray-400'; ?> shadow-sm"></span>
+                                    </div>
+
+                                    <!-- Three Dot Menu -->
+                                    <div class="absolute top-3 right-3 z-10">
+                                        <button class="item-menu-btn p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" aria-label="File options">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- File Icon Area -->
+                                    <div class="flex items-center justify-center p-6">
+                                        <div class="w-16 h-16 rounded-lg <?php echo $typeBg; ?> flex items-center justify-center transition-colors group-hover:scale-105 duration-200">
+                                            <i class="bi <?php echo $typeIcon; ?> text-3xl"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- File Name -->
+                                    <div class="px-3 pb-4 text-center">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" title="<?php echo $fname; ?>">
+                                            <?php echo $fname; ?>
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            <?php echo htmlspecialchars($n['date']); ?>
+                                        </p>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div id="request-empty" class="hidden mt-10 rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-10 text-center shadow-sm">
+                            <div class="mx-auto w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 dark:text-red-400 border border-red-100 dark:border-red-900/50">
+                                <i class="bi bi-inbox text-xl"></i>
+                            </div>
+                            <h4 class="mt-4 text-base font-bold text-gray-900 dark:text-gray-100">No requests found</h4>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No matching Request Copy requests fit this filter.</p>
+                        </div>
                     </div>
 				</div>
 			</main>
@@ -562,14 +624,8 @@ if (count($mock_notifications) < 10) {
         <!-- Floating Action Button -->
         <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 group">
             <div class="flex-col items-end gap-2 hidden group-hover:flex transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 mb-2">
-                <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    <i class="bi bi-cloud-arrow-up text-red-600 dark:text-red-400"></i> Upload Archive
-                </button>
-                <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    <i class="bi bi-collection text-red-600 dark:text-red-400"></i> Bulk Export
-                </button>
-                <button id="open-export-request" type="button" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    <i class="bi bi-file-earmark-plus text-red-600 dark:text-red-400"></i> New Export
+                <button id="open-request-modal" type="button" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-gray-200 dark:border-slate-700 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    <i class="bi bi-file-earmark-plus text-red-600 dark:text-red-400"></i>New Request
                 </button>
             </div>
             <button class="w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg flex items-center justify-center focus:outline-none transition-transform hover:scale-105">
@@ -577,7 +633,8 @@ if (count($mock_notifications) < 10) {
             </button>
         </div>
 
-        <div id="export-request-modal" class="fixed inset-0 z-50 hidden">
+        <!-- New Request Modal -->
+        <div id="request-modal" class="fixed inset-0 z-50 hidden">
             <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
             <div class="relative max-w-2xl mx-auto mt-16 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
                 <div class="flex items-center gap-3 mb-4">
@@ -585,8 +642,8 @@ if (count($mock_notifications) < 10) {
                         <i class="bi bi-file-earmark-plus"></i>
                     </div>
                     <div>
-                        <div class="text-base font-semibold text-gray-900 dark:text-gray-100">New Export Request</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">Provide the exact file and export details.</div>
+                        <div class="text-base font-semibold text-gray-900 dark:text-gray-100">New Request Copy</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Provide the exact file and request details.</div>
                     </div>
                 </div>
                 <?php if (!empty($export_error)): ?>
@@ -630,340 +687,370 @@ if (count($mock_notifications) < 10) {
                         <input type="text" name="purpose" value="<?php echo htmlspecialchars($_POST['purpose'] ?? ''); ?>" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500">
                     </div>
                     <div class="mt-4 flex justify-end gap-2">
-                        <button id="export-request-cancel" type="button" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600">Cancel</button>
+                        <button id="request-cancel" type="button" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600">Cancel</button>
                         <button type="submit" class="px-4 py-2 text-sm rounded-lg bg-red-700 hover:bg-red-800 text-white">Create Request</button>
                     </div>
                 </form>
             </div>
         </div>
 
-		<div id="send-to-modal" class="fixed inset-0 z-50 hidden">
-			<div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-			<div class="relative max-w-md mx-auto mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
-				<div class="flex items-center gap-3 mb-4">
-					<div class="w-10 h-10 rounded-md bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300">
-						<i class="bi bi-send"></i>
-					</div>
-					<div>
-						<div class="text-base font-semibold text-gray-900 dark:text-gray-100">Send To</div>
-						<div id="send-to-file" class="text-xs text-gray-500 dark:text-gray-400"></div>
-					</div>
-				</div>
-				<div class="space-y-2">
-					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
-						<input type="radio" name="sendToDest" value="Sessions" class="accent-red-600">
-						<span class="text-sm text-gray-800 dark:text-gray-200">Sessions</span>
-					</label>
-					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
-						<input type="radio" name="sendToDest" value="Records" class="accent-red-600">
-						<span class="text-sm text-gray-800 dark:text-gray-200">Records</span>
-					</label>
-					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
-						<input type="radio" name="sendToDest" value="Meetings" class="accent-red-600">
-						<span class="text-sm text-gray-800 dark:text-gray-200">Meetings</span>
-					</label>
-					<label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
-						<input type="radio" name="sendToDest" value="Others" class="accent-red-600">
-						<span class="text-sm text-gray-800 dark:text-gray-200">Others</span>
-					</label>
-				</div>
-				<div class="mt-6 flex justify-end gap-2">
-					<button id="send-to-cancel" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600">Cancel</button>
-					<button id="send-to-confirm" class="px-4 py-2 text-sm rounded-lg bg-red-700 hover:bg-red-800 text-white">Send</button>
-				</div>
-			</div>
-		</div>
+        <!-- Detail Modal -->
+        <div id="detail-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative max-w-2xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div id="detail-icon-container" class="w-12 h-12 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300">
+                            <i id="detail-icon" class="bi bi-file-earmark text-2xl"></i>
+                        </div>
+                        <div>
+                            <div id="detail-title" class="text-lg font-semibold text-gray-900 dark:text-gray-100"></div>
+                            <div id="detail-status" class="text-xs text-gray-500 dark:text-gray-400"></div>
+                        </div>
+                    </div>
+                    <button id="detail-close" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors">
+                        <i class="bi bi-x-lg text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Version</label>
+                            <p id="detail-version" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Needed By</label>
+                            <p id="detail-needed" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Submitted Date</label>
+                            <p id="detail-submitted-date" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Submitted Time</label>
+                            <p id="detail-submitted-time" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Purpose</label>
+                        <p id="detail-purpose" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Request Note</label>
+                        <p id="detail-note" class="text-sm text-gray-800 dark:text-gray-300 bg-gray-50 dark:bg-slate-900 rounded-lg p-3 border border-gray-100 dark:border-slate-700/50"></p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-slate-700">
+                        <a id="detail-open-location" href="#" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                            <i class="bi bi-box-arrow-right"></i>Open Location
+                        </a>
+                        <div class="flex gap-2">
+                            <button id="detail-mark-read" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+                                Mark as Read
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
 	<script src="assets/js/archives-landing.js"></script>
 	<script src="assets/js/theme-toggle.js"></script>
 	<script>
 		(function () {
-			const list = document.getElementById('export-list');
-			const exportModal = document.getElementById('export-request-modal');
-			const openExportBtn = document.getElementById('open-export-request');
-			const exportCancel = document.getElementById('export-request-cancel');
-			const sendToModal = document.getElementById('send-to-modal');
-			const sendToFile = document.getElementById('send-to-file');
-			const sendToCancel = document.getElementById('send-to-cancel');
-			const sendToConfirm = document.getElementById('send-to-confirm');
-			let sendFile = '';
-			const search = document.getElementById('export-search');
-			const allBtn = document.getElementById('filter-all');
-			const unreadBtn = document.getElementById('filter-unread');
-			const todayBtn = document.getElementById('filter-today');
-			const weekBtn = document.getElementById('filter-week');
-			const empty = document.getElementById('export-empty');
-			let filterMode = 'all'; // all, unread, today, week
-			let q = '';
+            const requestItems = document.querySelectorAll('.request-item');
+            const requestGrid = document.getElementById('request-grid');
+            const requestEmpty = document.getElementById('request-empty');
+            const searchInput = document.getElementById('request-search');
+            const requestModal = document.getElementById('request-modal');
+            const openRequestBtn = document.getElementById('open-request-modal');
+            const requestCancel = document.getElementById('request-cancel');
+            const detailModal = document.getElementById('detail-modal');
+            const detailClose = document.getElementById('detail-close');
 
-			document.addEventListener('click', function(){
-				document.querySelectorAll('.export-menu').forEach(el => el.classList.add('hidden'));
-			});
-			function openExportModal() {
-				if (!exportModal) return;
-				exportModal.classList.remove('hidden');
-				document.body.style.overflow = 'hidden';
-			}
-			function closeExportModal() {
-				if (!exportModal) return;
-				exportModal.classList.add('hidden');
-				document.body.style.overflow = '';
-			}
-			if (openExportBtn) openExportBtn.addEventListener('click', openExportModal);
-			if (exportCancel) exportCancel.addEventListener('click', closeExportModal);
-			<?php if (!empty($export_error)): ?>
-			openExportModal();
-			<?php endif; ?>
-			<?php if (!empty($export_notice)): ?>
-			try { UI_ENH.toast('<?php echo htmlspecialchars($export_notice, ENT_QUOTES); ?>', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
-			<?php endif; ?>
+            let currentFilter = {
+                type: 'all',
+                status: 'all',
+                search: '',
+                groupBy: 'daily',
+                sortBy: 'date',
+                sortDirection: 'desc'
+            };
 
-			function updateBtnsStyle() {
-			    [allBtn, unreadBtn, todayBtn, weekBtn].forEach(b => {
-			        b.classList.remove('bg-red-700','dark:bg-red-800');
-			        b.classList.add('bg-red-600','dark:bg-red-700');
-			        b.setAttribute('aria-pressed', 'false');
-			    });
-			    let active;
-			    if(filterMode==='all') active = allBtn;
-			    if(filterMode==='unread') active = unreadBtn;
-			    if(filterMode==='today') active = todayBtn;
-			    if(filterMode==='week') active = weekBtn;
-			    
-			    if(active) {
-			        active.classList.add('bg-red-700','dark:bg-red-800');
-			        active.classList.remove('bg-red-600','dark:bg-red-700');
-			        active.setAttribute('aria-pressed', 'true');
-			    }
-			}
-			function isToday(dateStr) {
-				const d = new Date(dateStr + 'T00:00:00');
-				const now = new Date();
-				return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-			}
-			function isThisWeek(dateStr) {
-				const d = new Date(dateStr + 'T00:00:00');
-				const now = new Date();
-				const diff = now.getTime() - d.getTime();
-				const days = diff / (1000 * 60 * 60 * 24);
-				return days >= 0 && days <= 6;
-			}
-			function apply() {
-				const items = list.querySelectorAll('.export-item');
-				let shown = 0;
-				items.forEach(el => {
-					const status = el.getAttribute('data-status') || '';
-					const content = el.getAttribute('data-content') || '';
-					const dateStr = el.getAttribute('data-date') || '';
-					const matchText = content.toLowerCase().includes(q);
-					let matchCond = true;
-					if(filterMode === 'unread') matchCond = (status === 'unread');
-					if(filterMode === 'today') matchCond = isToday(dateStr);
-					if(filterMode === 'week') matchCond = isThisWeek(dateStr);
-					
-					const visible = matchText && matchCond;
-					el.style.display = visible ? '' : 'none';
-					if (visible) shown++;
-				});
-				empty.classList.toggle('hidden', shown !== 0);
-				updateBtnsStyle();
-			}
-			search.addEventListener('input', function () {
-				q = this.value.trim().toLowerCase();
-				apply();
-			});
-			allBtn.addEventListener('click', function () {
-				filterMode = 'all'; apply();
-			});
-			unreadBtn.addEventListener('click', function () {
-				filterMode = 'unread'; apply();
-			});
-			todayBtn.addEventListener('click', function () {
-				filterMode = 'today'; apply();
-			});
-			weekBtn.addEventListener('click', function () {
-				filterMode = 'week'; apply();
-			});
-			const mo = new MutationObserver(() => updateUnreadBtnStyle());
-			mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-			apply();
-			function setItemStatus(item, status) {
-				if (!item) return;
-				status = (status === 'read') ? 'read' : 'unread';
-				item.setAttribute('data-status', status);
-				const dot = item.querySelector('.status-dot');
-				const text = item.querySelector('.status-text');
-				if (dot) {
-					dot.classList.toggle('bg-red-500', status === 'unread');
-					dot.classList.toggle('bg-gray-400', status === 'read');
-				}
-				if (text) {
-					text.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-					text.classList.toggle('text-red-600', status === 'unread');
-					text.classList.toggle('dark:text-red-400', status === 'unread');
-					text.classList.toggle('text-gray-500', status === 'read');
-					text.classList.toggle('dark:text-gray-400', status === 'read');
-				}
-			}
-			function markRead(item) {
-				if (!item) return;
-				const cur = item.getAttribute('data-status') || 'unread';
-				if (cur === 'read') return;
-				setItemStatus(item, 'read');
-				const id = item.getAttribute('data-id');
-				if (id) {
-					try {
-						fetch('notifications_update.php', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body: 'id=' + encodeURIComponent(id) + '&status=read'
-						}).then(function () { });
-					} catch (e) { }
-				}
-			}
-			list.addEventListener('click', function (e) {
-				const vb = e.target.closest('.view-btn');
-				if (vb) {
-					const item = vb.closest('.export-item');
-					if (!item) return;
-					const det = item.querySelector('.export-details');
-					if (!det) return;
-					const hidden = det.classList.contains('hidden');
-					det.classList.toggle('hidden');
-					vb.textContent = hidden ? 'Hide' : 'View';
-					markRead(item);
-					return;
-				}
-				const btn = e.target.closest('.send-to-btn');
-				if (btn) {
-					const item = btn.closest('.export-item');
-					if (item) markRead(item);
-					sendFile = btn.getAttribute('data-content') || '';
-					sendToFile.textContent = sendFile;
-					sendToModal.classList.remove('hidden');
-					document.body.style.overflow = 'hidden';
-					return;
-				}
-				const openLink = e.target.closest('.open-link');
-				if (openLink) {
-					const item = openLink.closest('.export-item');
-					if (item) markRead(item);
-					return;
-				}
-				if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea')) return;
-				const item = e.target.closest('.export-item');
-				if (!item) return;
-				markRead(item);
-				const link = item.getAttribute('data-link');
-				if (link) window.location.href = link;
-			});
-			list.addEventListener('keydown', function (e) {
-				if (e.key !== 'Enter') return;
-				const item = e.target.closest('.export-item');
-				if (!item) return;
-				markRead(item);
-				const link = item.getAttribute('data-link');
-				if (link) window.location.href = link;
-			});
-			sendToCancel.addEventListener('click', function () {
-				sendToModal.classList.add('hidden');
-				document.body.style.overflow = '';
-			});
-			sendToConfirm.addEventListener('click', function () {
-				const chosen = document.querySelector('input[name="sendToDest"]:checked');
-				if (!chosen) return;
-				sendToModal.classList.add('hidden');
-				document.body.style.overflow = '';
-                try { UI_ENH.toast('Sent "' + sendFile + '" to ' + chosen.value, {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
-			});
-		})();
-	</script>
+            let currentDetailItem = null;
 
-    <script>
-        (function() {
-            function fetchAndUpdateStorage() {
-                fetch('archives-landing.php?action=get_storage_data')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            const pct = data.percentage;
-                            const usedText = data.usedText;
-                            const totalText = data.totalText;
-                            const fileCount = data.fileCount;
-
-                            ['mobile', 'desktop'].forEach(prefix => {
-                                const bar = document.getElementById(prefix + '-storage-bar');
-                                const pctEl = document.getElementById(prefix + '-storage-pct');
-                                const textEl = document.getElementById(prefix + '-storage-text');
-                                const filesEl = document.getElementById(prefix + '-storage-files');
-                                
-                                if (bar) bar.style.width = pct + '%';
-                                if (pctEl) pctEl.textContent = pct + '%';
-                                if (textEl) textEl.textContent = usedText + ' of ' + totalText;
-                                if (filesEl) filesEl.textContent = fileCount + ' files tracked';
-                            });
-                        }
-                    }).catch(err => console.warn('Storage fetch error:', err));
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', fetchAndUpdateStorage);
-            } else {
-                fetchAndUpdateStorage();
-            }
-            setInterval(fetchAndUpdateStorage, 60000);
-        })();
-    </script>
-
-    <!-- Logout Confirmation Modal -->
-    <div id="logout-modal" class="hidden fixed inset-0 z-50">
-        <div id="logout-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative z-10 flex min-h-full items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
-                <div class="text-center mb-6">
-                    <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="bi bi-box-arrow-right text-red-600 dark:text-red-400 text-3xl"></i>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Logout Confirmation</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to logout from your account?</p>
-                </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button id="logout-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                    <form action="logout.php" method="POST" class="inline">
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Yes, Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        (function(){
-            var logoutModal = document.getElementById('logout-modal');
-            var openLogoutModalBtn = document.getElementById('open-logout-modal');
-            var logoutCancelBtn = document.getElementById('logout-cancel');
-            var logoutModalBackdrop = document.getElementById('logout-modal-backdrop');
-            
-            function openLogoutModal() {
-                logoutModal && logoutModal.classList.remove('hidden');
+            // Open new request modal
+            function openRequestModal() {
+                if (!requestModal) return;
+                requestModal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
             }
-            
-            function closeLogoutModal() {
-                logoutModal && logoutModal.classList.add('hidden');
+            function closeRequestModal() {
+                if (!requestModal) return;
+                requestModal.classList.add('hidden');
                 document.body.style.overflow = '';
             }
-            
-            openLogoutModalBtn?.addEventListener('click', openLogoutModal);
-            logoutCancelBtn?.addEventListener('click', closeLogoutModal);
-            logoutModalBackdrop?.addEventListener('click', closeLogoutModal);
-            
-            window.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && !logoutModal?.classList.contains('hidden') === false) {
-                    closeLogoutModal();
+            if (openRequestBtn) openRequestBtn.addEventListener('click', openRequestModal);
+            if (requestCancel) requestCancel.addEventListener('click', closeRequestModal);
+            <?php if (!empty($export_error) || !empty($export_notice)): ?>
+            openRequestModal();
+            <?php endif; ?>
+            <?php if (!empty($export_notice)): ?>
+            try { UI_ENH.toast('<?php echo htmlspecialchars($export_notice, ENT_QUOTES); ?>', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
+            <?php endif; ?>
+
+            // Detail modal functions
+            function openDetailModal(item) {
+                currentDetailItem = item;
+                detailModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+
+                const fileName = item.getAttribute('data-file-name');
+                const status = item.getAttribute('data-status');
+                const fileType = item.getAttribute('data-type');
+                const version = item.getAttribute('data-file-version');
+                const neededDate = item.getAttribute('data-needed-date');
+                const requestNote = item.getAttribute('data-request-note');
+                const purpose = item.getAttribute('data-purpose');
+                const submittedDate = item.getAttribute('data-submitted-date');
+                const submittedTime = item.getAttribute('data-submitted-time');
+                const link = item.getAttribute('data-link');
+
+                document.getElementById('detail-title').textContent = fileName;
+                document.getElementById('detail-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                document.getElementById('detail-version').textContent = version;
+                document.getElementById('detail-needed').textContent = neededDate;
+                document.getElementById('detail-purpose').textContent = purpose;
+                document.getElementById('detail-note').textContent = requestNote;
+                document.getElementById('detail-submitted-date').textContent = submittedDate;
+                document.getElementById('detail-submitted-time').textContent = submittedTime;
+                document.getElementById('detail-open-location').href = link;
+
+                // Set icon
+                let iconClass = 'bi-file-earmark';
+                let iconBg = 'bg-gray-100 dark:bg-slate-700/50';
+                let iconColor = 'text-gray-600 dark:text-gray-400';
+                if (fileType === 'pdf') {
+                    iconClass = 'bi-file-earmark-pdf';
+                    iconBg = 'bg-red-100 dark:bg-red-900/30';
+                    iconColor = 'text-red-700 dark:text-red-400';
+                } else if (fileType === 'doc') {
+                    iconClass = 'bi-file-earmark-word';
+                    iconBg = 'bg-blue-100 dark:bg-blue-900/30';
+                    iconColor = 'text-blue-700 dark:text-blue-400';
+                } else if (fileType === 'xls') {
+                    iconClass = 'bi-file-earmark-spreadsheet';
+                    iconBg = 'bg-emerald-100 dark:bg-emerald-900/30';
+                    iconColor = 'text-emerald-700 dark:text-emerald-400';
+                }
+
+                document.getElementById('detail-icon').className = 'bi ' + iconClass + ' text-2xl';
+                const iconContainer = document.getElementById('detail-icon-container');
+                iconContainer.className = 'w-12 h-12 rounded-md ' + iconBg + ' flex items-center justify-center ' + iconColor;
+            }
+
+            function closeDetailModal() {
+                detailModal.classList.add('hidden');
+                document.body.style.overflow = '';
+                currentDetailItem = null;
+            }
+
+            if (detailClose) detailClose.addEventListener('click', closeDetailModal);
+            detailModal.addEventListener('click', (e) => {
+                if (e.target === detailModal.querySelector('div:first-child')) {
+                    closeDetailModal();
                 }
             });
-        })();
-    </script>
+
+            // Item click handlers
+            requestItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.closest('.item-menu-btn')) {
+                        openDetailModal(item);
+                    }
+                });
+                item.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDetailModal(item);
+                    }
+                });
+            });
+
+            // Filter dropdowns
+            const filterTypeBtn = document.getElementById('filter-type-btn');
+            const filterTypeMenu = document.getElementById('filter-type-menu');
+            const filterStatusBtn = document.getElementById('filter-status-btn');
+            const filterStatusMenu = document.getElementById('filter-status-menu');
+            const groupDateBtn = document.getElementById('group-date-btn');
+            const groupDateMenu = document.getElementById('group-date-menu');
+            const sortBtn = document.getElementById('sort-btn');
+            const sortMenu = document.getElementById('sort-menu');
+            const sortDirectionBtn = document.getElementById('sort-direction-btn');
+
+            function toggleMenu(btn, menu) {
+                const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+                // Close all other menus
+                [filterTypeMenu, filterStatusMenu, groupDateMenu, sortMenu].forEach(m => {
+                    if (m !== menu) m.classList.add('hidden');
+                });
+                [filterTypeBtn, filterStatusBtn, groupDateBtn, sortBtn].forEach(b => {
+                    if (b !== btn) b.setAttribute('aria-expanded', 'false');
+                });
+                menu.classList.toggle('hidden');
+                btn.setAttribute('aria-expanded', !isExpanded);
+            }
+
+            filterTypeBtn.addEventListener('click', () => toggleMenu(filterTypeBtn, filterTypeMenu));
+            filterStatusBtn.addEventListener('click', () => toggleMenu(filterStatusBtn, filterStatusMenu));
+            groupDateBtn.addEventListener('click', () => toggleMenu(groupDateBtn, groupDateMenu));
+            sortBtn.addEventListener('click', () => toggleMenu(sortBtn, sortMenu));
+
+            // Close menus when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#filter-type-btn') && !e.target.closest('#filter-type-menu')) {
+                    filterTypeMenu.classList.add('hidden');
+                    filterTypeBtn.setAttribute('aria-expanded', 'false');
+                }
+                if (!e.target.closest('#filter-status-btn') && !e.target.closest('#filter-status-menu')) {
+                    filterStatusMenu.classList.add('hidden');
+                    filterStatusBtn.setAttribute('aria-expanded', 'false');
+                }
+                if (!e.target.closest('#group-date-btn') && !e.target.closest('#group-date-menu')) {
+                    groupDateMenu.classList.add('hidden');
+                    groupDateBtn.setAttribute('aria-expanded', 'false');
+                }
+                if (!e.target.closest('#sort-btn') && !e.target.closest('#sort-menu')) {
+                    sortMenu.classList.add('hidden');
+                    sortBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Type filter
+            document.querySelectorAll('.type-filter-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    currentFilter.type = option.getAttribute('data-type');
+                    filterTypeMenu.classList.add('hidden');
+                    filterTypeBtn.setAttribute('aria-expanded', 'false');
+                    applyFiltersAndSort();
+                });
+            });
+
+            // Status filter
+            document.querySelectorAll('.status-filter-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    currentFilter.status = option.getAttribute('data-status');
+                    filterStatusMenu.classList.add('hidden');
+                    filterStatusBtn.setAttribute('aria-expanded', 'false');
+                    applyFiltersAndSort();
+                });
+            });
+
+            // Group date
+            document.querySelectorAll('.group-date-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    currentFilter.groupBy = option.getAttribute('data-group');
+                    document.getElementById('group-date-label').textContent = option.textContent;
+                    groupDateMenu.classList.add('hidden');
+                    groupDateBtn.setAttribute('aria-expanded', 'false');
+                    applyFiltersAndSort();
+                });
+            });
+
+            // Sort
+            document.querySelectorAll('.sort-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    currentFilter.sortBy = option.getAttribute('data-sort');
+                    document.getElementById('sort-label').textContent = option.textContent;
+                    sortMenu.classList.add('hidden');
+                    sortBtn.setAttribute('aria-expanded', 'false');
+                    applyFiltersAndSort();
+                });
+            });
+
+            sortDirectionBtn.addEventListener('click', () => {
+                currentFilter.sortDirection = currentFilter.sortDirection === 'asc' ? 'desc' : 'asc';
+                const icon = document.getElementById('sort-direction-icon');
+                icon.classList.toggle('bi-arrow-down-up');
+                icon.classList.toggle('bi-arrow-up-down');
+                applyFiltersAndSort();
+            });
+
+            // Search
+            searchInput.addEventListener('input', (e) => {
+                currentFilter.search = e.target.value.toLowerCase();
+                applyFiltersAndSort();
+            });
+
+            function applyFiltersAndSort() {
+                let items = Array.from(requestItems);
+
+                // Filter
+                items = items.filter(item => {
+                    const typeMatch = currentFilter.type === 'all' || item.getAttribute('data-type') === currentFilter.type;
+                    const statusMatch = currentFilter.status === 'all' || item.getAttribute('data-status') === currentFilter.status;
+                    const searchMatch = currentFilter.search === '' || item.getAttribute('data-content').toLowerCase().includes(currentFilter.search);
+                    return typeMatch && statusMatch && searchMatch;
+                });
+
+                // Sort
+                items.sort((a, b) => {
+                    let aVal, bVal;
+                    if (currentFilter.sortBy === 'name') {
+                        aVal = a.getAttribute('data-content').toLowerCase();
+                        bVal = b.getAttribute('data-content').toLowerCase();
+                    } else if (currentFilter.sortBy === 'date') {
+                        aVal = new Date(a.getAttribute('data-date'));
+                        bVal = new Date(b.getAttribute('data-date'));
+                    } else if (currentFilter.sortBy === 'status') {
+                        aVal = a.getAttribute('data-status');
+                        bVal = b.getAttribute('data-status');
+                    }
+
+                    let comparison = 0;
+                    if (aVal < bVal) comparison = -1;
+                    if (aVal > bVal) comparison = 1;
+                    return currentFilter.sortDirection === 'desc' ? -comparison : comparison;
+                });
+
+                // Reorder in DOM
+                items.forEach(item => requestGrid.appendChild(item));
+
+                // Show/hide items
+                requestItems.forEach(item => {
+                    item.style.display = items.includes(item) ? '' : 'none';
+                });
+
+                // Show empty state
+                if (items.length === 0) {
+                    requestGrid.classList.add('hidden');
+                    requestEmpty.classList.remove('hidden');
+                } else {
+                    requestGrid.classList.remove('hidden');
+                    requestEmpty.classList.add('hidden');
+                }
+            }
+
+            // Initial apply
+            applyFiltersAndSort();
+
+            // Mark as read
+            document.getElementById('detail-mark-read')?.addEventListener('click', () => {
+                if (currentDetailItem) {
+                    currentDetailItem.setAttribute('data-status', 'read');
+                    const statusDot = currentDetailItem.querySelector('.absolute.top-3.left-3 span');
+                    if (statusDot) {
+                        statusDot.classList.remove('bg-red-500');
+                        statusDot.classList.add('bg-gray-400');
+                    }
+                    applyFiltersAndSort();
+                    closeDetailModal();
+                }
+            });
+		})();
+	</script>
 </body>
 </html>
