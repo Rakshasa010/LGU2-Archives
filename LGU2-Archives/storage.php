@@ -188,13 +188,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $chk->close();
         }
         $uid = (int)$_SESSION['user_id'];
-        $ins = $conn->prepare("INSERT INTO archive_folders (name, slug, created_by) VALUES (?, ?, ?)");
+        $prefix = generate_document_prefix($name);
+        $ins = $conn->prepare("INSERT INTO archive_folders (name, slug, created_by, document_prefix) VALUES (?, ?, ?, ?)");
         if (!$ins) {
             echo json_encode(['success' => false, 'message' => 'Could not create folder']);
             $conn->close();
             exit();
         }
-        $ins->bind_param("ssi", $name, $slug, $uid);
+        $ins->bind_param("ssis", $name, $slug, $uid, $prefix);
         if ($ins->execute()) {
             echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug]]);
             $ins->close();
@@ -505,18 +506,33 @@ if (isset($_SESSION['user_id'])) {
         'Meeting' => 'Meeting Records'
     ];
 
+    // Define custom prefixes for specific folders as per user request
+    $custom_prefixes = [
+        'Ordinances & Resolutions' => 'Ordinance-Resolution',
+        'Meeting Records' => 'Meeting-Records'
+    ];
+
     foreach ($folder_types as $type => $name) {
         // Check if folder exists
-        $checkStmt = $conn->prepare("SELECT id FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
+        $checkStmt = $conn->prepare("SELECT id, document_prefix FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
         $checkStmt->bind_param("s", $type);
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
         if ($folder = $checkResult->fetch_assoc()) {
             $legislative_folders[$type] = $folder['id'];
+            // If document prefix is missing, update it
+            if (empty($folder['document_prefix'])) {
+                $prefix = isset($custom_prefixes[$name]) ? $custom_prefixes[$name] : generate_document_prefix($name);
+                $updateStmt = $conn->prepare("UPDATE legislative_folders SET document_prefix = ? WHERE id = ?");
+                $updateStmt->bind_param("si", $prefix, $folder['id']);
+                $updateStmt->execute();
+                $updateStmt->close();
+            }
         } else {
             // Create folder if it doesn't exist
-            $insertStmt = $conn->prepare("INSERT INTO legislative_folders (name, type, parent_id) VALUES (?, ?, NULL)");
-            $insertStmt->bind_param("ss", $name, $type);
+            $prefix = isset($custom_prefixes[$name]) ? $custom_prefixes[$name] : generate_document_prefix($name);
+            $insertStmt = $conn->prepare("INSERT INTO legislative_folders (name, type, parent_id, document_prefix) VALUES (?, ?, NULL, ?)");
+            $insertStmt->bind_param("sss", $name, $type, $prefix);
             $insertStmt->execute();
             $legislative_folders[$type] = $conn->insert_id;
             $insertStmt->close();

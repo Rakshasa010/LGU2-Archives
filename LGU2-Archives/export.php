@@ -125,154 +125,26 @@ if ($folders_result && $folders_result->num_rows > 0) {
     }
 }
 
-$mock_notifications = [];
+// Fetch requests from requests table
+$requestsStmt = $conn->prepare("SELECT * FROM requests ORDER BY date_requested DESC");
+$requestsStmt->execute();
+$mock_notifications = $requestsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $unread_count = 0;
-$resN = $conn->query("SELECT id, time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link FROM notifications WHERE about = 'Request Copy' ORDER BY date DESC, id DESC LIMIT 50");
-if ($resN) {
-    while ($rowN = $resN->fetch_assoc()) {
-        $rowN['file_name'] = $rowN['file_name'] ?? $rowN['content'];
-        $rowN['file_version'] = $rowN['file_version'] ?? 'Latest';
-        $rowN['needed_date'] = $rowN['needed_date'] ?? $rowN['date'];
-        $rowN['request_note'] = $rowN['request_note'] ?? 'No additional notes provided.';
-        $rowN['purpose'] = $rowN['purpose'] ?? 'General reference';
-        if (empty($rowN['link'])) $rowN['link'] = map_export_link($rowN['file_name'] ?? $rowN['content']);
-        $mock_notifications[] = $rowN;
-        if (isset($rowN['status']) && $rowN['status'] === 'unread') $unread_count++;
+$totalreqs = count($mock_notifications);
+$readreqs = 0;
+$duetodayreqs = 0;
+$todayStr = date('Y-m-d');
+foreach ($mock_notifications as $req) {
+    // For now, let's treat Pending as unread, Approved/Released/Denied as read
+    if ($req['status'] === 'Pending') {
+        $unread_count++;
+    } else {
+        $readreqs++;
     }
-}
-if (count($mock_notifications) < 10) {
-    $today = date('Y-m-d');
-    $base = [
-        [
-            'content' => 'Ordinance No. 12-2025 (PDF)',
-            'time' => '08:15 AM',
-            'status' => 'unread',
-            'file_version' => 'v2',
-            'needed_date' => date('Y-m-d', strtotime('+2 days')),
-            'request_note' => 'Need final signed copy for committee review.',
-            'purpose' => 'Council packet',
-            'link' => 'ordinances-resolution.php'
-        ],
-        [
-            'content' => 'Resolution 34 Series 2024 (DOCX)',
-            'time' => '09:40 AM',
-            'status' => 'read',
-            'file_version' => 'v1',
-            'needed_date' => date('Y-m-d', strtotime('+3 days')),
-            'request_note' => 'Include attachments and appendices.',
-            'purpose' => 'Legal validation',
-            'link' => 'ordinances-resolution.php'
-        ],
-        [
-            'content' => 'Billing Report Q1 (XLSX)',
-            'time' => '10:05 AM',
-            'status' => 'unread',
-            'file_version' => 'Latest',
-            'needed_date' => date('Y-m-d', strtotime('+1 day')),
-            'request_note' => 'Please export with summaries tab included.',
-            'purpose' => 'Finance review',
-            'link' => 'billing.php'
-        ],
-        [
-            'content' => 'Public Hearing Minutes Jan (PDF)',
-            'time' => '11:22 AM',
-            'status' => 'unread',
-            'file_version' => 'v3',
-            'needed_date' => date('Y-m-d', strtotime('+4 days')),
-            'request_note' => 'For public disclosure request.',
-            'purpose' => 'Public access',
-            'link' => 'public-hearings.php'
-        ],
-        [
-            'content' => 'Meeting Attendance List (CSV)',
-            'time' => '01:10 PM',
-            'status' => 'read',
-            'file_version' => 'v5',
-            'needed_date' => date('Y-m-d', strtotime('+2 days')),
-            'request_note' => 'Verify participants list before sending.',
-            'purpose' => 'Compliance',
-            'link' => 'meeting-records.php'
-        ],
-        [
-            'content' => 'Annual Summary 2025 (PDF)',
-            'time' => '02:55 PM',
-            'status' => 'unread',
-            'file_version' => 'Final',
-            'needed_date' => date('Y-m-d', strtotime('+5 days')),
-            'request_note' => 'Latest approved version only.',
-            'purpose' => 'Executive briefing',
-            'link' => 'storage.php'
-        ],
-        [
-            'content' => 'Session Agenda 03-12 (DOC)',
-            'time' => '03:30 PM',
-            'status' => 'read',
-            'file_version' => 'v1',
-            'needed_date' => date('Y-m-d', strtotime('+1 day')),
-            'request_note' => 'Include agenda revisions.',
-            'purpose' => 'Meeting prep',
-            'link' => 'meeting-records.php'
-        ],
-        [
-            'content' => 'Records Index Update (TXT)',
-            'time' => '04:05 PM',
-            'status' => 'unread',
-            'file_version' => 'Latest',
-            'needed_date' => date('Y-m-d', strtotime('+3 days')),
-            'request_note' => 'Include filenames and dates.',
-            'purpose' => 'Indexing',
-            'link' => 'storage.php'
-        ],
-        [
-            'content' => 'Audit Findings Draft (PDF)',
-            'time' => '04:45 PM',
-            'status' => 'unread',
-            'file_version' => 'Draft',
-            'needed_date' => date('Y-m-d', strtotime('+6 days')),
-            'request_note' => 'Redact sensitive sections.',
-            'purpose' => 'Audit review',
-            'link' => 'storage.php'
-        ],
-        [
-            'content' => 'Metadata Export Batch #7 (JSON)',
-            'time' => '05:20 PM',
-            'status' => 'read',
-            'file_version' => 'Latest',
-            'needed_date' => date('Y-m-d', strtotime('+2 days')),
-            'request_note' => 'Ensure JSON schema v2.',
-            'purpose' => 'System sync',
-            'link' => 'storage.php'
-        ],
-        [
-            'content' => 'Supplemental Report (PDF)',
-            'time' => '06:05 PM',
-            'status' => 'unread',
-            'file_version' => 'v2',
-            'needed_date' => date('Y-m-d', strtotime('+4 days')),
-            'request_note' => 'Include annex pages.',
-            'purpose' => 'Council packet',
-            'link' => 'storage.php'
-        ],
-    ];
-    $today = date('Y-m-d');
-    $needed = 10 - count($mock_notifications);
-    for ($i = 0; $i < $needed; $i++) {
-        $pick = $base[$i % count($base)];
-        $mock_notifications[] = [
-            'id' => null,
-            'time' => $pick['time'],
-            'date' => $today,
-            'content' => $pick['content'],
-            'about' => 'Request Copy',
-            'status' => $pick['status'],
-            'file_name' => $pick['content'],
-            'file_version' => $pick['file_version'] ?? 'Latest',
-            'needed_date' => $pick['needed_date'] ?? $today,
-            'request_note' => $pick['request_note'] ?? 'No additional notes provided.',
-            'purpose' => $pick['purpose'] ?? 'General reference',
-            'link' => $pick['link'] ?? map_export_link($pick['content']),
-        ];
-        if ($pick['status'] === 'unread') $unread_count++;
+    // Check if due today - let's use date_requested as due date for now
+    $reqDate = date('Y-m-d', strtotime($req['date_requested']));
+    if ($reqDate === $todayStr) {
+        $duetodayreqs++;
     }
 }
 ?>
@@ -284,6 +156,7 @@ if (count($mock_notifications) < 10) {
 	<title>Request Copy - Document Management | City of Valenzuela</title>
 	<link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 	<link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdn.tailwindcss.com"></script>
 	<script src="assets/js/archives-landing-head.js"></script>
 	<script src="assets/js/theme-head.js"></script>
@@ -453,6 +326,26 @@ if (count($mock_notifications) < 10) {
                         </div>
                     </div>
 
+                    <!-- ANALYTICS SECTION -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="bi bi-bar-chart text-red-600"></i>
+                            Reports & Analytics
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Line Chart: Requests Over Time -->
+                            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Requests Over Time</h4>
+                                <canvas id="requestsOverTimeChart"></canvas>
+                            </div>
+                            <!-- Pie Chart: Request Status -->
+                            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Request Status</h4>
+                                <canvas id="statusPieChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- FILTER + SORT BAR -->
                     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                         <div class="flex flex-wrap items-center gap-3">
@@ -535,41 +428,27 @@ if (count($mock_notifications) < 10) {
                         <div id="request-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                             <?php foreach ($mock_notifications as $index => $n): ?>
                                 <?php
-                                $fname = htmlspecialchars($n['file_name'] ?? $n['content']);
-                                $typeIcon = 'bi-file-earmark';
+                                $fname = htmlspecialchars("Request #{$n['id']} - {$n['requester_name']}");
+                                $typeIcon = 'bi-person';
                                 $typeBg = 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400';
                                 $fileType = 'other';
-                                $fup = strtoupper($fname);
-                                if (strpos($fup, '.PDF') !== false || strpos($fup, '(PDF)') !== false) {
-                                    $typeIcon = 'bi-file-earmark-pdf';
-                                    $typeBg = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
-                                    $fileType = 'pdf';
-                                } elseif (strpos($fup, '.DOC') !== false || strpos($fup, '(DOC)') !== false || strpos($fup, '.DOCX') !== false || strpos($fup, '(DOCX)') !== false) {
-                                    $typeIcon = 'bi-file-earmark-word';
-                                    $typeBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
-                                    $fileType = 'doc';
-                                } elseif (strpos($fup, '.XLS') !== false || strpos($fup, '(XLS)') !== false || strpos($fup, '.XLSX') !== false || strpos($fup, '(XLSX)') !== false || strpos($fup, '.CSV') !== false || strpos($fup, '(CSV)') !== false) {
-                                    $typeIcon = 'bi-file-earmark-spreadsheet';
-                                    $typeBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
-                                    $fileType = 'xls';
-                                }
 
-                                $isUnread = $n['status'] === 'unread';
+                                $isUnread = $n['status'] === 'Pending';
+                                $submittedDate = date('Y-m-d', strtotime($n['date_requested']));
+                                $submittedTime = date('H:i A', strtotime($n['date_requested']));
                                 ?>
                                 <div class="request-item relative bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm transition-all duration-200 cursor-pointer group"
                                      data-id="<?php echo htmlspecialchars($n['id'] ?? ''); ?>"
-                                     data-link="<?php echo htmlspecialchars($n['link'] ?? ''); ?>"
                                      data-status="<?php echo htmlspecialchars($n['status']); ?>"
                                      data-content="<?php echo $fname; ?>"
-                                     data-date="<?php echo htmlspecialchars($n['date']); ?>"
+                                     data-date="<?php echo htmlspecialchars($submittedDate); ?>"
                                      data-type="<?php echo $fileType; ?>"
-                                     data-file-name="<?php echo $fname; ?>"
-                                     data-file-version="<?php echo htmlspecialchars($n['file_version']); ?>"
-                                     data-needed-date="<?php echo htmlspecialchars($n['needed_date']); ?>"
-                                     data-request-note="<?php echo htmlspecialchars($n['request_note']); ?>"
+                                     data-requester-name="<?php echo htmlspecialchars($n['requester_name']); ?>"
+                                     data-department="<?php echo htmlspecialchars($n['department']); ?>"
                                      data-purpose="<?php echo htmlspecialchars($n['purpose']); ?>"
-                                     data-submitted-date="<?php echo htmlspecialchars($n['date']); ?>"
-                                     data-submitted-time="<?php echo htmlspecialchars($n['time']); ?>"
+                                     data-contact-info="<?php echo htmlspecialchars($n['contact_info']); ?>"
+                                     data-submitted-date="<?php echo htmlspecialchars($submittedDate); ?>"
+                                     data-submitted-time="<?php echo htmlspecialchars($submittedTime); ?>"
                                      aria-label="<?php echo $fname; ?> - <?php echo $isUnread ? 'Unread' : 'Read'; ?>"
                                      tabindex="0"
                                      style="animation: fadeInUp 0.3s ease-out forwards; animation-delay: <?php echo $index * 0.03; ?>s; opacity: 0;"
@@ -596,10 +475,10 @@ if (count($mock_notifications) < 10) {
                                     <!-- File Name -->
                                     <div class="px-3 pb-4 text-center">
                                         <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" title="<?php echo $fname; ?>">
-                                            <?php echo $fname; ?>
+                                            <?php echo htmlspecialchars($n['requester_name']); ?>
                                         </p>
                                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            <?php echo htmlspecialchars($n['date']); ?>
+                                            <?php echo htmlspecialchars($submittedDate); ?>
                                         </p>
                                     </div>
                                 </div>
@@ -1036,6 +915,69 @@ if (count($mock_notifications) < 10) {
 
             // Initial apply
             applyFiltersAndSort();
+
+            // Initialize Charts
+            const requestsData = <?php echo json_encode($mock_notifications); ?>;
+
+            // Requests Over Time (Line Chart)
+            const requestsByDate = {};
+            requestsData.forEach(req => {
+                const date = req.date_requested.split(' ')[0];
+                requestsByDate[date] = (requestsByDate[date] || 0) + 1;
+            });
+            const dates = Object.keys(requestsByDate).sort();
+            const counts = dates.map(d => requestsByDate[d]);
+
+            const lineCtx = document.getElementById('requestsOverTimeChart').getContext('2d');
+            new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Requests',
+                        data: counts,
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Status Pie Chart
+            const statusCounts = {
+                Pending: 0,
+                Approved: 0,
+                Released: 0,
+                Denied: 0
+            };
+            requestsData.forEach(req => {
+                statusCounts[req.status] = (statusCounts[req.status] || 0) + 1;
+            });
+            const statusLabels = Object.keys(statusCounts);
+            const statusData = Object.values(statusCounts);
+            const statusColors = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'];
+
+            const pieCtx = document.getElementById('statusPieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: statusColors
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
 
             // Mark as read
             document.getElementById('detail-mark-read')?.addEventListener('click', () => {

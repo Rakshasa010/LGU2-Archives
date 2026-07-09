@@ -112,6 +112,31 @@ if ($folders_result && $folders_result->num_rows > 0) {
     }
 }
 
+// Calculate data for dashboard charts
+$dashboard_chart_data = [
+    'storage_last7' => [],
+    'files_by_source' => []
+];
+// Get last 7 days dates
+for ($i = 6; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-$i days"));
+    $dashboard_chart_data['storage_last7'][] = [
+        'date' => $date,
+        'value' => rand(10000000, 50000000) // Mock data for now
+    ];
+}
+// Count files by source
+$leg_count = 0;
+$arch_count = 0;
+$leg_res = $conn->query("SELECT COUNT(*) AS c FROM legislative_records");
+if ($leg_res && $row = $leg_res->fetch_assoc()) $leg_count = (int)$row['c'];
+$arch_res = $conn->query("SELECT COUNT(*) AS c FROM archive_files");
+if ($arch_res && $row = $arch_res->fetch_assoc()) $arch_count = (int)$row['c'];
+$dashboard_chart_data['files_by_source'] = [
+    'labels' => ['Legislative', 'Archives'],
+    'data' => [$leg_count, $arch_count]
+];
+
 $conn->close();
 
 $display_name = $user_data['full_name'] ?? 'User';
@@ -279,6 +304,26 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0">
                                 Advanced search and management for ordinances, resolutions, hearings, sessions, and archive records
                             </p>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Overview Section -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="bi bi-graph-up text-red-600"></i>
+                            Analytics Overview
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Storage Usage (Line Chart) -->
+                            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Storage Usage (Last 7 Days)</h4>
+                                <canvas id="storageUsageChart"></canvas>
+                            </div>
+                            <!-- Folders / File Types (Bar Chart) -->
+                            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
+                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Files by Source</h4>
+                                <canvas id="filesBySourceChart"></canvas>
+                            </div>
                         </div>
                     </div>
 
@@ -947,6 +992,58 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     $conn->close();
     ?>
     <script>
+        (function() {
+            const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
+            
+            // Initialize Storage Usage Chart
+            const storageCtx = document.getElementById('storageUsageChart')?.getContext('2d');
+            if (storageCtx) {
+                new Chart(storageCtx, {
+                    type: 'line',
+                    data: {
+                        labels: dashboardData.storage_last7.map(d => d.date),
+                        datasets: [{
+                            label: 'Storage Used (Bytes)',
+                            data: dashboardData.storage_last7.map(d => d.value),
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+            
+            // Initialize Files by Source Chart
+            const sourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
+            if (sourceCtx) {
+                new Chart(sourceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: dashboardData.files_by_source.labels,
+                        datasets: [{
+                            label: 'Files',
+                            data: dashboardData.files_by_source.data,
+                            backgroundColor: ['#dc2626', '#3b82f6'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        })();
+        
         (function() {
             const STORAGE_KEY = 'archives_shown_notif_ids';
             const MAX_STORED_IDS = 100;
@@ -1785,8 +1882,8 @@ For detailed information, visit the Storage Overview dashboard.`;
             }
 
             function buildResultLink(item) {
-                if (item.source === 'legislative') {
-                    return 'download.php?id=' + encodeURIComponent(item.id);
+                if (item.source === 'legislative' && item.folder_id) {
+                    return 'folder_view.php?id=' + encodeURIComponent(item.folder_id) + '&legislative=true&highlight=' + encodeURIComponent(item.id);
                 }
                 if (item.kind === 'folder') {
                     return 'folder_view.php?id=' + encodeURIComponent(item.id);

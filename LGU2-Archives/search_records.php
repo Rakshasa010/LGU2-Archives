@@ -28,11 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
 
     if ($include_legislative) {
         if ($author_only) {
-            $sql = "SELECT id, title, type, month, year, author FROM legislative_records WHERE author LIKE ? ORDER BY year DESC, month DESC, title ASC";
+            $sql = "SELECT id, title, type, month, year, author, folder_id, file_path FROM legislative_records WHERE author LIKE ? ORDER BY year DESC, month DESC, title ASC";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("s", $like);
         } else {
-            $sql = "SELECT id, title, type, month, year, author FROM legislative_records
+            $sql = "SELECT id, title, type, month, year, author, folder_id, file_path FROM legislative_records
                     WHERE title LIKE ? OR type LIKE ? OR month LIKE ? OR year LIKE ? OR author LIKE ? OR title LIKE ?
                     ORDER BY year DESC, month DESC, title ASC";
             $stmt = $conn->prepare($sql);
@@ -41,6 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
         if ($stmt->execute()) {
             $res = $stmt->get_result();
             while ($row = $res->fetch_assoc()) {
+                // Find legislative folder id for this type
+                $folder_id = $row['folder_id'];
+                if (!$folder_id) {
+                    $folderStmt = $conn->prepare("SELECT id FROM legislative_folders WHERE type = ? LIMIT 1");
+                    $folderStmt->bind_param("s", $row['type']);
+                    $folderStmt->execute();
+                    $folderRes = $folderStmt->get_result();
+                    if ($folderRow = $folderRes->fetch_assoc()) {
+                        $folder_id = $folderRow['id'];
+                    }
+                    $folderStmt->close();
+                }
                 $results[] = [
                     'id' => $row['id'],
                     'title' => $row['title'],
@@ -48,7 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
                     'month' => $row['month'],
                     'year' => $row['year'],
                     'author' => $row['author'],
-                    'source' => 'legislative'
+                    'source' => 'legislative',
+                    'kind' => 'file',
+                    'folder_id' => $folder_id,
+                    'file_path' => $row['file_path']
                 ];
             }
         }
@@ -77,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
         $stmt->close();
     }
     if ($include_archive_files) {
-        $stmt = $conn->prepare("SELECT f.id AS folder_id, f.name AS folder_name, af.id, af.name, af.created_at 
+        $stmt = $conn->prepare("SELECT f.id AS folder_id, f.name AS folder_name, af.id, af.name, af.created_at, af.file_path 
                                 FROM archive_files af 
                                 INNER JOIN archive_folders f ON af.folder_id = f.id 
                                 WHERE af.created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR) 
@@ -97,7 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search'])) {
                     'source' => 'archive',
                     'kind' => 'file',
                     'folder_id' => (int)$row['folder_id'],
-                    'folder_name' => $row['folder_name']
+                    'folder_name' => $row['folder_name'],
+                    'file_path' => $row['file_path']
                 ];
             }
         }

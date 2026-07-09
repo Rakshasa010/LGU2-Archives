@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. Find the element
     // Try finding by id attribute first, then data-id
     let el = document.getElementById(`file-${highlightId}`) || 
+             document.getElementById(`record-${highlightId}`) ||
              document.querySelector(`[data-id="${highlightId}"]`) ||
              document.getElementById(highlightId);
 

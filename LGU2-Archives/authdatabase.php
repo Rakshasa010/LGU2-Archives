@@ -20,6 +20,20 @@ $conn->query($sql);
 // Select the database
 $conn->select_db($dbname);
 
+// Helper function to generate clean document prefix from folder name
+if (!function_exists('generate_document_prefix')) {
+    function generate_document_prefix($folder_name) {
+        // Remove special characters except spaces and hyphens
+        $clean = preg_replace('/[^\w\s-]/', '', $folder_name);
+        // Replace multiple spaces or hyphens with single hyphen
+        $clean = preg_replace('/[\s-]+/', '-', $clean);
+        // Trim hyphens from start and end
+        $clean = trim($clean, '-');
+        // If empty, use a default
+        return $clean ?: 'Documents';
+    }
+}
+
 // Create legislative_records table
 $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
@@ -27,8 +41,14 @@ $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     type VARCHAR(50) NOT NULL,
     month VARCHAR(20) NOT NULL,
     year VARCHAR(4) NOT NULL,
-    author VARCHAR(100) NOT NULL,
+    author VARCHAR(255) NULL,
     file_path VARCHAR(255) NULL,
+    file_date DATE NULL,
+    unique_number VARCHAR(100) NULL,
+    version INT DEFAULT 1,
+    parent_version_id INT NULL,
+    folder_id INT NULL,
+    file_size BIGINT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP NULL
 )";
@@ -45,6 +65,22 @@ if ($check_column->num_rows == 0) {
 $check_column = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'file_path'");
 if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE legislative_records ADD COLUMN file_path VARCHAR(255) NULL AFTER author");
+}
+
+// Add missing columns to legislative_records
+$leg_cols_needed = [
+    'author' => "VARCHAR(255) DEFAULT NULL",
+    'file_date' => "DATE DEFAULT NULL",
+    'unique_number' => "VARCHAR(100) DEFAULT NULL",
+    'version' => "INT DEFAULT 1",
+    'parent_version_id' => "INT NULL",
+    'folder_id' => "INT NULL",
+    'file_size' => "BIGINT NULL"
+];
+foreach ($leg_cols_needed as $col => $def) {
+    if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
+        $conn->query("ALTER TABLE legislative_records ADD COLUMN $col $def");
+    }
 }
 
 // Create users table
@@ -132,6 +168,8 @@ $folders_sql = "CREATE TABLE IF NOT EXISTS archive_folders (
     parent_id INT(11) NULL,
     created_by INT(11) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    document_prefix VARCHAR(255) NULL,
+    last_sequence_number INT DEFAULT 0,
     INDEX idx_parent_id (parent_id)
 )";
 $conn->query($folders_sql);
@@ -143,15 +181,113 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE archive_folders ADD INDEX idx_parent_id (parent_id)");
 }
 
+// Add document_prefix and last_sequence_number columns to archive_folders
+$archive_folder_cols = [
+    'document_prefix' => "VARCHAR(255) NULL",
+    'last_sequence_number' => "INT DEFAULT 0"
+];
+foreach ($archive_folder_cols as $col => $def) {
+    if ($conn->query("SHOW COLUMNS FROM archive_folders LIKE '$col'")->num_rows == 0) {
+        $conn->query("ALTER TABLE archive_folders ADD COLUMN $col $def");
+    }
+}
+
+// Create legislative folders table
+$leg_folders_sql = "CREATE TABLE IF NOT EXISTS legislative_folders (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    parent_id INT(11) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    document_prefix VARCHAR(255) NULL,
+    last_sequence_number INT DEFAULT 0,
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_type (type)
+)";
+$conn->query($leg_folders_sql);
+
+// Add document_prefix and last_sequence_number columns to legislative_folders
+$leg_folder_cols = [
+    'document_prefix' => "VARCHAR(255) NULL",
+    'last_sequence_number' => "INT DEFAULT 0"
+];
+foreach ($leg_folder_cols as $col => $def) {
+    if ($conn->query("SHOW COLUMNS FROM legislative_folders LIKE '$col'")->num_rows == 0) {
+        $conn->query("ALTER TABLE legislative_folders ADD COLUMN $col $def");
+    }
+}
+
 $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     folder_id INT(11) NOT NULL,
     name VARCHAR(255) NOT NULL,
     file_path VARCHAR(255) NOT NULL,
+    author VARCHAR(255) DEFAULT NULL,
+    file_date DATE DEFAULT NULL,
+    unique_number VARCHAR(100) DEFAULT NULL,
+    version INT DEFAULT 1,
+    parent_version_id INT NULL,
+    file_size BIGINT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_folder_id (folder_id)
 )";
 $conn->query($files_sql);
+
+// Add missing columns to archive_files
+$archive_cols_needed = [
+    'author' => "VARCHAR(255) DEFAULT NULL",
+    'file_date' => "DATE DEFAULT NULL",
+    'unique_number' => "VARCHAR(100) DEFAULT NULL",
+    'version' => "INT DEFAULT 1",
+    'parent_version_id' => "INT NULL",
+    'file_size' => "BIGINT NULL"
+];
+foreach ($archive_cols_needed as $col => $def) {
+    if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
+        $conn->query("ALTER TABLE archive_files ADD COLUMN $col $def");
+    }
+}
+
+// Create requests table
+$requests_table_sql = "CREATE TABLE IF NOT EXISTS requests (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    file_id INT(11) NOT NULL,
+    file_source ENUM('legislative', 'archive') NOT NULL DEFAULT 'archive',
+    requester_name VARCHAR(255) NOT NULL,
+    department VARCHAR(255) NULL,
+    date_requested DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    purpose TEXT NULL,
+    status ENUM('Pending', 'Approved', 'Released', 'Denied') NOT NULL DEFAULT 'Pending',
+    contact_info VARCHAR(255) NULL,
+    date_released DATETIME NULL,
+    INDEX idx_file (file_id, file_source),
+    INDEX idx_status (status),
+    INDEX idx_date (date_requested)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+$conn->query($requests_table_sql);
+
+// Insert sample data if table is empty
+$check_requests = $conn->query("SELECT COUNT(*) AS cnt FROM requests");
+if ($check_requests) {
+    $row = $check_requests->fetch_assoc();
+    if ($row['cnt'] == 0) {
+        $sample_requests = [
+            [1, 'archive', 'Juan Dela Cruz', 'Engineering Department', '2026-07-01 09:00:00', 'For project planning', 'Pending', 'juan@email.com'],
+            [1, 'archive', 'Maria Santos', 'Finance Department', '2026-07-02 14:30:00', 'For budget review', 'Approved', 'maria@email.com'],
+            [2, 'legislative', 'Pedro Reyes', 'Legal Office', '2026-07-03 10:15:00', 'For legal reference', 'Released', 'pedro@email.com'],
+            [3, 'archive', 'Ana Lim', 'Public Information Office', '2026-07-04 16:45:00', 'For public disclosure', 'Pending', 'ana@email.com'],
+            [2, 'legislative', 'Luis Cruz', 'Mayor\'s Office', '2026-07-05 11:20:00', 'For policy making', 'Denied', 'luis@email.com'],
+            [3, 'archive', 'Carla Go', 'City Planning Office', '2026-07-06 08:50:00', 'For city planning', 'Pending', 'carla@email.com'],
+            [4, 'legislative', 'Benny Tan', 'Audit Office', '2026-07-07 13:30:00', 'For audit purposes', 'Approved', 'benny@email.com']
+        ];
+        foreach ($sample_requests as $req) {
+            $stmt = $conn->prepare("INSERT INTO requests (file_id, file_source, requester_name, department, date_requested, purpose, status, contact_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("isssssss", $req[0], $req[1], $req[2], $req[3], $req[4], $req[5], $req[6], $req[7]);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
 
 // Create notifications table
 $notif_sql = "CREATE TABLE IF NOT EXISTS notifications (

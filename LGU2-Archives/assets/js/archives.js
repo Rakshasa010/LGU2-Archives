@@ -168,7 +168,11 @@ document.addEventListener('DOMContentLoaded', function() {
                          data-type="${record.type.replace(/"/g, '&quot;')}"
                          data-month="${record.month.replace(/"/g, '&quot;')}"
                          data-year="${record.year}"
-                         data-author="${record.author.replace(/"/g, '&quot;')}">
+                         data-author="${record.author.replace(/"/g, '&quot;')}"
+                         data-source="${record.source}"
+                         data-kind="${record.kind || ''}"
+                         data-folder-id="${record.folder_id || ''}"
+                         data-file-path="${(record.file_path || '').replace(/"/g, '&quot;')}">
                         <div class="flex items-start justify-between">
                             <div class="flex items-start space-x-4 flex-1">
                                 <div class="flex-shrink-0 p-2 bg-gray-100 dark:bg-slate-700 rounded-lg group-hover:bg-red-50 dark:group-hover:bg-red-900/20 transition-colors">
@@ -190,6 +194,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-person mr-1.5 text-xs"></i>
                                             ${record.author}
                                         </span>
+                                        ${record.folder_name ? `
+                                        <span class="flex items-center">
+                                            <i class="bi bi-folder mr-1.5 text-xs"></i>
+                                            ${record.folder_name}
+                                        </span>
+                                        ` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -215,18 +225,10 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('click', function() {
                 const recordId = this.getAttribute('data-record-id');
                 const type = this.getAttribute('data-type');
-                
-                // Map types to their respective pages/folders
-                const typeMapping = {
-                    'Ordinance': 'ordinances-resolution.php',
-                    'Resolution': 'ordinances-resolution.php',
-                    'Billing': 'billing.php',
-                    'Public Hearing': 'public-hearings.php',
-                    'Meeting': 'meeting-records.php',
-                    'Legislative Session': 'meeting-records.php'
-                };
-                
-                const targetPage = typeMapping[type] || 'ordinances-resolution.php';
+                const source = this.getAttribute('data-source');
+                const kind = this.getAttribute('data-kind');
+                const folderId = this.getAttribute('data-folder-id');
+                const filePath = this.getAttribute('data-file-path');
                 
                 try {
                     const title = this.getAttribute('data-title') || '';
@@ -240,8 +242,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 visitFile(recordId);
                 
-                // Redirect to the appropriate page with the record ID
-                window.location.href = `${targetPage}?highlight=${recordId}`;
+                // Determine where to redirect
+                if (kind === 'folder') {
+                    // Clicked on an archive folder: go to folder view
+                    window.location.href = `folder_view.php?id=${folderId}`;
+                } else if (source === 'archive') {
+                    // Archive file: go to folder view with highlight
+                    window.location.href = `folder_view.php?id=${folderId}&highlight=${recordId}`;
+                } else {
+                    // Legislative file: go to folder view for the legislative folder
+                    window.location.href = `folder_view.php?id=${folderId}&highlight=${recordId}`;
+                }
             });
         });
     }
