@@ -787,8 +787,8 @@ function formatFileSize($fileSize) {
                                                         <i class="bi bi-clock-history"></i> <span>History</span>
                                                     </button>
                                                     <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="moveToHiddenFolder(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye-slash-fill"></i> <span>Move to Hidden Folder</span>
+                                                    <button onclick="moveToPrivateFiles(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
+                                                        <i class="bi bi-file-lock-fill"></i> <span>Move to Private Files</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1195,17 +1195,17 @@ function formatFileSize($fileSize) {
             return div.innerHTML;
         }
 
-        function moveToHiddenFolder(id, name) {
-            // Check if user has hidden folder setup and unlocked
+        function moveToPrivateFiles(id, name) {
+            // Check if user has private files setup and unlocked
             fetch('confidential_vault.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'move_to_hidden_folder', file_id: id, source_type: '<?php echo $is_legislative ? "legislative" : "archive"; ?>' })
+                body: JSON.stringify({ action: 'move_to_private_files', file_id: id, source_type: '<?php echo $is_legislative ? "legislative" : "archive"; ?>' })
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showNotification('Success', `File "${name}" moved to hidden folder`, 'success');
+                    showNotification('Success', `File "${name}" moved to private files`, 'success');
                     // Remove the file from current view
                     const fileElement = document.getElementById('<?php echo $is_legislative ? "record" : "file"; ?>-' + id);
                     if (fileElement) {
@@ -1435,7 +1435,7 @@ function formatFileSize($fileSize) {
                                     <hr class="my-1 border-gray-200 dark:border-slate-600">
                                     <button onclick="openRequestersModal(${file.id}, 'archive', '${file.name.replace(/'/g, "\\'")}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-people"></i><span>View Requesters</span></button>
                                     <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="moveToHiddenFolder(${file.id}, '${file.name}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"><i class="bi bi-eye-slash-fill"></i><span>Move to Hidden Folder</span></button>
+                                    <button onclick="moveToPrivateFiles(${file.id}, '${file.name}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors"><i class="bi bi-file-lock-fill"></i><span>Move to Private Files</span></button>
                                 </div>
                             </div>
                         </div>

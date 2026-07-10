@@ -13,19 +13,19 @@ require 'authdatabase.php';
 
 $user_id = (int)$_SESSION['user_id'];
 
-// Check if user's hidden folder is unlocked
-$folder_unlocked = isset($_SESSION['hidden_folder_unlocked']) && $_SESSION['hidden_folder_unlocked'] === true;
+// Check if user's private files are unlocked
+$files_unlocked = isset($_SESSION['private_files_unlocked']) && $_SESSION['private_files_unlocked'] === true;
 
-// Get user's hidden folder info
-$stmt = $conn->prepare("SELECT pin_hash, is_setup FROM user_hidden_folders WHERE user_id = ?");
+// Get user's private files info
+$stmt = $conn->prepare("SELECT pin_hash, is_setup FROM user_private_files WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
-$folder_info = $result->fetch_assoc();
+$files_info = $result->fetch_assoc();
 $stmt->close();
 
-$folder_exists = !empty($folder_info);
-$folder_setup = $folder_exists && $folder_info['is_setup'];
+$files_exists = !empty($files_info);
+$files_setup = $files_exists && $files_info['is_setup'];
 
 // Handle API requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payload = json_decode($raw, true);
         $action = $payload['action'] ?? '';
         
-        if ($action === 'setup_hidden_folder') {
+        if ($action === 'setup_private_files') {
             $pin = $payload['pin'] ?? '';
             
             if (strlen($pin) !== 6 || !ctype_digit($pin)) {
@@ -46,52 +46,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pin_hash = password_hash($pin, PASSWORD_DEFAULT);
             
-            if ($folder_exists) {
-                // Update existing folder
-                $stmt = $conn->prepare("UPDATE user_hidden_folders SET pin_hash = ?, is_setup = TRUE WHERE user_id = ?");
+            if ($files_exists) {
+                // Update existing files
+                $stmt = $conn->prepare("UPDATE user_private_files SET pin_hash = ?, is_setup = TRUE WHERE user_id = ?");
                 $stmt->bind_param("si", $pin_hash, $user_id);
             } else {
-                // Create new folder
-                $stmt = $conn->prepare("INSERT INTO user_hidden_folders (user_id, pin_hash, is_setup) VALUES (?, ?, TRUE)");
+                // Create new files setup
+                $stmt = $conn->prepare("INSERT INTO user_private_files (user_id, pin_hash, is_setup) VALUES (?, ?, TRUE)");
                 $stmt->bind_param("is", $user_id, $pin_hash);
             }
             
             if ($stmt->execute()) {
-                $_SESSION['hidden_folder_unlocked'] = true;
-                echo json_encode(['success' => true, 'message' => 'Hidden folder set up successfully']);
+                $_SESSION['private_files_unlocked'] = true;
+                echo json_encode(['success' => true, 'message' => 'Private files set up successfully']);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to set up hidden folder']);
+                echo json_encode(['success' => false, 'message' => 'Failed to set up private files']);
             }
             $stmt->close();
             exit();
         }
         
-        if ($action === 'unlock_hidden_folder') {
-            if (!$folder_setup) {
-                echo json_encode(['success' => false, 'message' => 'Hidden folder not set up']);
+        if ($action === 'unlock_private_files') {
+            if (!$files_setup) {
+                echo json_encode(['success' => false, 'message' => 'Private files not set up']);
                 exit();
             }
             
             $pin = $payload['pin'] ?? '';
             
-            if (password_verify($pin, $folder_info['pin_hash'])) {
-                $_SESSION['hidden_folder_unlocked'] = true;
-                echo json_encode(['success' => true, 'message' => 'Hidden folder unlocked']);
+            if (password_verify($pin, $files_info['pin_hash'])) {
+                $_SESSION['private_files_unlocked'] = true;
+                echo json_encode(['success' => true, 'message' => 'Private files unlocked']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Incorrect PIN']);
             }
             exit();
         }
         
-        if ($action === 'lock_hidden_folder') {
-            unset($_SESSION['hidden_folder_unlocked']);
-            echo json_encode(['success' => true, 'message' => 'Hidden folder locked']);
+        if ($action === 'lock_private_files') {
+            unset($_SESSION['private_files_unlocked']);
+            echo json_encode(['success' => true, 'message' => 'Private files locked']);
             exit();
         }
         
-        if ($action === 'move_to_hidden_folder') {
-            if (!$folder_unlocked) {
-                echo json_encode(['success' => false, 'message' => 'Hidden folder is locked']);
+        if ($action === 'move_to_private_files') {
+            if (!$files_unlocked) {
+                echo json_encode(['success' => false, 'message' => 'Private files are locked']);
                 exit();
             }
             
@@ -126,8 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file = $result->fetch_assoc();
             $stmt->close();
             
-            // Move file to user's hidden folder
-            $stmt = $conn->prepare("INSERT INTO hidden_files (user_id, name, file_path, original_source, original_id, moved_by) VALUES (?, ?, ?, ?, ?, ?)");
+            // Move file to user's private files
+            $stmt = $conn->prepare("INSERT INTO private_files (user_id, name, file_path, original_source, original_id, moved_by) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("isssii", $user_id, $file['name'], $file['file_path'], $source_type, $file_id, $user_id);
             
             if ($stmt->execute()) {
@@ -154,8 +154,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $ntime = date('h:i A');
                 $ndate = date('Y-m-d');
-                $ncontent = 'File moved to hidden folder: ' . $file['name'];
-                $nabout = 'Hidden Folder';
+                $ncontent = 'File moved to private files: ' . $file['name'];
+                $nabout = 'Private Files';
                 $nstatus = 'unread';
                 
                 $notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)");
@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notif->execute();
                 $notif->close();
                 
-                echo json_encode(['success' => true, 'message' => 'File moved to hidden folder']);
+                echo json_encode(['success' => true, 'message' => 'File moved to private files']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to move file']);
             }
@@ -172,9 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         
-        if ($action === 'remove_from_hidden_folder') {
-            if (!$folder_unlocked) {
-                echo json_encode(['success' => false, 'message' => 'Hidden folder is locked']);
+        if ($action === 'remove_from_private_files') {
+            if (!$files_unlocked) {
+                echo json_encode(['success' => false, 'message' => 'Private files are locked']);
                 exit();
             }
             
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Get file info (only files belonging to current user)
-            $stmt = $conn->prepare("SELECT name, file_path FROM hidden_files WHERE id = ? AND user_id = ?");
+            $stmt = $conn->prepare("SELECT name, file_path FROM private_files WHERE id = ? AND user_id = ?");
             $stmt->bind_param("ii", $file_id, $user_id);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -206,15 +206,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Delete from database
-            $del = $conn->prepare("DELETE FROM hidden_files WHERE id = ? AND user_id = ?");
+            $del = $conn->prepare("DELETE FROM private_files WHERE id = ? AND user_id = ?");
             $del->bind_param("ii", $file_id, $user_id);
             
             if ($del->execute()) {
                 // Log activity
                 $ntime = date('h:i A');
                 $ndate = date('Y-m-d');
-                $ncontent = 'File removed from hidden folder: ' . $file['name'];
-                $nabout = 'Hidden Folder';
+                $ncontent = 'File removed from private files: ' . $file['name'];
+                $nabout = 'Private Files';
                 $nstatus = 'unread';
                 
                 $notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)");
@@ -222,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notif->execute();
                 $notif->close();
                 
-                echo json_encode(['success' => true, 'message' => 'File removed from hidden folder']);
+                echo json_encode(['success' => true, 'message' => 'File removed from private files']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to remove file']);
             }
@@ -231,13 +231,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         
-        if ($action === 'get_hidden_files') {
-            if (!$folder_unlocked) {
-                echo json_encode(['success' => false, 'message' => 'Hidden folder is locked']);
+        if ($action === 'get_private_files') {
+            if (!$files_unlocked) {
+                echo json_encode(['success' => false, 'message' => 'Private files are locked']);
                 exit();
             }
             
-            $stmt = $conn->prepare("SELECT id, name, file_path, created_at FROM hidden_files WHERE user_id = ? ORDER BY created_at DESC");
+            $stmt = $conn->prepare("SELECT id, name, file_path, created_at FROM private_files WHERE user_id = ? ORDER BY created_at DESC");
             $stmt->bind_param("i", $user_id);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -274,7 +274,7 @@ $profile_picture = $user_data['profile_picture'] ?? null;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hidden Folder - Document Management</title>
+    <title>Private Files - Document Management</title>
     <?php include 'includes/header_scripts.php'; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">
@@ -291,12 +291,12 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                             <i class="bi bi-arrow-left text-xl"></i>
                         </a>
                         <div class="flex items-center gap-3">
-                            <div class="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
-                                <i class="bi bi-eye-slash-fill text-red-600 dark:text-red-400 text-xl"></i>
+                            <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                                <i class="bi bi-file-lock-fill text-purple-600 dark:text-purple-400 text-xl"></i>
                             </div>
                             <div>
-                                <h1 class="text-lg font-bold text-gray-800 dark:text-gray-100">Hidden Folder</h1>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Personal secure storage</p>
+                                <h1 class="text-lg font-bold text-gray-800 dark:text-gray-100">Private Files</h1>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Personal secure document storage</p>
                             </div>
                         </div>
                     </div>
@@ -313,30 +313,30 @@ $profile_picture = $user_data['profile_picture'] ?? null;
         <!-- Main Content -->
         <main class="flex-1 p-6">
             <div class="max-w-7xl mx-auto">
-                <?php if (!$folder_unlocked): ?>
-                    <?php if (!$folder_setup): ?>
+                <?php if (!$files_unlocked): ?>
+                    <?php if (!$files_setup): ?>
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12">
                         <div class="flex flex-col items-center justify-center">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-8 rounded-full mb-6">
                                 <i class="bi bi-gear-fill text-blue-600 dark:text-blue-400 text-6xl"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">Setup Your Hidden Folder</h2>
-                            <p class="text-gray-600 dark:text-gray-400 mb-8 text-center max-w-md">Create a personal 6-digit PIN to secure your hidden folder. Only you will have access to files stored here.</p>
-                            <button onclick="openHiddenFolderModal('setup')" class="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors">
-                                <i class="bi bi-plus-circle-fill mr-2"></i>Setup Hidden Folder
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">Setup Your Private Files</h2>
+                            <p class="text-gray-600 dark:text-gray-400 mb-8 text-center max-w-md">Create a personal 6-digit PIN to secure your private documents. Only you will have access to files stored here.</p>
+                            <button onclick="openPrivateFilesModal('setup')" class="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors">
+                                <i class="bi bi-plus-circle-fill mr-2"></i>Setup Private Files
                             </button>
                         </div>
                     </div>
                     <?php else: ?>
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12">
                         <div class="flex flex-col items-center justify-center">
-                            <div class="bg-red-50 dark:bg-red-900/20 p-8 rounded-full mb-6">
-                                <i class="bi bi-eye-slash text-red-600 dark:text-red-400 text-6xl"></i>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-8 rounded-full mb-6">
+                                <i class="bi bi-lock-fill text-purple-600 dark:text-purple-400 text-6xl"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">Hidden Folder is Locked</h2>
-                            <p class="text-gray-600 dark:text-gray-400 mb-8">Enter your personal PIN to access your hidden files</p>
-                            <button onclick="openHiddenFolderModal('unlock')" class="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
-                                <i class="bi bi-unlock-fill mr-2"></i>Unlock Hidden Folder
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">Private Files are Locked</h2>
+                            <p class="text-gray-600 dark:text-gray-400 mb-8">Enter your personal PIN to access your private documents</p>
+                            <button onclick="openPrivateFilesModal('unlock')" class="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-colors">
+                                <i class="bi bi-unlock-fill mr-2"></i>Unlock Private Files
                             </button>
                         </div>
                     </div>
@@ -345,13 +345,13 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center gap-2">
-                            <i class="bi bi-eye text-green-600 dark:text-green-400"></i>
-                            <span class="text-sm text-green-700 dark:text-green-300 font-medium">Hidden folder is unlocked</span>
+                            <i class="bi bi-unlock text-green-600 dark:text-green-400"></i>
+                            <span class="text-sm text-green-700 dark:text-green-300 font-medium">Private files are unlocked</span>
                         </div>
                         <div class="flex items-center gap-4">
                             <span class="text-sm text-gray-600 dark:text-gray-400" id="file-count">Loading...</span>
-                            <button onclick="lockHiddenFolder()" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors">
-                                <i class="bi bi-eye-slash mr-2"></i>Lock Folder
+                            <button onclick="lockPrivateFiles()" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors">
+                                <i class="bi bi-lock mr-2"></i>Lock Files
                             </button>
                         </div>
                     </div>
@@ -362,8 +362,8 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                     
                     <div id="empty-state" class="hidden flex flex-col items-center justify-center py-12">
                         <i class="bi bi-inbox text-gray-400 dark:text-gray-600 text-5xl mb-3"></i>
-                        <p class="text-gray-500 dark:text-gray-400">No hidden files yet</p>
-                        <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Move files here from other folders to keep them private</p>
+                        <p class="text-gray-500 dark:text-gray-400">No private files yet</p>
+                        <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Move files here from other folders to keep them private and secure</p>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -373,40 +373,42 @@ $profile_picture = $user_data['profile_picture'] ?? null;
         </main>
     </div>
     
-    <!-- Hidden Folder PIN Modal -->
-    <div id="hidden-folder-modal" class="hidden fixed inset-0 z-50">
-        <div id="hidden-folder-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <!-- Private Files PIN Modal -->
+    <div id="private-files-modal" class="hidden fixed inset-0 z-50">
+        <div id="private-files-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div class="relative z-10 flex min-h-full items-center justify-center p-4">
             <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
                 <div class="text-center mb-6">
-                    <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="bi bi-eye-slash-fill text-red-600 dark:text-red-400 text-3xl"></i>
+                    <div class="bg-purple-100 dark:bg-purple-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="bi bi-file-lock-fill text-purple-600 dark:text-purple-400 text-3xl"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1" id="hidden-folder-modal-title">Enter PIN</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400" id="hidden-folder-modal-subtitle">Enter your 6-digit PIN</p>
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1" id="private-files-modal-title">Enter PIN</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400" id="private-files-modal-subtitle">Enter your 6-digit PIN</p>
                 </div>
                 
                 <div class="mb-4">
                     <div class="flex justify-center gap-2 mb-4">
-                        <input type="password" maxlength="1" class="hidden-folder-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
-                        <input type="password" maxlength="1" class="hidden-folder-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
-                        <input type="password" maxlength="1" class="hidden-folder-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
-                        <input type="password" maxlength="1" class="hidden-folder-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
-                        <input type="password" maxlength="1" class="hidden-folder-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
-                        <input type="password" maxlength="1" class="hidden-folder-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-red-500 focus:outline-none" />
+                        <input type="password" maxlength="1" class="private-files-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-purple-500 focus:outline-none" />
+                        <input type="password" maxlength="1" class="private-files-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-purple-500 focus:outline-none" />
+                        <input type="password" maxlength="1" class="private-files-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-purple-500 focus:outline-none" />
+                        <input type="password" maxlength="1" class="private-files-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-purple-500 focus:outline-none" />
+                        <input type="password" maxlength="1" class="private-files-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-purple-500 focus:outline-none" />
+                        <input type="password" maxlength="1" class="private-files-pin-input w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:border-purple-500 focus:outline-none" />
                     </div>
-                    <div id="hidden-folder-pin-error" class="text-xs text-red-600 dark:text-red-400 text-center hidden"></div>
+                    <div id="private-files-pin-error" class="text-xs text-red-600 dark:text-red-400 text-center hidden"></div>
                 </div>
                 
                 <div class="flex justify-end gap-2">
-                    <button id="hidden-folder-pin-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                    <button id="hidden-folder-pin-confirm" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Confirm</button>
+                    <button id="private-files-pin-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
+                    <button id="private-files-pin-confirm" type="button" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold">Confirm</button>
                 </div>
             </div>
         </div>
     </div>
     
     <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold"></div>
+    
+    <?php include 'includes/footer_scripts.php'; ?>
     
     <?php include 'includes/footer_scripts.php'; ?>
     
@@ -425,19 +427,19 @@ $profile_picture = $user_data['profile_picture'] ?? null;
             }, 3000);
         }
         
-        let hiddenFolderMode = 'unlock';
+        let privateFilesMode = 'unlock';
         
-        function openHiddenFolderModal(mode) {
-            hiddenFolderMode = mode;
-            const modal = document.getElementById('hidden-folder-modal');
-            const title = document.getElementById('hidden-folder-modal-title');
-            const subtitle = document.getElementById('hidden-folder-modal-subtitle');
-            const inputs = document.querySelectorAll('.hidden-folder-pin-input');
-            const error = document.getElementById('hidden-folder-pin-error');
+        function openPrivateFilesModal(mode) {
+            privateFilesMode = mode;
+            const modal = document.getElementById('private-files-modal');
+            const title = document.getElementById('private-files-modal-title');
+            const subtitle = document.getElementById('private-files-modal-subtitle');
+            const inputs = document.querySelectorAll('.private-files-pin-input');
+            const error = document.getElementById('private-files-pin-error');
             
             if (mode === 'setup') {
-                title.textContent = 'Setup Hidden Folder PIN';
-                subtitle.textContent = 'Create a 6-digit PIN to secure your folder';
+                title.textContent = 'Setup Private Files PIN';
+                subtitle.textContent = 'Create a 6-digit PIN to secure your files';
             } else {
                 title.textContent = 'Enter PIN';
                 subtitle.textContent = 'Enter your 6-digit PIN to unlock';
@@ -449,25 +451,25 @@ $profile_picture = $user_data['profile_picture'] ?? null;
             setTimeout(() => inputs[0]?.focus(), 100);
         }
         
-        function closeHiddenFolderModal() {
-            const modal = document.getElementById('hidden-folder-modal');
-            const inputs = document.querySelectorAll('.hidden-folder-pin-input');
-            const error = document.getElementById('hidden-folder-pin-error');
+        function closePrivateFilesModal() {
+            const modal = document.getElementById('private-files-modal');
+            const inputs = document.querySelectorAll('.private-files-pin-input');
+            const error = document.getElementById('private-files-pin-error');
             
             modal.classList.add('hidden');
             inputs.forEach(input => input.value = '');
             error.classList.add('hidden');
         }
         
-        function getHiddenFolderPin() {
-            const inputs = document.querySelectorAll('.hidden-folder-pin-input');
+        function getPrivateFilesPin() {
+            const inputs = document.querySelectorAll('.private-files-pin-input');
             return Array.from(inputs).map(input => input.value).join('');
         }
         
-        function handleHiddenFolderPinInput(e, index) {
+        function handlePrivateFilesPinInput(e, index) {
             const input = e.target;
             const value = input.value;
-            const inputs = document.querySelectorAll('.hidden-folder-pin-input');
+            const inputs = document.querySelectorAll('.private-files-pin-input');
             
             if (value && /^\d$/.test(value)) {
                 if (index < inputs.length - 1) {
@@ -478,20 +480,20 @@ $profile_picture = $user_data['profile_picture'] ?? null;
             }
         }
         
-        function handleHiddenFolderPinKeydown(e, index) {
-            const inputs = document.querySelectorAll('.hidden-folder-pin-input');
+        function handlePrivateFilesPinKeydown(e, index) {
+            const inputs = document.querySelectorAll('.private-files-pin-input');
             if (e.key === 'Backspace' && !e.target.value && index > 0) {
                 inputs[index - 1].focus();
             } else if (e.key === 'Enter') {
-                document.getElementById('hidden-folder-pin-confirm').click();
+                document.getElementById('private-files-pin-confirm').click();
             }
         }
         
-        function lockHiddenFolder() {
+        function lockPrivateFiles() {
             fetch('confidential_vault.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'lock_hidden_folder' })
+                body: JSON.stringify({ action: 'lock_private_files' })
             })
             .then(r => r.json())
             .then(data => {
@@ -499,7 +501,7 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                     showToast(data.message, 'success');
                     setTimeout(() => location.reload(), 1000);
                 } else {
-                    showToast(data.message || 'Failed to lock folder', 'error');
+                    showToast(data.message || 'Failed to lock files', 'error');
                 }
             })
             .catch(e => {
@@ -507,12 +509,12 @@ $profile_picture = $user_data['profile_picture'] ?? null;
             });
         }
         
-        <?php if ($folder_unlocked): ?>
+        <?php if ($files_unlocked): ?>
         function loadFiles() {
             fetch('confidential_vault.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_hidden_files' })
+                body: JSON.stringify({ action: 'get_private_files' })
             })
             .then(r => r.json())
             .then(data => {
@@ -571,14 +573,14 @@ $profile_picture = $user_data['profile_picture'] ?? null;
         }
         
         function removeFile(fileId) {
-            if (!confirm('Remove this file from the hidden folder? This will permanently delete the file.')) {
+            if (!confirm('Remove this file from private files? This will permanently delete the file.')) {
                 return;
             }
             
             fetch('confidential_vault.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'remove_from_hidden_folder', file_id: fileId })
+                body: JSON.stringify({ action: 'remove_from_private_files', file_id: fileId })
             })
             .then(r => r.json())
             .then(data => {
@@ -605,11 +607,11 @@ $profile_picture = $user_data['profile_picture'] ?? null;
         
         // Setup PIN input handlers
         document.addEventListener('DOMContentLoaded', function() {
-            const inputs = document.querySelectorAll('.hidden-folder-pin-input');
+            const inputs = document.querySelectorAll('.private-files-pin-input');
             
             inputs.forEach((input, index) => {
-                input.addEventListener('input', (e) => handleHiddenFolderPinInput(e, index));
-                input.addEventListener('keydown', (e) => handleHiddenFolderPinKeydown(e, index));
+                input.addEventListener('input', (e) => handlePrivateFilesPinInput(e, index));
+                input.addEventListener('keydown', (e) => handlePrivateFilesPinKeydown(e, index));
                 input.addEventListener('paste', (e) => {
                     e.preventDefault();
                     const paste = (e.clipboardData || window.clipboardData).getData('text');
@@ -626,12 +628,12 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                 });
             });
             
-            document.getElementById('hidden-folder-pin-cancel')?.addEventListener('click', closeHiddenFolderModal);
-            document.getElementById('hidden-folder-backdrop')?.addEventListener('click', closeHiddenFolderModal);
+            document.getElementById('private-files-pin-cancel')?.addEventListener('click', closePrivateFilesModal);
+            document.getElementById('private-files-backdrop')?.addEventListener('click', closePrivateFilesModal);
             
-            document.getElementById('hidden-folder-pin-confirm')?.addEventListener('click', () => {
-                const pin = getHiddenFolderPin();
-                const error = document.getElementById('hidden-folder-pin-error');
+            document.getElementById('private-files-pin-confirm')?.addEventListener('click', () => {
+                const pin = getPrivateFilesPin();
+                const error = document.getElementById('private-files-pin-error');
                 
                 if (!/^\d{6}$/.test(pin)) {
                     error.textContent = 'Please enter all 6 digits';
@@ -639,7 +641,7 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                     return;
                 }
                 
-                const action = hiddenFolderMode === 'setup' ? 'setup_hidden_folder' : 'unlock_hidden_folder';
+                const action = privateFilesMode === 'setup' ? 'setup_private_files' : 'unlock_private_files';
                 
                 fetch('confidential_vault.php', {
                     method: 'POST',
@@ -649,7 +651,7 @@ $profile_picture = $user_data['profile_picture'] ?? null;
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        closeHiddenFolderModal();
+                        closePrivateFilesModal();
                         showToast(data.message, 'success');
                         setTimeout(() => location.reload(), 1000);
                     } else {
