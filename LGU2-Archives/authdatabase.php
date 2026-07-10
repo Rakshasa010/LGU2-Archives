@@ -320,27 +320,66 @@ if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
 }
 
-// Create confidential_vault table for secure file storage
-$vault_sql = "CREATE TABLE IF NOT EXISTS confidential_vault (
+// Create user_hidden_folders table for user-specific secure file storage
+$hidden_folder_sql = "CREATE TABLE IF NOT EXISTS user_hidden_folders (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
-    pin_hash VARCHAR(255) NOT NULL,
-    created_by INT(11) NOT NULL,
+    user_id INT(11) NOT NULL UNIQUE,
+    pin_hash VARCHAR(255) NULL,
+    is_setup BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id)
 )";
-$conn->query($vault_sql);
+$conn->query($hidden_folder_sql);
 
-// Create confidential_files table for files in the vault
-$vault_files_sql = "CREATE TABLE IF NOT EXISTS confidential_files (
+// Create hidden_files table for files in user hidden folders
+$hidden_files_sql = "CREATE TABLE IF NOT EXISTS hidden_files (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
-    vault_id INT(11) NOT NULL DEFAULT 1,
+    user_id INT(11) NOT NULL,
     name VARCHAR(255) NOT NULL,
     file_path VARCHAR(255) NOT NULL,
+    original_source VARCHAR(50) NOT NULL,
+    original_id INT(11) NOT NULL,
     moved_by INT(11) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_vault_id (vault_id)
+    INDEX idx_user_id (user_id),
+    INDEX idx_original_source_id (original_source, original_id)
 )";
-$conn->query($vault_files_sql);
+$conn->query($hidden_files_sql);
+
+// Migrate existing vault data to user-specific system (if needed)
+$check_old_vault = $conn->query("SHOW TABLES LIKE 'confidential_vault'");
+if ($check_old_vault && $check_old_vault->num_rows > 0) {
+    // Check if migration is needed
+    $check_migration = $conn->query("SELECT COUNT(*) as count FROM confidential_vault");
+    if ($check_migration && $check_migration->fetch_assoc()['count'] > 0) {
+        // Get the admin user (or first user) to migrate vault data to
+        $admin_user = $conn->query("SELECT id FROM users WHERE role = 'admin' OR role = 'Administrator' ORDER BY id ASC LIMIT 1");
+        if ($admin_user && $admin_user->num_rows > 0) {
+            $admin_id = $admin_user->fetch_assoc()['id'];
+            
+            // Migrate vault setup to admin user
+            $migrate_vault = $conn->query("SELECT * FROM confidential_vault LIMIT 1");
+            if ($migrate_vault && $migrate_vault->num_rows > 0) {
+                $vault_data = $migrate_vault->fetch_assoc();
+                $conn->query("INSERT IGNORE INTO user_hidden_folders (user_id, pin_hash, is_setup) VALUES ($admin_id, '{$vault_data['pin_hash']}', TRUE)");
+            }
+            
+            // Migrate files to admin user
+            $migrate_files = $conn->query("SELECT * FROM confidential_files");
+            if ($migrate_files) {
+                while ($file = $migrate_files->fetch_assoc()) {
+                    $name = $conn->real_escape_string($file['name']);
+                    $path = $conn->real_escape_string($file['file_path']);
+                    $moved_by = $file['moved_by'];
+                    $created_at = $file['created_at'];
+                    
+                    $conn->query("INSERT IGNORE INTO hidden_files (user_id, name, file_path, original_source, original_id, moved_by, created_at) VALUES ($admin_id, '$name', '$path', 'migrated', 0, $moved_by, '$created_at')");
+                }
+            }
+        }
+    }
+}
 
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");

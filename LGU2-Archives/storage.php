@@ -294,8 +294,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     
-    // Vault operations
-    if ($action === 'vault_setup') {
+    // Hidden folder operations
+    if ($action === 'hidden_folder_setup') {
         $pin = isset($payload['pin']) ? trim((string)$payload['pin']) : '';
         if (!preg_match('/^\d{6}$/', $pin)) {
             echo json_encode(['success' => false, 'message' => 'PIN must be exactly 6 digits']);
@@ -305,67 +305,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uid = (int)$_SESSION['user_id'];
         $pin_hash = password_hash($pin, PASSWORD_DEFAULT);
         
-        // Check if vault already exists
-        $check = $conn->query("SELECT id FROM confidential_vault LIMIT 1");
-        if ($check && $check->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Vault already exists']);
-            $conn->close();
-            exit();
+        // Check if user already has a hidden folder
+        $check = $conn->prepare("SELECT id FROM user_hidden_folders WHERE user_id = ?");
+        $check->bind_param("i", $uid);
+        $check->execute();
+        $result = $check->get_result();
+        
+        if ($result->num_rows > 0) {
+            $check->close();
+            // Update existing folder
+            $stmt = $conn->prepare("UPDATE user_hidden_folders SET pin_hash = ?, is_setup = TRUE WHERE user_id = ?");
+            $stmt->bind_param("si", $pin_hash, $uid);
+        } else {
+            $check->close();
+            // Create new folder
+            $stmt = $conn->prepare("INSERT INTO user_hidden_folders (user_id, pin_hash, is_setup) VALUES (?, ?, TRUE)");
+            $stmt->bind_param("is", $uid, $pin_hash);
         }
         
-        $ins = $conn->prepare("INSERT INTO confidential_vault (pin_hash, created_by) VALUES (?, ?)");
-        if ($ins) {
-            $ins->bind_param("si", $pin_hash, $uid);
-            if ($ins->execute()) {
-                // Log to audit
-                $ntime = date('h:i A');
-                $ndate = date('Y-m-d');
-                $ncontent = 'Confidential vault created by user #' . $uid;
-                $nabout = 'Vault';
-                $nstatus = 'unread';
-                
-                if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                    $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
-                    $notif->execute();
-                    $notif->close();
-                }
-                
-                echo json_encode(['success' => true, 'message' => 'Vault created successfully']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to create vault']);
-            }
-            $ins->close();
-        }
-        $conn->close();
-        exit();
-    }
-    
-    if ($action === 'vault_unlock') {
-        $pin = isset($payload['pin']) ? trim((string)$payload['pin']) : '';
-        if (!preg_match('/^\d{6}$/', $pin)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid PIN format']);
-            $conn->close();
-            exit();
-        }
-        
-        $vault = $conn->query("SELECT id, pin_hash FROM confidential_vault LIMIT 1");
-        if (!$vault || $vault->num_rows === 0) {
-            echo json_encode(['success' => false, 'message' => 'Vault not found']);
-            $conn->close();
-            exit();
-        }
-        
-        $row = $vault->fetch_assoc();
-        if (password_verify($pin, $row['pin_hash'])) {
-            $_SESSION['vault_unlocked'] = true;
-            $_SESSION['vault_unlock_time'] = time();
-            
+        if ($stmt->execute()) {
+            $_SESSION['hidden_folder_unlocked'] = true;
             // Log to audit
-            $uid = (int)$_SESSION['user_id'];
             $ntime = date('h:i A');
             $ndate = date('Y-m-d');
-            $ncontent = 'Vault unlocked by user #' . $uid;
-            $nabout = 'Vault';
+            $ncontent = 'Hidden folder set up by user #' . $uid;
+            $nabout = 'Hidden Folder';
             $nstatus = 'unread';
             
             if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
@@ -374,7 +338,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notif->close();
             }
             
-            echo json_encode(['success' => true, 'message' => 'Vault unlocked']);
+            echo json_encode(['success' => true, 'message' => 'Hidden folder set up successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to set up hidden folder']);
+        }
+        $stmt->close();
+        $conn->close();
+        exit();
+    }
+    
+    if ($action === 'hidden_folder_unlock') {
+        $pin = isset($payload['pin']) ? trim((string)$payload['pin']) : '';
+        if (!preg_match('/^\d{6}$/', $pin)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid PIN format']);
+            $conn->close();
+            exit();
+        }
+        
+        $uid = (int)$_SESSION['user_id'];
+        $stmt = $conn->prepare("SELECT pin_hash, is_setup FROM user_hidden_folders WHERE user_id = ?");
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Hidden folder not found']);
+            $stmt->close();
+            $conn->close();
+            exit();
+        }
+        
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        
+        if (!$row['is_setup']) {
+            echo json_encode(['success' => false, 'message' => 'Hidden folder not set up']);
+            $conn->close();
+            exit();
+        }
+        
+        if (password_verify($pin, $row['pin_hash'])) {
+            $_SESSION['hidden_folder_unlocked'] = true;
+            
+            // Log to audit
+            $ntime = date('h:i A');
+            $ndate = date('Y-m-d');
+            $ncontent = 'Hidden folder unlocked by user #' . $uid;
+            $nabout = 'Hidden Folder';
+            $nstatus = 'unread';
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
+                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                $notif->execute();
+                $notif->close();
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'Hidden folder unlocked']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Incorrect PIN']);
         }
@@ -382,13 +401,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     
-    if ($action === 'vault_lock') {
+    if ($action === 'hidden_folder_lock') {
         // Log to audit before clearing session
         $uid = (int)$_SESSION['user_id'];
         $ntime = date('h:i A');
         $ndate = date('Y-m-d');
-        $ncontent = 'Vault locked by user #' . $uid;
-        $nabout = 'Vault';
+        $ncontent = 'Hidden folder locked by user #' . $uid;
+        $nabout = 'Hidden Folder';
         $nstatus = 'unread';
         
         if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
@@ -397,44 +416,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notif->close();
         }
         
-        unset($_SESSION['vault_unlocked']);
-        unset($_SESSION['vault_unlock_time']);
-        echo json_encode(['success' => true, 'message' => 'Vault locked']);
+        unset($_SESSION['hidden_folder_unlocked']);
+        echo json_encode(['success' => true, 'message' => 'Hidden folder locked']);
         $conn->close();
         exit();
     }
     
-    if ($action === 'vault_get_files') {
-        if (!isset($_SESSION['vault_unlocked']) || $_SESSION['vault_unlocked'] !== true) {
-            echo json_encode(['success' => false, 'message' => 'Vault is locked']);
+    if ($action === 'hidden_folder_get_files') {
+        if (!isset($_SESSION['hidden_folder_unlocked']) || $_SESSION['hidden_folder_unlocked'] !== true) {
+            echo json_encode(['success' => false, 'message' => 'Hidden folder is locked']);
             $conn->close();
             exit();
         }
         
+        $uid = (int)$_SESSION['user_id'];
         $files = [];
-        $result = $conn->query("SELECT id, name, file_path, created_at FROM confidential_files ORDER BY created_at DESC");
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $files[] = $row;
-            }
+        $stmt = $conn->prepare("SELECT id, name, file_path, created_at FROM hidden_files WHERE user_id = ? ORDER BY created_at DESC");
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $files[] = $row;
         }
+        $stmt->close();
+        
         echo json_encode(['success' => true, 'files' => $files]);
         $conn->close();
         exit();
     }
     
-    if ($action === 'vault_check_status') {
-        $vault_exists = false;
-        $is_unlocked = isset($_SESSION['vault_unlocked']) && $_SESSION['vault_unlocked'] === true;
+    if ($action === 'hidden_folder_check_status') {
+        $uid = (int)$_SESSION['user_id'];
+        $folder_exists = false;
+        $folder_setup = false;
+        $is_unlocked = isset($_SESSION['hidden_folder_unlocked']) && $_SESSION['hidden_folder_unlocked'] === true;
         
-        $check = $conn->query("SELECT id FROM confidential_vault LIMIT 1");
-        if ($check && $check->num_rows > 0) {
-            $vault_exists = true;
+        $stmt = $conn->prepare("SELECT is_setup FROM user_hidden_folders WHERE user_id = ?");
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $folder_exists = true;
+            $row = $result->fetch_assoc();
+            $folder_setup = (bool)$row['is_setup'];
         }
+        $stmt->close();
         
         echo json_encode([
             'success' => true,
-            'vault_exists' => $vault_exists,
+            'folder_exists' => $folder_exists,
+            'folder_setup' => $folder_setup,
             'is_unlocked' => $is_unlocked
         ]);
         $conn->close();
