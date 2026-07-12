@@ -1469,6 +1469,3 @@ function formatFileSize($fileSize) {
     </script>
 </body>
 </html>
-</think_never_used_51bce0c785ca2f68081bfa7d91973934>Okay, let's update the todo list now!
-
-<seed:tool_call><function name="TodoWrite"><parameter name="todos" string="false">[{"id": "1", "content": "Explore current folder_view.php and other relevant files", "status": "completed", "priority": "high"}, {"id": "2", "content": "Enhance toolbar with sort, search, create folder, and upload file for both legislative and archive", "status": "completed", "priority": "high"}, {"id": "3", "content": "Enhance grid view of uploaded files (for both legislative and archive folders)", "status": "completed", "priority": "high"}, {"id": "4", "content": "Implement sorting and search functionality", "status": "completed", "priority": "high"}, {"id": "5", "content": "Add missing JS functions and version history modal", "status": "completed", "priority": "high"}, {"id": "6", "content": "Test everything", "status": "in_progress", "priority": "medium"}]
