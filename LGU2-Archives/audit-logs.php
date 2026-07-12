@@ -105,8 +105,8 @@
         <link rel="stylesheet" href="assets/css/archives-landing.css">
         <link rel="stylesheet" href="assets/css/audit-logs.css">
     </head>
-
-        <div class="flex min-h-screen">
+    <body class="h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200 overflow-hidden">
+        <div class="flex h-full">
             <?php
             $sidebar_active_page = 'audit-logs';
             $sidebar_include_overlay = true;
@@ -114,7 +114,7 @@
             ?>
 
             <!-- Main Content -->
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 flex flex-col overflow-hidden">
                 <!-- Header / Navbar -->
                 <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -361,6 +361,7 @@
                         </div>
                     </div>
                 </main>
+                <?php include 'includes/footer.php'; ?>
             </div>
         </div>
 

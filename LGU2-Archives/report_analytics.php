@@ -481,7 +481,7 @@ $funnel_types = array_values($funnel_types);
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
-<body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
+<body class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
     <div class="flex min-h-screen">
         <?php
         $sidebar_active_page = 'report-analytics';
@@ -489,7 +489,7 @@ $funnel_types = array_values($funnel_types);
         require_once 'includes/sidebar-centralized.php';
         ?>
         <!-- Main Content -->
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 flex flex-col">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -934,6 +934,7 @@ $funnel_types = array_values($funnel_types);
                     </div>
                 </div>
             </main>
+            <?php include 'includes/footer.php'; ?>
         </div>
     </div>
 

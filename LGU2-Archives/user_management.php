@@ -160,15 +160,15 @@ if ($folders_result && $folders_result->num_rows > 0) {
     <link rel="icon" href="Images/Val-logo/valenzuela logo.webp">
         
 </head>
-<body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <div class="flex min-h-screen">
+<body class="h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200 overflow-hidden">
+    <div class="flex h-full">
         <?php
         $sidebar_active_page = 'user-management';
         $sidebar_include_overlay = true;
         require_once 'includes/sidebar-centralized.php';
         ?>
         
-        <div class="flex-1 min-h-0">
+        <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -545,6 +545,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
                 </a>
             </div>
         </div>
+        <?php include 'includes/footer.php'; ?>
     </div>
 </div>
 

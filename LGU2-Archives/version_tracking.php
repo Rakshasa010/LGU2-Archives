@@ -71,7 +71,7 @@ $conn->close();
         .dark .toggle-thumb { transform: translateX(20px); }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
+<body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
     <div class="flex min-h-screen">
         <?php
         $sidebar_active_page = 'version-tracking';
@@ -80,7 +80,7 @@ $conn->close();
         ?>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -259,6 +259,7 @@ $conn->close();
             </main>
         </div>
     </div>
+    <?php include 'includes/footer.php'; ?>
 
     <div id="versionModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4">

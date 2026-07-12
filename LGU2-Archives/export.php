@@ -172,9 +172,8 @@ foreach ($mock_notifications as $req) {
         require_once 'includes/sidebar-centralized.php';
         ?>
 
-        <div class="flex-1 min-h-0">
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -496,8 +495,8 @@ foreach ($mock_notifications as $req) {
 				</div>
 			</main>
 		</div>
-		</div>
 	</div>
+	<?php include 'includes/footer.php'; ?>
 	</div>
 
         <!-- Floating Action Button -->

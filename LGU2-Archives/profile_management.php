@@ -74,14 +74,14 @@ if ($folders_result && $folders_result->num_rows > 0) {
         #sidebar { top: 0; left: 0; }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+<body class="h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-200 overflow-hidden">
     <?php
     $sidebar_active_page = '';
     $sidebar_include_overlay = false;
     require_once 'includes/sidebar-centralized.php';
     ?>
 
-    <div class="flex flex-col md:flex-row min-h-screen md:h-screen overflow-hidden">
+    <div class="flex flex-col md:flex-row h-full overflow-hidden">
     <!-- Main Content (scrollable on mobile) -->
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
 
@@ -470,6 +470,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
                     </div>
                 </form>
     </div>
+    <?php include 'includes/footer.php'; ?>
     </div>
 
     <script src="assets/js/archives-landing.js"></script>
