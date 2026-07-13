@@ -661,7 +661,7 @@ if (isset($_SESSION['user_id'])) {
     $profile_picture = $user_data['profile_picture'] ?? null;
     ?>
 
-    <div class="flex min-h-screen">
+    <div class="md:ml-64">
         <?php
         $sidebar_active_page = 'storage';
         $sidebar_include_overlay = true;
@@ -669,7 +669,7 @@ if (isset($_SESSION['user_id'])) {
         ?>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex flex-col min-h-screen">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -965,9 +965,9 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                 </div>
             </main>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
 
         <!-- Vault PIN Modal -->
         <div id="vault-pin-modal" class="hidden fixed inset-0 z-50">

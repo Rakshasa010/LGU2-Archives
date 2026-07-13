@@ -183,14 +183,14 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     </style>
 </head>
 <body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
-    <div class="flex min-h-screen">
+    <div class="md:ml-64">
         <?php
         // include centralized sidebar after session/auth and user data are ready
         $sidebar_active_page = 'dashboard';
         $sidebar_include_overlay = true;
         require_once 'includes/sidebar-centralized.php';
         ?>
-        <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div class="flex flex-col min-h-screen">
             <!-- Header / Navbar -->
             <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -917,9 +917,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 </div>
 
             </main>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
 
     <!-- Storage Details Modal -->
     <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">

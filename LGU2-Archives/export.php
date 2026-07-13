@@ -165,7 +165,7 @@ foreach ($mock_notifications as $req) {
 	<link rel="stylesheet" href="assets/css/audit-logs.css">
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <div class="flex min-h-screen">
+    <div class="md:ml-64">
         <?php
         $sidebar_active_page = 'export';
         $sidebar_include_overlay = true;
@@ -173,7 +173,7 @@ foreach ($mock_notifications as $req) {
         ?>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex flex-col min-h-screen">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -494,9 +494,9 @@ foreach ($mock_notifications as $req) {
                     </div>
 				</div>
 			</main>
+		<?php include 'includes/footer.php'; ?>
 		</div>
 	</div>
-	<?php include 'includes/footer.php'; ?>
 	</div>
 
         <!-- Floating Action Button -->

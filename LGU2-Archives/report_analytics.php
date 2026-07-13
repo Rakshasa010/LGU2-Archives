@@ -52,6 +52,7 @@ $q_end = isset($_GET['end']) ? $_GET['end'] : null;
 $q_type = isset($_GET['type']) ? $_GET['type'] : null;
 $q_format = isset($_GET['format']) ? $_GET['format'] : null;
 $q_event = isset($_GET['event']) ? $_GET['event'] : null;
+$q_view = isset($_GET['view']) ? $_GET['view'] : 'day';
 $f_start = null;
 $f_end = null;
 if ($q_start) {
@@ -169,6 +170,7 @@ $uploads_bytes = $uploads_metrics['bytes'];
 
 $exportQuery = $_GET;
 $exportQuery['export'] = 'csv';
+if ($q_view) $exportQuery['view'] = $q_view;
 $exportUrl = 'report_analytics.php?' . http_build_query($exportQuery);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
@@ -367,29 +369,89 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     exit();
 }
 
-// Time series data (last 30 days)
-$days = [];
-for ($i = 29; $i >= 0; $i--) {
-    $d = date('Y-m-d', strtotime("-$i days"));
-    $days[$d] = 0;
+// Time series data
+$time_periods = [];
+$date_format_sql = 'DATE';
+$date_format_php = 'Y-m-d';
+$interval = 29;
+$interval_unit = 'DAY';
+
+switch ($q_view) {
+    case 'week':
+        $interval = 52; // Last ~1 year
+        $interval_unit = 'WEEK';
+        $date_format_sql = "DATE_FORMAT(created_at, '%Y-%u')";
+        $date_format_php = 'Y-W';
+        for ($i = $interval; $i >= 0; $i--) {
+            $d = date($date_format_php, strtotime("-$i week"));
+            $time_periods[$d] = 0;
+        }
+        break;
+    case 'month':
+        $interval = 24; // Last 2 years
+        $interval_unit = 'MONTH';
+        $date_format_sql = "DATE_FORMAT(created_at, '%Y-%m')";
+        $date_format_php = 'Y-m';
+        for ($i = $interval; $i >= 0; $i--) {
+            $d = date($date_format_php, strtotime("-$i month"));
+            $time_periods[$d] = 0;
+        }
+        break;
+    case 'year':
+        $interval = 10; // Last 10 years
+        $interval_unit = 'YEAR';
+        $date_format_sql = "YEAR(created_at)";
+        $date_format_php = 'Y';
+        for ($i = $interval; $i >= 0; $i--) {
+            $d = date($date_format_php, strtotime("-$i year"));
+            $time_periods[$d] = 0;
+        }
+        break;
+    default: // day
+        $interval = 29;
+        $interval_unit = 'DAY';
+        $date_format_sql = 'DATE(created_at)';
+        $date_format_php = 'Y-m-d';
+        for ($i = $interval; $i >= 0; $i--) {
+            $d = date($date_format_php, strtotime("-$i days"));
+            $time_periods[$d] = 0;
+        }
+        break;
 }
-$series_downloads = $days;
-$series_records = $days;
-$q_dl_series = $conn->query("SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM analytics_events WHERE event_type='download' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) GROUP BY DATE(created_at) ORDER BY d");
+
+$series_downloads = $time_periods;
+$series_records = $time_periods;
+
+// Build downloads query
+$dl_where = "event_type='download' AND created_at >= DATE_SUB(CURDATE(), INTERVAL $interval $interval_unit)";
+if ($f_start) $dl_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
+if ($f_end) $dl_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
+if ($safe_type) $dl_where .= " AND record_type = '".$safe_type."'";
+if ($safe_format) $dl_where .= " AND download_format = '".$safe_format."'";
+
+$q_dl_series = $conn->query("SELECT $date_format_sql AS d, COUNT(*) AS cnt FROM analytics_events WHERE $dl_where GROUP BY $date_format_sql ORDER BY d");
 if ($q_dl_series) {
     while ($r = $q_dl_series->fetch_assoc()) {
         $key = $r['d'];
         if (isset($series_downloads[$key])) $series_downloads[$key] = (int)$r['cnt'];
     }
 }
-$q_rec_series = $conn->query("SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM legislative_records WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) GROUP BY DATE(created_at) ORDER BY d");
+
+// Build records query
+$rec_where = "created_at >= DATE_SUB(CURDATE(), INTERVAL $interval $interval_unit)";
+if ($f_start) $rec_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
+if ($f_end) $rec_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
+if ($safe_type) $rec_where .= " AND type = '".$safe_type."'";
+
+$q_rec_series = $conn->query("SELECT $date_format_sql AS d, COUNT(*) AS cnt FROM legislative_records WHERE $rec_where GROUP BY $date_format_sql ORDER BY d");
 if ($q_rec_series) {
     while ($r = $q_rec_series->fetch_assoc()) {
         $key = $r['d'];
         if (isset($series_records[$key])) $series_records[$key] = (int)$r['cnt'];
     }
 }
-$series_labels = array_keys($days);
+
+$series_labels = array_keys($time_periods);
 $series_downloads_values = array_values($series_downloads);
 $series_records_values = array_values($series_records);
 
@@ -482,14 +544,14 @@ $funnel_types = array_values($funnel_types);
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
 <body class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
-    <div class="flex min-h-screen">
+    <div class="md:ml-64">
         <?php
         $sidebar_active_page = 'report-analytics';
         $sidebar_include_overlay = true;
         require_once 'includes/sidebar-centralized.php';
         ?>
         <!-- Main Content -->
-        <div class="flex-1 min-w-0 flex flex-col">
+        <div class="flex flex-col min-h-screen">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -700,6 +762,15 @@ $funnel_types = array_values($funnel_types);
                         </div>
                         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="flex flex-wrap items-center gap-2">
+                                <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">View by:</label>
+                                <div class="inline-flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden shadow-sm">
+                                    <button class="view-btn <?php echo $q_view === 'day' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?> px-3 py-1.5 text-xs font-medium transition-colors" data-view="day">Day</button>
+                                    <button class="view-btn <?php echo $q_view === 'week' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?> px-3 py-1.5 text-xs font-medium transition-colors border-x border-gray-300 dark:border-slate-600" data-view="week">Week</button>
+                                    <button class="view-btn <?php echo $q_view === 'month' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?> px-3 py-1.5 text-xs font-medium transition-colors border-r border-gray-300 dark:border-slate-600" data-view="month">Month</button>
+                                    <button class="view-btn <?php echo $q_view === 'year' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?> px-3 py-1.5 text-xs font-medium transition-colors" data-view="year">Year</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
                                 <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
                                 <input id="filter-from" type="date" value="<?php echo htmlspecialchars($f_start ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                 <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
@@ -710,9 +781,9 @@ $funnel_types = array_values($funnel_types);
                                         <option value="<?php echo htmlspecialchars($k); ?>" <?php echo ($safe_type === $k ? 'selected' : ''); ?>><?php echo htmlspecialchars($k); ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                            </div>
-                            <div class="flex md:justify-end">
-                                <button id="apply-filters" aria-pressed="false" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
+                                <div class="flex md:justify-end ml-auto">
+                                    <button id="apply-filters" aria-pressed="false" class="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1155,6 +1226,11 @@ $funnel_types = array_values($funnel_types);
             const to = document.getElementById('filter-to')?.value || '';
             const type = document.getElementById('filter-type')?.value || '';
             const params = new URLSearchParams();
+            // Get current view from URL or default to 'day'
+            const qs = new URLSearchParams(window.location.search);
+            const currentView = qs.get('view') || 'day';
+            params.set('view', currentView);
+            
             if (from) params.set('start', from);
             if (to) params.set('end', to);
             if (type) params.set('type', type);
@@ -1171,6 +1247,16 @@ $funnel_types = array_values($funnel_types);
             window.location.assign(url);
         });
         initFiltersApplied();
+        
+        // Handle view button clicks
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const view = btn.getAttribute('data-view');
+                const params = new URLSearchParams(window.location.search);
+                params.set('view', view);
+                window.location.assign(window.location.pathname + '?' + params.toString());
+            });
+        });
 
     </script>
     <script src="assets/js/theme-toggle.js"></script>
