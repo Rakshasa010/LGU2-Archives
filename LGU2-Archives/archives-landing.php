@@ -738,35 +738,32 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                     <button id="qa-apply" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-3">
-                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <div class="text-sm opacity-80">Downloads</div>
-                                        <div class="text-xs opacity-80">Last 14 days</div>
-                                    </div>
-                                    <div class="text-xl md:text-2xl font-bold mb-1"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsBar" height="60"></canvas>
-                                </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
                                 <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                     <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Records</div>
                                     <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_total_records; ?></div>
-                                    <canvas id="qaRecordsMini" height="50"></canvas>
+                                    <canvas id="qaRecordsMini" height="40"></canvas>
                                 </div>
                                 <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                     <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Downloads</div>
                                     <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsMini" height="50"></canvas>
+                                    <canvas id="qaDownloadsMini" height="40"></canvas>
+                                </div>
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Uploads</div>
+                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_uploads; ?></div>
+                                    <canvas id="qaUploadsMini" height="40"></canvas>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
-                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                     <div class="flex items-center justify-between mb-1">
                                         <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records Trend</div>
                                         <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 14 days</div>
                                     </div>
-                                    <canvas id="qaRecordsLine" height="90"></canvas>
+                                    <canvas id="qaRecordsLine" height="180"></canvas>
                                 </div>
-                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                 <div class="flex items-center justify-between mb-1">
                                     <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records by Type</div>
                                     <div class="flex items-center gap-2">
@@ -774,7 +771,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                         <button id="rbt-toggle" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
                                     </div>
                                 </div>
-                                    <canvas id="qaRecordsByType" height="100"></canvas>
+                                    <canvas id="qaRecordsByType" height="180"></canvas>
                                 </div>
                             </div>
                         </div>

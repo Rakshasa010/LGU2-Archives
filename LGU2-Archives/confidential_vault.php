@@ -312,7 +312,7 @@ $profile_picture = $user_data['profile_picture'] ?? null;
         
         <!-- Main Content -->
         <main class="flex-1 p-6">
-            <div class="max-w-7xl mx-auto">
+            <div class="w-full">
                 <?php if (!$files_unlocked): ?>
                     <?php if (!$files_setup): ?>
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12">

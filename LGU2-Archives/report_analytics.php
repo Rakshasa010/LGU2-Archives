@@ -645,7 +645,7 @@ $funnel_types = array_values($funnel_types);
             </nav>
 
             <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900 p-4 sm:p-6">
-                <div class="max-w-7xl mx-auto space-y-6">
+                <div class="w-full space-y-6">
                     <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6">
                         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                             <div>

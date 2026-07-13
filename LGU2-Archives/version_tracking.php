@@ -53,16 +53,23 @@ if ($folders_result && $folders_result->num_rows > 0) {
 $conn->close();
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
     <title>Version Tracking</title>
-    <?php include 'includes/header_scripts.php'; ?>
-    <link rel="stylesheet" href="assets/css/archives-landing.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <meta name="description" content="Version tracking for legislative records">
+    <meta name="keywords" content="version tracking, archives, legislative records">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <?php include 'includes/header_scripts.php'; ?>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
     <style>
         .toggle-pill { display: inline-flex; align-items: center; gap: .5rem; padding: .375rem .625rem; border-radius: 9999px; border: 1px solid rgba(203,213,225,.6); }
         .toggle-track { position: relative; width: 40px; height: 20px; border-radius: 9999px; background-color: rgba(203,213,225,.6); }
@@ -71,7 +78,7 @@ $conn->close();
         .dark .toggle-thumb { transform: translateX(20px); }
     </style>
 </head>
-<body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
+<body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
     <div class="md:ml-64">
         <?php
         $sidebar_active_page = 'version-tracking';
@@ -87,9 +94,15 @@ $conn->close();
                     <div class="flex justify-between items-center h-16">
                         <!-- Left Side -->
                         <div class="flex items-center">
+                            <!-- Mobile Menu Button -->
                             <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
                                 <i class="bi bi-list text-2xl"></i>
                             </button>
+                            
+                            <!-- Logo (Mobile) -->
+                            <div class="mobile-only flex items-center ml-2">
+                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                            </div>
                         </div>
                         
                         <!-- Page Title -->
@@ -173,7 +186,7 @@ $conn->close();
             <!-- Main Content -->
             <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
                 <!-- Content Wrapper with Max Width -->
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div class="w-full px-4 sm:px-6 lg:px-8 py-6">
                     <!-- Header Section -->
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
@@ -257,9 +270,9 @@ $conn->close();
                     </div>
                 </div>
             </main>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
 
     <div id="versionModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4">
@@ -651,39 +664,9 @@ $conn->close();
             document.getElementById('versionModal').classList.add('hidden');
         }
     </script>
+    <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
-    <script>
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileSidebar = document.getElementById('mobile-sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
-
-        if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', function () {
-                if (mobileSidebar) mobileSidebar.classList.remove('-translate-x-full');
-                if (sidebarOverlay) {
-                    sidebarOverlay.classList.remove('opacity-0', 'pointer-events-none');
-                    sidebarOverlay.classList.add('opacity-100', 'pointer-events-auto');
-                }
-            });
-        }
-        if (closeMobileSidebar) {
-            closeMobileSidebar.addEventListener('click', function () {
-                if (mobileSidebar) mobileSidebar.classList.add('-translate-x-full');
-                if (sidebarOverlay) {
-                    sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
-                    sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
-                }
-            });
-        }
-        if (sidebarOverlay) {
-            sidebarOverlay.addEventListener('click', function () {
-                if (mobileSidebar) mobileSidebar.classList.add('-translate-x-full');
-                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
-                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
-            });
-        }
-    </script>
+    <?php include 'includes/footer_scripts.php'; ?>
 
     <!-- Logout Confirmation Modal -->
     <div id="logout-modal" class="hidden fixed inset-0 z-50">
