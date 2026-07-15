@@ -183,14 +183,14 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     </style>
 </head>
 <body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
-    <div class="flex min-h-screen">
+    <div class="md:ml-64">
         <?php
         // include centralized sidebar after session/auth and user data are ready
         $sidebar_active_page = 'dashboard';
         $sidebar_include_overlay = true;
         require_once 'includes/sidebar-centralized.php';
         ?>
-        <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div class="flex flex-col min-h-screen">
             <!-- Header / Navbar -->
             <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -738,35 +738,32 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                     <button id="qa-apply" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-3">
-                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <div class="text-sm opacity-80">Downloads</div>
-                                        <div class="text-xs opacity-80">Last 14 days</div>
-                                    </div>
-                                    <div class="text-xl md:text-2xl font-bold mb-1"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsBar" height="60"></canvas>
-                                </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
                                 <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                     <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Records</div>
                                     <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_total_records; ?></div>
-                                    <canvas id="qaRecordsMini" height="50"></canvas>
+                                    <canvas id="qaRecordsMini" height="40"></canvas>
                                 </div>
                                 <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                     <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Downloads</div>
                                     <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsMini" height="50"></canvas>
+                                    <canvas id="qaDownloadsMini" height="40"></canvas>
+                                </div>
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Uploads</div>
+                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_uploads; ?></div>
+                                    <canvas id="qaUploadsMini" height="40"></canvas>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
-                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                     <div class="flex items-center justify-between mb-1">
                                         <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records Trend</div>
                                         <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 14 days</div>
                                     </div>
-                                    <canvas id="qaRecordsLine" height="90"></canvas>
+                                    <canvas id="qaRecordsLine" height="180"></canvas>
                                 </div>
-                                <div class="lg:col-span-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                 <div class="flex items-center justify-between mb-1">
                                     <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records by Type</div>
                                     <div class="flex items-center gap-2">
@@ -774,7 +771,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                         <button id="rbt-toggle" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
                                     </div>
                                 </div>
-                                    <canvas id="qaRecordsByType" height="100"></canvas>
+                                    <canvas id="qaRecordsByType" height="180"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -917,9 +914,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 </div>
 
             </main>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
 
     <!-- Storage Details Modal -->
     <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">

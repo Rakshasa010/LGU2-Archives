@@ -63,6 +63,14 @@
     $registrations_all = 0;
     $today_str = date('Y-m-d');
     
+    // Get distinct categories
+    $categories = [];
+    if ($cat_res = $conn->query("SELECT DISTINCT about FROM notifications ORDER BY about")) {
+        while ($cat_row = $cat_res->fetch_assoc()) {
+            $categories[] = $cat_row['about'];
+        }
+    }
+    
     if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
             $notifications[] = $row;
@@ -105,8 +113,8 @@
         <link rel="stylesheet" href="assets/css/archives-landing.css">
         <link rel="stylesheet" href="assets/css/audit-logs.css">
     </head>
-    <body class="h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200 overflow-hidden">
-        <div class="flex h-full">
+    <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
+        <div class="md:ml-64">
             <?php
             $sidebar_active_page = 'audit-logs';
             $sidebar_include_overlay = true;
@@ -114,7 +122,7 @@
             ?>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex flex-col min-h-screen">
                 <!-- Header / Navbar -->
                 <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
@@ -206,7 +214,7 @@
 
                 <!-- Main Content Area -->
                 <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div class="w-full px-4 sm:px-6 lg:px-8 py-6">
                         <div class="space-y-6">
                             <!-- Stats Bar -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -241,14 +249,17 @@
 
                                 <!-- Smarter filter bar -->
                                 <div class="bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm p-3 mb-6 flex flex-col lg:flex-row gap-3 lg:items-center">
-                                    <div class="relative flex-1">
-                                        <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                                        <input id="searchInput" type="search" placeholder="Search audit logs by content, user, or date..." class="w-full pl-9 pr-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 focus:border-red-500 dark:focus:border-red-500 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors shadow-sm">
-                                    </div>
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <select id="filter-about" class="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:border-red-400 shadow-sm">
-                                            <option value="">All Categories</option>
-                                        </select>
+                    <div class="relative flex-1">
+                        <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input id="searchInput" type="search" placeholder="Search audit logs by content, user, or date..." class="w-full pl-9 pr-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 focus:border-red-500 dark:focus:border-red-500 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors shadow-sm">
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="filter-about" class="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:border-red-400 shadow-sm">
+                            <option value="">All Categories</option>
+                            <?php foreach ($categories as $cat): ?>
+                            <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                                         <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 hidden md:block mx-1"></div>
                                         <div class="flex items-center gap-1 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 p-0.5 shadow-sm">
                                             <button type="button" id="date-preset-today" class="px-2.5 py-1.5 rounded text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">Today</button>
@@ -386,11 +397,13 @@
                 // Wire page size control
                 document.getElementById('page-size')?.addEventListener('change', function(){ table.page.len(parseInt(this.value,10)).draw(); });
 
-                // Populate 'About' filter from table data
-                const aboutSet = new Set();
-                $('#auditTable tbody tr').each(function(){ aboutSet.add($(this).find('td').eq(4).text().trim()); });
+                // Wire 'About' filter
                 const sel = document.getElementById('filter-about');
-                if (sel){ aboutSet.forEach(v=>{ if(v){ const o = document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); } }); sel.addEventListener('change', function(){ table.column(4).search(this.value).draw(); }); }
+                if (sel) {
+                    sel.addEventListener('change', function() {
+                        table.column(4).search(this.value).draw();
+                    });
+                }
 
                 // Wire preset date buttons to filter via search (simple)
                 document.getElementById('date-preset-today')?.addEventListener('click', function(){ table.column(2).search('<?php echo date('Y-m-d'); ?>').draw(); });
