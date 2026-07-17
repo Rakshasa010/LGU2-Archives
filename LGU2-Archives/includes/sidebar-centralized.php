@@ -85,16 +85,7 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    height: 100% !important;
     overflow-x: hidden !important;
-}
-
-/* Outer wrapper div - critical for layout */
-body > div {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    display: block !important;
 }
 
 /* Desktop sidebar - fixed positioning */
@@ -118,26 +109,16 @@ body > div {
     display: none; /* Chrome, Safari and Opera */
 }
 
-/* Main content wrapper - CRITICAL FIX */
-div.flex.flex-col.min-h-screen {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 100vh !important;
-}
-
-/* On desktop, offset main content from sidebar */
+/* Main content offset from sidebar on desktop */
 @media (min-width: 768px) {
-    div.flex.flex-col.min-h-screen {
+    .flex.flex-col.min-h-screen {
         margin-left: 16rem !important;
         width: calc(100% - 16rem) !important;
-        max-width: calc(100% - 16rem) !important;
+        box-sizing: border-box !important;
     }
 }
 
-/* Ensure box sizing is correct everywhere */
+/* Ensure no overflow on html/body */
 * {
     box-sizing: border-box !important;
 }
