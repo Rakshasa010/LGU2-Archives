@@ -165,7 +165,7 @@ foreach ($mock_notifications as $req) {
 	<link rel="stylesheet" href="assets/css/audit-logs.css">
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <div class="md:ml-64">
+    <div>
         <?php
         $sidebar_active_page = 'export';
         $sidebar_include_overlay = true;

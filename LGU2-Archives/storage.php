@@ -661,7 +661,7 @@ if (isset($_SESSION['user_id'])) {
     $profile_picture = $user_data['profile_picture'] ?? null;
     ?>
 
-    <div class="md:ml-64">
+    <div>
         <?php
         $sidebar_active_page = 'storage';
         $sidebar_include_overlay = true;

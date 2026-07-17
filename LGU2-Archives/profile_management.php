@@ -81,7 +81,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
     require_once 'includes/sidebar-centralized.php';
     ?>
 
-    <div class="md:ml-64">
+    <div>
     <!-- Main Content (scrollable on mobile) -->
     <div class="flex flex-col min-h-screen w-full">
 

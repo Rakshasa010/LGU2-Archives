@@ -77,6 +77,7 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
 };
 ?>
 <?php if ($sidebar_include_overlay): ?>
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
 <?php endif; ?>
 <style>
 /* Reset default margins and padding */
@@ -84,17 +85,19 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
 }
-@media (min-width: 768px) {
-    #sidebar {
-        width: 16rem;
-        min-width: 16rem;
-        /* Hide scrollbar */
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-    }
-    #sidebar::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
-    }
+#sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 16rem !important;
+    height: 100vh !important;
+    z-index: 30 !important;
+    /* Hide scrollbar */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+#sidebar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
 }
 
 </style>

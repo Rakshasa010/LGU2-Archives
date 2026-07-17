@@ -161,7 +161,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
         
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
-    <div class="md:ml-64">
+    <div>
         <?php
         $sidebar_active_page = 'user-management';
         $sidebar_include_overlay = true;
