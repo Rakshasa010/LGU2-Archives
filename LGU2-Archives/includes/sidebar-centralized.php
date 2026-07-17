@@ -105,7 +105,7 @@ body > div {
     top: 0 !important;
     right: auto !important;
     bottom: 0 !important;
-    width: 16rem !important;
+    width: 18rem !important;
     height: 100vh !important;
     max-height: 100vh !important;
     z-index: 30 !important;
@@ -115,6 +115,8 @@ body > div {
     padding: 0 !important;
     border: none !important;
     outline: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     /* Hide scrollbar */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
@@ -152,6 +154,26 @@ aside#sidebar.sidebar-expanded {
 #sidebar nav {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+/* Fix sidebar navigation links width */
+#sidebar nav a,
+#sidebar nav button {
+    width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: none !important;
+}
+
+/* Ensure sidebar text is visible and not cut off */
+#sidebar .sidebar-text {
+    display: inline !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 /* Force sidebar logo section positioning */
@@ -166,11 +188,11 @@ aside#sidebar.sidebar-expanded {
     /* Main content takes remaining space using absolute positioning */
     .flex.flex-col.min-h-screen {
         position: absolute !important;
-        left: 16rem !important;
+        left: 18rem !important;
         top: 0 !important;
         right: 0 !important;
         bottom: auto !important;
-        width: calc(100% - 16rem) !important;
+        width: calc(100% - 18rem) !important;
         min-height: 100vh !important;
         height: auto !important;
         margin: 0 !important;
