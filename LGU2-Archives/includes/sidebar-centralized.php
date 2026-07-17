@@ -80,7 +80,11 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
 <?php endif; ?>
 <style>
-
+/* Reset default margins and padding */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
 
 /* Ensure sidebar doesn't create empty space */
 #sidebar {
