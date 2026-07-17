@@ -77,7 +77,6 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
 };
 ?>
 <?php if ($sidebar_include_overlay): ?>
-<div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
 <?php endif; ?>
 <style>
 /* Reset default margins and padding */
@@ -85,35 +84,16 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
 }
-
-/* Ensure sidebar doesn't create empty space */
-#sidebar {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 16rem !important;
-    min-width: 16rem !important;
-    height: 100vh !important;
-    z-index: 30 !important;
-    /* Hide scrollbar */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-}
-
-#sidebar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
-}
-
-/* Ensure main content starts after sidebar on desktop */
 @media (min-width: 768px) {
-    body {
-        display: flex !important;
-        flex-direction: row !important;
+    #sidebar {
+        width: 16rem;
+        min-width: 16rem;
+        /* Hide scrollbar */
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
     }
-    /* Add margin to main content containers instead of body padding */
-    .flex.min-h-screen > .flex-1,
-    .main-content-area {
-        margin-left: 16rem !important;
+    #sidebar::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
     }
 }
 
@@ -225,7 +205,7 @@ html, body {
     </nav>
 </div>
 <?php if ($sidebar_layout === 'full'): ?>
-<aside id="sidebar" class="sidebar sidebar-expanded bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl h-screen z-30 overflow-hidden md:flex hidden">
+<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl fixed top-0 left-0 h-screen z-30 overflow-hidden md:flex">
     <div class="p-6 border-b border-white/10 sidebar-logo bg-white/5 backdrop-blur-sm flex-shrink-0">
         <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
             <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
