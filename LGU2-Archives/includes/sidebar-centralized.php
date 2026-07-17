@@ -80,28 +80,41 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
 <?php endif; ?>
 <style>
-/* Reset default margins and padding */
+/* COMPREHENSIVE RESET TO ELIMINATE ALL GAPS */
 html, body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     height: 100% !important;
     overflow-x: hidden !important;
+    line-height: 1 !important;
 }
 
-/* Desktop sidebar - fixed positioning */
+/* Remove any default spacing from wrapper divs */
+body > div {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Desktop sidebar - fixed positioning with NO gaps */
 #sidebar {
     position: fixed !important;
     left: 0 !important;
     top: 0 !important;
     right: auto !important;
-    bottom: auto !important;
+    bottom: 0 !important;
     width: 16rem !important;
     height: 100vh !important;
     max-height: 100vh !important;
     z-index: 30 !important;
     display: flex !important;
     flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
     /* Hide scrollbar */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
@@ -110,7 +123,7 @@ html, body {
     display: none; /* Chrome, Safari and Opera */
 }
 
-/* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT */
+/* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT - NO GAPS */
 @media (min-width: 768px) {
     /* Main content takes remaining space using absolute positioning */
     .flex.flex-col.min-h-screen {
@@ -126,6 +139,19 @@ html, body {
         display: flex !important;
         flex-direction: column !important;
         overflow-y: auto !important;
+        border: none !important;
+        outline: none !important;
+    }
+    
+    /* Ensure navbar and main elements have no top spacing */
+    .flex.flex-col.min-h-screen > * {
+        margin-top: 0 !important;
+    }
+    
+    .flex.flex-col.min-h-screen > nav:first-child {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        top: 0 !important;
     }
 }
 
