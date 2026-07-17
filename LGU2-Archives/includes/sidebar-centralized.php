@@ -110,6 +110,7 @@ html, body {
         display: flex !important;
         flex-direction: row !important;
     }
+<<<<<<< HEAD
     
     body > *:not(#sidebar):not(#sidebar-overlay) {
         margin-left: 16rem !important;
@@ -120,6 +121,12 @@ html, body {
     body > div:not(#sidebar):not(#sidebar-overlay):not(.fixed) {
         margin-left: 16rem !important;
         width: calc(100% - 16rem) !important;
+=======
+    /* Add margin to main content containers instead of body padding */
+    .flex.min-h-screen > .flex-1,
+    .main-content-area {
+        margin-left: 16rem !important;
+>>>>>>> parent of 0b4c9be (reply ka na sakin, masyado ka na busy huhu)
     }
 }
 
