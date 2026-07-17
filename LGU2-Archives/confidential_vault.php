@@ -312,15 +312,9 @@ $profile_picture = $user_data['profile_picture'] ?? null;
         
         <!-- Main Content -->
         <main class="flex-1 p-6">
-<<<<<<< HEAD
-            <div class="w-full">
+            <div class="max-w-7xl mx-auto">
                 <?php if (!$files_unlocked): ?>
                     <?php if (!$files_setup): ?>
-=======
-            <div class="max-w-7xl mx-auto">
-                <?php if (!$folder_unlocked): ?>
-                    <?php if (!$folder_setup): ?>
->>>>>>> parent of a64a771 (byahyah)
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12">
                         <div class="flex flex-col items-center justify-center">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-8 rounded-full mb-6">
