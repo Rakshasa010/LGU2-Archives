@@ -138,7 +138,58 @@ html, body {
         <?php if ($sidebar_is_admin): ?>
         <a href="recent_deleted.php" class="hidden"></a>
         <?php endif; ?>
-        <?php echo $sidebar_link('version_tracking.php', 'bi bi-book', 'Version Tracking', 'version-tracking'); ?>
+        
+        <!-- Version Tracking with Dropdown (Mobile) -->
+        <div class="mb-1.5">
+            <div class="group flex w-full items-center justify-between px-4 py-3 text-white/90 hover:text-white rounded-2xl transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]">
+                <a href="version_tracking.php" class="flex items-center gap-3" aria-current="<?php echo $sidebar_active_page === 'version-tracking' ? 'page' : 'false'; ?>">
+                    <i class="bi bi-book text-lg"></i>
+                    <span>Version Tracking</span>
+                </a>
+                <button type="button" id="version-tracking-toggle-mobile" aria-expanded="false" aria-controls="version-tracking-submenu-mobile" class="text-xs transition-transform duration-200 hover:bg-white/10 p-1 rounded-lg" onclick="event.stopPropagation();">
+                    <i class="bi bi-chevron-down" id="version-tracking-chevron-mobile"></i>
+                </button>
+            </div>
+            <div id="version-tracking-submenu-mobile" class="mt-1 ml-4 space-y-1 overflow-hidden max-h-0 transition-all duration-300">
+                <!-- Legislative Folders -->
+                <a href="version_tracking.php?folder=ordinances" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-orange-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-file-earmark-text text-orange-400"></i>
+                    </div>
+                    <span>Ordinances & Resolutions</span>
+                </a>
+                <a href="version_tracking.php?folder=billing" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-green-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-receipt text-green-400"></i>
+                    </div>
+                    <span>Billing</span>
+                </a>
+                <a href="version_tracking.php?folder=public-hearings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-megaphone text-blue-400"></i>
+                    </div>
+                    <span>Public Hearings</span>
+                </a>
+                <a href="version_tracking.php?folder=meetings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-purple-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-journal-text text-purple-400"></i>
+                    </div>
+                    <span>Meeting Records</span>
+                </a>
+                
+                <!-- Dynamic Archive Folders -->
+                <?php if (!empty($archive_folders)): ?>
+                    <?php foreach ($archive_folders as $folder): ?>
+                    <a href="version_tracking.php?folder=archive_<?php echo (int)$folder['id']; ?>" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-folder-fill text-slate-400"></i>
+                        </div>
+                        <span><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
         <div class="mt-4 pt-4 border-t border-red-700/50">
             <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
             <?php echo $sidebar_link('report_analytics.php', 'bi bi-graph-up', 'Reports & Analytics', 'report-analytics'); ?>
@@ -188,7 +239,58 @@ html, body {
             <?php if ($sidebar_is_admin): ?>
             <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
-            <?php echo $sidebar_link('version_tracking.php', 'bi bi-book', 'Version Tracking', 'version-tracking', true); ?>
+            
+            <!-- Version Tracking with Dropdown (Desktop) -->
+            <div class="mb-1.5">
+                <div class="group flex w-full items-center justify-between px-4 py-3 text-white/90 hover:text-white rounded-2xl transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]">
+                    <a href="version_tracking.php" class="flex items-center gap-3" aria-current="<?php echo $sidebar_active_page === 'version-tracking' ? 'page' : 'false'; ?>">
+                        <i class="bi bi-book"></i>
+                        <span class="sidebar-text">Version Tracking</span>
+                    </a>
+                    <button type="button" id="version-tracking-toggle-desktop" aria-expanded="false" aria-controls="version-tracking-submenu-desktop" class="text-xs transition-transform duration-200 hover:bg-white/10 p-1 rounded-lg" onclick="event.stopPropagation();">
+                        <i class="bi bi-chevron-down" id="version-tracking-chevron-desktop"></i>
+                    </button>
+                </div>
+                <div id="version-tracking-submenu-desktop" class="mt-1 ml-4 space-y-1 overflow-hidden max-h-0 transition-all duration-300">
+                    <!-- Legislative Folders -->
+                    <a href="version_tracking.php?folder=ordinances" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-orange-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-file-earmark-text text-orange-400"></i>
+                        </div>
+                        <span class="sidebar-text">Ordinances & Resolutions</span>
+                    </a>
+                    <a href="version_tracking.php?folder=billing" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-green-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-receipt text-green-400"></i>
+                        </div>
+                        <span class="sidebar-text">Billing</span>
+                    </a>
+                    <a href="version_tracking.php?folder=public-hearings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-megaphone text-blue-400"></i>
+                        </div>
+                        <span class="sidebar-text">Public Hearings</span>
+                    </a>
+                    <a href="version_tracking.php?folder=meetings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-journal-text text-purple-400"></i>
+                        </div>
+                        <span class="sidebar-text">Meeting Records</span>
+                    </a>
+                    
+                    <!-- Dynamic Archive Folders -->
+                    <?php if (!empty($archive_folders)): ?>
+                        <?php foreach ($archive_folders as $folder): ?>
+                        <a href="version_tracking.php?folder=archive_<?php echo (int)$folder['id']; ?>" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                                <i class="bi bi-folder-fill text-slate-400"></i>
+                            </div>
+                            <span class="sidebar-text"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
+                        </a>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
         <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
             <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
@@ -244,5 +346,64 @@ html, body {
     }
     window.addEventListener('resize', adjustMainOffset);
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adjustMainOffset); else adjustMainOffset();
+})();
+
+// Version Tracking dropdown functionality
+(function() {
+    function setupVersionTrackingDropdown(toggleId, submenuId, chevronId) {
+        var toggle = document.getElementById(toggleId);
+        var submenu = document.getElementById(submenuId);
+        var chevron = document.getElementById(chevronId);
+        
+        if (!toggle || !submenu) return;
+        
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
+            
+            if (isExpanded) {
+                // Collapse
+                submenu.style.maxHeight = '0px';
+                submenu.style.opacity = '0';
+                toggle.setAttribute('aria-expanded', 'false');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            } else {
+                // Expand
+                submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                submenu.style.opacity = '1';
+                toggle.setAttribute('aria-expanded', 'true');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!toggle.contains(e.target) && !submenu.contains(e.target)) {
+                submenu.style.maxHeight = '0px';
+                submenu.style.opacity = '0';
+                toggle.setAttribute('aria-expanded', 'false');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            }
+        });
+    }
+    
+    // Initialize dropdown for both mobile and desktop
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setupVersionTrackingDropdown('version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile');
+            setupVersionTrackingDropdown('version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop');
+        });
+    } else {
+        setupVersionTrackingDropdown('version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile');
+        setupVersionTrackingDropdown('version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop');
+    }
 })();
 </script>
