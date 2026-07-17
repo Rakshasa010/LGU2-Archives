@@ -50,6 +50,46 @@ if ($folders_result && $folders_result->num_rows > 0) {
     }
 }
 
+// Handle folder parameter from sidebar dropdown
+$selected_folder = isset($_GET['folder']) ? trim($_GET['folder']) : null;
+$page_title = "Version Tracking";
+$page_subtitle = "Select a folder from the sidebar to view files";
+
+// Set page title and subtitle based on selected folder
+if ($selected_folder) {
+    switch ($selected_folder) {
+        case 'ordinances':
+            $page_title = "Version Tracking - Ordinances & Resolutions";
+            $page_subtitle = "Track versions for ordinances and resolutions";
+            break;
+        case 'billing':
+            $page_title = "Version Tracking - Billing";
+            $page_subtitle = "Track versions for billing records";
+            break;
+        case 'public-hearings':
+            $page_title = "Version Tracking - Public Hearings";
+            $page_subtitle = "Track versions for public hearing records";
+            break;
+        case 'meetings':
+            $page_title = "Version Tracking - Meeting Records";
+            $page_subtitle = "Track versions for meeting and session records";
+            break;
+        default:
+            // Check if it's an archive folder
+            if (strpos($selected_folder, 'archive_') === 0) {
+                $folder_id = (int)str_replace('archive_', '', $selected_folder);
+                foreach ($archive_folders as $folder) {
+                    if ($folder['id'] == $folder_id) {
+                        $page_title = "Version Tracking - " . $folder['name'];
+                        $page_subtitle = "Track versions for " . $folder['name'] . " files";
+                        break;
+                    }
+                }
+            }
+            break;
+    }
+}
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -190,8 +230,8 @@ $conn->close();
                     <!-- Header Section -->
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
-                            <h1 id="vt-page-title" class="text-2xl font-bold text-gray-900 dark:text-gray-100">Version Tracking</h1>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Select a folder from the sidebar to view files</p>
+                            <h1 id="vt-page-title" class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($page_title); ?></h1>
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($page_subtitle); ?></p>
                         </div>
                         <!-- Search Input -->
                         <div class="relative w-full sm:w-80">
@@ -304,6 +344,35 @@ $conn->close();
 
         // Initialize
         (function() {
+            // Auto-select folder based on URL parameter
+            var urlParams = new URLSearchParams(window.location.search);
+            var folderParam = urlParams.get('folder');
+            
+            if (folderParam) {
+                // Map folder parameters to their display configuration
+                var folderMapping = {
+                    'ordinances': { key: 'ordRes', label: 'Ordinances & Resolutions' },
+                    'billing': { key: 'billing', label: 'Billing' },
+                    'public-hearings': { key: 'publicHearing', label: 'Public Hearings' },
+                    'meetings': { key: 'meeting', label: 'Meeting Records' }
+                };
+                
+                // Check if it's an archive folder
+                if (folderParam.startsWith('archive_')) {
+                    var folderId = folderParam.replace('archive_', '');
+                    // Find the archive folder name from the dropdown links
+                    var archiveLink = document.querySelector('a[href="version_tracking.php?folder=' + folderParam + '"]');
+                    if (archiveLink) {
+                        var folderName = archiveLink.querySelector('span').textContent;
+                        selectArchiveFolder('archive_' + folderId, folderName, folderId);
+                    }
+                } else if (folderMapping[folderParam]) {
+                    // Auto-select the legislative folder
+                    var config = folderMapping[folderParam];
+                    selectFolder(config.key, config.label);
+                }
+            }
+
             // Attach folder button click handlers
             document.querySelectorAll('.vt-folder-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
@@ -338,6 +407,73 @@ $conn->close();
                 });
             });
         })();
+
+        function selectArchiveFolder(key, label, folderId) {
+            // Update selected folder state
+            vtSelectedFolder = key;
+            document.getElementById('vt-page-title').textContent = label;
+            document.getElementById('page-title').textContent = label;
+            document.getElementById('vt-search-files').placeholder = 'Search in ' + label + '...';
+
+            // Show files section, hide empty state
+            document.getElementById('vt-empty-state').classList.add('hidden');
+            document.getElementById('vt-files-section').classList.remove('hidden');
+            document.getElementById('vt-no-search-results').classList.add('hidden');
+
+            // Load archive files
+            loadArchiveFiles(folderId);
+        }
+
+        function loadArchiveFiles(folderId) {
+            var grid = document.getElementById('vt-files-grid');
+            grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">Loading...</div>';
+
+            // Fetch archive files for this folder
+            fetch('archives_api.php?action=get_files&folder_id=' + encodeURIComponent(folderId))
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        vtAllFiles = d.files.map(function(f) {
+                            return {
+                                id: f.id,
+                                title: f.title || f.name,
+                                created_at: f.created_at,
+                                version: f.version || 1,
+                                type: 'Archive',
+                                file_path: f.file_path,
+                                author: f.author || f.created_by || 'System'
+                            };
+                        }).sort(function(a, b) {
+                            return new Date(b.created_at) - new Date(a.created_at);
+                        });
+                    } else {
+                        vtAllFiles = [];
+                    }
+
+                    // Update stats
+                    document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
+                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
+                    
+                    let todayCount = 0;
+                    let todayStr = new Date().toISOString().split('T')[0];
+                    vtAllFiles.forEach(f => {
+                        if (f.created_at && f.created_at.startsWith(todayStr)) todayCount++;
+                    });
+                    document.getElementById('vt-stat-today').textContent = todayCount;
+
+                    // Clear search input and render files
+                    document.getElementById('vt-search-files').value = '';
+                    renderFiles(vtAllFiles);
+                })
+                .catch(error => {
+                    console.error('Error loading archive files:', error);
+                    vtAllFiles = [];
+                    document.getElementById('vt-stat-total').textContent = '0';
+                    document.getElementById('vt-stat-versions').textContent = '0';
+                    document.getElementById('vt-stat-today').textContent = '0';
+                    renderFiles([]);
+                });
+        }
 
         function selectFolder(key, label) {
             // Update selected folder state
@@ -609,20 +745,36 @@ $conn->close();
             const isArchiveFile = record && record.type === 'Archive';
             
             if (isArchiveFile) {
-                // For archive files, for now just show current version since we might not have full version tracking
-                list.innerHTML = `
-                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
-                        <div>
-                            <div class="font-medium text-gray-800 dark:text-white">Version ${record.version || 1}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                ${record.created_at} • ${record.author || 'Unknown'}
-                            </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <a href="${record.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
-                        </div>
-                    </div>
-                `;
+                // Use archives_api.php for archive file versions
+                fetch('archives_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
+                .then(r => r.json())
+                .then(d => {
+                    if(d.success) {
+                        if(d.versions.length === 0) {
+                            list.innerHTML = '<div class="text-center text-gray-500">No version history found.</div>';
+                        } else {
+                            list.innerHTML = d.versions.map(v => `
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
+                                    <div>
+                                        <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            ${v.created_at} • ${record.author || 'System'}
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <a href="${record.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+                    } else {
+                        list.innerHTML = '<div class="text-red-500 text-center">Failed to load version history</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading archive versions:', error);
+                    list.innerHTML = '<div class="text-red-500 text-center">Error loading version history</div>';
+                });
             } else {
                 fetch('legislative_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
                 .then(r => r.json())
