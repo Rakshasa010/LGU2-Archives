@@ -155,6 +155,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['start_over'])) {
             </div>
         <?php endif; ?>
 
+        <?php if (isset($_SESSION['otp_email_status'])): ?>
+            <?php if ($_SESSION['otp_email_status'] === 'sent'): ?>
+                <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+                    ✓ OTP has been sent to your email address
+                </div>
+            <?php elseif ($_SESSION['otp_email_status'] === 'failed'): ?>
+                <div class="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg">
+                    ⚠️ Unable to send OTP via email.
+                    <?php if (isset($_SESSION['email_error'])): ?>
+                        <br><small>Error: <?php echo htmlspecialchars($_SESSION['email_error']); ?></small>
+                    <?php endif; ?>
+                    <?php if (isset($_SESSION['otp_fallback'])): ?>
+                        <br><strong>Your OTP code is: <span class="font-mono text-lg bg-yellow-200 px-2 py-1 rounded"><?php echo htmlspecialchars($_SESSION['otp_fallback']); ?></span></strong>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            <?php 
+            // Clear the status after showing it once
+            unset($_SESSION['otp_email_status'], $_SESSION['otp_fallback'], $_SESSION['email_error']); 
+            ?>
+        <?php endif; ?>
+
         <div class="mb-6">
             <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Verify OTP</div>
             <div class="text-sm text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to your email</div>
@@ -188,6 +210,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['start_over'])) {
                 ← Start Over
             </button>
         </form>
+        
+        <!-- Debug link (remove in production) -->
+        <div class="mt-2 text-center">
+            <a href="test_email.php" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                Test Email Configuration
+            </a>
+        </div>
     </div>
 
     <script>

@@ -128,9 +128,19 @@
                         </div>
                     </div>';
                     $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 3 minutes.';
-                    try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
+                    try { 
+                        $mailer->send(); 
+                        $sent = true; 
+                    } catch (Throwable $e) { 
+                        $sent = false;
+                        // Store the error message for debugging
+                        $_SESSION['email_error'] = $e->getMessage();
+                    }
                 }
             }
+            // Store email send status in session for display on verify-otp page
+            $_SESSION['otp_email_status'] = $sent ? 'sent' : 'failed';
+            $_SESSION['otp_fallback'] = $sent ? null : $otp; // Show OTP if email failed
             // Redirect to verify-otp.php
             header("Location: verify-otp.php");
             exit();
@@ -210,9 +220,19 @@
                                     </div>
                                 </div>';
                                 $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 1 minute.';
-                                try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
+                                try { 
+                                    $mailer->send(); 
+                                    $sent = true; 
+                                } catch (Throwable $e) { 
+                                    $sent = false;
+                                    // Store the error message for debugging
+                                    $_SESSION['email_error'] = $e->getMessage();
+                                }
                             }
                         }
+                        // Store email send status in session for display on verify-otp page
+                        $_SESSION['otp_email_status'] = $sent ? 'sent' : 'failed';
+                        $_SESSION['otp_fallback'] = $sent ? null : $otp; // Show OTP if email failed
                         // Redirect to verify-otp.php
                         header("Location: verify-otp.php");
                         exit();
