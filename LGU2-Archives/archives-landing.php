@@ -190,7 +190,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         $sidebar_include_overlay = true;
         require_once 'includes/sidebar-centralized.php';
         ?>
-        <div class="flex-1 min-h-screen md:ml-64">
+        <div class="flex-1 flex-row min-h-screen md:ml-64">
             <!-- Header / Navbar -->
             <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">

@@ -85,6 +85,7 @@ html, body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    height: 100% !important;
     overflow-x: hidden !important;
 }
 
@@ -109,16 +110,42 @@ html, body {
     display: none; /* Chrome, Safari and Opera */
 }
 
-/* Main content offset from sidebar on desktop */
+/* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT */
 @media (min-width: 768px) {
+    /* Main content takes remaining space using absolute positioning */
     .flex.flex-col.min-h-screen {
-        margin-left: 16rem !important;
+        position: absolute !important;
+        left: 16rem !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         width: calc(100% - 16rem) !important;
-        box-sizing: border-box !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
     }
 }
 
-/* Ensure no overflow on html/body */
+/* Mobile - normal flow positioning */
+@media (max-width: 767px) {
+    .flex.flex-col.min-h-screen {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+/* Ensure box sizing is correct everywhere */
 * {
     box-sizing: border-box !important;
 }
