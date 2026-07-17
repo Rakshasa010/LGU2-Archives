@@ -105,7 +105,7 @@ body > div {
     top: 0 !important;
     right: auto !important;
     bottom: 0 !important;
-    width: 16rem !important;
+    width: 18rem !important;
     height: 100vh !important;
     max-height: 100vh !important;
     z-index: 30 !important;
@@ -150,15 +150,30 @@ aside#sidebar.sidebar-expanded {
 
 /* Ensure sidebar navigation has proper internal padding */
 #sidebar nav {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
 }
 
 /* Force sidebar logo section positioning */
 #sidebar .sidebar-logo,
 #sidebar .p-6 {
-    padding-left: 1.5rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
     margin-left: 0 !important;
+}
+
+/* Improve sidebar navigation item spacing */
+#sidebar a,
+#sidebar button {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+/* Ensure sidebar text is not cut off */
+#sidebar .sidebar-text {
+    white-space: nowrap !important;
+    overflow: visible !important;
 }
 
 /* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT - NO GAPS */
@@ -166,11 +181,11 @@ aside#sidebar.sidebar-expanded {
     /* Main content takes remaining space using absolute positioning */
     .flex.flex-col.min-h-screen {
         position: absolute !important;
-        left: 16rem !important;
+        left: 18rem !important;
         top: 0 !important;
         right: 0 !important;
         bottom: auto !important;
-        width: calc(100% - 16rem) !important;
+        width: calc(100% - 18rem) !important;
         min-height: 100vh !important;
         height: auto !important;
         margin: 0 !important;
