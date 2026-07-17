@@ -39,64 +39,13 @@
     </div>
     <?php
     session_start();
-    $otp_step = isset($_SESSION['otp_pending']) && $_SESSION['otp_pending'] === true;
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
-        include 'authdatabase.php';
-        $code = trim($_POST['otp'] ?? '');
-        if (!isset($_SESSION['otp_code']) || !isset($_SESSION['otp_expires']) || !isset($_SESSION['otp_user_id'])) {
-            $error = "OTP verification not initialized.";
-        } elseif (time() > (int)$_SESSION['otp_expires']) {
-            $error = "OTP expired. Please sign in again.";
-            $_SESSION['otp_pending'] = false;
-            unset($_SESSION['otp_code'], $_SESSION['otp_expires'], $_SESSION['otp_user_id'], $_SESSION['otp_must_change']);
-        } elseif ($code !== (string)$_SESSION['otp_code']) {
-            $error = "Invalid OTP code.";
-            $otp_step = true;
-        } else {
-            $uid = (int)$_SESSION['otp_user_id'];
-            $_SESSION['user_id'] = $uid;
-            $_SESSION['last_activity'] = time();
-            $conn->query("UPDATE users SET last_activity = NOW(), failed_attempts = 0, lockout_until = NULL WHERE id = " . $uid);
-            $must = (int)($_SESSION['otp_must_change'] ?? 0);
-            $conn->query("CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, time VARCHAR(20) NOT NULL, date DATE NOT NULL, content VARCHAR(255) NOT NULL, about VARCHAR(100) NOT NULL, status ENUM('unread','read') NOT NULL DEFAULT 'unread', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
-            if ($nt) {
-                $ntime = date('h:i A');
-                $ndate = date('Y-m-d');
-                $label = "User ID #" . $uid;
-                if ($userStmt = $conn->prepare("SELECT full_name, username FROM users WHERE id = ?")) {
-                    $userStmt->bind_param("i", $uid);
-                    $userStmt->execute();
-                    if ($userRes = $userStmt->get_result()) {
-                        if ($urow = $userRes->fetch_assoc()) {
-                            $parts = [];
-                            if (!empty($urow['full_name'])) $parts[] = $urow['full_name'];
-                            if (!empty($urow['username'])) $parts[] = '@' . $urow['username'];
-                            if (!empty($parts)) $label = implode(' ', $parts);
-                        }
-                    }
-                    $userStmt->close();
-                }
-                $ncontent = "User login verified via OTP: " . $label;
-                $nabout = "Login";
-                $nstatus = "unread";
-                $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
-                $nt->execute();
-                $nt->close();
-            }
-            $_SESSION['otp_pending'] = false;
-            $_SESSION['dark_mode'] = (int)($_SESSION['otp_dark_mode'] ?? 0);
-            $themeScript = $_SESSION['dark_mode'] === 1 ? "localStorage.setItem('theme', 'dark'); localStorage.setItem('archive-theme', 'dark');" : "localStorage.setItem('theme', 'light'); localStorage.setItem('archive-theme', 'light');";
-            
-            unset($_SESSION['otp_code'], $_SESSION['otp_expires'], $_SESSION['otp_user_id'], $_SESSION['otp_dark_mode']);
-            if ($must === 1) {
-                echo "<script>$themeScript window.location.href = 'profile.php?force=1';</script>";
-            } else {
-                echo "<script>$themeScript window.location.href = 'archives-landing.php';</script>";
-            }
-            exit();
-        }
-    } elseif ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['google_sso'])) {
+    
+    // If OTP is pending, redirect to verify-otp.php
+    if (isset($_SESSION['otp_pending']) && $_SESSION['otp_pending'] === true) {
+        header("Location: verify-otp.php");
+        exit();
+    }
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['google_sso'])) {
         include 'authdatabase.php';
         $google_email = trim($_POST['google_email']);
         
@@ -182,8 +131,9 @@
                     try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
                 }
             }
-            $otp_step = true;
-            $error = $sent ? "An OTP was sent to your Google email." : "Unable to send OTP via Email. Testing fallback OTP is: " . $otp;
+            // Redirect to verify-otp.php
+            header("Location: verify-otp.php");
+            exit();
         }
 
     } elseif ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -263,8 +213,9 @@
                                 try { $mailer->send(); $sent = true; } catch (Throwable $e) { $sent = false; }
                             }
                         }
-                        $otp_step = true;
-                        $error = $sent ? "An OTP was sent to your email." : "Unable to send OTP via Email. Testing fallback OTP is: " . $otp;
+                        // Redirect to verify-otp.php
+                        header("Location: verify-otp.php");
+                        exit();
                     }
                 } else {
                     // Increment failed attempts
@@ -340,11 +291,10 @@
   </div>
         <?php endif; ?>
 
-        <?php if (!$otp_step): ?>
-            <div class="mb-6">
-                <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome Back</div>
-                <div class="text-sm text-gray-600 dark:text-gray-400">Sign in to access your archives</div>
-            </div>
+        <div class="mb-6">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome Back</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Sign in to access your archives</div>
+        </div>
             <form action="login.php" method="POST" class="space-y-5">
                 <div>
                     <label for="username" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Email Address</label>
@@ -421,91 +371,6 @@
                 </div>
 
             </form>
-        <?php else: ?>
-            <div class="mb-6">
-                <div class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Verify OTP</div>
-                <div class="text-sm text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to your email</div>
-                <div class="text-xs text-amber-600 dark:text-amber-400 mt-2">⏱️ Expires in <span id="timer" class="font-bold">60</span>s</div>
-            </div>
-            <form action="login.php" method="POST" class="space-y-5">
-                <input type="hidden" name="verify_otp" value="1">
-                <div>
-                    <label for="otp-1" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">OTP Code</label>
-                    <div class="flex items-center justify-between gap-2 sm:gap-3">
-                        <input type="text" id="otp-1" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="OTP digit 1" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 2" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 3" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 4" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 5" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="OTP digit 6" class="otp-digit w-12 sm:w-14 h-12 sm:h-14 text-center text-2xl font-bold border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors" placeholder="0">
-                    </div>
-                    <input type="hidden" id="otp" name="otp" minlength="6" maxlength="6" pattern="[0-9]{6}" required>
-                    <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Tip: paste the full code, it will fill automatically.</div>
-                </div>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl">Verify Code</button>
-                <a href="login.php" class="block text-center text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-semibold">← Start Over</a>
-            </form>
-            <script>
-                (function(){
-                    var end = <?php echo isset($_SESSION['otp_expires']) ? (int)$_SESSION['otp_expires'] : '0'; ?>;
-                    function tick(){
-                        var now = Math.floor(Date.now()/1000);
-                        var remain = Math.max(0, end - now);
-                        var el = document.getElementById('timer');
-                        if (el) el.textContent = String(remain);
-                        if (remain > 0) setTimeout(tick, 1000);
-                    }
-                    tick();
-                })();
-            </script>
-            <script>
-                (function(){
-                    var digits = Array.prototype.slice.call(document.querySelectorAll('.otp-digit'));
-                    var hidden = document.getElementById('otp');
-                    if (!digits.length || !hidden) return;
-
-                    function syncHidden() {
-                        hidden.value = digits.map(function (d) { return d.value.replace(/[^0-9]/g, ''); }).join('');
-                    }
-
-                    digits.forEach(function (input, idx) {
-                        input.addEventListener('input', function () {
-                            var val = input.value.replace(/[^0-9]/g, '');
-                            input.value = val.slice(0, 1);
-                            if (val.length > 1) {
-                                var chars = val.split('');
-                                for (var i = 0; i < chars.length && (idx + i) < digits.length; i++) {
-                                    digits[idx + i].value = chars[i];
-                                }
-                                var nextIdx = Math.min(idx + chars.length, digits.length - 1);
-                                digits[nextIdx].focus();
-                            } else if (val && digits[idx + 1]) {
-                                digits[idx + 1].focus();
-                            }
-                            syncHidden();
-                        });
-                        input.addEventListener('keydown', function (e) {
-                            if (e.key === 'Backspace' && !input.value && digits[idx - 1]) {
-                                digits[idx - 1].focus();
-                            }
-                        });
-                        input.addEventListener('paste', function (e) {
-                            var text = (e.clipboardData || window.clipboardData).getData('text');
-                            if (!text) return;
-                            var cleaned = text.replace(/[^0-9]/g, '').slice(0, digits.length);
-                            if (!cleaned) return;
-                            e.preventDefault();
-                            cleaned.split('').forEach(function (ch, i) {
-                                if (digits[i]) digits[i].value = ch;
-                            });
-                            digits[Math.min(cleaned.length, digits.length) - 1].focus();
-                            syncHidden();
-                        });
-                    });
-                    syncHidden();
-                })();
-            </script>
-        <?php endif; ?>
         </div>
 
     <script>

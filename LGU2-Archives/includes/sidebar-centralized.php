@@ -97,11 +97,7 @@ html, body {
         display: none; /* Chrome, Safari and Opera */
     }
 }
-@media (max-width: 767px) {
-    body {
-        padding-left: 0 !important;
-    }
-}
+
 </style>
 <div id="mobile-sidebar" class="sticky inset-y-0 left-0 min-h-screen transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-[0_25px_70px_rgba(0,0,0,0.35)] visible">
     <div class="p-4 border-b border-white/10 sidebar-header bg-white/5 backdrop-blur-sm">
