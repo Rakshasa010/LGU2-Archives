@@ -525,7 +525,7 @@ function formatFileSize($fileSize) {
         require_once 'includes/sidebar-centralized.php';
         ?>
 
-        <div class="flex flex-col min-h-screen">
+        <div class="flex flex-col min-h-screen md:ml-64">
             <!-- Header -->
             <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
                 <div class="w-full px-4 sm:px-6 lg:px-8">

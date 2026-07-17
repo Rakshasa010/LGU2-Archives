@@ -84,20 +84,43 @@ $sidebar_link = function ($href, $icon, $label, $pageKey, $desktop = false) use 
 html, body {
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
 }
+
+/* Desktop sidebar - fixed positioning */
 #sidebar {
     position: fixed !important;
     left: 0 !important;
     top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
     width: 16rem !important;
     height: 100vh !important;
+    max-height: 100vh !important;
     z-index: 30 !important;
+    display: flex !important;
+    flex-direction: column !important;
     /* Hide scrollbar */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 }
 #sidebar::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
+}
+
+/* Main content offset from sidebar on desktop */
+@media (min-width: 768px) {
+    .flex.flex-col.min-h-screen {
+        margin-left: 16rem !important;
+        width: calc(100% - 16rem) !important;
+        box-sizing: border-box !important;
+    }
+}
+
+/* Ensure no overflow on html/body */
+* {
+    box-sizing: border-box !important;
 }
 
 </style>

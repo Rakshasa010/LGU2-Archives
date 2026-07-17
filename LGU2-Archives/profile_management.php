@@ -83,7 +83,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
 
     <div>
     <!-- Main Content (scrollable on mobile) -->
-    <div class="flex flex-col min-h-screen w-full">
+    <div class="flex flex-col min-h-screen w-full md:ml-64">
 
      <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">

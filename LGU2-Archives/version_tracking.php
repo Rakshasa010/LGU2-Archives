@@ -87,7 +87,7 @@ $conn->close();
         ?>
 
         <!-- Main Content -->
-        <div class="flex flex-col min-h-screen">
+        <div class="flex flex-col min-h-screen md:ml-64">
             <!-- Header / Navbar -->
             <nav class="bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-200">
                 <div class="px-4 sm:px-6 lg:px-8">
