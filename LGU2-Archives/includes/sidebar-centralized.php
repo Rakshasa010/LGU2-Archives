@@ -123,6 +123,44 @@ body > div {
     display: none; /* Chrome, Safari and Opera */
 }
 
+/* FORCE sidebar to exact left edge - override all Tailwind classes */
+aside#sidebar {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    transform: translateX(0) !important;
+    left: 0 !important;
+    box-shadow: none !important;
+    border-left: none !important;
+}
+
+/* Aggressive reset for any potential spacing issues */
+aside#sidebar,
+aside#sidebar.sidebar,
+aside#sidebar.sidebar-expanded {
+    margin: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+}
+
+/* Fix sidebar internal spacing */
+#sidebar > * {
+    margin-left: 0 !important;
+}
+
+/* Ensure sidebar navigation has proper internal padding */
+#sidebar nav {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+/* Force sidebar logo section positioning */
+#sidebar .sidebar-logo,
+#sidebar .p-6 {
+    padding-left: 1.5rem !important;
+    margin-left: 0 !important;
+}
+
 /* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT - NO GAPS */
 @media (min-width: 768px) {
     /* Main content takes remaining space using absolute positioning */
