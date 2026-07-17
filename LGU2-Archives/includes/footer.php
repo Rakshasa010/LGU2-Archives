@@ -1,6 +1,6 @@
 
 <!-- Footer Component -->
-<footer style="background-color: #0f172a; color: white; padding: 3rem 2rem; margin-top: auto;">
+<footer style="background-color: #0f172a; color: white; padding: 3rem 2rem; margin-top: 2rem;">
     <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">
         <!-- Column 1: Left -->
         <div>

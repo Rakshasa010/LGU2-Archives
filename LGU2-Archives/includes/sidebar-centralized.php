@@ -169,14 +169,15 @@ aside#sidebar.sidebar-expanded {
         left: 16rem !important;
         top: 0 !important;
         right: 0 !important;
-        bottom: 0 !important;
+        bottom: auto !important;
         width: calc(100% - 16rem) !important;
-        height: 100vh !important;
+        min-height: 100vh !important;
+        height: auto !important;
         margin: 0 !important;
         padding: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-        overflow-y: auto !important;
+        overflow-y: visible !important;
         border: none !important;
         outline: none !important;
     }
