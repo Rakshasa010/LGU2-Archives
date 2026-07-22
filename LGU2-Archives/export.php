@@ -705,7 +705,31 @@ foreach ($mock_notifications as $req) {
 
 	<script src="assets/js/archives-landing.js"></script>
 	<script src="assets/js/theme-toggle.js"></script>
-	<script src="assets/js/export-fulfillment.js"></script>
+	<script src="assets/js/export-fulfillment.js?v=<?php echo time(); ?>"></script>
+	<script>
+	    // Inline diagnostic - verify buttons are clickable
+	    setTimeout(function() {
+	        console.log('[Diagnostic] Checking for storage modal buttons...');
+	        const buttons = document.querySelectorAll('.copy-file-btn');
+	        console.log('[Diagnostic] Found buttons:', buttons.length);
+	        
+	        buttons.forEach(function(btn, index) {
+	            console.log('[Diagnostic] Button ' + (index + 1) + ':', {
+	                exists: true,
+	                hasOnclick: typeof btn.onclick === 'function',
+	                fileId: btn.getAttribute('data-file-id'),
+	                visible: btn.offsetHeight > 0,
+	                zIndex: btn.style.zIndex,
+	                pointerEvents: btn.style.pointerEvents
+	            });
+	            
+	            // Add backup click handler directly
+	            btn.addEventListener('click', function(e) {
+	                console.log('[Diagnostic] BACKUP HANDLER triggered for button ' + (index + 1));
+	            });
+	        });
+	    }, 2000);
+	</script>
 	<script>
 		// Chart initialization
 		(function () {
