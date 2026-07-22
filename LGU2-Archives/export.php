@@ -660,8 +660,8 @@ foreach ($mock_notifications as $req) {
 
         <!-- Storage Browser Modal (Modal #2) -->
         <div id="storage-modal" class="fixed inset-0 z-50 hidden">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-            <div class="relative max-w-4xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 max-h-[90vh] flex flex-col">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" style="z-index: 1;"></div>
+            <div class="relative max-w-4xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 max-h-[90vh] flex flex-col" style="z-index: 2;">
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
                     <div>
@@ -679,7 +679,7 @@ foreach ($mock_notifications as $req) {
                 </div>
 
                 <!-- Content Area -->
-                <div class="flex-1 overflow-y-auto min-h-0">
+                <div class="flex-1 overflow-y-auto min-h-0" style="position: relative; z-index: 3;">
                     <!-- Folder Tabs -->
                     <div id="storage-folders" class="mb-4 flex flex-wrap gap-2"></div>
 

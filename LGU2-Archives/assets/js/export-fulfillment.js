@@ -182,8 +182,23 @@
             })
             .then(data => {
                 console.log('[StorageAPI] Response data:', data);
+                console.log('[StorageAPI] Files count:', data.data?.files?.length || 0);
                 if (data.success) {
                     renderStorageContent(data.data);
+                    
+                    // Verify buttons are clickable after render
+                    setTimeout(() => {
+                        const buttons = document.querySelectorAll('#storage-files-container button[data-file-id]');
+                        console.log('[StorageAPI] Total buttons rendered:', buttons.length);
+                        buttons.forEach((btn, idx) => {
+                            console.log(`[StorageAPI] Button ${idx + 1}:`, {
+                                fileId: btn.getAttribute('data-file-id'),
+                                fileName: btn.getAttribute('data-file-name'),
+                                clickable: btn.style.pointerEvents,
+                                visible: btn.offsetHeight > 0
+                            });
+                        });
+                    }, 100);
                 } else {
                     showError('Failed to load storage: ' + (data.error || 'Unknown error'));
                     console.error('[StorageAPI] Error response:', data);
@@ -257,12 +272,14 @@
     }
 
     function createFileRow(file) {
+        console.log('[FileCard] Creating card for:', file.name, file.id);
+        
         const row = document.createElement('div');
-        row.className = 'relative bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-md transition-all duration-200 p-4';
+        row.className = 'relative bg-white dark:bg-slate-800 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-lg transition-all duration-200 p-4';
 
         // File icon and info
         const fileInfo = document.createElement('div');
-        fileInfo.className = 'flex items-start gap-3 mb-3';
+        fileInfo.className = 'flex items-start gap-3 mb-3 pointer-events-none';
         
         const fileIcon = document.createElement('div');
         fileIcon.className = 'flex-shrink-0';
@@ -280,23 +297,41 @@
         fileInfo.appendChild(nameContainer);
         row.appendChild(fileInfo);
 
-        // Make a Copy Button
+        // Make a Copy Button - with explicit z-index and pointer-events
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';
-        copyBtn.className = 'w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors';
-        copyBtn.innerHTML = '<i class="bi bi-files"></i>Make a Copy';
+        copyBtn.className = 'relative w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg font-semibold text-sm transition-all shadow-sm hover:shadow-md cursor-pointer';
+        copyBtn.style.cssText = 'z-index: 10; pointer-events: auto !important;';
+        copyBtn.innerHTML = '<i class="bi bi-files"></i><span>Make a Copy</span>';
         copyBtn.setAttribute('data-file-id', file.id);
+        copyBtn.setAttribute('data-file-name', file.name);
         
-        copyBtn.addEventListener('click', function(e) {
-            console.log('[FileCopy] Clicked for file:', file.name, file.id);
+        // Use onclick as backup
+        copyBtn.onclick = function(e) {
+            console.log('[FileCopy] ONCLICK triggered for:', file.name, file.id);
             e.stopPropagation();
             e.preventDefault();
             stageExportCopy(file);
             return false;
+        };
+        
+        // Also add addEventListener
+        copyBtn.addEventListener('click', function(e) {
+            console.log('[FileCopy] CLICK EVENT triggered for:', file.name, file.id);
+            e.stopPropagation();
+            e.preventDefault();
+            stageExportCopy(file);
+            return false;
+        }, true); // Use capture phase
+
+        // Add mousedown as fallback
+        copyBtn.addEventListener('mousedown', function(e) {
+            console.log('[FileCopy] MOUSEDOWN detected on button');
         });
 
         row.appendChild(copyBtn);
 
+        console.log('[FileCard] Card created with button, appending to container');
         return row;
     }
 
