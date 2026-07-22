@@ -277,9 +277,11 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
-                                        <button type="button" id="open-logout-modal" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
-                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
-                                        </button>
+                                        <form action="logout.php" method="POST" class="block w-full">
+                                            <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                                <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -761,7 +763,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                         <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records Trend</div>
                                         <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 14 days</div>
                                     </div>
-                                    <canvas id="qaRecordsLine" height="180"></canvas>
+                                    <canvas id="qaRecordsLine" height="200"></canvas>
                                 </div>
                                 <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                                 <div class="flex items-center justify-between mb-1">
@@ -771,7 +773,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                         <button id="rbt-toggle" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
                                     </div>
                                 </div>
-                                    <canvas id="qaRecordsByType" height="180"></canvas>
+                                    <canvas id="qaRecordsByType" height="200"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -782,18 +784,27 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $uploads_last7 = [];
                         $uploads_prev7 = [];
                         $uploads_earlier = [];
-                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
+                        $has_archive = $conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0;
+                        $has_leg = $conn->query("SHOW TABLES LIKE 'legislative_records'")->num_rows > 0;
+
+                        $all_files_union = [];
+                        if ($has_archive) {
+                            $all_files_union[] = "SELECT f.id, f.name COLLATE utf8mb4_unicode_ci AS name, f.folder_id, f.created_at, fo.name COLLATE utf8mb4_unicode_ci AS folder_name, 'archive' COLLATE utf8mb4_unicode_ci AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
+                        }
+                        if ($has_leg) {
+                            $all_files_union[] = "SELECT lr.id, lr.title COLLATE utf8mb4_unicode_ci AS name, lr.folder_id, lr.created_at, lf.name COLLATE utf8mb4_unicode_ci AS folder_name, 'legislative' COLLATE utf8mb4_unicode_ci AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
+                        }
+
+                        if (!empty($all_files_union)) {
+                            $all_files_sql = implode(" UNION ALL ", $all_files_union);
                             $q = "
-                                SELECT fo.name AS folder,
-                                       SUM(CASE WHEN f.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS last7,
-                                       SUM(CASE WHEN f.created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND f.created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 1 ELSE 0 END) AS prev7,
-                                       SUM(CASE WHEN f.created_at < DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND f.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS earlier
-                                FROM archive_folders fo
-                                LEFT JOIN archive_files f
-                                  ON f.folder_id = fo.id
-                                 AND f.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                                GROUP BY fo.id, fo.name
-                                ORDER BY fo.name
+                                SELECT folder_name AS folder,
+                                       SUM(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS last7,
+                                       SUM(CASE WHEN created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 1 ELSE 0 END) AS prev7,
+                                       SUM(CASE WHEN created_at < DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS earlier
+                                FROM ($all_files_sql) all_files
+                                GROUP BY folder_name
+                                ORDER BY folder_name
                             ";
                             if ($r = $conn->query($q)) {
                                 while ($row = $r->fetch_assoc()) {
@@ -804,10 +815,11 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 }
                             }
                         }
+
                         $recent_uploads = [];
-                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
-                            $q = "SELECT f.id, f.name, fo.name AS folder_name, f.created_at FROM archive_files f JOIN archive_folders fo ON fo.id=f.folder_id ORDER BY f.created_at DESC LIMIT 12";
-                            if ($r = $conn->query($q)) {
+                        if (!empty($all_files_union)) {
+                            $recent_sql = "SELECT id, name, folder_id, folder_name, src, created_at FROM ($all_files_sql) all_files ORDER BY created_at DESC LIMIT 12";
+                            if ($r = $conn->query($recent_sql)) {
                                 while ($row = $r->fetch_assoc()) $recent_uploads[] = $row;
                             }
                         }
@@ -833,17 +845,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                     <div id="fu-cards" class="grid grid-cols-1 gap-3">
                                         <?php foreach ($recent_uploads as $u): ?>
                                             <?php
-                                            $fname = strtolower($u['folder_name']);
-                                            $link = 'folder_view.php?folder=' . urlencode($u['folder_name']);
-                                            if (strpos($fname, 'billing') !== false) {
-                                                $link = 'billing.php';
-                                            } elseif (strpos($fname, 'meeting') !== false || strpos($fname, 'session') !== false) {
-                                                $link = 'meeting-records.php';
-                                            } elseif (strpos($fname, 'ordinance') !== false || strpos($fname, 'resolution') !== false) {
-                                                $link = 'ordinances-resolution.php';
-                                            } elseif (strpos($fname, 'hearing') !== false) {
-                                                $link = 'public-hearings.php';
-                                            }
+                                            $link = 'folder_view.php?id=' . urlencode($u['folder_id']);
+                                            if (($u['src'] ?? '') === 'legislative') $link .= '&legislative=true';
                                             ?>
                                             <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>" class="file-card block bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700 py-1.5 px-3 hover:shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-slate-700">
                                                 <div class="flex items-center justify-between">
@@ -989,6 +992,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     }
     $conn->close();
     ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         (function() {
             const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
@@ -1223,7 +1227,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         (function(){
             var byType = <?php echo json_encode($qa_by_type ?? []); ?>;
@@ -2049,58 +2052,6 @@ For detailed information, visit the Storage Overview dashboard.`;
             toggleBtn.addEventListener('click', function() {
                 var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
                 setExpanded(!expanded);
-            });
-        })();
-    </script>
-
-    <!-- Logout Confirmation Modal -->
-    <div id="logout-modal" class="hidden fixed inset-0 z-50">
-        <div id="logout-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative z-10 flex min-h-full items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
-                <div class="text-center mb-6">
-                    <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="bi bi-box-arrow-right text-red-600 dark:text-red-400 text-3xl"></i>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Logout Confirmation</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to logout from your account?</p>
-                </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button id="logout-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                    <form action="logout.php" method="POST" class="inline">
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Yes, Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        (function(){
-            var logoutModal = document.getElementById('logout-modal');
-            var openLogoutModalBtn = document.getElementById('open-logout-modal');
-            var logoutCancelBtn = document.getElementById('logout-cancel');
-            var logoutModalBackdrop = document.getElementById('logout-modal-backdrop');
-            
-            function openLogoutModal() {
-                logoutModal && logoutModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
-            
-            function closeLogoutModal() {
-                logoutModal && logoutModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-            
-            openLogoutModalBtn?.addEventListener('click', openLogoutModal);
-            logoutCancelBtn?.addEventListener('click', closeLogoutModal);
-            logoutModalBackdrop?.addEventListener('click', closeLogoutModal);
-            
-            window.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && !logoutModal?.classList.contains('hidden') === false) {
-                    closeLogoutModal();
-                }
             });
         })();
     </script>

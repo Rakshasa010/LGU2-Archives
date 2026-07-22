@@ -63,10 +63,11 @@ try {
     }
 
     // 2. Fetch from legislative_records (Ordinances, etc.)
-    $sql2 = "SELECT id, title, type, month, year, author, file_path, created_at 
-             FROM legislative_records 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
-             ORDER BY created_at DESC LIMIT ?";
+    $sql2 = "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.file_path, lr.created_at, lr.folder_id, lf.name as folder_name
+             FROM legislative_records lr
+             LEFT JOIN legislative_folders lf ON lr.folder_id = lf.id
+             WHERE lr.created_at >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
+             ORDER BY lr.created_at DESC LIMIT ?";
     
     if ($stmt2 = $conn->prepare($sql2)) {
         $stmt2->bind_param("i", $limit);
@@ -101,6 +102,8 @@ try {
                     'date' => date('M j, Y', strtotime($row['created_at'])),
                     'source' => 'legislative',
                     'author' => $row['author'],
+                    'folder_id' => $row['folder_id'],
+                    'folder_name' => $row['folder_name'] ?? '',
                     'download_params' => http_build_query($params),
                     'preview_url' => 'download.php?action=view&' . http_build_query($params),
                     'size_bytes' => $sizeBytes

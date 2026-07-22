@@ -168,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->close();
             exit();
         }
-        $reserved = ['ordinances-resolution', 'billing', 'public-hearings', 'meeting-records'];
+        $reserved = ['ordinances-resolution', 'public-hearings', 'meeting-records'];
         if (in_array($slug, $reserved, true)) {
             echo json_encode(['success' => false, 'message' => 'Folder already exists']);
             $conn->close();
@@ -534,7 +534,6 @@ if (isset($_SESSION['user_id'])) {
     $folder_types = [
         'Ordinance' => 'Ordinances & Resolutions',
         'Resolution' => 'Ordinances & Resolutions',
-        'Billing' => 'Billing',
         'Public Hearing' => 'Public Hearings',
         'Meeting' => 'Meeting Records'
     ];
@@ -655,6 +654,10 @@ if (isset($_SESSION['user_id'])) {
             $archive_folders[] = $row;
         }
     }
+    $archive_folders_all = $archive_folders;
+    $archive_folders_total = count($archive_folders);
+    $page_size_folders = 20;
+    $archive_folders = array_slice($archive_folders, 0, $page_size_folders);
     $conn->close();
     
     $display_name = $user_data['full_name'] ?? 'User';
@@ -748,9 +751,11 @@ if (isset($_SESSION['user_id'])) {
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
-                                        <button type="button" id="open-logout-modal" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
-                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
-                                        </button>
+                                        <form action="logout.php" method="POST" class="block w-full">
+                                            <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                                <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -821,20 +826,6 @@ if (isset($_SESSION['user_id'])) {
                         <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="ordinances-resolution">Calculating...</div>
                     </div>
                 </a>
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Billing']; ?>&legislative=true" data-archive="billing" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-green-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center text-green-600 dark:text-green-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Billing</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="billing">Calculating...</div>
-                    </div>
-                </a>
                 <a href="folder_view.php?id=<?php echo $legislative_folders['Public Hearing']; ?>&legislative=true" data-archive="public-hearings" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-blue-500/50 transition-all group h-40">
                     <div class="flex items-start justify-between">
                         <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform">
@@ -883,6 +874,8 @@ if (isset($_SESSION['user_id'])) {
                 </a>
                 <?php endforeach; ?>
             </div>
+            <!-- Folders Pagination -->
+            <div id="foldersPagination" class="mt-4"></div>
         </div>
         
                     <!-- Confidential Files Vault Section -->
@@ -1017,29 +1010,6 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
         </div>
-<!-- Logout Confirmation Modal -->
-<div id="logout-modal" class="hidden fixed inset-0 z-50">
-    <div id="logout-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-    <div class="relative z-10 flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
-            <div class="text-center mb-6">
-                <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <i class="bi bi-box-arrow-right text-red-600 dark:text-red-400 text-3xl"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Logout Confirmation</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to logout from your account?</p>
-            </div>
-            
-            <div class="flex justify-end gap-2">
-                <button id="logout-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                <form action="logout.php" method="POST" class="inline">
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Yes, Logout</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Delete Folder Modal -->
 <div id="delete-folder-modal" class="hidden fixed inset-0 z-50">
     <div id="delete-folder-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
@@ -1049,7 +1019,7 @@ if (isset($_SESSION['user_id'])) {
             <label class="block text-sm text-gray-600 dark:text-gray-400 mb-2" for="delete-folder-select">Select Folder</label>
             <select id="delete-folder-select" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500">
                 <option value="">-- Choose a folder --</option>
-                <?php foreach ($archive_folders as $folder): ?>
+                <?php foreach ($archive_folders_all as $folder): ?>
                 <option value="<?php echo (int)$folder['id']; ?>"><?php echo htmlspecialchars($folder['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></option>
                 <?php endforeach; ?>
             </select>
@@ -1095,6 +1065,7 @@ if (isset($_SESSION['user_id'])) {
         <div id="toast" class="fixed right-6 bottom-6 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all z-50 font-semibold" role="status" aria-live="polite"></div>
     </div>
 
+    <script src="assets/js/pagination.js"></script>
     <script>
         // Enhanced Storage Donut Chart Initialization
         // storageData lives at script scope so it can be updated by AJAX
@@ -2172,35 +2143,48 @@ if (isset($_SESSION['user_id'])) {
             });
         })();
     </script>
-        
-        <script>
-            (function(){
-                var logoutModal = document.getElementById('logout-modal');
-                var openLogoutModalBtn = document.getElementById('open-logout-modal');
-                var logoutCancelBtn = document.getElementById('logout-cancel');
-                var logoutModalBackdrop = document.getElementById('logout-modal-backdrop');
-                
-                function openLogoutModal() {
-                    logoutModal && logoutModal.classList.remove('hidden');
-                    document.body.style.overflow = 'hidden';
-                }
-                
-                function closeLogoutModal() {
-                    logoutModal && logoutModal.classList.add('hidden');
-                    document.body.style.overflow = '';
-                }
-                
-                openLogoutModalBtn?.addEventListener('click', openLogoutModal);
-                logoutCancelBtn?.addEventListener('click', closeLogoutModal);
-                logoutModalBackdrop?.addEventListener('click', closeLogoutModal);
-                
-                window.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && !logoutModal?.classList.contains('hidden') === false) {
-                        closeLogoutModal();
-                    }
-                });
-            })();
-        </script>
+
+    <script>
+        // Archive Folders Pagination
+        (function(){
+            const foldersGrid = document.getElementById('archive-folders-grid');
+            const legisHeaders = foldersGrid ? foldersGrid.querySelectorAll('a[href*="legislative=true"]') : [];
+            const legisCount = legisHeaders.length;
+            const foldersPagination = new PaginationControls('foldersPagination', { onPageChange: loadFoldersPage });
+            foldersPagination.update(<?php echo $archive_folders_total; ?>);
+
+            if (<?php echo $archive_folders_total; ?> <= <?php echo $page_size_folders; ?>) {
+                document.getElementById('foldersPagination').style.display = 'none';
+            }
+
+            function loadFoldersPage(page) {
+                fetch('archives_api.php?action=list_folders&page=' + page + '&page_size=<?php echo $page_size_folders; ?>')
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                        if (!data || !data.success) return;
+                        // Remove user-created cards (keep legislative headers)
+                        var allCards = Array.from(foldersGrid.querySelectorAll('a[data-archive]'));
+                        allCards.forEach(function(card){
+                            if (!card.getAttribute('href').includes('legislative=true')) {
+                                card.remove();
+                            }
+                        });
+                        // Add new cards
+                        (data.folders || []).forEach(function(folder){
+                            var card = document.createElement('a');
+                            card.id = 'folder-card-' + folder.id;
+                            card.href = 'folder_view.php?id=' + folder.id;
+                            card.setAttribute('data-archive', folder.slug || '');
+                            card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40';
+                            var createdDate = new Date(folder.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
+                            foldersGrid.appendChild(card);
+                        });
+                    })
+                    .catch(function(e){ console.error('Folder pagination error:', e); });
+            }
+        })();
+    </script>
         </div>
     </div>
     <?php include 'includes/footer_scripts.php'; ?>

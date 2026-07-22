@@ -64,60 +64,51 @@
         timeTimer = setInterval(updateRelativeTimes, 60000);
     }
 
-    function setButtonState(btn, status) {
-        if (!btn) return;
-        // reset
-        btn.classList.remove(
-            'bg-red-600', 'hover:bg-red-700', 'text-white', 'border-red-700',
-            'bg-white', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-gray-200',
-            'border-gray-200', 'dark:border-slate-600'
-        );
-
-        if (status === 'unread') {
-            btn.classList.add('bg-red-600', 'hover:bg-red-700', 'text-white', 'border-red-700');
-            btn.textContent = 'Mark Read';
-        } else {
-            btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-gray-200', 'border-gray-200', 'dark:border-slate-600');
-            btn.textContent = 'Read';
-        }
-    }
-
     function updateRowStatus(id, status) {
         status = (status || 'unread').toLowerCase();
         var tr = document.querySelector('[data-id="' + id + '"]');
         if (!tr) return;
         tr.setAttribute('data-status', status);
-        var btn = tr.querySelector('.mark-read-btn');
-        var actionCell = tr.querySelector('td:nth-child(6)');
+        var actionCell = tr.querySelector('td:nth-child(5)');
         var contentEl = tr.querySelector('td:nth-child(4) a, td:nth-child(4) span');
-        if (status === 'read') {
-            tr.classList.remove('highlight');
+        var isRead = status === 'read';
+        if (isRead) {
+            tr.classList.remove('bg-[#fff5f5]', 'dark:bg-red-900/20', 'border-l-red-500');
+            tr.classList.add('bg-white', 'dark:bg-slate-800', 'border-l-transparent', 'text-gray-700', 'dark:text-slate-300');
             if (actionCell) {
-                actionCell.innerHTML = '<span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-600">Read</span>';
+                actionCell.innerHTML = '<button class="mark-read-btn inline-flex items-center justify-center w-8 h-8 rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-slate-700 text-gray-400 dark:text-slate-400 border-gray-200 dark:border-slate-600 highlight-mark-read cursor-default" type="button" data-status="read" title="Read"><i class="bi bi-check2-all text-lg"></i></button>';
             }
             if (contentEl) {
                 contentEl.classList.remove('font-semibold');
                 contentEl.classList.add('font-medium');
             }
         } else {
+            tr.classList.remove('bg-white', 'dark:bg-slate-800', 'border-l-transparent', 'text-gray-700', 'dark:text-slate-300');
+            tr.classList.add('bg-[#fff5f5]', 'dark:bg-red-900/20', 'border-l-red-500');
             if (actionCell) {
-                actionCell.innerHTML = '<button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-600 hover:bg-red-700 text-white border-red-700 transition-colors" type="button">Mark Read</button>';
+                actionCell.innerHTML = '<button class="mark-read-btn inline-flex items-center justify-center w-8 h-8 rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 hover:bg-red-600 hover:text-white dark:hover:bg-red-600" type="button" data-status="unread" title="Mark as Read"><i class="bi bi-check2 text-lg"></i></button>';
             }
             if (contentEl) {
                 contentEl.classList.remove('font-medium');
                 contentEl.classList.add('font-semibold');
             }
-            attachRowHandlers();
         }
+    }
+
+    function getBadgeColor(about) {
+        if (!about) return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
+        if (/login/i.test(about)) return 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50';
+        if (/register|registration/i.test(about)) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
+    }
+    function escapeHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     function renderRows(items) {
         var tbody = document.getElementById('notesBody');
         if (!tbody) return;
         var html = items.map(function (note) {
-            var linkHtml = '';
-            if (note.link) linkHtml = '<a href="' + note.link + '" class="text-gray-800 dark:text-gray-100 hover:underline block">' + note.content + '</a>';
-            else linkHtml = '<span class="text-gray-800 dark:text-gray-100 block">' + note.content + '</span>';
             var baseMs = NaN;
             if (typeof note.age_seconds === 'number') {
                 baseMs = Date.now() - (note.age_seconds * 1000);
@@ -129,35 +120,59 @@
             if (isNaN(baseMs)) {
                 baseMs = buildTimestamp(String(note.date || ''), String(note.time || ''));
             }
-            var actionHtml = (String((note.status || 'unread')).toLowerCase() === 'read')
-                ? '<span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-600">Read</span>'
-                : '<button class="mark-read-btn px-3 py-1.5 text-xs font-semibold rounded-lg border bg-red-600 hover:bg-red-700 text-white border-red-700 transition-colors" type="button">Mark Read</button>';
-            return '<tr id="note-' + note.id + '" data-id="' + note.id + '" data-status="' + note.status + '" class="border-t">' +
-                '<td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">' + note.id + '</td>' +
-                '<td class="px-3 py-2 text-sm"><span class="note-time" data-ts="' + baseMs + '" data-base="' + String(note.time || '') + '" title="Created: ' + String(note.created_at || note.date) + ' • Status: ' + String(note.status || '') + '">' + String(note.time || '') + ' <span class="text-gray-500">' + formatRelative(baseMs) + '</span></span></td>' +
-                '<td class="px-3 py-2 text-sm">' + note.date + '</td>' +
-                '<td class="px-3 py-2 text-sm">' + linkHtml + '</td>' +
-                '<td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">' + note.about + '</td>' +
-                '<td class="px-3 py-2 text-sm">' + actionHtml + '</td>' +
+            var dispTime = String(note.time || '');
+            var relTime = formatRelative(baseMs);
+            var dispDate = note.created_at || note.date || '';
+            var isRead = String(note.status || 'unread').toLowerCase() === 'read';
+            var unreadBg = isRead
+                ? 'bg-white dark:bg-slate-800 border-l-[3px] border-l-transparent text-gray-700 dark:text-slate-300'
+                : 'bg-[#fff5f5] dark:bg-red-900/20 border-l-[3px] border-l-red-500';
+            var rowClass = unreadBg + ' hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors md:table-row flex flex-col md:flex-row mb-2 md:mb-0 border border-gray-100 dark:border-slate-700/50 md:border-0 rounded-lg md:rounded-none shadow-sm md:shadow-none';
+            var contentHtml = '';
+            if (note.link) {
+                contentHtml = '<a href="' + escapeHtml(note.link) + '" class="text-gray-900 dark:text-slate-100 hover:text-red-600 dark:hover:text-red-400 block">' + note.content + '</a>';
+            } else {
+                contentHtml = '<span class="block">' + note.content + '</span>';
+            }
+            var btnClass = isRead
+                ? 'bg-white dark:bg-slate-700 text-gray-400 dark:text-slate-400 border-gray-200 dark:border-slate-600 highlight-mark-read cursor-default'
+                : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 hover:bg-red-600 hover:text-white dark:hover:bg-red-600';
+            var iconClass = isRead ? 'bi bi-check2-all' : 'bi bi-check2';
+            var title = isRead ? 'Read' : 'Mark as Read';
+            var badgeColor = getBadgeColor(note.about);
+
+            return '<tr id="note-' + note.id + '" data-id="' + note.id + '" data-status="' + note.status + '" class="' + rowClass + '">' +
+                '<td class="px-4 py-3 text-sm font-medium opacity-70 text-center"><span class="md:hidden font-bold inline-block w-20 text-left">ID</span>' + note.id + '</td>' +
+                '<td class="px-4 py-3">' +
+                    '<span class="md:hidden font-bold inline-block w-20 text-left mb-1">Time</span>' +
+                    '<div class="inline-block align-top">' +
+                        '<div class="text-sm font-bold text-gray-900 dark:text-gray-100" title="' + escapeHtml(dispDate) + '">' + escapeHtml(dispTime) + '</div>' +
+                        '<div class="note-time text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-ts="' + baseMs + '" data-base="' + escapeHtml(dispTime) + '" data-search="' + escapeHtml(dispDate) + '">' + relTime + '</div>' +
+                    '</div>' +
+                '</td>' +
+                '<td class="px-4 py-3 text-sm leading-relaxed">' +
+                    '<span class="md:hidden font-bold block w-20 text-left mb-1">Content</span>' +
+                    contentHtml +
+                '</td>' +
+                '<td class="px-4 py-3 text-sm">' +
+                    '<span class="md:hidden font-bold inline-block w-20 text-left">Cat.</span>' +
+                    '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ' + badgeColor + '">' + escapeHtml(note.about) + '</span>' +
+                    '<span class="hidden" data-search="' + escapeHtml(note.about) + '"></span>' +
+                '</td>' +
+                '<td class="px-4 py-3 text-sm text-center">' +
+                    '<button class="mark-read-btn inline-flex items-center justify-center w-8 h-8 rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-red-500 ' + btnClass + '" type="button" data-status="' + note.status + '" title="' + title + '">' +
+                        '<i class="' + iconClass + ' text-lg"></i>' +
+                    '</button>' +
+                '</td>' +
                 '</tr>';
         }).join('');
         tbody.innerHTML = html;
-        // apply initial styles per item status
-        items.forEach(function (note) { updateRowStatus(note.id, note.status || 'unread'); });
-        attachRowHandlers();
         updateUnreadCount();
         logShown();
         updateRelativeTimes();
         ensureTimer();
     }
-    document.querySelectorAll('#notesBody tr').forEach(function (tr) {
-        var id = tr.getAttribute('data-id');
-        var status = (tr.getAttribute('data-status') || 'unread').toLowerCase();
-        updateRowStatus(id, status);
-    });
-    attachRowHandlers();
-
-    // Mark read on row click (excluding the explicit toggle button)
+    var notesBody = document.getElementById('notesBody');
     if (notesBody) {
         notesBody.addEventListener('click', function (e) {
             var btn = e.target.closest('.mark-read-btn');
@@ -165,7 +180,8 @@
                 var trBtn = btn.closest('tr');
                 if (!trBtn) return;
                 var idBtn = trBtn.getAttribute('data-id');
-                var nextBtn = 'read';
+                var curStatus = (trBtn.getAttribute('data-status') || 'unread').toLowerCase();
+                var nextBtn = curStatus === 'read' ? 'unread' : 'read';
                 try {
                     fetch('notifications_update.php', {
                         method: 'POST',
@@ -175,10 +191,6 @@
                 } catch (e) { }
                 updateRowStatus(idBtn, nextBtn);
                 updateUnreadCount();
-                // Update highlight for mark-read button on dark mode
-                if (document.documentElement.getAttribute('data-theme') === 'dark') {
-                    btn.classList.add('highlight-mark-read');
-                }
                 return;
             }
             var anchor = e.target.closest('a');
@@ -217,6 +229,7 @@
         fetch(url).then(function (r) { return r.json(); }).then(function (data) {
             if (!data || !data.success) return;
             renderRows(data.items || []);
+            Object.keys(stored).forEach(function (k) { var val = stored[k]; updateRowStatus(k, val); });
             var aboutSel = document.getElementById('filter-about');
             if (aboutSel) {
                 // Clear existing dynamic options (keep the first "About" option)
@@ -247,28 +260,7 @@
         }).catch(function () { });
     }
     fetchNotifications.page = 1;
-    Object.keys(stored).forEach(function (k) { var val = stored[k]; updateRowStatus(k, val); });
 
-    function attachRowHandlers() {
-        document.querySelectorAll('.mark-read-btn').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var tr = btn.closest('tr');
-                var id = tr.getAttribute('data-id');
-                var next = 'read';
-                updateRowStatus(id, next);
-                updateUnreadCount();
-                try { logEvent('alert_dismissed', [id]); } catch (e) { }
-                fetch('notifications_update.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(next)
-                }).then(function () { }).catch(function () { });
-            });
-        });
-    }
-
-    var notesBody = document.getElementById('notesBody');
     var filterAll = document.getElementById('filter-all');
     var filterUnread = document.getElementById('filter-unread');
     var searchInput = document.getElementById('searchInput');
@@ -277,7 +269,9 @@
     function updateUnreadCount() {
         var unread = 0;
         document.querySelectorAll('#notesBody tr').forEach(function (r) { if ((r.getAttribute('data-status') || '').toLowerCase() === 'unread') unread++; });
-        unreadCountEl.textContent = unread + ' unread';
+        if (unreadCountEl) unreadCountEl.textContent = unread + ' unread';
+        var bellBadge = document.getElementById('notif-count');
+        if (bellBadge) bellBadge.textContent = unread || '';
     }
 
     function updateUrlParams() {

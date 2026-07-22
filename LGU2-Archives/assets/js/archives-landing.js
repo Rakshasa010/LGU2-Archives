@@ -112,12 +112,12 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                         if (file.source === 'archive') {
                             icon = '<i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>';
                             subtext = `In: ${escapeHtml(file.folder_name)}${size ? ' • '+size : ''}`;
-                            downloadAction = `<a href="${file.download_url}" target="_blank" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></a>`;
-                            previewAction = file.preview_url ? `<a href="${file.preview_url}" target="_blank" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview"><i class="bi bi-eye"></i></a>` : '';
+                            downloadAction = `<a href="${file.download_url}" target="_blank" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download" onclick="event.stopPropagation()"><i class="bi bi-download"></i></a>`;
+                            const archiveFolderUrl = `folder_view.php?id=${file.folder_id}&highlight=${file.id}`;
+                            previewAction = `<a href="${archiveFolderUrl}&preview=1" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview" onclick="event.stopPropagation()"><i class="bi bi-eye"></i></a>`;
                             
-                            // Make the whole card clickable for archive files
                             return `
-                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:border-slate-600 cursor-pointer" onclick="window.location.href='folder_view.php?id=${file.folder_id}'">
+                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:hover:border-slate-600 cursor-pointer" onclick="window.location.href='${archiveFolderUrl}'">
                                 <div class="flex items-center space-x-3 min-w-0">
                                     <div class="flex-shrink-0">${icon}</div>
                                     <div class="min-w-0">
@@ -140,29 +140,21 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
                                 'Legislative Session': 'text-indigo-600'
                             };
                             
-                            // Map types to their respective pages/folders
-                            const typeMapping = {
-                                'Ordinance': 'ordinances-resolution.php',
-                                'Resolution': 'ordinances-resolution.php',
-                                'Billing': 'billing.php',
-                                'Public Hearing': 'public-hearings.php',
-                                'Meeting': 'meeting-records.php',
-                                'Legislative Session': 'meeting-records.php'
-                            };
-                            const targetPage = typeMapping[file.type] || 'ordinances-resolution.php';
-                            
                             const colorClass = typeIcons[file.type] || 'text-gray-600';
                             icon = `<i class="bi bi-file-text ${colorClass} text-2xl"></i>`;
                             subtext = `${escapeHtml(file.type)} • ${escapeHtml(file.author)}${size ? ' • '+size : ''}`;
                             
-                            // Construct download URL for legislative
                             const dlUrl = `download.php?${file.download_params}`;
-                            downloadAction = `<button onclick="window.open('${dlUrl}', 'downloadPopup', 'width=520,height=520')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></button>`;
-                            previewAction = file.preview_url ? `<a href="${file.preview_url}" target="_blank" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview"><i class="bi bi-eye"></i></a>` : '';
+                            downloadAction = `<button onclick="event.stopPropagation(); window.open('${dlUrl}', 'downloadPopup', 'width=520,height=520')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></button>`;
                             
-                            // Make the whole card clickable for legislative files
+                            const folderId = file.folder_id || '';
+                            const redirectUrl = folderId 
+                                ? `folder_view.php?id=${folderId}&legislative=true&highlight=${file.id}`
+                                : `folder_view.php?highlight=${file.id}`;
+                            previewAction = `<a href="${redirectUrl}&preview=1" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview" onclick="event.stopPropagation()"><i class="bi bi-eye"></i></a>`;
+                            
                             return `
-                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:border-slate-600 cursor-pointer" onclick="window.location.href='${targetPage}?highlight=${file.id}'">
+                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:hover:border-slate-600 cursor-pointer" onclick="window.location.href='${redirectUrl}'">
                                 <div class="flex items-center space-x-3 min-w-0">
                                     <div class="flex-shrink-0">${icon}</div>
                                     <div class="min-w-0">

@@ -261,9 +261,11 @@ foreach ($mock_notifications as $req) {
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
-                                        <button type="button" id="open-logout-modal" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
-                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
-                                        </button>
+                                        <form action="logout.php" method="POST" class="block w-full">
+                                            <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                                <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>

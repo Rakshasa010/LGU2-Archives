@@ -5,18 +5,34 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success'=>false,'message'=>'Unauthorized']); exit; }
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 if ($action === 'list_folders') {
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
+    $total = 0;
+    $cnt = $conn->query("SELECT COUNT(*) AS cnt FROM archive_folders");
+    if ($cnt && ($r = $cnt->fetch_assoc())) $total = (int)$r['cnt'];
+    $total_pages = max(1, ceil($total / $page_size));
+    if ($page > $total_pages) $page = $total_pages;
+    $offset = ($page - 1) * $page_size;
     $rows = [];
-    $q = $conn->query("SELECT id, name, created_at FROM archive_folders ORDER BY created_at DESC LIMIT 100");
-    if ($q) {
-        while ($r = $q->fetch_assoc()) {
-            $rows[] = ['id'=>(int)$r['id'],'name'=>$r['name'],'created_at'=>$r['created_at']];
+    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders ORDER BY created_at DESC LIMIT ?, ?");
+    if ($stmt) {
+        $stmt->bind_param("ii", $offset, $page_size);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res) {
+            while ($r = $res->fetch_assoc()) {
+                $rows[] = ['id'=>(int)$r['id'],'name'=>$r['name'],'created_at'=>$r['created_at']];
+            }
         }
+        $stmt->close();
     }
-    echo json_encode(['success'=>true,'folders'=>$rows]); exit;
+    echo json_encode(['success'=>true,'folders'=>$rows,'total'=>$total,'page'=>$page,'page_size'=>$page_size]); exit;
 }
 if ($action === 'get_files') {
     $folder_id = (int)($_GET['folder_id'] ?? $_POST['folder_id'] ?? 0);
     if ($folder_id<=0) { echo json_encode(['success'=>false,'message'=>'Invalid folder']); exit; }
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
     $conn->query("CREATE TABLE IF NOT EXISTS archive_files (
         id INT AUTO_INCREMENT PRIMARY KEY,
         folder_id INT NOT NULL,
@@ -26,9 +42,20 @@ if ($action === 'get_files') {
         parent_version_id INT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+    $total = 0;
+    if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ?")) {
+        $stc->bind_param("i", $folder_id);
+        $stc->execute();
+        $rc = $stc->get_result();
+        if ($rc && ($rowc = $rc->fetch_assoc())) $total = (int)$rowc['cnt'];
+        $stc->close();
+    }
+    $total_pages = max(1, ceil($total / $page_size));
+    if ($page > $total_pages) $page = $total_pages;
+    $offset = ($page - 1) * $page_size;
     $rows = [];
-    if ($st = $conn->prepare("SELECT id, name, file_path, version, parent_version_id, created_at FROM archive_files WHERE folder_id = ? ORDER BY created_at DESC")) {
-        $st->bind_param("i", $folder_id);
+    if ($st = $conn->prepare("SELECT id, name, file_path, version, parent_version_id, created_at FROM archive_files WHERE folder_id = ? ORDER BY created_at DESC LIMIT ?, ?")) {
+        $st->bind_param("iii", $folder_id, $offset, $page_size);
         $st->execute();
         $res = $st->get_result();
         while ($r = $res->fetch_assoc()) {
@@ -43,11 +70,13 @@ if ($action === 'get_files') {
         }
         $st->close();
     }
-    echo json_encode(['success'=>true,'files'=>$rows]); exit;
+    echo json_encode(['success'=>true,'files'=>$rows,'total'=>$total,'page'=>$page,'page_size'=>$page_size]); exit;
 }
 if ($action === 'get_versions') {
     $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
     if ($id<=0) { echo json_encode(['success'=>false,'message'=>'Invalid id']); exit; }
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
     $conn->query("CREATE TABLE IF NOT EXISTS archive_files (
         id INT AUTO_INCREMENT PRIMARY KEY,
         folder_id INT NOT NULL,
@@ -68,9 +97,20 @@ if ($action === 'get_versions') {
         }
         $st->close();
     }
+    $total = 0;
+    if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE id = ? OR parent_version_id = ?")) {
+        $stc->bind_param("ii", $root, $root);
+        $stc->execute();
+        $rc = $stc->get_result();
+        if ($rc && ($rowc = $rc->fetch_assoc())) $total = (int)$rowc['cnt'];
+        $stc->close();
+    }
+    $total_pages = max(1, ceil($total / $page_size));
+    if ($page > $total_pages) $page = $total_pages;
+    $offset = ($page - 1) * $page_size;
     $versions = [];
-    if ($st2 = $conn->prepare("SELECT id, name, version, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC")) {
-        $st2->bind_param("ii", $root, $root);
+    if ($st2 = $conn->prepare("SELECT id, name, version, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
+        $st2->bind_param("iiii", $root, $root, $offset, $page_size);
         $st2->execute();
         $res2 = $st2->get_result();
         while ($v = $res2->fetch_assoc()) {
@@ -83,7 +123,7 @@ if ($action === 'get_versions') {
         }
         $st2->close();
     }
-    echo json_encode(['success'=>true,'versions'=>$versions]); exit;
+    echo json_encode(['success'=>true,'versions'=>$versions,'total'=>$total,'page'=>$page,'page_size'=>$page_size]); exit;
 }
 
 if ($action === 'restore_version') {

@@ -13,6 +13,9 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Set timezone for consistent TIMESTAMP handling across all queries
+$conn->query("SET time_zone = '+08:00'");
+
 // Create database if it doesn't exist
 $sql = "CREATE DATABASE IF NOT EXISTS $dbname";
 $conn->query($sql);

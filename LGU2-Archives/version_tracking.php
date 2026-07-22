@@ -50,6 +50,68 @@ if ($folders_result && $folders_result->num_rows > 0) {
     }
 }
 
+// Fetch all folders (archive + legislative) for main content area
+$all_folders = [];
+// Archive folders with file counts
+if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+    $af_result = $conn->query("
+        SELECT af.id, af.name, af.slug, af.created_at,
+               COUNT(DISTINCT af2.id) AS file_count,
+               MAX(af2.created_at) AS last_modified
+        FROM archive_folders af
+        LEFT JOIN archive_files af2 ON af2.folder_id = af.id
+        GROUP BY af.id, af.name, af.slug, af.created_at
+        ORDER BY af.created_at DESC
+    ");
+    if ($af_result) {
+        while ($row = $af_result->fetch_assoc()) {
+            $all_folders[] = [
+                'id' => $row['id'],
+                'name' => $row['name'],
+                'source' => 'archive',
+                'file_count' => (int)$row['file_count'],
+                'last_modified' => $row['last_modified'],
+                'created_at' => $row['created_at'],
+                'icon_color' => 'slate',
+                'icon' => 'bi-folder-fill'
+            ];
+        }
+    }
+}
+// Legislative folders with file counts
+if ($conn->query("SHOW TABLES LIKE 'legislative_folders'")->num_rows > 0) {
+    $lf_result = $conn->query("
+        SELECT lf.id, lf.name, lf.type, lf.created_at,
+               COUNT(DISTINCT lr.id) AS file_count,
+               MAX(lr.created_at) AS last_modified
+        FROM legislative_folders lf
+        LEFT JOIN legislative_records lr ON lr.folder_id = lf.id
+        GROUP BY lf.id, lf.name, lf.type, lf.created_at
+        ORDER BY lf.created_at DESC
+    ");
+    if ($lf_result) {
+        while ($row = $lf_result->fetch_assoc()) {
+            $type = strtolower($row['type'] ?? '');
+            $icon = 'bi-folder-fill';
+            $icon_color = 'slate';
+            if ($type === 'ordinance' || $type === 'resolution') { $icon = 'bi-file-earmark-text'; $icon_color = 'orange'; }
+            elseif ($type === 'billing') { $icon = 'bi-receipt'; $icon_color = 'green'; }
+            elseif ($type === 'public hearing') { $icon = 'bi-megaphone'; $icon_color = 'blue'; }
+            elseif ($type === 'meeting') { $icon = 'bi-journal-text'; $icon_color = 'purple'; }
+            $all_folders[] = [
+                'id' => $row['id'],
+                'name' => $row['name'],
+                'source' => 'legislative',
+                'file_count' => (int)$row['file_count'],
+                'last_modified' => $row['last_modified'],
+                'created_at' => $row['created_at'],
+                'icon_color' => $icon_color,
+                'icon' => $icon
+            ];
+        }
+    }
+}
+
 // Handle folder parameter from sidebar dropdown
 $selected_folder = isset($_GET['folder']) ? trim($_GET['folder']) : null;
 $page_title = "Version Tracking";
@@ -89,6 +151,9 @@ if ($selected_folder) {
             break;
     }
 }
+
+// Encode all folders for JavaScript
+$all_folders_json = json_encode($all_folders, JSON_HEX_TAG | JSON_HEX_AMP);
 
 $conn->close();
 ?>
@@ -212,9 +277,11 @@ $conn->close();
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
-                                        <button type="button" id="open-logout-modal" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
-                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
-                                        </button>
+                                        <form action="logout.php" method="POST" class="block w-full">
+                                            <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                                <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -229,9 +296,14 @@ $conn->close();
                 <div class="w-full px-4 sm:px-6 lg:px-8 py-6">
                     <!-- Header Section -->
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <div>
-                            <h1 id="vt-page-title" class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($page_title); ?></h1>
-                            <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($page_subtitle); ?></p>
+                        <div class="flex items-center gap-3">
+                            <button id="vt-back-btn" onclick="vtBackToFolders()" class="hidden items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" title="Back to folders">
+                                <i class="bi bi-arrow-left text-lg"></i>
+                            </button>
+                            <div>
+                                <h1 id="vt-page-title" class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($page_title); ?></h1>
+                                <p id="vt-page-subtitle" class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($page_subtitle); ?></p>
+                            </div>
                         </div>
                         <!-- Search Input -->
                         <div class="relative w-full sm:w-80">
@@ -242,13 +314,23 @@ $conn->close();
 
                     <!-- Files Section -->
                     <div id="vt-content-area" class="space-y-6">
-                        <!-- Empty State -->
-                        <div id="vt-empty-state" class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
-                            <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="bi bi-folder text-4xl text-gray-400"></i>
+                        <!-- Folder Grid (shown when no folder is selected) -->
+                        <div id="vt-folder-grid-section" class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">Select a Folder</h2>
+                                <span class="text-xs text-gray-500 dark:text-gray-400" id="vt-folder-count"></span>
                             </div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No folder selected</h3>
-                            <p class="text-gray-500 dark:text-gray-400">Select a folder from the sidebar to view files</p>
+                            <div id="vt-folder-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <!-- Folder cards rendered by JS -->
+                            </div>
+                            <!-- Empty state: zero folders -->
+                            <div id="vt-zero-folders" class="hidden bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
+                                <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="bi bi-folder text-4xl text-gray-400"></i>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No folders yet</h3>
+                                <p class="text-gray-500 dark:text-gray-400">Create a folder in Main Storage Archives to get started</p>
+                            </div>
                         </div>
 
                         <!-- Files Display (hidden by default) -->
@@ -290,6 +372,8 @@ $conn->close();
                                 <div id="vt-files-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <!-- Files will be rendered here -->
                                 </div>
+                                <!-- Pagination Controls -->
+                                <div id="vt-pagination" class="mt-6"></div>
                                 <!-- Empty States -->
                                 <div id="vt-no-files" class="hidden text-center py-12">
                                     <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -327,11 +411,181 @@ $conn->close();
         </div>
     </div>
 
+    <script src="assets/js/pagination.js"></script>
     <script>
         // Global state
         let vtSelectedFolder = null;
         let vtAllFiles = [];
-        let vtSortMode = 'daily'; // daily, monthly, yearly
+        let vtFilteredFiles = [];
+        let vtSortMode = 'daily';
+        let vtCurrentPage = 1;
+        let vtCurrentLoadContext = null;
+        const vtPageSize = 20;
+        const vtPagination = new PaginationControls('vt-pagination', { onPageChange: function(page) { vtCurrentPage = page; if (vtCurrentLoadContext) vtCurrentLoadContext(); } });
+
+        // Folder data from PHP (all database folders)
+        const vtAllFolders = <?php echo $all_folders_json; ?>;
+
+        // Icon color map to Tailwind classes
+        const vtColorMap = {
+            orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-500 dark:text-orange-400', border: 'border-orange-200 dark:border-orange-800/50', hoverBorder: 'hover:border-orange-400 dark:hover:border-orange-600' },
+            green:  { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-500 dark:text-green-400', border: 'border-green-200 dark:border-green-800/50', hoverBorder: 'hover:border-green-400 dark:hover:border-green-600' },
+            blue:   { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-500 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800/50', hoverBorder: 'hover:border-blue-400 dark:hover:border-blue-600' },
+            purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-500 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800/50', hoverBorder: 'hover:border-purple-400 dark:hover:border-purple-600' },
+            slate:  { bg: 'bg-slate-100 dark:bg-slate-700/50', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700', hoverBorder: 'hover:border-slate-400 dark:hover:border-slate-500' }
+        };
+
+        function vtRenderFolderGrid() {
+            var grid = document.getElementById('vt-folder-grid');
+            var countEl = document.getElementById('vt-folder-count');
+            var zeroEl = document.getElementById('vt-zero-folders');
+
+            if (!vtAllFolders.length) {
+                grid.classList.add('hidden');
+                zeroEl.classList.remove('hidden');
+                if (countEl) countEl.textContent = '';
+                return;
+            }
+
+            zeroEl.classList.add('hidden');
+            grid.classList.remove('hidden');
+            if (countEl) countEl.textContent = vtAllFolders.length + ' folder' + (vtAllFolders.length !== 1 ? 's' : '');
+            grid.innerHTML = '';
+
+            vtAllFolders.forEach(function(folder) {
+                var colors = vtColorMap[folder.icon_color] || vtColorMap.slate;
+                var card = document.createElement('div');
+                card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg ' + colors.hoverBorder + ' transition-all group h-40 cursor-pointer vt-folder-card';
+                card.setAttribute('data-folder-source', folder.source);
+                card.setAttribute('data-folder-id', folder.id);
+                card.setAttribute('data-folder-name', folder.name);
+
+                var dateStr = '';
+                if (folder.last_modified) {
+                    var d = new Date(folder.last_modified);
+                    dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                } else if (folder.created_at) {
+                    var d = new Date(folder.created_at);
+                    dateStr = 'Created ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+
+                card.innerHTML =
+                    '<div class="flex items-start justify-between">' +
+                        '<div class="w-12 h-12 ' + colors.bg + ' rounded-xl flex items-center justify-center ' + colors.text + ' text-2xl group-hover:scale-110 transition-transform">' +
+                            '<i class="bi ' + folder.icon + '"></i>' +
+                        '</div>' +
+                        '<div class="text-xs font-medium px-2 py-0.5 rounded-full ' + colors.bg + ' ' + colors.text + ' border ' + colors.border + '">' +
+                            (folder.source === 'legislative' ? 'Legislative' : 'Archive') +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="min-w-0 mt-4">' +
+                        '<div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + escapeHtml(folder.name) + '</div>' +
+                        '<div class="text-sm text-gray-500 dark:text-gray-400 mt-1">' +
+                            folder.file_count + ' file' + (folder.file_count !== 1 ? 's' : '') +
+                            (dateStr ? ' &middot; ' + dateStr : '') +
+                        '</div>' +
+                    '</div>';
+
+                card.addEventListener('click', function() {
+                    vtSelectFolderFromGrid(folder);
+                });
+                grid.appendChild(card);
+            });
+        }
+
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(s || ''));
+            return div.innerHTML;
+        }
+
+        function vtSelectFolderFromGrid(folder) {
+            // Hide folder grid, show files section
+            document.getElementById('vt-folder-grid-section').classList.add('hidden');
+            document.getElementById('vt-files-section').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.add('flex');
+
+            // Update header
+            document.getElementById('vt-page-title').textContent = 'Version Tracking — ' + folder.name;
+            document.getElementById('page-title').textContent = folder.name;
+            document.getElementById('vt-page-subtitle').textContent = 'Track versions for ' + folder.name + ' files';
+            document.getElementById('vt-search-files').placeholder = 'Search in ' + folder.name + '...';
+
+            vtSelectedFolder = folder.source + '_' + folder.id;
+
+            if (folder.source === 'archive') {
+                selectArchiveFolder('archive_' + folder.id, folder.name, folder.id);
+            } else {
+                // Find the matching vtFolderConfig key or load directly
+                var typeLower = (folder.name || '').toLowerCase();
+                var configKey = null;
+                if (typeLower.indexOf('ordinance') >= 0 || typeLower.indexOf('resolution') >= 0) configKey = 'ordRes';
+                else if (typeLower.indexOf('billing') >= 0) configKey = 'billing';
+                else if (typeLower.indexOf('public hearing') >= 0) configKey = 'publicHearing';
+                else if (typeLower.indexOf('meeting') >= 0) configKey = 'meeting';
+
+                if (configKey && vtFolderConfig[configKey]) {
+                    selectFolder(configKey, folder.name);
+                } else {
+                    // Generic legislative folder — load via legislative_api with folder_id
+                    vtLoadLegislativeFolder(folder.id, folder.name);
+                }
+            }
+
+            // Update URL without reload
+            var newUrl = 'version_tracking.php?folder=' + vtSelectedFolder;
+            history.pushState(null, '', newUrl);
+        }
+
+        function vtLoadLegislativeFolder(folderId, folderName) {
+            vtCurrentLoadContext = function() { vtLoadLegislativeFolder(folderId, folderName); };
+            var grid = document.getElementById('vt-files-grid');
+            grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">Loading...</div>';
+
+            fetch('legislative_api.php?action=get_files&folder_id=' + encodeURIComponent(folderId) + '&page=' + vtCurrentPage + '&page_size=' + vtPageSize)
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.files) {
+                        vtAllFiles = d.files.map(function(f) {
+                            return { id: f.id, title: f.name || f.title, created_at: f.created_at, version: f.version || 1, type: 'Archive', file_path: f.file_path, author: f.author };
+                        });
+                    } else {
+                        vtAllFiles = [];
+                    }
+                    document.getElementById('vt-stat-total').textContent = d.total || vtAllFiles.length;
+                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(function(f) { return f.version && f.version > 1; }).length;
+                    var todayStr = new Date().toISOString().split('T')[0];
+                    var todayCount = vtAllFiles.filter(function(f) { return f.created_at && f.created_at.startsWith(todayStr); }).length;
+                    document.getElementById('vt-stat-today').textContent = todayCount;
+                    document.getElementById('vt-search-files').value = '';
+                    vtFilteredFiles = [];
+                    vtPagination.setPage(d.page || 1);
+                    vtPagination.update(d.total || vtAllFiles.length);
+                    renderFiles(vtAllFiles);
+                })
+                .catch(function(error) {
+                    console.error('Error loading legislative folder:', error);
+                    vtAllFiles = [];
+                    vtFilteredFiles = [];
+                    renderFiles([]);
+                });
+        }
+
+        function vtBackToFolders() {
+            document.getElementById('vt-files-section').classList.add('hidden');
+            document.getElementById('vt-folder-grid-section').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.add('hidden');
+            document.getElementById('vt-back-btn').classList.remove('flex');
+            document.getElementById('vt-page-title').textContent = 'Version Tracking';
+            document.getElementById('vt-page-subtitle').textContent = 'Select a folder to view version history';
+            document.getElementById('page-title').textContent = 'Version Tracking';
+            document.getElementById('vt-search-files').placeholder = 'Search in folder...';
+            vtSelectedFolder = null;
+            vtAllFiles = [];
+            vtFilteredFiles = [];
+            history.pushState(null, '', 'version_tracking.php');
+        }
 
         // Folder config
         const vtFolderConfig = {
@@ -344,32 +598,49 @@ $conn->close();
 
         // Initialize
         (function() {
+            // Render folder grid on page load
+            vtRenderFolderGrid();
+
             // Auto-select folder based on URL parameter
             var urlParams = new URLSearchParams(window.location.search);
             var folderParam = urlParams.get('folder');
             
             if (folderParam) {
-                // Map folder parameters to their display configuration
-                var folderMapping = {
-                    'ordinances': { key: 'ordRes', label: 'Ordinances & Resolutions' },
-                    'billing': { key: 'billing', label: 'Billing' },
-                    'public-hearings': { key: 'publicHearing', label: 'Public Hearings' },
-                    'meetings': { key: 'meeting', label: 'Meeting Records' }
-                };
-                
                 // Check if it's an archive folder
                 if (folderParam.startsWith('archive_')) {
                     var folderId = folderParam.replace('archive_', '');
-                    // Find the archive folder name from the dropdown links
+                    // Find from vtAllFolders
+                    var found = vtAllFolders.find(function(f) { return f.source === 'archive' && String(f.id) === folderId; });
+                    if (found) {
+                        vtSelectFolderFromGrid(found);
+                        return;
+                    }
+                    // Fallback: find from sidebar links
                     var archiveLink = document.querySelector('a[href="version_tracking.php?folder=' + folderParam + '"]');
                     if (archiveLink) {
                         var folderName = archiveLink.querySelector('span').textContent;
                         selectArchiveFolder('archive_' + folderId, folderName, folderId);
                     }
-                } else if (folderMapping[folderParam]) {
-                    // Auto-select the legislative folder
-                    var config = folderMapping[folderParam];
-                    selectFolder(config.key, config.label);
+                } else if (folderParam.startsWith('legislative_')) {
+                    var legId = folderParam.replace('legislative_', '');
+                    var found = vtAllFolders.find(function(f) { return f.source === 'legislative' && String(f.id) === legId; });
+                    if (found) {
+                        vtSelectFolderFromGrid(found);
+                        return;
+                    }
+                } else {
+                    // Map legislative folder params to their display configuration
+                    var folderMapping = {
+                        'ordinances': { key: 'ordRes', label: 'Ordinances & Resolutions' },
+                        'billing': { key: 'billing', label: 'Billing' },
+                        'public-hearings': { key: 'publicHearing', label: 'Public Hearings' },
+                        'meetings': { key: 'meeting', label: 'Meeting Records' }
+                    };
+                    
+                    if (folderMapping[folderParam]) {
+                        var config = folderMapping[folderParam];
+                        selectFolder(config.key, config.label);
+                    }
                 }
             }
 
@@ -390,18 +661,15 @@ $conn->close();
                 });
             }
 
-            // Sort mode buttons
             document.querySelectorAll('.vt-sort-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     vtSortMode = this.getAttribute('data-sort');
-                    // Update active button styling
                     document.querySelectorAll('.vt-sort-btn').forEach(function(b) {
                         b.classList.remove('bg-red-600', 'text-white');
                         b.classList.add('text-gray-600', 'dark:text-gray-300');
                     });
                     this.classList.remove('text-gray-600', 'dark:text-gray-300');
                     this.classList.add('bg-red-600', 'text-white');
-                    // Re-render files
                     var searchInput = document.getElementById('vt-search-files');
                     filterFiles(searchInput ? searchInput.value : '');
                 });
@@ -409,15 +677,19 @@ $conn->close();
         })();
 
         function selectArchiveFolder(key, label, folderId) {
-            // Update selected folder state
+            vtCurrentPage = 1;
+            vtFilteredFiles = [];
             vtSelectedFolder = key;
-            document.getElementById('vt-page-title').textContent = label;
+            document.getElementById('vt-page-title').textContent = 'Version Tracking — ' + label;
             document.getElementById('page-title').textContent = label;
+            document.getElementById('vt-page-subtitle').textContent = 'Track versions for ' + label + ' files';
             document.getElementById('vt-search-files').placeholder = 'Search in ' + label + '...';
 
-            // Show files section, hide empty state
-            document.getElementById('vt-empty-state').classList.add('hidden');
+            // Hide folder grid, show files section
+            document.getElementById('vt-folder-grid-section').classList.add('hidden');
             document.getElementById('vt-files-section').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.add('flex');
             document.getElementById('vt-no-search-results').classList.add('hidden');
 
             // Load archive files
@@ -425,11 +697,11 @@ $conn->close();
         }
 
         function loadArchiveFiles(folderId) {
+            vtCurrentLoadContext = function() { loadArchiveFiles(folderId); };
             var grid = document.getElementById('vt-files-grid');
             grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">Loading...</div>';
 
-            // Fetch archive files for this folder
-            fetch('archives_api.php?action=get_files&folder_id=' + encodeURIComponent(folderId))
+            fetch('archives_api.php?action=get_files&folder_id=' + encodeURIComponent(folderId) + '&page=' + vtCurrentPage + '&page_size=' + vtPageSize)
                 .then(r => r.json())
                 .then(d => {
                     if (d.success) {
@@ -443,15 +715,12 @@ $conn->close();
                                 file_path: f.file_path,
                                 author: f.author || f.created_by || 'System'
                             };
-                        }).sort(function(a, b) {
-                            return new Date(b.created_at) - new Date(a.created_at);
                         });
                     } else {
                         vtAllFiles = [];
                     }
 
-                    // Update stats
-                    document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
+                    document.getElementById('vt-stat-total').textContent = d.total || vtAllFiles.length;
                     document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
                     
                     let todayCount = 0;
@@ -461,13 +730,16 @@ $conn->close();
                     });
                     document.getElementById('vt-stat-today').textContent = todayCount;
 
-                    // Clear search input and render files
                     document.getElementById('vt-search-files').value = '';
+                    vtFilteredFiles = [];
+                    vtPagination.setPage(d.page || 1);
+                    vtPagination.update(d.total || vtAllFiles.length);
                     renderFiles(vtAllFiles);
                 })
                 .catch(error => {
                     console.error('Error loading archive files:', error);
                     vtAllFiles = [];
+                    vtFilteredFiles = [];
                     document.getElementById('vt-stat-total').textContent = '0';
                     document.getElementById('vt-stat-versions').textContent = '0';
                     document.getElementById('vt-stat-today').textContent = '0';
@@ -476,9 +748,11 @@ $conn->close();
         }
 
         function selectFolder(key, label) {
-            // Update selected folder state
+            vtCurrentPage = 1;
+            vtFilteredFiles = [];
             vtSelectedFolder = key;
-            document.getElementById('vt-page-title').textContent = label;
+            document.getElementById('vt-page-title').textContent = 'Version Tracking — ' + label;
+            document.getElementById('page-title').textContent = label;
             document.getElementById('vt-search-files').placeholder = 'Search in ' + label + '...';
 
             // Update active state on folder buttons
@@ -490,63 +764,23 @@ $conn->close();
                 btn.classList.add('bg-red-600/90', 'to-orange-500/80', 'ring-1', 'ring-white/20', 'border', 'border-white/15', 'text-white');
             });
 
-            // Show files section, hide empty state
-            document.getElementById('vt-empty-state').classList.add('hidden');
+            // Hide folder grid, show files section
+            document.getElementById('vt-folder-grid-section').classList.add('hidden');
             document.getElementById('vt-files-section').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.remove('hidden');
+            document.getElementById('vt-back-btn').classList.add('flex');
             document.getElementById('vt-no-search-results').classList.add('hidden');
 
             // Load files
-            loadFiles(key, event.currentTarget);
+            loadFiles(key);
         }
 
-        function loadFiles(key, buttonEl) {
+        function loadFiles(key) {
+            vtCurrentLoadContext = function() { loadFiles(key); };
             var grid = document.getElementById('vt-files-grid');
             grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">Loading...</div>';
 
-            // Check if it's an archive folder
-            const isArchiveFolder = buttonEl && buttonEl.getAttribute('data-folder-type') === 'archive';
-            
-            if (isArchiveFolder) {
-                const folderId = buttonEl.getAttribute('data-folder-id');
-                // Fetch archive files for this folder
-                fetch('legislative_api.php?action=get_archive_files&folder_id=' + encodeURIComponent(folderId))
-                    .then(r => r.json())
-                    .then(d => {
-                        if (d.success) {
-                            vtAllFiles = d.files.map(function(f) {
-                                return {
-                                    id: f.id,
-                                    title: f.name,
-                                    created_at: f.created_at,
-                                    version: f.version || 1,
-                                    type: 'Archive',
-                                    file_path: f.file_path,
-                                    author: f.author
-                                };
-                            }).sort(function(a, b) {
-                                return new Date(b.created_at) - new Date(a.created_at);
-                            });
-                        } else {
-                            vtAllFiles = [];
-                        }
-
-                        // Update stats
-                        document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
-                        document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
-                        
-                        let todayCount = 0;
-                        let todayStr = new Date().toISOString().split('T')[0];
-                        vtAllFiles.forEach(f => {
-                            if (f.created_at && f.created_at.startsWith(todayStr)) todayCount++;
-                        });
-                        document.getElementById('vt-stat-today').textContent = todayCount;
-
-                        // Clear search input and render files
-                        document.getElementById('vt-search-files').value = '';
-                        renderFiles(vtAllFiles);
-                    });
-            } else if (key === 'phpFiles') {
-                // Mock data for PHP Files
+            if (key === 'phpFiles') {
                 vtAllFiles = [
                     { id: 1, title: 'authdatabase.php', created_at: '2026-07-05T10:30:00Z', version: 2, type: 'PHP' },
                     { id: 2, title: 'sidebar-centralized.php', created_at: '2026-07-04T09:15:00Z', version: 3, type: 'PHP' },
@@ -555,7 +789,6 @@ $conn->close();
                     { id: 5, title: 'report_analytics.php', created_at: '2026-05-10T16:00:00Z', version: 2, type: 'PHP' }
                 ];
                 
-                // Update stats
                 document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
                 document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
                 
@@ -566,24 +799,32 @@ $conn->close();
                 });
                 document.getElementById('vt-stat-today').textContent = todayCount;
 
-                // Clear search input and render files
                 document.getElementById('vt-search-files').value = '';
+                vtFilteredFiles = [];
+                vtPagination.update(vtAllFiles.length);
                 renderFiles(vtAllFiles);
             } else {
                 const config = vtFolderConfig[key];
                 var promises = config.types.map(function(t) {
-                    return fetch('legislative_api.php?action=get_files&type=' + encodeURIComponent(t))
+                    return fetch('legislative_api.php?action=get_files&type=' + encodeURIComponent(t) + '&page=' + vtCurrentPage + '&page_size=' + vtPageSize)
                         .then(function(r){ return r.json(); })
-                        .then(function(d){ return d.success ? d.files : []; });
+                        .then(function(d){ return d; });
                 });
 
                 Promise.all(promises).then(function(results) {
-                    vtAllFiles = results.flat().sort(function(a, b) {
+                    var allFiles = [];
+                    var totalCount = 0;
+                    results.forEach(function(d) {
+                        if (d.success && d.files) {
+                            allFiles = allFiles.concat(d.files);
+                            totalCount += (d.total || d.files.length);
+                        }
+                    });
+                    vtAllFiles = allFiles.sort(function(a, b) {
                         return new Date(b.created_at) - new Date(a.created_at);
                     });
 
-                    // Update stats
-                    document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
+                    document.getElementById('vt-stat-total').textContent = totalCount || vtAllFiles.length;
                     document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
                     
                     let todayCount = 0;
@@ -593,8 +834,10 @@ $conn->close();
                     });
                     document.getElementById('vt-stat-today').textContent = todayCount;
 
-                    // Clear search input and render files
                     document.getElementById('vt-search-files').value = '';
+                    vtFilteredFiles = [];
+                    vtPagination.setPage(results[0]?.page || 1);
+                    vtPagination.update(totalCount || vtAllFiles.length);
                     renderFiles(vtAllFiles);
                 });
             }
@@ -605,7 +848,6 @@ $conn->close();
             
             if (!files.length) {
                 gridContainer.classList.add('hidden');
-                // Check if it's a search no results or empty folder
                 var searchInput = document.getElementById('vt-search-files');
                 if (searchInput && searchInput.value.trim()) {
                     document.getElementById('vt-no-files').classList.add('hidden');
@@ -615,59 +857,41 @@ $conn->close();
                     document.getElementById('vt-no-search-results').classList.add('hidden');
                     document.getElementById('vt-no-files').classList.remove('hidden');
                 }
+                document.getElementById('vt-pagination').style.display = 'none';
                 return;
             }
 
-            // Show grid, hide empty states
             gridContainer.classList.remove('hidden');
             document.getElementById('vt-no-files').classList.add('hidden');
             document.getElementById('vt-no-search-results').classList.add('hidden');
             gridContainer.innerHTML = '';
 
-            if (vtSortMode === 'daily') {
-                // Daily: flat list sorted by date (most recent first)
-                files.forEach(function(record) {
-                    appendFileCard(gridContainer, record);
+            var sortedFiles = files.slice().sort(function(a, b) {
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            if (vtSortMode === 'monthly') {
+                sortedFiles.sort(function(a, b) {
+                    var da = new Date(a.created_at), db = new Date(b.created_at);
+                    var km = db.getFullYear() * 12 + db.getMonth() - (da.getFullYear() * 12 + da.getMonth());
+                    return km !== 0 ? km : new Date(b.created_at) - new Date(a.created_at);
                 });
+            } else if (vtSortMode === 'yearly') {
+                sortedFiles.sort(function(a, b) {
+                    var da = new Date(a.created_at), db = new Date(b.created_at);
+                    var ky = db.getFullYear() - da.getFullYear();
+                    return ky !== 0 ? ky : new Date(b.created_at) - new Date(a.created_at);
+                });
+            }
+
+            sortedFiles.forEach(function(record) {
+                appendFileCard(gridContainer, record);
+            });
+
+            if (files.length > vtPageSize) {
+                document.getElementById('vt-pagination').style.display = '';
             } else {
-                // Group by year or month
-                var grouped = {};
-                files.forEach(function(record) {
-                    var date = new Date(record.created_at);
-                    var key;
-                    if (vtSortMode === 'yearly') {
-                        key = date.getFullYear().toString();
-                    } else { // monthly
-                        key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-                    }
-                    if (!grouped[key]) {
-                        grouped[key] = [];
-                    }
-                    grouped[key].push(record);
-                });
-
-                // Sort groups in descending order
-                var sortedKeys = Object.keys(grouped).sort().reverse();
-
-                sortedKeys.forEach(function(key) {
-                    // Add group header
-                    var header = document.createElement('h3');
-                    header.className = 'col-span-full mt-4 mb-2 text-lg font-bold text-gray-800 dark:text-gray-200';
-                    if (vtSortMode === 'yearly') {
-                        header.textContent = key;
-                    } else {
-                        var year = parseInt(key.split('-')[0]);
-                        var month = parseInt(key.split('-')[1]) - 1;
-                        var date = new Date(year, month, 1);
-                        header.textContent = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    }
-                    gridContainer.appendChild(header);
-
-                    // Add files in this group
-                    grouped[key].forEach(function(record) {
-                        appendFileCard(gridContainer, record);
-                    });
-                });
+                document.getElementById('vt-pagination').style.display = 'none';
             }
         }
 
@@ -724,15 +948,16 @@ $conn->close();
             query = query.toLowerCase().trim();
             
             if (!query) {
+                vtFilteredFiles = [];
                 renderFiles(vtAllFiles);
                 return;
             }
 
-            var filteredFiles = vtAllFiles.filter(function(file) {
+            vtFilteredFiles = vtAllFiles.filter(function(file) {
                 return (file.title || '').toLowerCase().includes(query) || (file.name || '').toLowerCase().includes(query);
             });
 
-            renderFiles(filteredFiles);
+            renderFiles(vtFilteredFiles);
         }
 
         function openVersionHistory(record) {
@@ -819,55 +1044,5 @@ $conn->close();
     <script src="assets/js/archives-landing.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
-
-    <!-- Logout Confirmation Modal -->
-    <div id="logout-modal" class="hidden fixed inset-0 z-50">
-        <div class="flex items-center justify-center min-h-screen px-4">
-            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
-            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 max-w-md w-full p-6">
-                <div class="text-center mb-6">
-                    <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="bi bi-box-arrow-right text-red-600 dark:text-red-400 text-3xl"></i>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Logout Confirmation</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to logout from your account?</p>
-                </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button id="logout-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                    <form action="logout.php" method="POST" class="inline">
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Yes, Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        (function(){
-            var logoutModal = document.getElementById('logout-modal');
-            var openLogoutModalBtn = document.getElementById('open-logout-modal');
-            var logoutCancelBtn = document.getElementById('logout-cancel');
-            
-            function openLogoutModal() {
-                logoutModal && logoutModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
-            
-            function closeLogoutModal() {
-                logoutModal && logoutModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-            
-            openLogoutModalBtn?.addEventListener('click', openLogoutModal);
-            logoutCancelBtn?.addEventListener('click', closeLogoutModal);
-            
-            window.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && !logoutModal?.classList.contains('hidden') === false) {
-                    closeLogoutModal();
-                }
-            });
-        })();
-    </script>
 </body>
 </html>

@@ -153,9 +153,11 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                         <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <i class="bi bi-gear mr-2"></i>Account Settings
                                         </a>
-                                        <button type="button" id="open-logout-modal" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
-                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
-                                        </button>
+                                        <form action="logout.php" method="POST" class="block w-full">
+                                            <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                                <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -625,58 +627,6 @@ if ($folders_result && $folders_result->num_rows > 0) {
             m.classList.add('opacity-0'); i.classList.remove('scale-100'); i.classList.add('scale-95');
             setTimeout(() => { m.classList.add('hidden'); }, 300);
         }
-    </script>
-
-    <!-- Logout Confirmation Modal -->
-    <div id="logout-modal" class="hidden fixed inset-0 z-50">
-        <div id="logout-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative z-10 flex min-h-full items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl p-6">
-                <div class="text-center mb-6">
-                    <div class="bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="bi bi-box-arrow-right text-red-600 dark:text-red-400 text-3xl"></i>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Logout Confirmation</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to logout from your account?</p>
-                </div>
-                
-                <div class="flex justify-end gap-2">
-                    <button id="logout-cancel" type="button" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 text-sm font-semibold">Cancel</button>
-                    <form action="logout.php" method="POST" class="inline">
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Yes, Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        (function(){
-            var logoutModal = document.getElementById('logout-modal');
-            var openLogoutModalBtn = document.getElementById('open-logout-modal');
-            var logoutCancelBtn = document.getElementById('logout-cancel');
-            var logoutModalBackdrop = document.getElementById('logout-modal-backdrop');
-            
-            function openLogoutModal() {
-                logoutModal && logoutModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
-            
-            function closeLogoutModal() {
-                logoutModal && logoutModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-            
-            openLogoutModalBtn?.addEventListener('click', openLogoutModal);
-            logoutCancelBtn?.addEventListener('click', closeLogoutModal);
-            logoutModalBackdrop?.addEventListener('click', closeLogoutModal);
-            
-            window.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && !logoutModal?.classList.contains('hidden') === false) {
-                    closeLogoutModal();
-                }
-            });
-        })();
     </script>
 </body>
 </html>

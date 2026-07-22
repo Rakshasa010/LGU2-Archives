@@ -305,56 +305,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Content-Type: application/json');
         $term = $_POST['term'] ?? $input['term'] ?? '';
         $sort = $_POST['sort'] ?? $input['sort'] ?? 'latest';
+        $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+        $page_size = isset($_POST['page_size']) ? max(1, min(100, intval($_POST['page_size']))) : 20;
         $term = trim($term);
         $like = '%' . $conn->real_escape_string($term) . '%';
         $folders = [];
         $files = [];
-
-        if (!$is_legislative) {
-            $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE parent_id = ? AND name LIKE ? ORDER BY created_at DESC LIMIT 20");
-            $stmt->bind_param("is", $current_folder_id, $like);
-            if ($stmt->execute()) {
-                $res = $stmt->get_result();
-                while ($row = $res->fetch_assoc()) {
-                    $folders[] = $row;
-                }
-            }
-            $stmt->close();
-        }
 
         $orderClause = "ORDER BY created_at DESC";
         if ($sort === 'daily') $orderClause = "ORDER BY DATE(created_at) DESC, created_at DESC";
         if ($sort === 'monthly') $orderClause = "ORDER BY YEAR(created_at) DESC, MONTH(created_at) DESC, created_at DESC";
         if ($sort === 'yearly') $orderClause = "ORDER BY YEAR(created_at) DESC, created_at DESC";
 
+        $subfolders_total = 0;
+        $files_total = 0;
+
+        if (!$is_legislative) {
+            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_folders WHERE parent_id = ? AND name LIKE ?");
+            $cnt->bind_param("is", $current_folder_id, $like);
+            $cnt->execute();
+            $cnt_res = $cnt->get_result();
+            if ($cnt_r = $cnt_res->fetch_assoc()) $subfolders_total = (int)$cnt_r['cnt'];
+            $cnt->close();
+        }
+
         if ($is_legislative) {
             $type = $current_folder['type'];
             if ($type === 'Ordinance') {
-                $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT 100");
-                $stmt->bind_param("isss", $current_folder_id, $like, $like, $like);
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?)");
+                $cnt->bind_param("isss", $current_folder_id, $like, $like, $like);
             } else {
-                $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT 100");
-                $stmt->bind_param("sisss", $type, $current_folder_id, $like, $like, $like);
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?)");
+                $cnt->bind_param("sisss", $type, $current_folder_id, $like, $like, $like);
             }
-            if ($stmt->execute()) {
-                $res = $stmt->get_result();
-                while ($row = $res->fetch_assoc()) {
-                    $files[] = $row;
-                }
+            $cnt->execute();
+            $cnt_res = $cnt->get_result();
+            if ($cnt_r = $cnt_res->fetch_assoc()) $files_total = (int)$cnt_r['cnt'];
+            $cnt->close();
+        } else {
+            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ? AND (name LIKE ? OR author LIKE ? OR unique_number LIKE ?)");
+            $cnt->bind_param("isss", $current_folder_id, $like, $like, $like);
+            $cnt->execute();
+            $cnt_res = $cnt->get_result();
+            if ($cnt_r = $cnt_res->fetch_assoc()) $files_total = (int)$cnt_r['cnt'];
+            $cnt->close();
+        }
+
+        $total_items = $subfolders_total + $files_total;
+        $total_pages = max(1, ceil($total_items / $page_size));
+        if ($page > $total_pages) $page = $total_pages;
+        $offset = ($page - 1) * $page_size;
+
+        if (!$is_legislative) {
+            $sf_limit = max(0, min($subfolders_total, $page_size));
+            if ($offset < $subfolders_total && $sf_limit > 0) {
+                $sf_offset = $offset;
+                $sf_stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE parent_id = ? AND name LIKE ? ORDER BY created_at DESC LIMIT ?, ?");
+                $sf_stmt->bind_param("isii", $current_folder_id, $like, $sf_offset, $sf_limit);
+                $sf_stmt->execute();
+                $sf_res = $sf_stmt->get_result();
+                while ($row = $sf_res->fetch_assoc()) $folders[] = $row;
+                $sf_stmt->close();
+            }
+            $file_offset = max(0, $offset - $subfolders_total);
+            if ($file_offset >= 0 && $file_offset < $files_total) {
+                $f_limit = min($page_size, $files_total - $file_offset);
+                $f_stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? AND (name LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT ?, ?");
+                $f_stmt->bind_param("isssii", $current_folder_id, $like, $like, $like, $file_offset, $f_limit);
+                $f_stmt->execute();
+                $f_res = $f_stmt->get_result();
+                while ($row = $f_res->fetch_assoc()) $files[] = $row;
+                $f_stmt->close();
             }
         } else {
-            $stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? AND (name LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT 100");
-            $stmt->bind_param("isss", $current_folder_id, $like, $like, $like);
-            if ($stmt->execute()) {
-                $res = $stmt->get_result();
-                while ($row = $res->fetch_assoc()) {
-                    $files[] = $row;
+            if ($offset < $files_total) {
+                $f_limit = min($page_size, $files_total - $offset);
+                $type = $current_folder['type'];
+                if ($type === 'Ordinance') {
+                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT ?, ?");
+                    $f_stmt->bind_param("isssii", $current_folder_id, $like, $like, $like, $offset, $f_limit);
+                } else {
+                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT ?, ?");
+                    $f_stmt->bind_param("sisssii", $type, $current_folder_id, $like, $like, $like, $offset, $f_limit);
                 }
+                $f_stmt->execute();
+                $f_res = $f_stmt->get_result();
+                while ($row = $f_res->fetch_assoc()) $files[] = $row;
+                $f_stmt->close();
             }
         }
-        $stmt->close();
         
-        echo json_encode(['success' => true, 'folders' => $folders, 'files' => $files]);
+        echo json_encode(['success' => true, 'folders' => $folders, 'files' => $files, 'total' => $total_items, 'page' => $page, 'page_size' => $page_size]);
         exit();
     }
 
@@ -399,6 +440,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'get_files') {
         header('Content-Type: application/json');
         $sort = $_POST['sort'] ?? $input['sort'] ?? 'latest';
+        $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+        $page_size = isset($_POST['page_size']) ? max(1, min(100, intval($_POST['page_size']))) : 20;
         $orderClause = "ORDER BY created_at DESC";
         if ($sort === 'daily') $orderClause = "ORDER BY DATE(created_at) DESC, created_at DESC";
         if ($sort === 'monthly') $orderClause = "ORDER BY YEAR(created_at) DESC, MONTH(created_at) DESC, created_at DESC";
@@ -406,72 +449,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $subfolders = [];
         $files = [];
+        $subfolders_total = 0;
+        $files_total = 0;
 
         if (!$is_legislative) {
-            $stmt = $conn->prepare("SELECT * FROM archive_folders WHERE parent_id = ? ORDER BY created_at DESC");
-            $stmt->bind_param("i", $current_folder_id);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            while ($row = $res->fetch_assoc()) $subfolders[] = $row;
-            $stmt->close();
+            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_folders WHERE parent_id = ?");
+            $cnt->bind_param("i", $current_folder_id);
+            $cnt->execute();
+            $cnt_res = $cnt->get_result();
+            if ($cnt_r = $cnt_res->fetch_assoc()) $subfolders_total = (int)$cnt_r['cnt'];
+            $cnt->close();
         }
 
         if ($is_legislative) {
             $type = $current_folder['type'];
             if ($type === 'Ordinance') {
-                $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? $orderClause");
-                $stmt->bind_param("i", $current_folder_id);
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ?");
+                $cnt->bind_param("i", $current_folder_id);
             } else {
-                $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND folder_id = ? $orderClause");
-                $stmt->bind_param("si", $type, $current_folder_id);
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND folder_id = ?");
+                $cnt->bind_param("si", $type, $current_folder_id);
             }
+            $cnt->execute();
+            $cnt_res = $cnt->get_result();
+            if ($cnt_r = $cnt_res->fetch_assoc()) $files_total = (int)$cnt_r['cnt'];
+            $cnt->close();
         } else {
-            $stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? $orderClause");
-            $stmt->bind_param("i", $current_folder_id);
+            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ?");
+            $cnt->bind_param("i", $current_folder_id);
+            $cnt->execute();
+            $cnt_res = $cnt->get_result();
+            if ($cnt_r = $cnt_res->fetch_assoc()) $files_total = (int)$cnt_r['cnt'];
+            $cnt->close();
         }
 
-        $stmt->execute();
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_assoc()) $files[] = $row;
-        $stmt->close();
+        $total_items = $subfolders_total + $files_total;
+        $total_pages = max(1, ceil($total_items / $page_size));
+        if ($page > $total_pages) $page = $total_pages;
+        $offset = ($page - 1) * $page_size;
+
+        if (!$is_legislative) {
+            $sf_limit = max(0, min($subfolders_total, $page_size));
+            if ($offset < $subfolders_total && $sf_limit > 0) {
+                $sf_offset = $offset;
+                $sf_stmt = $conn->prepare("SELECT * FROM archive_folders WHERE parent_id = ? ORDER BY created_at DESC LIMIT ?, ?");
+                $sf_stmt->bind_param("iii", $current_folder_id, $sf_offset, $sf_limit);
+                $sf_stmt->execute();
+                $sf_res = $sf_stmt->get_result();
+                while ($row = $sf_res->fetch_assoc()) $subfolders[] = $row;
+                $sf_stmt->close();
+            }
+            $file_offset = max(0, $offset - $subfolders_total);
+            if ($file_offset >= 0 && $file_offset < $files_total) {
+                $f_limit = min($page_size, $files_total - $file_offset);
+                $f_stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? $orderClause LIMIT ?, ?");
+                $f_stmt->bind_param("iii", $current_folder_id, $file_offset, $f_limit);
+                $f_stmt->execute();
+                $f_res = $f_stmt->get_result();
+                while ($row = $f_res->fetch_assoc()) $files[] = $row;
+                $f_stmt->close();
+            }
+        } else {
+            if ($offset < $files_total) {
+                $f_limit = min($page_size, $files_total - $offset);
+                $type = $current_folder['type'];
+                if ($type === 'Ordinance') {
+                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? $orderClause LIMIT ?, ?");
+                    $f_stmt->bind_param("iii", $current_folder_id, $offset, $f_limit);
+                } else {
+                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND folder_id = ? $orderClause LIMIT ?, ?");
+                    $f_stmt->bind_param("sii", $type, $current_folder_id, $offset, $f_limit);
+                }
+                $f_stmt->execute();
+                $f_res = $f_stmt->get_result();
+                while ($row = $f_res->fetch_assoc()) $files[] = $row;
+                $f_stmt->close();
+            }
+        }
         
-        echo json_encode(['success' => true, 'folders' => $subfolders, 'files' => $files]);
+        echo json_encode(['success' => true, 'folders' => $subfolders, 'files' => $files, 'total' => $total_items, 'page' => $page, 'page_size' => $page_size]);
         exit();
     }
 }
 
-// Fetch subfolders and files/records
+// Fetch subfolders and files/records (server-side pagination: first page only)
 $subfolders = [];
 $files = [];
 $legislative_records = [];
+$total_items_initial = 0;
+$page_size_initial = 20;
 
 if ($is_legislative) {
     $type = $current_folder['type'];
+    $cnt_sql = $type === 'Ordinance' 
+        ? "SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND (folder_id = ? OR folder_id IS NULL)" 
+        : "SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND (folder_id = ? OR folder_id IS NULL)";
+    $cnt_stmt = $conn->prepare($cnt_sql);
     if ($type === 'Ordinance') {
-        $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND (folder_id = ? OR folder_id IS NULL) ORDER BY created_at DESC");
-        $stmt->bind_param("i", $current_folder_id);
+        $cnt_stmt->bind_param("i", $current_folder_id);
     } else {
-        $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND (folder_id = ? OR folder_id IS NULL) ORDER BY created_at DESC");
-        $stmt->bind_param("si", $type, $current_folder_id);
+        $cnt_stmt->bind_param("si", $type, $current_folder_id);
+    }
+    $cnt_stmt->execute();
+    $cnt_res = $cnt_stmt->get_result();
+    if ($cnt_row = $cnt_res->fetch_assoc()) $total_items_initial = (int)$cnt_row['cnt'];
+    $cnt_stmt->close();
+
+    if ($type === 'Ordinance') {
+        $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND (folder_id = ? OR folder_id IS NULL) ORDER BY created_at DESC LIMIT ?");
+        $stmt->bind_param("ii", $current_folder_id, $page_size_initial);
+    } else {
+        $stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND (folder_id = ? OR folder_id IS NULL) ORDER BY created_at DESC LIMIT ?");
+        $stmt->bind_param("sii", $type, $current_folder_id, $page_size_initial);
     }
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) $legislative_records[] = $row;
     $stmt->close();
 } else {
-    $stmt = $conn->prepare("SELECT * FROM archive_folders WHERE parent_id = ? ORDER BY created_at DESC");
-    $stmt->bind_param("i", $current_folder_id);
+    $cnt_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_folders WHERE parent_id = ?");
+    $cnt_stmt->bind_param("i", $current_folder_id);
+    $cnt_stmt->execute();
+    $cnt_res = $cnt_stmt->get_result();
+    $subfolders_total_init = 0;
+    if ($cnt_row = $cnt_res->fetch_assoc()) $subfolders_total_init = (int)$cnt_row['cnt'];
+    $cnt_stmt->close();
+
+    $cnt_stmt2 = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ?");
+    $cnt_stmt2->bind_param("i", $current_folder_id);
+    $cnt_stmt2->execute();
+    $cnt_res2 = $cnt_stmt2->get_result();
+    $files_total_init = 0;
+    if ($cnt_row2 = $cnt_res2->fetch_assoc()) $files_total_init = (int)$cnt_row2['cnt'];
+    $cnt_stmt2->close();
+
+    $total_items_initial = $subfolders_total_init + $files_total_init;
+
+    $stmt = $conn->prepare("SELECT * FROM archive_folders WHERE parent_id = ? ORDER BY created_at DESC LIMIT ?");
+    $stmt->bind_param("ii", $current_folder_id, $page_size_initial);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) $subfolders[] = $row;
     $stmt->close();
 
-    $stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? ORDER BY created_at DESC");
-    $stmt->bind_param("i", $current_folder_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) $files[] = $row;
-    $stmt->close();
+    $remaining = max(0, $page_size_initial - count($subfolders));
+    if ($remaining > 0) {
+        $stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? ORDER BY created_at DESC LIMIT ?");
+        $stmt->bind_param("ii", $current_folder_id, $remaining);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) $files[] = $row;
+        $stmt->close();
+    }
 }
 
 // Check if user is admin
@@ -823,6 +952,8 @@ function formatFileSize($fileSize) {
                             </div>
                         <?php endif; ?>
                     </div>
+                    <!-- Pagination Controls -->
+                    <div id="folderPagination" class="border-t border-gray-200 dark:border-slate-700 px-4 py-3"></div>
                 </div>
             </main>
         <?php include 'includes/footer.php'; ?>
@@ -943,11 +1074,15 @@ function formatFileSize($fileSize) {
         </div>
     </div>
 
+    <script src="assets/js/pagination.js"></script>
     <script>
         const isLegislative = <?php echo $is_legislative ? 'true' : 'false'; ?>;
         const highlightFileId = <?php echo isset($_GET['highlight']) ? (int)$_GET['highlight'] : 'null'; ?>;
+        const autoPreview = <?php echo isset($_GET['preview']) ? 'true' : 'false'; ?>;
         window.currentRecords = <?php echo json_encode($legislative_records); ?>;
         window.currentFiles = <?php echo json_encode($files); ?>;
+        const folderPagination = new PaginationControls('folderPagination', { onPageChange: (page) => refreshContent(page) });
+        folderPagination.update(<?php echo $total_items_initial; ?>);
 
         function closePreviewModal() {
             const modal = document.getElementById('previewModal');
@@ -979,15 +1114,17 @@ function formatFileSize($fileSize) {
                         targetElement.classList.remove('ring-4', 'ring-yellow-400', 'ring-opacity-75');
                     }, 3000);
                     
-                    // Try to auto-open preview
-                    const fileUrl = window.currentFiles?.find(f => f.id == highlightFileId)?.file_path;
-                    const recordUrl = window.currentRecords?.find(r => r.id == highlightFileId)?.file_path;
-                    const name = window.currentFiles?.find(f => f.id == highlightFileId)?.name ||
-                                 window.currentRecords?.find(r => r.id == highlightFileId)?.title;
-                    const size = 0;
-                    const createdAt = '';
-                    if (fileUrl || recordUrl) {
-                        previewFile(name, highlightFileId, fileUrl || recordUrl, size, createdAt);
+                    // Only auto-open preview when &preview=1 is in the URL
+                    if (autoPreview) {
+                        const fileUrl = window.currentFiles?.find(f => f.id == highlightFileId)?.file_path;
+                        const recordUrl = window.currentRecords?.find(r => r.id == highlightFileId)?.file_path;
+                        const name = window.currentFiles?.find(f => f.id == highlightFileId)?.name ||
+                                     window.currentRecords?.find(r => r.id == highlightFileId)?.title;
+                        const size = 0;
+                        const createdAt = '';
+                        if (fileUrl || recordUrl) {
+                            previewFile(name, highlightFileId, fileUrl || recordUrl, size, createdAt);
+                        }
                     }
                 }
             }, 500);
@@ -1268,24 +1405,27 @@ function formatFileSize($fileSize) {
         });
 
         document.getElementById('sortSelect').addEventListener('change', function() {
-            refreshContent();
+            refreshContent(1);
         });
 
         document.getElementById('searchBtn').addEventListener('click', function() {
-            refreshContent();
+            refreshContent(1);
         });
 
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') refreshContent();
+            if (e.key === 'Enter') refreshContent(1);
         });
 
-        function refreshContent() {
+        function refreshContent(page) {
+            page = page || 1;
             const sort = document.getElementById('sortSelect').value;
             const search = document.getElementById('searchInput').value.trim();
             const action = search ? 'search_folder' : 'get_files';
             const formData = new FormData();
             formData.append('action', action);
             formData.append('sort', sort);
+            formData.append('page', page);
+            formData.append('page_size', 20);
             if (search) formData.append('term', search);
 
             fetch('folder_view.php?id=<?php echo $current_folder_id; ?><?php echo $is_legislative ? '&legislative=1' : ''; ?>', {
@@ -1299,7 +1439,9 @@ function formatFileSize($fileSize) {
         }
 
         function renderContent(data) {
-            document.getElementById('itemCount').textContent = (data.folders.length + data.files.length) + ' items';
+            document.getElementById('itemCount').textContent = (data.total || (data.folders.length + data.files.length)) + ' items';
+            folderPagination.setPage(data.page || 1);
+            folderPagination.update(data.total || (data.folders.length + data.files.length));
             if (isLegislative) {
                 renderLegislativeRecords(data.files);
             } else {

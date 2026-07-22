@@ -221,9 +221,9 @@ switch ($action) {
             echo json_encode(['success' => false, 'message' => 'Invalid ID']);
             exit;
         }
+        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
         
-        // Fetch all versions in the family (parent + children)
-        // First find the root parent
         $findParent = $conn->prepare("SELECT id, parent_version_id FROM legislative_records WHERE id = ?");
         $findParent->bind_param("i", $id);
         $findParent->execute();
@@ -232,9 +232,21 @@ switch ($action) {
         
         $root_id = $row['parent_version_id'] ? $row['parent_version_id'] : $id;
         
-        $sql = "SELECT id, title, version, created_at, author FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
+        $total = 0;
+        if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE id = ? OR parent_version_id = ?")) {
+            $stc->bind_param("ii", $root_id, $root_id);
+            $stc->execute();
+            $rc = $stc->get_result();
+            if ($rc && ($rowc = $rc->fetch_assoc())) $total = (int)$rowc['cnt'];
+            $stc->close();
+        }
+        $total_pages = max(1, ceil($total / $page_size));
+        if ($page > $total_pages) $page = $total_pages;
+        $offset = ($page - 1) * $page_size;
+        
+        $sql = "SELECT id, title, version, created_at, author FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC LIMIT ?, ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ii", $root_id, $root_id);
+        $stmt->bind_param("iiii", $root_id, $root_id, $offset, $page_size);
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -243,34 +255,58 @@ switch ($action) {
             $versions[] = $v;
         }
         
-        echo json_encode(['success' => true, 'versions' => $versions]);
+        echo json_encode(['success' => true, 'versions' => $versions, 'total' => $total, 'page' => $page, 'page_size' => $page_size]);
         break;
 
     case 'get_files':
         $type = $_GET['type'] ?? '';
+        $folder_id = isset($_GET['folder_id']) ? (int)$_GET['folder_id'] : 0;
         $allowed_types = ['Ordinance', 'Resolution', 'Billing', 'Public Hearing', 'Meeting'];
+        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
         
-        $sql = "SELECT id, title, type, month, year, author, created_at, last_accessed, version 
-                FROM legislative_records 
-                WHERE parent_version_id IS NULL";
-        
+        $where_sql = "lr.parent_version_id IS NULL";
         $params = [];
         $types = "";
         
+        if ($folder_id) {
+            $where_sql .= " AND lr.folder_id = ?";
+            $params[] = $folder_id;
+            $types .= "i";
+        }
         if ($type && in_array($type, $allowed_types)) {
-            $sql .= " AND type = ?";
+            $where_sql .= " AND lr.type = ?";
             $params[] = $type;
-            $types = "s";
+            $types .= "s";
         } elseif ($type === 'All') {
-             $sql .= " AND type IN ('Ordinance', 'Resolution', 'Billing', 'Public Hearing', 'Meeting')";
+             $where_sql .= " AND lr.type IN ('Ordinance', 'Resolution', 'Billing', 'Public Hearing', 'Meeting')";
         }
         
-        $sql .= " ORDER BY year DESC, month DESC, created_at DESC";
+        $cnt_sql = "SELECT COUNT(*) AS cnt FROM legislative_records lr WHERE $where_sql";
+        $cnt_stmt = $conn->prepare($cnt_sql);
+        if ($types !== '') $cnt_stmt->bind_param($types, ...$params);
+        $cnt_stmt->execute();
+        $cnt_res = $cnt_stmt->get_result();
+        $total = 0;
+        if ($cnt_row = $cnt_res->fetch_assoc()) $total = (int)$cnt_row['cnt'];
+        $cnt_stmt->close();
+        
+        $total_pages = max(1, ceil($total / $page_size));
+        if ($page > $total_pages) $page = $total_pages;
+        $offset = ($page - 1) * $page_size;
+        
+        $sql = "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.created_at, lr.last_accessed, lr.version, lr.folder_id, lr.file_path
+                FROM legislative_records lr
+                WHERE $where_sql
+                ORDER BY lr.year DESC, lr.month DESC, lr.created_at DESC
+                LIMIT ?, ?";
+        
+        $params[] = $offset;
+        $params[] = $page_size;
+        $types .= "ii";
         
         $stmt = $conn->prepare($sql);
-        if ($type && $type !== 'All' && in_array($type, $allowed_types)) {
-            $stmt->bind_param($types, $type);
-        }
+        $stmt->bind_param($types, ...$params);
         
         $stmt->execute();
         $result = $stmt->get_result();
@@ -280,7 +316,7 @@ switch ($action) {
             $files[] = $row;
         }
         
-        echo json_encode(['success' => true, 'files' => $files]);
+        echo json_encode(['success' => true, 'files' => $files, 'total' => $total, 'page' => $page, 'page_size' => $page_size]);
         break;
 
     case 'get_archive_files':
@@ -289,13 +325,28 @@ switch ($action) {
             echo json_encode(['success' => false, 'message' => 'Invalid folder ID']);
             exit;
         }
+        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
+        
+        $total = 0;
+        if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ?")) {
+            $stc->bind_param("i", $folder_id);
+            $stc->execute();
+            $rc = $stc->get_result();
+            if ($rc && ($rowc = $rc->fetch_assoc())) $total = (int)$rowc['cnt'];
+            $stc->close();
+        }
+        $total_pages = max(1, ceil($total / $page_size));
+        if ($page > $total_pages) $page = $total_pages;
+        $offset = ($page - 1) * $page_size;
         
         $sql = "SELECT id, name, file_path, author, created_at, version 
                 FROM archive_files 
                 WHERE folder_id = ?
-                ORDER BY created_at DESC";
+                ORDER BY created_at DESC
+                LIMIT ?, ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $folder_id);
+        $stmt->bind_param("iii", $folder_id, $offset, $page_size);
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -304,7 +355,7 @@ switch ($action) {
             $files[] = $row;
         }
         
-        echo json_encode(['success' => true, 'files' => $files]);
+        echo json_encode(['success' => true, 'files' => $files, 'total' => $total, 'page' => $page, 'page_size' => $page_size]);
         break;
 
     case 'get_contents':
