@@ -574,10 +574,10 @@ foreach ($mock_notifications as $req) {
             </div>
         </div>
 
-        <!-- Detail Modal -->
+        <!-- Detail Modal (Modal #1) -->
         <div id="detail-modal" class="fixed inset-0 z-50 hidden">
             <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-            <div class="relative max-w-2xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
+            <div class="relative max-w-2xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-3">
                         <div id="detail-icon-container" class="w-12 h-12 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-700 dark:text-red-300">
@@ -595,6 +595,14 @@ foreach ($mock_notifications as $req) {
 
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Requester</label>
+                            <p id="detail-requester" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Department</label>
+                            <p id="detail-department" class="text-sm text-gray-900 dark:text-gray-100"></p>
+                        </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Version</label>
                             <p id="detail-version" class="text-sm text-gray-900 dark:text-gray-100"></p>
@@ -623,13 +631,26 @@ foreach ($mock_notifications as $req) {
                         <p id="detail-note" class="text-sm text-gray-800 dark:text-gray-300 bg-gray-50 dark:bg-slate-900 rounded-lg p-3 border border-gray-100 dark:border-slate-700/50"></p>
                     </div>
 
+                    <!-- Staged Attachment Status -->
+                    <div id="staged-attachment-container" class="hidden bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/50 rounded-lg p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-check-circle-fill text-emerald-600 dark:text-emerald-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-emerald-900 dark:text-emerald-100">Staged Attachment: <span id="staged-file-name" class="font-semibold"></span></p>
+                                <p class="text-xs text-emerald-700 dark:text-emerald-400 mt-1"><span id="staged-file-size"></span> · Ready for export</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-slate-700">
-                        <a id="detail-open-location" href="#" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                            <i class="bi bi-box-arrow-right"></i>Open Location
-                        </a>
+                        <button id="detail-open-storage" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                            <i class="bi bi-folder-open"></i>Open Storage
+                        </button>
                         <div class="flex gap-2">
-                            <button id="detail-mark-read" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
-                                Mark as Read
+                            <button id="detail-export-btn" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                Export Package
                             </button>
                         </div>
                     </div>
@@ -637,30 +658,61 @@ foreach ($mock_notifications as $req) {
             </div>
         </div>
 
+        <!-- Storage Browser Modal (Modal #2) -->
+        <div id="storage-modal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative max-w-4xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 max-h-[90vh] flex flex-col">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-slate-700">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Storage Browser</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Select a file to create a copy for export</p>
+                    </div>
+                    <button id="storage-close" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors">
+                        <i class="bi bi-x-lg text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="mb-4">
+                    <input type="text" id="storage-search" placeholder="Search files by name..." class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+
+                <!-- Content Area -->
+                <div class="flex-1 overflow-y-auto min-h-0">
+                    <!-- Folder Tabs -->
+                    <div id="storage-folders" class="mb-4 flex flex-wrap gap-2"></div>
+
+                    <!-- Files List -->
+                    <div class="space-y-2">
+                        <div id="storage-files-container" class="space-y-2">
+                            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                <i class="bi bi-hourglass-split text-3xl mb-2"></i>
+                                <p class="text-sm">Loading files...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
+                    <button id="storage-cancel" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
 	<script src="assets/js/archives-landing.js"></script>
 	<script src="assets/js/theme-toggle.js"></script>
+	<script src="assets/js/export-fulfillment.js"></script>
 	<script>
+		// Chart initialization
 		(function () {
             const requestItems = document.querySelectorAll('.request-item');
-            const requestGrid = document.getElementById('request-grid');
-            const requestEmpty = document.getElementById('request-empty');
-            const searchInput = document.getElementById('request-search');
             const requestModal = document.getElementById('request-modal');
             const openRequestBtn = document.getElementById('open-request-modal');
             const requestCancel = document.getElementById('request-cancel');
-            const detailModal = document.getElementById('detail-modal');
-            const detailClose = document.getElementById('detail-close');
-
-            let currentFilter = {
-                type: 'all',
-                status: 'all',
-                search: '',
-                groupBy: 'daily',
-                sortBy: 'date',
-                sortDirection: 'desc'
-            };
-
-            let currentDetailItem = null;
 
             // Open new request modal
             function openRequestModal() {
@@ -680,244 +732,7 @@ foreach ($mock_notifications as $req) {
             <?php endif; ?>
             <?php if (!empty($export_notice)): ?>
             try { UI_ENH.toast('<?php echo htmlspecialchars($export_notice, ENT_QUOTES); ?>', {background:'linear-gradient(90deg,#4ade80,#10b981)'}); } catch(e) {}
-            <?php endif; ?>
-
-            // Detail modal functions
-            function openDetailModal(item) {
-                currentDetailItem = item;
-                detailModal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-
-                const fileName = item.getAttribute('data-file-name');
-                const status = item.getAttribute('data-status');
-                const fileType = item.getAttribute('data-type');
-                const version = item.getAttribute('data-file-version');
-                const neededDate = item.getAttribute('data-needed-date');
-                const requestNote = item.getAttribute('data-request-note');
-                const purpose = item.getAttribute('data-purpose');
-                const submittedDate = item.getAttribute('data-submitted-date');
-                const submittedTime = item.getAttribute('data-submitted-time');
-                const link = item.getAttribute('data-link');
-
-                document.getElementById('detail-title').textContent = fileName;
-                document.getElementById('detail-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
-                document.getElementById('detail-version').textContent = version;
-                document.getElementById('detail-needed').textContent = neededDate;
-                document.getElementById('detail-purpose').textContent = purpose;
-                document.getElementById('detail-note').textContent = requestNote;
-                document.getElementById('detail-submitted-date').textContent = submittedDate;
-                document.getElementById('detail-submitted-time').textContent = submittedTime;
-                document.getElementById('detail-open-location').href = link;
-
-                // Set icon
-                let iconClass = 'bi-file-earmark';
-                let iconBg = 'bg-gray-100 dark:bg-slate-700/50';
-                let iconColor = 'text-gray-600 dark:text-gray-400';
-                if (fileType === 'pdf') {
-                    iconClass = 'bi-file-earmark-pdf';
-                    iconBg = 'bg-red-100 dark:bg-red-900/30';
-                    iconColor = 'text-red-700 dark:text-red-400';
-                } else if (fileType === 'doc') {
-                    iconClass = 'bi-file-earmark-word';
-                    iconBg = 'bg-blue-100 dark:bg-blue-900/30';
-                    iconColor = 'text-blue-700 dark:text-blue-400';
-                } else if (fileType === 'xls') {
-                    iconClass = 'bi-file-earmark-spreadsheet';
-                    iconBg = 'bg-emerald-100 dark:bg-emerald-900/30';
-                    iconColor = 'text-emerald-700 dark:text-emerald-400';
-                }
-
-                document.getElementById('detail-icon').className = 'bi ' + iconClass + ' text-2xl';
-                const iconContainer = document.getElementById('detail-icon-container');
-                iconContainer.className = 'w-12 h-12 rounded-md ' + iconBg + ' flex items-center justify-center ' + iconColor;
-            }
-
-            function closeDetailModal() {
-                detailModal.classList.add('hidden');
-                document.body.style.overflow = '';
-                currentDetailItem = null;
-            }
-
-            if (detailClose) detailClose.addEventListener('click', closeDetailModal);
-            detailModal.addEventListener('click', (e) => {
-                if (e.target === detailModal.querySelector('div:first-child')) {
-                    closeDetailModal();
-                }
-            });
-
-            // Item click handlers
-            requestItems.forEach(item => {
-                item.addEventListener('click', (e) => {
-                    if (!e.target.closest('.item-menu-btn')) {
-                        openDetailModal(item);
-                    }
-                });
-                item.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        openDetailModal(item);
-                    }
-                });
-            });
-
-            // Filter dropdowns
-            const filterTypeBtn = document.getElementById('filter-type-btn');
-            const filterTypeMenu = document.getElementById('filter-type-menu');
-            const filterStatusBtn = document.getElementById('filter-status-btn');
-            const filterStatusMenu = document.getElementById('filter-status-menu');
-            const groupDateBtn = document.getElementById('group-date-btn');
-            const groupDateMenu = document.getElementById('group-date-menu');
-            const sortBtn = document.getElementById('sort-btn');
-            const sortMenu = document.getElementById('sort-menu');
-            const sortDirectionBtn = document.getElementById('sort-direction-btn');
-
-            function toggleMenu(btn, menu) {
-                const isExpanded = btn.getAttribute('aria-expanded') === 'true';
-                // Close all other menus
-                [filterTypeMenu, filterStatusMenu, groupDateMenu, sortMenu].forEach(m => {
-                    if (m !== menu) m.classList.add('hidden');
-                });
-                [filterTypeBtn, filterStatusBtn, groupDateBtn, sortBtn].forEach(b => {
-                    if (b !== btn) b.setAttribute('aria-expanded', 'false');
-                });
-                menu.classList.toggle('hidden');
-                btn.setAttribute('aria-expanded', !isExpanded);
-            }
-
-            filterTypeBtn.addEventListener('click', () => toggleMenu(filterTypeBtn, filterTypeMenu));
-            filterStatusBtn.addEventListener('click', () => toggleMenu(filterStatusBtn, filterStatusMenu));
-            groupDateBtn.addEventListener('click', () => toggleMenu(groupDateBtn, groupDateMenu));
-            sortBtn.addEventListener('click', () => toggleMenu(sortBtn, sortMenu));
-
-            // Close menus when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#filter-type-btn') && !e.target.closest('#filter-type-menu')) {
-                    filterTypeMenu.classList.add('hidden');
-                    filterTypeBtn.setAttribute('aria-expanded', 'false');
-                }
-                if (!e.target.closest('#filter-status-btn') && !e.target.closest('#filter-status-menu')) {
-                    filterStatusMenu.classList.add('hidden');
-                    filterStatusBtn.setAttribute('aria-expanded', 'false');
-                }
-                if (!e.target.closest('#group-date-btn') && !e.target.closest('#group-date-menu')) {
-                    groupDateMenu.classList.add('hidden');
-                    groupDateBtn.setAttribute('aria-expanded', 'false');
-                }
-                if (!e.target.closest('#sort-btn') && !e.target.closest('#sort-menu')) {
-                    sortMenu.classList.add('hidden');
-                    sortBtn.setAttribute('aria-expanded', 'false');
-                }
-            });
-
-            // Type filter
-            document.querySelectorAll('.type-filter-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    currentFilter.type = option.getAttribute('data-type');
-                    filterTypeMenu.classList.add('hidden');
-                    filterTypeBtn.setAttribute('aria-expanded', 'false');
-                    applyFiltersAndSort();
-                });
-            });
-
-            // Status filter
-            document.querySelectorAll('.status-filter-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    currentFilter.status = option.getAttribute('data-status');
-                    filterStatusMenu.classList.add('hidden');
-                    filterStatusBtn.setAttribute('aria-expanded', 'false');
-                    applyFiltersAndSort();
-                });
-            });
-
-            // Group date
-            document.querySelectorAll('.group-date-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    currentFilter.groupBy = option.getAttribute('data-group');
-                    document.getElementById('group-date-label').textContent = option.textContent;
-                    groupDateMenu.classList.add('hidden');
-                    groupDateBtn.setAttribute('aria-expanded', 'false');
-                    applyFiltersAndSort();
-                });
-            });
-
-            // Sort
-            document.querySelectorAll('.sort-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    currentFilter.sortBy = option.getAttribute('data-sort');
-                    document.getElementById('sort-label').textContent = option.textContent;
-                    sortMenu.classList.add('hidden');
-                    sortBtn.setAttribute('aria-expanded', 'false');
-                    applyFiltersAndSort();
-                });
-            });
-
-            sortDirectionBtn.addEventListener('click', () => {
-                currentFilter.sortDirection = currentFilter.sortDirection === 'asc' ? 'desc' : 'asc';
-                const icon = document.getElementById('sort-direction-icon');
-                icon.classList.toggle('bi-arrow-down-up');
-                icon.classList.toggle('bi-arrow-up-down');
-                applyFiltersAndSort();
-            });
-
-            // Search
-            searchInput.addEventListener('input', (e) => {
-                currentFilter.search = e.target.value.toLowerCase();
-                applyFiltersAndSort();
-            });
-
-            function applyFiltersAndSort() {
-                let items = Array.from(requestItems);
-
-                // Filter
-                items = items.filter(item => {
-                    const typeMatch = currentFilter.type === 'all' || item.getAttribute('data-type') === currentFilter.type;
-                    const statusMatch = currentFilter.status === 'all' || item.getAttribute('data-status') === currentFilter.status;
-                    const searchMatch = currentFilter.search === '' || item.getAttribute('data-content').toLowerCase().includes(currentFilter.search);
-                    return typeMatch && statusMatch && searchMatch;
-                });
-
-                // Sort
-                items.sort((a, b) => {
-                    let aVal, bVal;
-                    if (currentFilter.sortBy === 'name') {
-                        aVal = a.getAttribute('data-content').toLowerCase();
-                        bVal = b.getAttribute('data-content').toLowerCase();
-                    } else if (currentFilter.sortBy === 'date') {
-                        aVal = new Date(a.getAttribute('data-date'));
-                        bVal = new Date(b.getAttribute('data-date'));
-                    } else if (currentFilter.sortBy === 'status') {
-                        aVal = a.getAttribute('data-status');
-                        bVal = b.getAttribute('data-status');
-                    }
-
-                    let comparison = 0;
-                    if (aVal < bVal) comparison = -1;
-                    if (aVal > bVal) comparison = 1;
-                    return currentFilter.sortDirection === 'desc' ? -comparison : comparison;
-                });
-
-                // Reorder in DOM
-                items.forEach(item => requestGrid.appendChild(item));
-
-                // Show/hide items
-                requestItems.forEach(item => {
-                    item.style.display = items.includes(item) ? '' : 'none';
-                });
-
-                // Show empty state
-                if (items.length === 0) {
-                    requestGrid.classList.add('hidden');
-                    requestEmpty.classList.remove('hidden');
-                } else {
-                    requestGrid.classList.remove('hidden');
-                    requestEmpty.classList.add('hidden');
-                }
-            }
-
-            // Initial apply
-            applyFiltersAndSort();
-
-            // Initialize Charts
+            <?php endif; ?>            // Initialize Charts
             const requestsData = <?php echo json_encode($mock_notifications); ?>;
 
             // Requests Over Time (Line Chart)
@@ -929,27 +744,27 @@ foreach ($mock_notifications as $req) {
             const dates = Object.keys(requestsByDate).sort();
             const counts = dates.map(d => requestsByDate[d]);
 
-            const lineCtx = document.getElementById('requestsOverTimeChart').getContext('2d');
-            new Chart(lineCtx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [{
-                        label: 'Requests',
-                        data: counts,
-                        borderColor: '#dc2626',
-                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false }
+            const lineCtx = document.getElementById('requestsOverTimeChart');
+            if (lineCtx) {
+                new Chart(lineCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [{
+                            label: 'Requests',
+                            data: counts,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } }
                     }
-                }
-            });
+                });
+            }
 
             // Status Pie Chart
             const statusCounts = {
@@ -965,34 +780,20 @@ foreach ($mock_notifications as $req) {
             const statusData = Object.values(statusCounts);
             const statusColors = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'];
 
-            const pieCtx = document.getElementById('statusPieChart').getContext('2d');
-            new Chart(pieCtx, {
-                type: 'pie',
-                data: {
-                    labels: statusLabels,
-                    datasets: [{
-                        data: statusData,
-                        backgroundColor: statusColors
-                    }]
-                },
-                options: {
-                    responsive: true
-                }
-            });
-
-            // Mark as read
-            document.getElementById('detail-mark-read')?.addEventListener('click', () => {
-                if (currentDetailItem) {
-                    currentDetailItem.setAttribute('data-status', 'read');
-                    const statusDot = currentDetailItem.querySelector('.absolute.top-3.left-3 span');
-                    if (statusDot) {
-                        statusDot.classList.remove('bg-red-500');
-                        statusDot.classList.add('bg-gray-400');
-                    }
-                    applyFiltersAndSort();
-                    closeDetailModal();
-                }
-            });
+            const pieCtx = document.getElementById('statusPieChart');
+            if (pieCtx) {
+                new Chart(pieCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: statusLabels,
+                        datasets: [{
+                            data: statusData,
+                            backgroundColor: statusColors
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            }
 		})();
 	</script>
 </body>
