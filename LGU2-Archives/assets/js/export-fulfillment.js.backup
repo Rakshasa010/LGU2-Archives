@@ -318,7 +318,8 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
             <button 
                 type="button" 
                 class="copy-file-btn"
-                onclick="if(window.copyStorageFile){window.copyStorageFile('${file.id}','${escapeHtml(file.name).replace(/'/g, "\\'")}','${file.size_formatted}','${file.path||''}');}return false;"
+                data-file-id="${file.id}"
+                data-file-name="${escapeHtml(file.name)}"
                 style="
                     position: relative;
                     width: 100%;
@@ -347,16 +348,32 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
             </button>
         `;
         
-        console.log('[FileCard] Card created with inline onclick handler');
+        // Find the button element and attach click handler
+        const copyBtn = row.querySelector('.copy-file-btn');
+        if (copyBtn) {
+            console.log('[FileCard] Attaching click handler to button');
+            
+            // Use onclick attribute
+            copyBtn.onclick = function(e) {
+                console.log('[FileCopy] ✅ ONCLICK triggered for:', file.name);
+                e.stopPropagation();
+                e.preventDefault();
+                handleFileCopy(file);
+                return false;
+            };
+        } else {
+            console.error('[FileCard] ❌ Button not found in row!');
+        }
+
+        console.log('[FileCard] Card created and ready');
         return row;
     }
     
-    // Expose staging function to global scope
-    window.exportFulfillment = window.exportFulfillment || {};
-    window.exportFulfillment.stageFile = function(file) {
-        console.log('[ExportFulfillment] Global staging for:', file.name);
+    // Separate handler function
+    function handleFileCopy(file) {
+        console.log('[FileCopy] Processing copy for:', file.name, file.id);
         stageExportCopy(file);
-    };
+    }
 
     function getFileIcon(fileType) {
         let iconClass = 'bi-file';
