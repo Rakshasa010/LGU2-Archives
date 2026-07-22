@@ -225,11 +225,11 @@
 
     function createFileRow(file) {
         const row = document.createElement('div');
-        row.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500';
+        row.className = 'relative flex items-center justify-between p-3 px-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500';
 
-        // File icon and name
+        // File icon and name (left side)
         const fileInfo = document.createElement('div');
-        fileInfo.className = 'flex items-center gap-3 flex-1 min-w-0';
+        fileInfo.className = 'flex items-center gap-3 flex-1 min-w-0 pr-4';
         
         const fileIcon = document.createElement('div');
         fileIcon.className = 'flex-shrink-0';
@@ -244,21 +244,30 @@
 
         fileInfo.appendChild(fileIcon);
         fileInfo.appendChild(nameContainer);
+        row.appendChild(fileInfo);
 
-        // Three-dot menu button
+        // Three-dot menu button (right side)
+        const menuBtnContainer = document.createElement('div');
+        menuBtnContainer.className = 'flex-shrink-0 ml-auto';
+        
         const menuBtn = document.createElement('button');
         menuBtn.type = 'button';
-        menuBtn.className = 'flex-shrink-0 ml-2 p-2 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-all opacity-0 group-hover:opacity-100 focus:opacity-100';
+        menuBtn.className = 'inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-slate-600 transition-all cursor-pointer z-10';
         menuBtn.title = 'File options';
+        menuBtn.setAttribute('data-file-id', file.id);
         menuBtn.innerHTML = '<i class="bi bi-three-dots-vertical text-lg"></i>';
-        menuBtn.addEventListener('click', (e) => {
+        
+        // Add click handler directly
+        menuBtn.addEventListener('click', function(e) {
+            console.log('[FileMenu] Clicked for file:', file.name, file.id);
             e.stopPropagation();
             e.preventDefault();
-            showFileContextMenu(file, menuBtn);
+            showFileContextMenu(file, this);
+            return false;
         });
 
-        row.appendChild(fileInfo);
-        row.appendChild(menuBtn);
+        menuBtnContainer.appendChild(menuBtn);
+        row.appendChild(menuBtnContainer);
 
         return row;
     }
@@ -286,60 +295,96 @@
     }
 
     function showFileContextMenu(file, triggerBtn) {
-        // Remove existing menu if present
-        const existingMenu = document.querySelector('.file-context-menu');
-        if (existingMenu) existingMenu.remove();
-
-        const menu = document.createElement('div');
-        menu.className = 'file-context-menu fixed bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-50 min-w-max';
+        console.log('[FileMenu] Opening menu for file:', file.name);
         
+        // Remove any existing menus
+        const existingMenus = document.querySelectorAll('.file-context-menu');
+        existingMenus.forEach(m => m.remove());
+
+        // Create menu container
+        const menuId = 'menu-' + file.id + '-' + Date.now();
+        const menu = document.createElement('div');
+        menu.id = menuId;
+        menu.className = 'file-context-menu fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-gray-200 dark:border-slate-700 z-[9999] min-w-[220px]';
+        menu.style.pointerEvents = 'auto';
+        
+        // Create menu content
+        const menuContent = document.createElement('div');
+        menuContent.className = 'py-1';
+        
+        // Create menu item
         const menuItem = document.createElement('button');
         menuItem.type = 'button';
-        menuItem.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 rounded-lg';
-        menuItem.innerHTML = '<i class="bi bi-files text-red-600"></i>Make Copy for Export';
-        menuItem.addEventListener('click', () => {
+        menuItem.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 font-medium';
+        menuItem.innerHTML = '<i class="bi bi-files text-red-600 text-base"></i>Make a Copy';
+        menuItem.setAttribute('data-file-id', file.id);
+        
+        menuItem.addEventListener('click', function(e) {
+            console.log('[FileMenu] Clicked Make a Copy for file:', file.name);
+            e.stopPropagation();
+            e.preventDefault();
             stageExportCopy(file);
             menu.remove();
+            return false;
         });
 
-        menu.appendChild(menuItem);
+        menuContent.appendChild(menuItem);
+        menu.appendChild(menuContent);
         document.body.appendChild(menu);
 
-        // Position menu near trigger button (using fixed positioning)
-        const rect = triggerBtn.getBoundingClientRect();
-        
-        // Calculate position - position menu to the right and below the button
-        let top = rect.bottom + 8;
-        let left = rect.left;
-        
-        // Adjust if menu would go off-screen to the right
+        console.log('[FileMenu] Menu created:', menuId);
+
+        // Position menu using getBoundingClientRect
         setTimeout(() => {
+            const btnRect = triggerBtn.getBoundingClientRect();
             const menuRect = menu.getBoundingClientRect();
-            if (menuRect.right > window.innerWidth - 10) {
+            
+            let top = btnRect.bottom + 5;
+            let left = btnRect.right - menuRect.width;
+            
+            // Adjust if going off right edge
+            if (left < 10) {
+                left = 10;
+            } else if (left + menuRect.width > window.innerWidth - 10) {
                 left = window.innerWidth - menuRect.width - 10;
             }
             
-            // Adjust if menu would go off-screen below
-            if (menuRect.bottom > window.innerHeight - 10) {
-                top = rect.top - menuRect.height - 8;
+            // Adjust if going off bottom edge
+            if (top + menuRect.height > window.innerHeight - 10) {
+                top = btnRect.top - menuRect.height - 5;
             }
             
-            menu.style.top = top + 'px';
-            menu.style.left = left + 'px';
+            menu.style.top = Math.max(5, top) + 'px';
+            menu.style.left = Math.max(5, left) + 'px';
+            
+            console.log('[FileMenu] Menu positioned at:', {top: menu.style.top, left: menu.style.left});
         }, 0);
 
-        // Close menu on click outside
-        const closeHandler = (e) => {
-            // Don't close if clicking the menu or the trigger button
-            if (!menu.contains(e.target) && e.target !== triggerBtn && !triggerBtn.contains(e.target)) {
+        // Handle clicking outside menu
+        const handleClickOutside = (e) => {
+            if (!menu.contains(e.target) && e.target !== triggerBtn) {
+                console.log('[FileMenu] Closing menu (clicked outside)');
                 menu.remove();
-                document.removeEventListener('click', closeHandler);
+                document.removeEventListener('click', handleClickOutside);
+                document.removeEventListener('keydown', handleEscapeKey);
             }
         };
-        
+
+        // Handle Escape key
+        const handleEscapeKey = (e) => {
+            if (e.key === 'Escape') {
+                console.log('[FileMenu] Closing menu (Escape pressed)');
+                menu.remove();
+                document.removeEventListener('click', handleClickOutside);
+                document.removeEventListener('keydown', handleEscapeKey);
+            }
+        };
+
+        // Add event listeners
         setTimeout(() => {
-            document.addEventListener('click', closeHandler);
-        }, 100);
+            document.addEventListener('click', handleClickOutside);
+            document.addEventListener('keydown', handleEscapeKey);
+        }, 50);
     }
 
     function stageExportCopy(file) {
