@@ -641,6 +641,15 @@ foreach ($mock_notifications as $req) {
                                 <p class="text-sm font-medium text-emerald-900 dark:text-emerald-100">Staged Attachment: <span id="staged-file-name" class="font-semibold"></span></p>
                                 <p class="text-xs text-emerald-700 dark:text-emerald-400 mt-1"><span id="staged-file-size"></span> · Ready for export</p>
                             </div>
+                            <div class="flex-shrink-0">
+                                <button 
+                                    id="remove-staged-file-btn" 
+                                    type="button"
+                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                    title="Remove staged file">
+                                    <i class="bi bi-x-lg text-sm"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 

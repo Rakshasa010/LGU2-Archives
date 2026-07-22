@@ -44,6 +44,7 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
     const detailOpenStorageBtn = document.getElementById('detail-open-storage');
     const detailExportBtn = document.getElementById('detail-export-btn');
     const stagedAttachmentContainer = document.getElementById('staged-attachment-container');
+    const removeStagedFileBtn = document.getElementById('remove-staged-file-btn');
     
     // Storage Modal (Modal #2)
     const storageModal = document.getElementById('storage-modal');
@@ -126,6 +127,10 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
 
     if (detailExportBtn) {
         detailExportBtn.addEventListener('click', processExport);
+    }
+
+    if (removeStagedFileBtn) {
+        removeStagedFileBtn.addEventListener('click', removeStagedFile);
     }
 
     // Close modals on backdrop click
@@ -504,6 +509,65 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
                 console.error('[StageExport] ❌ Exception:', error);
                 console.error('[StageExport] Error details:', error.message);
                 showError('Error staging file copy: ' + error.message);
+            });
+    }
+
+    function removeStagedFile() {
+        if (!currentDetailRequest) {
+            showError('No request selected');
+            return;
+        }
+
+        console.log('[RemoveStaged] Removing staged file for request:', currentDetailRequest);
+        
+        // Show confirmation
+        if (!confirm('Remove the staged file? You will need to select another file to export.')) {
+            return;
+        }
+
+        showInfo('Removing staged file...');
+
+        fetch('api/remove-staged-file.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                request_id: currentDetailRequest
+            })
+        })
+            .then(response => {
+                console.log('[RemoveStaged] API Response status:', response.status);
+                if (!response.ok) throw new Error('Failed to remove staged file - HTTP ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('[RemoveStaged] API Response data:', data);
+                
+                if (data.success) {
+                    console.log('[RemoveStaged] ✅ Success! Staged file removed');
+                    
+                    // Clear local state
+                    currentStagedFile = null;
+                    
+                    // Hide staged attachment container
+                    stagedAttachmentContainer.classList.add('hidden');
+                    
+                    // Disable export button
+                    detailExportBtn.disabled = true;
+                    detailExportBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-white', 'dark:bg-slate-700');
+                    detailExportBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'font-semibold');
+                    detailExportBtn.innerHTML = 'Export Package';
+                    
+                    showSuccess('Staged file removed successfully');
+                } else {
+                    console.error('[RemoveStaged] ❌ API returned error:', data.error);
+                    showError('Failed to remove staged file: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('[RemoveStaged] ❌ Exception:', error);
+                showError('Error removing staged file: ' + error.message);
             });
     }
 
