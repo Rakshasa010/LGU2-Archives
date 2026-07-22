@@ -2,7 +2,7 @@
 /**
  * Fetch Storage Files/Folders API
  * Returns a hierarchical folder tree with files
- * Supports pagination and folder filtering
+ * Integrates with existing archive_files and archive_folders tables
  */
 
 session_start();
@@ -23,13 +23,12 @@ $limit = 50;
 $offset = ($page - 1) * $limit;
 
 try {
-    // Build folder hierarchy
     $folders = [];
     $files = [];
     
     // Get all archive folders if no folder_id specified
     if ($folder_id === null) {
-        $folderQuery = $conn->prepare("SELECT id, name, slug, description FROM archive_folders ORDER BY name ASC");
+        $folderQuery = $conn->prepare("SELECT id, name FROM archive_folders ORDER BY name ASC");
         if (!$folderQuery) {
             throw new Exception("Folder query prepare failed: " . $conn->error);
         }
@@ -43,45 +42,42 @@ try {
             $folders[] = [
                 'id' => $row['id'],
                 'type' => 'folder',
-                'name' => $row['name'],
-                'slug' => $row['slug'],
-                'description' => $row['description'],
-                'children_count' => 0
+                'name' => $row['name']
             ];
         }
+        $folderResult->free();
         $folderQuery->close();
     }
     
-    // Get files - build search query
-    $fileQuery = "SELECT id, file_name, file_type, file_size, archive_folder_id, uploaded_at, version FROM archive_files ";
+    // Build the file query
+    $fileQuery = "SELECT id, name, file_path, file_size, created_at FROM archive_files ";
     $conditions = [];
     $params = [];
     $types = '';
     
     if ($folder_id !== null) {
-        $conditions[] = "archive_folder_id = ?";
+        $conditions[] = "folder_id = ?";
         $params[] = $folder_id;
         $types .= 'i';
     }
     
     if (!empty($search)) {
-        $conditions[] = "(file_name LIKE ? OR file_type LIKE ?)";
+        $conditions[] = "(name LIKE ?)";
         $search_param = '%' . $search . '%';
         $params[] = $search_param;
-        $params[] = $search_param;
-        $types .= 'ss';
+        $types .= 's';
     }
     
     if (!empty($conditions)) {
         $fileQuery .= " WHERE " . implode(" AND ", $conditions);
     }
     
-    $fileQuery .= " ORDER BY file_name ASC LIMIT ? OFFSET ?";
+    $fileQuery .= " ORDER BY name ASC LIMIT ? OFFSET ?";
     $params[] = $limit;
     $params[] = $offset;
     $types .= 'ii';
     
-    // Prepare query with dynamic types
+    // Execute file query
     $stmt = $conn->prepare($fileQuery);
     if (!$stmt) {
         throw new Exception("File query prepare failed: " . $conn->error);
@@ -97,37 +93,44 @@ try {
     
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
+        // Determine file type from file_path extension
+        $ext = strtolower(pathinfo($row['file_path'], PATHINFO_EXTENSION));
+        $fileType = getFileType($ext);
+        
         $files[] = [
             'id' => $row['id'],
             'type' => 'file',
-            'name' => $row['file_name'],
-            'file_type' => $row['file_type'],
+            'name' => $row['name'],
+            'file_type' => $fileType,
+            'path' => $row['file_path'],
             'size' => (int)$row['file_size'],
             'size_formatted' => formatFileSize($row['file_size']),
-            'uploaded_at' => $row['uploaded_at'],
-            'version' => $row['version'] ?? '1.0'
+            'uploaded_at' => $row['created_at']
         ];
     }
+    $result->free();
     $stmt->close();
     
-    // Get total count for pagination
+    // Get total count for pagination - need to recalculate without limit
     $countQuery = "SELECT COUNT(*) as total FROM archive_files";
     if (!empty($conditions)) {
-        $countQuery .= " WHERE " . implode(" AND ", array_slice($conditions, 0, count($conditions)));
+        $countQuery .= " WHERE " . implode(" AND ", array_slice($conditions, 0, -2));
     }
     
     $countStmt = $conn->prepare($countQuery);
-    if (!empty($params) && count($params) > 2) {
-        // Rebind for count query
+    if (count($params) > 2) {
         $countParams = array_slice($params, 0, -2);
         $countTypes = substr($types, 0, -2);
         if (!empty($countParams)) {
             $countStmt->bind_param($countTypes, ...$countParams);
         }
     }
+    
     $countStmt->execute();
-    $countResult = $countStmt->get_result()->fetch_assoc();
-    $total = (int)$countResult['total'];
+    $countResult = $countStmt->get_result();
+    $row = $countResult->fetch_assoc();
+    $total = (int)$row['total'];
+    $countResult->free();
     $countStmt->close();
     
     echo json_encode([
@@ -145,7 +148,25 @@ try {
     ]);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+}
+
+function getFileType($extension) {
+    $map = [
+        'pdf' => 'application/pdf',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'csv' => 'text/csv',
+        'txt' => 'text/plain',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'zip' => 'application/zip'
+    ];
+    return $map[$extension] ?? 'application/octet-stream';
 }
 
 function formatFileSize($bytes) {

@@ -172,23 +172,28 @@
 
         storageFilesContainer.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400"><i class="bi bi-hourglass-split text-3xl mb-2 block"></i><p class="text-sm">Loading files...</p></div>';
 
+        console.log('[StorageAPI] Fetching: ' + url);
+
         fetch(url)
             .then(response => {
-                if (!response.ok) throw new Error('Failed to fetch storage files');
+                console.log('[StorageAPI] Response status:', response.status);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 return response.json();
             })
             .then(data => {
+                console.log('[StorageAPI] Response data:', data);
                 if (data.success) {
                     renderStorageContent(data.data);
                 } else {
-                    showError('Failed to load storage: ' + data.error);
-                    storageFilesContainer.innerHTML = '<div class="text-center py-8 text-red-500"><p class="text-sm">Failed to load files</p></div>';
+                    showError('Failed to load storage: ' + (data.error || 'Unknown error'));
+                    console.error('[StorageAPI] Error response:', data);
+                    storageFilesContainer.innerHTML = '<div class="text-center py-8 text-red-500"><p class="text-sm">Error: ' + (data.error || 'Failed to load files') + '</p></div>';
                 }
             })
             .catch(error => {
-                console.error('Error fetching storage files:', error);
-                showError('Error loading storage files');
-                storageFilesContainer.innerHTML = '<div class="text-center py-8 text-red-500"><p class="text-sm">Error loading files</p></div>';
+                console.error('[StorageAPI] Exception:', error);
+                showError('Error loading storage files: ' + error.message);
+                storageFilesContainer.innerHTML = '<div class="text-center py-8 text-red-500"><p class="text-sm">Error: ' + error.message + '</p></div>';
             });
     }
 

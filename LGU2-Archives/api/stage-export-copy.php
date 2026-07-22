@@ -2,7 +2,7 @@
 /**
  * Stage Export Copy API
  * Creates a temporary duplicate of a file for export
- * Returns file metadata including staged_file_id
+ * Integrated with existing archive_files table
  */
 
 session_start();
@@ -35,8 +35,8 @@ try {
         }
     }
     
-    // Get file details from database
-    $stmt = $conn->prepare("SELECT file_name, file_path, file_size FROM archive_files WHERE id = ?");
+    // Get file details from database using the correct table structure
+    $stmt = $conn->prepare("SELECT name, file_path, file_size FROM archive_files WHERE id = ?");
     if (!$stmt) {
         throw new Exception("Query prepare failed: " . $conn->error);
     }
@@ -55,23 +55,36 @@ try {
     }
     
     $file = $result->fetch_assoc();
+    $result->free();
     $stmt->close();
     
-    // Original file path - adjust as needed based on your storage structure
-    $originalPath = '../storage/' . $file['file_path'];
+    // Original file path - handle relative paths
+    $originalPath = $file['file_path'];
     
+    // Try multiple path variations
     if (!file_exists($originalPath)) {
-        // If direct path doesn't exist, try common patterns
-        $originalPath = '../uploads/' . $file['file_path'];
+        // Try with ../ prefix
+        $originalPath = '../' . $originalPath;
         if (!file_exists($originalPath)) {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'error' => 'Original file not found on server']);
-            exit;
+            // Try uploads directory
+            $originalPath = '../uploads/' . $file['file_path'];
+            if (!file_exists($originalPath)) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Original file not found on server']);
+                exit;
+            }
         }
     }
     
+    // Verify file is actually readable
+    if (!is_file($originalPath) || !is_readable($originalPath)) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Cannot read file from server']);
+        exit;
+    }
+    
     // Generate unique staging filename
-    $fileInfo = pathinfo($file['file_name']);
+    $fileInfo = pathinfo($file['name']);
     $staged_file_id = 'export_' . $request_id . '_' . time() . '_' . bin2hex(random_bytes(4));
     $stagedFileName = $staged_file_id . '.' . $fileInfo['extension'];
     $stagedFilePath = $stagingDir . '/' . $stagedFileName;
@@ -87,17 +100,17 @@ try {
         throw new Exception("Update prepare failed: " . $conn->error);
     }
     
-    $updateStmt->bind_param("ssii", $staged_file_id, $file['file_name'], $file['file_size'], $request_id);
+    $updateStmt->bind_param("ssii", $staged_file_id, $file['name'], $file['file_size'], $request_id);
     if (!$updateStmt->execute()) {
         throw new Exception("Update execute failed: " . $updateStmt->error);
     }
     $updateStmt->close();
     
-    // Log audit action
-    $action = 'File Staged for Export';
-    $details = "File: {$file['file_name']}, Request ID: {$request_id}";
+    // Log audit action if audit_logs table exists
     $auditStmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, file_id, details, timestamp) VALUES (?, ?, ?, ?, NOW())");
     if ($auditStmt) {
+        $action = 'File Staged for Export';
+        $details = "File: {$file['name']}, Request ID: {$request_id}";
         $auditStmt->bind_param("isss", $_SESSION['user_id'], $action, $file_id, $details);
         $auditStmt->execute();
         $auditStmt->close();
@@ -107,7 +120,7 @@ try {
         'success' => true,
         'data' => [
             'staged_file_id' => $staged_file_id,
-            'file_name' => $file['file_name'],
+            'file_name' => $file['name'],
             'file_size' => (int)$file['file_size'],
             'file_size_formatted' => formatFileSize($file['file_size']),
             'staged_at' => date('Y-m-d H:i:s')
@@ -115,7 +128,7 @@ try {
     ]);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
 function formatFileSize($bytes) {
