@@ -275,64 +275,83 @@
         console.log('[FileCard] Creating card for:', file.name, file.id);
         
         const row = document.createElement('div');
-        row.className = 'relative bg-white dark:bg-slate-800 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-lg transition-all duration-200 p-4';
-
-        // File icon and info
-        const fileInfo = document.createElement('div');
-        fileInfo.className = 'flex items-start gap-3 mb-3 pointer-events-none';
+        row.className = 'file-card-item bg-white dark:bg-slate-800 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-lg p-4';
+        row.style.cssText = 'position: relative; transition: all 0.2s;';
         
-        const fileIcon = document.createElement('div');
-        fileIcon.className = 'flex-shrink-0';
-        fileIcon.innerHTML = getFileIcon(file.file_type);
+        // Build the HTML content directly
+        const fileTypeIcon = getFileIcon(file.file_type);
         
-        const nameContainer = document.createElement('div');
-        nameContainer.className = 'flex-1 min-w-0';
-        nameContainer.innerHTML = `
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">${escapeHtml(file.name)}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">${file.size_formatted}</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${file.uploaded_at || 'Unknown date'}</p>
+        row.innerHTML = `
+            <div class="file-info" style="pointer-events: none; margin-bottom: 12px;">
+                <div style="display: flex; align-items: start; gap: 12px;">
+                    <div style="flex-shrink: 0;">
+                        ${fileTypeIcon}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <p style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 4px;" class="dark:text-gray-100">${escapeHtml(file.name)}</p>
+                        <p style="font-size: 12px; color: #6b7280;" class="dark:text-gray-400">${file.size_formatted}</p>
+                        <p style="font-size: 11px; color: #9ca3af; margin-top: 4px;" class="dark:text-gray-500">${file.uploaded_at || 'Unknown date'}</p>
+                    </div>
+                </div>
+            </div>
+            <button 
+                type="button" 
+                class="copy-file-btn"
+                data-file-id="${file.id}"
+                data-file-name="${escapeHtml(file.name)}"
+                style="
+                    position: relative;
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    padding: 10px 16px;
+                    background-color: #dc2626;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    cursor: pointer;
+                    z-index: 100;
+                    pointer-events: auto;
+                    transition: background-color 0.2s;
+                "
+                onmouseover="this.style.backgroundColor='#b91c1c'"
+                onmouseout="this.style.backgroundColor='#dc2626'"
+                onmousedown="this.style.backgroundColor='#991b1b'"
+                onmouseup="this.style.backgroundColor='#b91c1c'">
+                <i class="bi bi-files"></i>
+                <span>Make a Copy</span>
+            </button>
         `;
-
-        fileInfo.appendChild(fileIcon);
-        fileInfo.appendChild(nameContainer);
-        row.appendChild(fileInfo);
-
-        // Make a Copy Button - with explicit z-index and pointer-events
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.className = 'relative w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg font-semibold text-sm transition-all shadow-sm hover:shadow-md cursor-pointer';
-        copyBtn.style.cssText = 'z-index: 10; pointer-events: auto !important;';
-        copyBtn.innerHTML = '<i class="bi bi-files"></i><span>Make a Copy</span>';
-        copyBtn.setAttribute('data-file-id', file.id);
-        copyBtn.setAttribute('data-file-name', file.name);
         
-        // Use onclick as backup
-        copyBtn.onclick = function(e) {
-            console.log('[FileCopy] ONCLICK triggered for:', file.name, file.id);
-            e.stopPropagation();
-            e.preventDefault();
-            stageExportCopy(file);
-            return false;
-        };
-        
-        // Also add addEventListener
-        copyBtn.addEventListener('click', function(e) {
-            console.log('[FileCopy] CLICK EVENT triggered for:', file.name, file.id);
-            e.stopPropagation();
-            e.preventDefault();
-            stageExportCopy(file);
-            return false;
-        }, true); // Use capture phase
+        // Find the button element and attach click handler
+        const copyBtn = row.querySelector('.copy-file-btn');
+        if (copyBtn) {
+            console.log('[FileCard] Attaching click handler to button');
+            
+            // Use onclick attribute
+            copyBtn.onclick = function(e) {
+                console.log('[FileCopy] ✅ ONCLICK triggered for:', file.name);
+                e.stopPropagation();
+                e.preventDefault();
+                handleFileCopy(file);
+                return false;
+            };
+        } else {
+            console.error('[FileCard] ❌ Button not found in row!');
+        }
 
-        // Add mousedown as fallback
-        copyBtn.addEventListener('mousedown', function(e) {
-            console.log('[FileCopy] MOUSEDOWN detected on button');
-        });
-
-        row.appendChild(copyBtn);
-
-        console.log('[FileCard] Card created with button, appending to container');
+        console.log('[FileCard] Card created and ready');
         return row;
+    }
+    
+    // Separate handler function
+    function handleFileCopy(file) {
+        console.log('[FileCopy] Processing copy for:', file.name, file.id);
+        stageExportCopy(file);
     }
 
     function getFileIcon(fileType) {
