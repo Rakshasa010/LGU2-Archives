@@ -707,28 +707,24 @@ foreach ($mock_notifications as $req) {
 	<script src="assets/js/theme-toggle.js"></script>
 	<script src="assets/js/export-fulfillment.js?v=<?php echo uniqid() . '_' . rand(1000, 9999); ?>"></script>
 	<script>
-	    // Inline diagnostic - verify buttons are clickable
+	    // Test that window.exportFulfillment.stageFile is available
 	    setTimeout(function() {
-	        console.log('[Diagnostic] Checking for storage modal buttons...');
-	        const buttons = document.querySelectorAll('.copy-file-btn');
-	        console.log('[Diagnostic] Found buttons:', buttons.length);
+	        console.log('[DIAGNOSTIC] ========================================');
+	        console.log('[DIAGNOSTIC] Testing window.exportFulfillment availability...');
+	        console.log('[DIAGNOSTIC] window.exportFulfillment exists?', typeof window.exportFulfillment !== 'undefined');
+	        console.log('[DIAGNOSTIC] window.exportFulfillment.stageFile exists?', typeof window.exportFulfillment?.stageFile === 'function');
 	        
-	        buttons.forEach(function(btn, index) {
-	            console.log('[Diagnostic] Button ' + (index + 1) + ':', {
-	                exists: true,
-	                hasOnclick: typeof btn.onclick === 'function',
-	                fileId: btn.getAttribute('data-file-id'),
-	                visible: btn.offsetHeight > 0,
-	                zIndex: btn.style.zIndex,
-	                pointerEvents: btn.style.pointerEvents
-	            });
-	            
-	            // Add backup click handler directly
-	            btn.addEventListener('click', function(e) {
-	                console.log('[Diagnostic] BACKUP HANDLER triggered for button ' + (index + 1));
-	            });
-	        });
-	    }, 2000);
+	        if (typeof window.exportFulfillment?.stageFile === 'function') {
+	            console.log('[DIAGNOSTIC] ✅ SUCCESS: window.exportFulfillment.stageFile is a function');
+	        } else {
+	            console.error('[DIAGNOSTIC] ❌ ERROR: window.exportFulfillment.stageFile is NOT available!');
+	        }
+	        
+	        console.log('[DIAGNOSTIC] Checking for storage modal buttons...');
+	        const buttons = document.querySelectorAll('.copy-file-btn-action');
+	        console.log('[DIAGNOSTIC] Found buttons with class .copy-file-btn-action:', buttons.length);
+	        console.log('[DIAGNOSTIC] ========================================');
+	    }, 1000);
 	</script>
 	<script>
 		// Chart initialization

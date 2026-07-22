@@ -396,9 +396,18 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
     // Expose staging function to global scope
     window.exportFulfillment = window.exportFulfillment || {};
     window.exportFulfillment.stageFile = function(file) {
-        console.log('[ExportFulfillment] Global staging for:', file.name);
+        console.log('[ExportFulfillment] ========================================');
+        console.log('[ExportFulfillment] Global staging function called!');
+        console.log('[ExportFulfillment] File object:', file);
+        console.log('[ExportFulfillment] File name:', file.name);
+        console.log('[ExportFulfillment] File ID:', file.id);
+        console.log('[ExportFulfillment] About to call stageExportCopy...');
+        console.log('[ExportFulfillment] ========================================');
         stageExportCopy(file);
     };
+    
+    console.log('[EXPORT-FULFILLMENT] ✅ window.exportFulfillment.stageFile exposed successfully');
+    console.log('[EXPORT-FULFILLMENT] Test it with: window.exportFulfillment.stageFile({id:"test", name:"test.pdf"})');
 
     function getFileIcon(fileType) {
         let iconClass = 'bi-file';
