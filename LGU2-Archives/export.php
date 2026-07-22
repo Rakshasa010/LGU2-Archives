@@ -705,7 +705,7 @@ foreach ($mock_notifications as $req) {
 
 	<script src="assets/js/archives-landing.js"></script>
 	<script src="assets/js/theme-toggle.js"></script>
-	<script src="assets/js/export-fulfillment.js?v=<?php echo time(); ?>"></script>
+	<script src="assets/js/export-fulfillment.js?v=<?php echo uniqid() . '_' . rand(1000, 9999); ?>"></script>
 	<script>
 	    // Inline diagnostic - verify buttons are clickable
 	    setTimeout(function() {

@@ -3,6 +3,10 @@
  * Asynchronous AJAX implementation with multi-modal workflow
  */
 
+// IMMEDIATELY VERIFY FILE LOADED
+console.log('[EXPORT-FULFILLMENT] ✅ Script loaded successfully at:', new Date().toISOString());
+console.log('[EXPORT-FULFILLMENT] Version: CACHE_BUST_v' + Math.random());
+
 // GLOBAL FILE COPY HANDLER (Outside IIFE for accessibility)
 window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathStr) {
     console.log('[GLOBAL] Copy triggered:', fileIdStr, fileNameStr);
