@@ -238,25 +238,31 @@
             });
         }
 
-        // Render files
+        // Render files in a grid layout
         storageFilesContainer.innerHTML = '';
         if (data.files && data.files.length > 0) {
+            // Create grid container
+            const gridContainer = document.createElement('div');
+            gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            
             data.files.forEach(file => {
-                const fileRow = createFileRow(file);
-                storageFilesContainer.appendChild(fileRow);
+                const fileCard = createFileRow(file);
+                gridContainer.appendChild(fileCard);
             });
+            
+            storageFilesContainer.appendChild(gridContainer);
         } else {
-            storageFilesContainer.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400"><p class="text-sm">No files found</p></div>';
+            storageFilesContainer.innerHTML = '<div class="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-900/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-700"><i class="bi bi-inbox text-4xl mb-3 block"></i><p class="text-sm font-medium">No files found</p><p class="text-xs mt-1">Try selecting a different folder or adjusting your search</p></div>';
         }
     }
 
     function createFileRow(file) {
         const row = document.createElement('div');
-        row.className = 'relative flex items-center justify-between p-3 px-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500';
+        row.className = 'relative bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-md transition-all duration-200 p-4';
 
-        // File icon and name (left side)
+        // File icon and info
         const fileInfo = document.createElement('div');
-        fileInfo.className = 'flex items-center gap-3 flex-1 min-w-0 pr-4';
+        fileInfo.className = 'flex items-start gap-3 mb-3';
         
         const fileIcon = document.createElement('div');
         fileIcon.className = 'flex-shrink-0';
@@ -265,36 +271,31 @@
         const nameContainer = document.createElement('div');
         nameContainer.className = 'flex-1 min-w-0';
         nameContainer.innerHTML = `
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">${escapeHtml(file.name)}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">${escapeHtml(file.name)}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">${file.size_formatted}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${file.uploaded_at || 'Unknown date'}</p>
         `;
 
         fileInfo.appendChild(fileIcon);
         fileInfo.appendChild(nameContainer);
         row.appendChild(fileInfo);
 
-        // Three-dot menu button (right side)
-        const menuBtnContainer = document.createElement('div');
-        menuBtnContainer.className = 'flex-shrink-0 ml-auto';
+        // Make a Copy Button
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors';
+        copyBtn.innerHTML = '<i class="bi bi-files"></i>Make a Copy';
+        copyBtn.setAttribute('data-file-id', file.id);
         
-        const menuBtn = document.createElement('button');
-        menuBtn.type = 'button';
-        menuBtn.className = 'inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-slate-600 transition-all cursor-pointer z-10';
-        menuBtn.title = 'File options';
-        menuBtn.setAttribute('data-file-id', file.id);
-        menuBtn.innerHTML = '<i class="bi bi-three-dots-vertical text-lg"></i>';
-        
-        // Add click handler directly
-        menuBtn.addEventListener('click', function(e) {
-            console.log('[FileMenu] Clicked for file:', file.name, file.id);
+        copyBtn.addEventListener('click', function(e) {
+            console.log('[FileCopy] Clicked for file:', file.name, file.id);
             e.stopPropagation();
             e.preventDefault();
-            showFileContextMenu(file, this);
+            stageExportCopy(file);
             return false;
         });
 
-        menuBtnContainer.appendChild(menuBtn);
-        row.appendChild(menuBtnContainer);
+        row.appendChild(copyBtn);
 
         return row;
     }
@@ -321,107 +322,13 @@
         return `<div class="w-10 h-10 rounded-lg ${bgClass} flex items-center justify-center"><i class="bi ${iconClass} text-lg ${textClass}"></i></div>`;
     }
 
-    function showFileContextMenu(file, triggerBtn) {
-        console.log('[FileMenu] Opening menu for file:', file.name);
-        
-        // Remove any existing menus
-        const existingMenus = document.querySelectorAll('.file-context-menu');
-        existingMenus.forEach(m => m.remove());
-
-        // Create menu container
-        const menuId = 'menu-' + file.id + '-' + Date.now();
-        const menu = document.createElement('div');
-        menu.id = menuId;
-        menu.className = 'file-context-menu fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-gray-200 dark:border-slate-700 z-[9999] min-w-[220px]';
-        menu.style.pointerEvents = 'auto';
-        
-        // Create menu content
-        const menuContent = document.createElement('div');
-        menuContent.className = 'py-1';
-        
-        // Create menu item
-        const menuItem = document.createElement('button');
-        menuItem.type = 'button';
-        menuItem.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 font-medium';
-        menuItem.innerHTML = '<i class="bi bi-files text-red-600 text-base"></i>Make a Copy';
-        menuItem.setAttribute('data-file-id', file.id);
-        
-        menuItem.addEventListener('click', function(e) {
-            console.log('[FileMenu] Clicked Make a Copy for file:', file.name);
-            e.stopPropagation();
-            e.preventDefault();
-            stageExportCopy(file);
-            menu.remove();
-            return false;
-        });
-
-        menuContent.appendChild(menuItem);
-        menu.appendChild(menuContent);
-        document.body.appendChild(menu);
-
-        console.log('[FileMenu] Menu created:', menuId);
-
-        // Position menu using getBoundingClientRect
-        setTimeout(() => {
-            const btnRect = triggerBtn.getBoundingClientRect();
-            const menuRect = menu.getBoundingClientRect();
-            
-            let top = btnRect.bottom + 5;
-            let left = btnRect.right - menuRect.width;
-            
-            // Adjust if going off right edge
-            if (left < 10) {
-                left = 10;
-            } else if (left + menuRect.width > window.innerWidth - 10) {
-                left = window.innerWidth - menuRect.width - 10;
-            }
-            
-            // Adjust if going off bottom edge
-            if (top + menuRect.height > window.innerHeight - 10) {
-                top = btnRect.top - menuRect.height - 5;
-            }
-            
-            menu.style.top = Math.max(5, top) + 'px';
-            menu.style.left = Math.max(5, left) + 'px';
-            
-            console.log('[FileMenu] Menu positioned at:', {top: menu.style.top, left: menu.style.left});
-        }, 0);
-
-        // Handle clicking outside menu
-        const handleClickOutside = (e) => {
-            if (!menu.contains(e.target) && e.target !== triggerBtn) {
-                console.log('[FileMenu] Closing menu (clicked outside)');
-                menu.remove();
-                document.removeEventListener('click', handleClickOutside);
-                document.removeEventListener('keydown', handleEscapeKey);
-            }
-        };
-
-        // Handle Escape key
-        const handleEscapeKey = (e) => {
-            if (e.key === 'Escape') {
-                console.log('[FileMenu] Closing menu (Escape pressed)');
-                menu.remove();
-                document.removeEventListener('click', handleClickOutside);
-                document.removeEventListener('keydown', handleEscapeKey);
-            }
-        };
-
-        // Add event listeners
-        setTimeout(() => {
-            document.addEventListener('click', handleClickOutside);
-            document.addEventListener('keydown', handleEscapeKey);
-        }, 50);
-    }
-
     function stageExportCopy(file) {
         if (!currentDetailRequest) {
             showError('No request selected');
             return;
         }
 
-        // Show loading state
-        const originalText = 'Make Copy for Export';
+        // Show loading state on the button
         showInfo('Staging file copy...');
 
         const payload = {
@@ -455,13 +362,14 @@
 
                     // Enable export button
                     detailExportBtn.disabled = false;
-                    detailExportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    detailExportBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white');
+                    detailExportBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-white', 'dark:bg-slate-700');
+                    detailExportBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'font-semibold');
+                    detailExportBtn.innerHTML = '<i class="bi bi-box-arrow-up mr-2"></i>Export Package';
 
                     // Close storage modal and show detail modal
                     closeStorageModal();
                     
-                    showSuccess('File staged successfully!');
+                    showSuccess('File staged successfully! You can now export.');
                 } else {
                     showError('Failed to stage file: ' + data.error);
                 }
