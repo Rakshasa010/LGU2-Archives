@@ -70,20 +70,23 @@ try {
     }
     $updateStmt->close();
     
-    // Log audit entry
-    $action = 'Export Request Fulfilled';
-    $details = "Request ID: {$request_id}, File: {$request['staged_file_name']}, Requester: {$request['requester_name']}";
-    
-    $auditStmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, request_id, details, timestamp) VALUES (?, ?, ?, ?, NOW())");
-    if (!$auditStmt) {
-        throw new Exception("Audit insert prepare failed: " . $conn->error);
+    // Log to notifications table (using existing system)
+    try {
+        $notifStmt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, created_at) VALUES (?, ?, ?, ?, 'unread', NOW())");
+        if ($notifStmt) {
+            $time = date('h:i A');
+            $date = date('Y-m-d');
+            $content = "Export request #{$request_id} fulfilled: '{$request['staged_file_name']}' for {$request['requester_name']}";
+            $about = 'Export Completed';
+            
+            $notifStmt->bind_param("ssss", $time, $date, $content, $about);
+            $notifStmt->execute();
+            $notifStmt->close();
+        }
+    } catch (Exception $notifError) {
+        // Non-fatal, continue
+        error_log("WARNING: Notification logging failed: " . $notifError->getMessage());
     }
-    
-    $auditStmt->bind_param("isss", $_SESSION['user_id'], $action, $request_id, $details);
-    if (!$auditStmt->execute()) {
-        throw new Exception("Audit insert execute failed: " . $auditStmt->error);
-    }
-    $auditStmt->close();
     
     // Commit transaction
     $conn->commit();

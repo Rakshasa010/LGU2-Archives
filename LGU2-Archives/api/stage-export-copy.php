@@ -204,15 +204,28 @@ try {
     error_log("Request updated successfully, affected rows: " . $updateStmt->affected_rows);
     $updateStmt->close();
     
-    // Log audit action if audit_logs table exists
-    $auditStmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, file_id, details, timestamp) VALUES (?, ?, ?, ?, NOW())");
-    if ($auditStmt) {
-        $action = 'File Staged for Export';
-        $details = "File: {$file['name']}, Request ID: {$request_id}, Source: " . (strpos($file_id, 'leg_') === 0 ? 'Legislative' : 'Archive');
-        $auditStmt->bind_param("isss", $_SESSION['user_id'], $action, $file_id, $details);
-        $auditStmt->execute();
-        $auditStmt->close();
-        error_log("Audit log created successfully");
+    // Log to notifications table (using existing system)
+    try {
+        $notifStmt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, created_at) VALUES (?, ?, ?, ?, 'unread', NOW())");
+        if ($notifStmt) {
+            $time = date('h:i A');
+            $date = date('Y-m-d');
+            $content = "File '{$file['name']}' staged for export request #$request_id by user #{$_SESSION['user_id']}";
+            $about = 'Export Fulfillment';
+            
+            $notifStmt->bind_param("ssss", $time, $date, $content, $about);
+            
+            if ($notifStmt->execute()) {
+                error_log("Notification logged successfully");
+            } else {
+                error_log("WARNING: Notification log failed (non-fatal): " . $notifStmt->error);
+            }
+            
+            $notifStmt->close();
+        }
+    } catch (Exception $notifError) {
+        // Notification logging is optional, don't fail the request
+        error_log("WARNING: Notification logging failed (non-fatal): " . $notifError->getMessage());
     }
     
     error_log("SUCCESS: File staged successfully");

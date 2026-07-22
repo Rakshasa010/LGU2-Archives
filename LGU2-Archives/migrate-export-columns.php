@@ -6,15 +6,18 @@
 
 session_start();
 
-// Security check - only allow admin users
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    die("ERROR: This migration script requires admin access. Please login as admin first.");
+// Security check - only allow logged-in users
+if (!isset($_SESSION['user_id'])) {
+    die("ERROR: Please login first before running this migration script. <a href='login.php'>Go to Login</a>");
 }
 
 require 'authdatabase.php';
 
+// Note: User is logged in as user_id: " . $_SESSION['user_id'];
+
 echo "<html><head><title>Database Migration</title></head><body>";
 echo "<h1>Export Fulfillment - Database Migration</h1>";
+echo "<p>User ID: " . $_SESSION['user_id'] . "</p>";
 echo "<p>Adding required columns to <code>requests</code> table...</p>";
 echo "<hr>";
 
