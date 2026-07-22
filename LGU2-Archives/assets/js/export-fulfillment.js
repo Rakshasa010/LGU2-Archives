@@ -204,9 +204,36 @@
             data.folders.forEach(folder => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors';
-                btn.textContent = folder.name;
-                btn.addEventListener('click', () => loadStorageFiles(folder.id));
+                
+                // Add color coding based on folder type
+                let bgClass = 'bg-white dark:bg-slate-700';
+                let hoverClass = 'hover:bg-gray-100 dark:hover:bg-slate-600';
+                
+                if (folder.color) {
+                    if (folder.color === 'orange') {
+                        bgClass = 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700';
+                        hoverClass = 'hover:bg-orange-100 dark:hover:bg-orange-900/30';
+                    } else if (folder.color === 'blue') {
+                        bgClass = 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700';
+                        hoverClass = 'hover:bg-blue-100 dark:hover:bg-blue-900/30';
+                    } else if (folder.color === 'indigo') {
+                        bgClass = 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700';
+                        hoverClass = 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30';
+                    }
+                }
+                
+                btn.className = `px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-slate-600 ${bgClass} text-gray-700 dark:text-gray-200 ${hoverClass} transition-colors flex items-center gap-2`;
+                btn.innerHTML = `<i class="bi ${folder.icon || 'bi-folder-fill'}"></i>${escapeHtml(folder.name)}`;
+                
+                // Store folder ID and type as data attributes
+                btn.setAttribute('data-folder-id', folder.id);
+                btn.setAttribute('data-folder-type', folder.folder_type || 'archive');
+                
+                btn.addEventListener('click', () => {
+                    console.log('[StorageAPI] Opening folder:', folder.name, folder.id);
+                    loadStorageFiles(folder.id);
+                });
+                
                 storageFolders.appendChild(btn);
             });
         }

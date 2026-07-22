@@ -17,10 +17,10 @@ require '../authdatabase.php';
 header('Content-Type: application/json');
 
 $input = json_decode(file_get_contents('php://input'), true);
-$file_id = isset($input['file_id']) ? (int)$input['file_id'] : 0;
+$file_id = isset($input['file_id']) ? $input['file_id'] : ''; // Now accepts string with prefix
 $request_id = isset($input['request_id']) ? (int)$input['request_id'] : 0;
 
-if ($file_id <= 0 || $request_id <= 0) {
+if (empty($file_id) || $request_id <= 0) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid file or request ID']);
     exit;
@@ -35,42 +35,78 @@ try {
         }
     }
     
-    // Get file details from database using the correct table structure
-    $stmt = $conn->prepare("SELECT name, file_path, file_size FROM archive_files WHERE id = ?");
-    if (!$stmt) {
-        throw new Exception("Query prepare failed: " . $conn->error);
-    }
+    $file = null;
+    $originalPath = null;
     
-    $stmt->bind_param("i", $file_id);
-    if (!$stmt->execute()) {
-        throw new Exception("Query execute failed: " . $stmt->error);
-    }
-    
-    $result = $stmt->get_result();
-    if ($result->num_rows === 0) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'File not found']);
+    // Determine file source based on ID prefix
+    if (strpos($file_id, 'arch_file_') === 0) {
+        // Archive file
+        $actual_id = (int)substr($file_id, 10);
+        $stmt = $conn->prepare("SELECT name, file_path, file_size FROM archive_files WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Query prepare failed: " . $conn->error);
+        }
+        
+        $stmt->bind_param("i", $actual_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $file = $result->fetch_assoc();
+            $originalPath = $file['file_path'];
+        }
+        
+        $result->free();
         $stmt->close();
+        
+    } elseif (strpos($file_id, 'leg_file_') === 0) {
+        // Legislative file
+        $actual_id = (int)substr($file_id, 9);
+        $stmt = $conn->prepare("SELECT title as name, file_path FROM legislative_records WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Query prepare failed: " . $conn->error);
+        }
+        
+        $stmt->bind_param("i", $actual_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $file = $result->fetch_assoc();
+            $originalPath = $file['file_path'];
+            
+            // Calculate file size for legislative files
+            if (file_exists($originalPath)) {
+                $file['file_size'] = filesize($originalPath);
+            } else {
+                $file['file_size'] = 0;
+            }
+        }
+        
+        $result->free();
+        $stmt->close();
+    }
+    
+    if (!$file) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'File not found in database']);
         exit;
     }
     
-    $file = $result->fetch_assoc();
-    $result->free();
-    $stmt->close();
-    
-    // Original file path - handle relative paths
-    $originalPath = $file['file_path'];
-    
-    // Try multiple path variations
+    // Try multiple path variations to find the actual file
     if (!file_exists($originalPath)) {
         // Try with ../ prefix
-        $originalPath = '../' . $originalPath;
-        if (!file_exists($originalPath)) {
+        $testPath = '../' . $originalPath;
+        if (file_exists($testPath)) {
+            $originalPath = $testPath;
+        } else {
             // Try uploads directory
-            $originalPath = '../uploads/' . $file['file_path'];
-            if (!file_exists($originalPath)) {
+            $testPath = '../uploads/' . basename($originalPath);
+            if (file_exists($testPath)) {
+                $originalPath = $testPath;
+            } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'Original file not found on server']);
+                echo json_encode(['success' => false, 'error' => 'Original file not found on server', 'searched_path' => $originalPath]);
                 exit;
             }
         }
@@ -85,8 +121,9 @@ try {
     
     // Generate unique staging filename
     $fileInfo = pathinfo($file['name']);
+    $extension = isset($fileInfo['extension']) ? $fileInfo['extension'] : 'pdf';
     $staged_file_id = 'export_' . $request_id . '_' . time() . '_' . bin2hex(random_bytes(4));
-    $stagedFileName = $staged_file_id . '.' . $fileInfo['extension'];
+    $stagedFileName = $staged_file_id . '.' . $extension;
     $stagedFilePath = $stagingDir . '/' . $stagedFileName;
     
     // Copy file to staging area
@@ -94,13 +131,16 @@ try {
         throw new Exception("Failed to copy file to staging area");
     }
     
+    // Get actual file size after copy
+    $actualFileSize = filesize($stagedFilePath);
+    
     // Update request with staged file info
     $updateStmt = $conn->prepare("UPDATE requests SET staged_file_id = ?, staged_file_name = ?, staged_file_size = ? WHERE id = ?");
     if (!$updateStmt) {
         throw new Exception("Update prepare failed: " . $conn->error);
     }
     
-    $updateStmt->bind_param("ssii", $staged_file_id, $file['name'], $file['file_size'], $request_id);
+    $updateStmt->bind_param("ssii", $staged_file_id, $file['name'], $actualFileSize, $request_id);
     if (!$updateStmt->execute()) {
         throw new Exception("Update execute failed: " . $updateStmt->error);
     }
@@ -110,7 +150,7 @@ try {
     $auditStmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, file_id, details, timestamp) VALUES (?, ?, ?, ?, NOW())");
     if ($auditStmt) {
         $action = 'File Staged for Export';
-        $details = "File: {$file['name']}, Request ID: {$request_id}";
+        $details = "File: {$file['name']}, Request ID: {$request_id}, Source: " . (strpos($file_id, 'leg_') === 0 ? 'Legislative' : 'Archive');
         $auditStmt->bind_param("isss", $_SESSION['user_id'], $action, $file_id, $details);
         $auditStmt->execute();
         $auditStmt->close();
@@ -121,8 +161,8 @@ try {
         'data' => [
             'staged_file_id' => $staged_file_id,
             'file_name' => $file['name'],
-            'file_size' => (int)$file['file_size'],
-            'file_size_formatted' => formatFileSize($file['file_size']),
+            'file_size' => $actualFileSize,
+            'file_size_formatted' => formatFileSize($actualFileSize),
             'staged_at' => date('Y-m-d H:i:s')
         ]
     ]);

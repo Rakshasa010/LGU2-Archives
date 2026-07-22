@@ -1,8 +1,11 @@
 <?php
 /**
- * Fetch Storage Files/Folders API
- * Returns a hierarchical folder tree with files
- * Integrates with existing archive_files and archive_folders tables
+ * Fetch Storage Files/Folders API - COMPLETE STORAGE INTEGRATION
+ * Returns ALL folders and files from the entire storage system:
+ * - Archive folders (archive_folders + archive_files)
+ * - Legislative folders (legislative_folders + legislative_records)
+ * 
+ * This provides the same complete storage view as storage.php
  */
 
 session_start();
@@ -16,7 +19,8 @@ require '../authdatabase.php';
 
 header('Content-Type: application/json');
 
-$folder_id = isset($_GET['folder_id']) ? (int)$_GET['folder_id'] : null;
+$folder_id = isset($_GET['folder_id']) ? $_GET['folder_id'] : null;
+$folder_type = isset($_GET['folder_type']) ? $_GET['folder_type'] : 'archive'; // 'archive' or 'legislative'
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 50;
@@ -25,32 +29,103 @@ $offset = ($page - 1) * $limit;
 try {
     $folders = [];
     $files = [];
+    $total = 0;
     
-    // Get all archive folders if no folder_id specified
+    // ============================================
+    // SHOW ALL FOLDERS (when no folder_id specified)
+    // ============================================
     if ($folder_id === null) {
-        $folderQuery = $conn->prepare("SELECT id, name FROM archive_folders ORDER BY name ASC");
-        if (!$folderQuery) {
-            throw new Exception("Folder query prepare failed: " . $conn->error);
+        // Get legislative folders
+        $legQuery = $conn->prepare("SELECT id, name, type FROM legislative_folders WHERE parent_id IS NULL ORDER BY name ASC");
+        if ($legQuery) {
+            $legQuery->execute();
+            $legResult = $legQuery->get_result();
+            while ($row = $legResult->fetch_assoc()) {
+                $folders[] = [
+                    'id' => 'leg_' . $row['id'], // Prefix to distinguish from archive folders
+                    'type' => 'folder',
+                    'folder_type' => 'legislative',
+                    'name' => $row['name'],
+                    'icon' => 'bi-folder-fill',
+                    'color' => getLegislativeColor($row['type'])
+                ];
+            }
+            $legResult->free();
+            $legQuery->close();
         }
         
-        if (!$folderQuery->execute()) {
-            throw new Exception("Folder query execute failed: " . $folderQuery->error);
+        // Get archive folders
+        $archiveQuery = $conn->prepare("SELECT id, name FROM archive_folders ORDER BY name ASC");
+        if ($archiveQuery) {
+            $archiveQuery->execute();
+            $archiveResult = $archiveQuery->get_result();
+            while ($row = $archiveResult->fetch_assoc()) {
+                $folders[] = [
+                    'id' => 'arch_' . $row['id'], // Prefix to distinguish
+                    'type' => 'folder',
+                    'folder_type' => 'archive',
+                    'name' => $row['name'],
+                    'icon' => 'bi-folder-fill',
+                    'color' => 'slate'
+                ];
+            }
+            $archiveResult->free();
+            $archiveQuery->close();
         }
-        
-        $folderResult = $folderQuery->get_result();
-        while ($row = $folderResult->fetch_assoc()) {
-            $folders[] = [
-                'id' => $row['id'],
-                'type' => 'folder',
-                'name' => $row['name']
-            ];
-        }
-        $folderResult->free();
-        $folderQuery->close();
     }
     
-    // Build the file query
-    $fileQuery = "SELECT id, name, file_path, file_size, created_at FROM archive_files ";
+    // ============================================
+    // FETCH FILES FROM SPECIFIC FOLDER
+    // ============================================
+    if ($folder_id !== null) {
+        // Determine if it's legislative or archive folder
+        if (strpos($folder_id, 'leg_') === 0) {
+            $actual_id = (int)substr($folder_id, 4);
+            $files = fetchLegislativeFiles($conn, $actual_id, $search, $limit, $offset);
+            $total = countLegislativeFiles($conn, $actual_id, $search);
+        } elseif (strpos($folder_id, 'arch_') === 0) {
+            $actual_id = (int)substr($folder_id, 5);
+            $files = fetchArchiveFiles($conn, $actual_id, $search, $limit, $offset);
+            $total = countArchiveFiles($conn, $actual_id, $search);
+        }
+    } else {
+        // Show all files from all folders (for search across everything)
+        if (!empty($search)) {
+            $archiveFiles = fetchArchiveFiles($conn, null, $search, $limit, $offset);
+            $legislativeFiles = fetchLegislativeFiles($conn, null, $search, 0, 0);
+            $files = array_merge($archiveFiles, $legislativeFiles);
+            $total = countArchiveFiles($conn, null, $search) + countLegislativeFiles($conn, null, $search);
+            
+            // Re-slice for pagination
+            $files = array_slice($files, $offset, $limit);
+        }
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'folders' => $folders,
+            'files' => $files,
+            'pagination' => [
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'pages' => ceil(max($total, 1) / $limit)
+            ]
+        ]
+    ]);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
+    $files = [];
+    $query = "SELECT id, name, file_path, file_size, created_at FROM archive_files ";
     $conditions = [];
     $params = [];
     $types = '';
@@ -63,104 +138,221 @@ try {
     
     if (!empty($search)) {
         $conditions[] = "(name LIKE ?)";
-        $search_param = '%' . $search . '%';
-        $params[] = $search_param;
+        $params[] = '%' . $search . '%';
         $types .= 's';
     }
     
     if (!empty($conditions)) {
-        $fileQuery .= " WHERE " . implode(" AND ", $conditions);
+        $query .= " WHERE " . implode(" AND ", $conditions);
     }
     
-    $fileQuery .= " ORDER BY name ASC LIMIT ? OFFSET ?";
-    $params[] = $limit;
-    $params[] = $offset;
-    $types .= 'ii';
+    $query .= " ORDER BY name ASC";
     
-    // Execute file query
-    $stmt = $conn->prepare($fileQuery);
-    if (!$stmt) {
-        throw new Exception("File query prepare failed: " . $conn->error);
+    if ($limit > 0) {
+        $query .= " LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
+        $types .= 'ii';
     }
     
-    if (!empty($params)) {
+    $stmt = $conn->prepare($query);
+    if ($stmt && !empty($params)) {
         $stmt->bind_param($types, ...$params);
-    }
-    
-    if (!$stmt->execute()) {
-        throw new Exception("File query execute failed: " . $stmt->error);
-    }
-    
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        // Determine file type from file_path extension
-        $ext = strtolower(pathinfo($row['file_path'], PATHINFO_EXTENSION));
-        $fileType = getFileType($ext);
+        $stmt->execute();
+        $result = $stmt->get_result();
         
-        $files[] = [
-            'id' => $row['id'],
-            'type' => 'file',
-            'name' => $row['name'],
-            'file_type' => $fileType,
-            'path' => $row['file_path'],
-            'size' => (int)$row['file_size'],
-            'size_formatted' => formatFileSize($row['file_size']),
-            'uploaded_at' => $row['created_at']
-        ];
+        while ($row = $result->fetch_assoc()) {
+            $ext = strtolower(pathinfo($row['file_path'], PATHINFO_EXTENSION));
+            $files[] = [
+                'id' => 'arch_file_' . $row['id'],
+                'type' => 'file',
+                'source' => 'archive',
+                'name' => $row['name'],
+                'file_type' => getFileType($ext),
+                'path' => $row['file_path'],
+                'size' => (int)$row['file_size'],
+                'size_formatted' => formatFileSize($row['file_size']),
+                'uploaded_at' => $row['created_at']
+            ];
+        }
+        
+        $result->free();
+        $stmt->close();
     }
-    $result->free();
-    $stmt->close();
     
-    // Get total count for pagination - need to recalculate without limit/offset
-    $countQuery = "SELECT COUNT(*) as total FROM archive_files";
-    $countParams = [];
-    $countTypes = '';
+    return $files;
+}
+
+function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
+    $files = [];
+    $query = "SELECT id, title, file_path, created_at FROM legislative_records WHERE parent_version_id IS NULL ";
+    $conditions = [];
+    $params = [];
+    $types = '';
     
     if ($folder_id !== null) {
-        $countQuery .= " WHERE folder_id = ?";
-        $countParams[] = $folder_id;
-        $countTypes .= 'i';
+        // Map folder_id to legislative type
+        $typeQuery = $conn->prepare("SELECT type FROM legislative_folders WHERE id = ?");
+        $typeQuery->bind_param("i", $folder_id);
+        $typeQuery->execute();
+        $typeResult = $typeQuery->get_result();
+        if ($typeRow = $typeResult->fetch_assoc()) {
+            $legislativeType = $typeRow['type'];
+            $conditions[] = "type = ?";
+            $params[] = $legislativeType;
+            $types .= 's';
+        }
+        $typeResult->free();
+        $typeQuery->close();
     }
     
     if (!empty($search)) {
-        if ($folder_id !== null) {
-            $countQuery .= " AND (name LIKE ?)";
-        } else {
-            $countQuery .= " WHERE (name LIKE ?)";
+        $conditions[] = "(title LIKE ?)";
+        $params[] = '%' . $search . '%';
+        $types .= 's';
+    }
+    
+    if (!empty($conditions)) {
+        $query .= " AND " . implode(" AND ", $conditions);
+    }
+    
+    $query .= " ORDER BY title ASC";
+    
+    if ($limit > 0) {
+        $query .= " LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
+        $types .= 'ii';
+    }
+    
+    $stmt = $conn->prepare($query);
+    if ($stmt) {
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
         }
-        $search_param = '%' . $search . '%';
-        $countParams[] = $search_param;
-        $countTypes .= 's';
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $filePath = $row['file_path'];
+            $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
+            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            
+            $files[] = [
+                'id' => 'leg_file_' . $row['id'],
+                'type' => 'file',
+                'source' => 'legislative',
+                'name' => $row['title'],
+                'file_type' => getFileType($ext),
+                'path' => $filePath,
+                'size' => $fileSize,
+                'size_formatted' => formatFileSize($fileSize),
+                'uploaded_at' => $row['created_at']
+            ];
+        }
+        
+        $result->free();
+        $stmt->close();
     }
     
-    $countStmt = $conn->prepare($countQuery);
-    if (!empty($countParams)) {
-        $countStmt->bind_param($countTypes, ...$countParams);
+    return $files;
+}
+
+function countArchiveFiles($conn, $folder_id, $search) {
+    $query = "SELECT COUNT(*) as total FROM archive_files";
+    $conditions = [];
+    $params = [];
+    $types = '';
+    
+    if ($folder_id !== null) {
+        $conditions[] = "folder_id = ?";
+        $params[] = $folder_id;
+        $types .= 'i';
     }
     
-    $countStmt->execute();
-    $countResult = $countStmt->get_result();
-    $row = $countResult->fetch_assoc();
-    $total = (int)$row['total'];
-    $countResult->free();
-    $countStmt->close();
+    if (!empty($search)) {
+        $conditions[] = "(name LIKE ?)";
+        $params[] = '%' . $search . '%';
+        $types .= 's';
+    }
     
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'folders' => $folders,
-            'files' => $files,
-            'pagination' => [
-                'page' => $page,
-                'limit' => $limit,
-                'total' => $total,
-                'pages' => ceil($total / $limit)
-            ]
-        ]
-    ]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    if (!empty($conditions)) {
+        $query .= " WHERE " . implode(" AND ", $conditions);
+    }
+    
+    $stmt = $conn->prepare($query);
+    if ($stmt) {
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $total = (int)$row['total'];
+        $result->free();
+        $stmt->close();
+        return $total;
+    }
+    
+    return 0;
+}
+
+function countLegislativeFiles($conn, $folder_id, $search) {
+    $query = "SELECT COUNT(*) as total FROM legislative_records WHERE parent_version_id IS NULL";
+    $conditions = [];
+    $params = [];
+    $types = '';
+    
+    if ($folder_id !== null) {
+        $typeQuery = $conn->prepare("SELECT type FROM legislative_folders WHERE id = ?");
+        $typeQuery->bind_param("i", $folder_id);
+        $typeQuery->execute();
+        $typeResult = $typeQuery->get_result();
+        if ($typeRow = $typeResult->fetch_assoc()) {
+            $legislativeType = $typeRow['type'];
+            $conditions[] = "type = ?";
+            $params[] = $legislativeType;
+            $types .= 's';
+        }
+        $typeResult->free();
+        $typeQuery->close();
+    }
+    
+    if (!empty($search)) {
+        $conditions[] = "(title LIKE ?)";
+        $params[] = '%' . $search . '%';
+        $types .= 's';
+    }
+    
+    if (!empty($conditions)) {
+        $query .= " AND " . implode(" AND ", $conditions);
+    }
+    
+    $stmt = $conn->prepare($query);
+    if ($stmt) {
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $total = (int)$row['total'];
+        $result->free();
+        $stmt->close();
+        return $total;
+    }
+    
+    return 0;
+}
+
+function getLegislativeColor($type) {
+    $map = [
+        'Ordinance' => 'orange',
+        'Resolution' => 'orange',
+        'Public Hearing' => 'blue',
+        'Meeting' => 'indigo'
+    ];
+    return $map[$type] ?? 'slate';
 }
 
 function getFileType($extension) {
