@@ -111,19 +111,31 @@ try {
     $result->free();
     $stmt->close();
     
-    // Get total count for pagination - need to recalculate without limit
+    // Get total count for pagination - need to recalculate without limit/offset
     $countQuery = "SELECT COUNT(*) as total FROM archive_files";
-    if (!empty($conditions)) {
-        $countQuery .= " WHERE " . implode(" AND ", array_slice($conditions, 0, -2));
+    $countParams = [];
+    $countTypes = '';
+    
+    if ($folder_id !== null) {
+        $countQuery .= " WHERE folder_id = ?";
+        $countParams[] = $folder_id;
+        $countTypes .= 'i';
+    }
+    
+    if (!empty($search)) {
+        if ($folder_id !== null) {
+            $countQuery .= " AND (name LIKE ?)";
+        } else {
+            $countQuery .= " WHERE (name LIKE ?)";
+        }
+        $search_param = '%' . $search . '%';
+        $countParams[] = $search_param;
+        $countTypes .= 's';
     }
     
     $countStmt = $conn->prepare($countQuery);
-    if (count($params) > 2) {
-        $countParams = array_slice($params, 0, -2);
-        $countTypes = substr($types, 0, -2);
-        if (!empty($countParams)) {
-            $countStmt->bind_param($countTypes, ...$countParams);
-        }
+    if (!empty($countParams)) {
+        $countStmt->bind_param($countTypes, ...$countParams);
     }
     
     $countStmt->execute();

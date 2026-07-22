@@ -225,7 +225,7 @@
 
     function createFileRow(file) {
         const row = document.createElement('div');
-        row.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group';
+        row.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500';
 
         // File icon and name
         const fileInfo = document.createElement('div');
@@ -248,10 +248,12 @@
         // Three-dot menu button
         const menuBtn = document.createElement('button');
         menuBtn.type = 'button';
-        menuBtn.className = 'p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-colors opacity-0 group-hover:opacity-100';
-        menuBtn.innerHTML = '<i class="bi bi-three-dots-vertical"></i>';
+        menuBtn.className = 'flex-shrink-0 ml-2 p-2 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-all opacity-0 group-hover:opacity-100 focus:opacity-100';
+        menuBtn.title = 'File options';
+        menuBtn.innerHTML = '<i class="bi bi-three-dots-vertical text-lg"></i>';
         menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             showFileContextMenu(file, menuBtn);
         });
 
@@ -289,11 +291,11 @@
         if (existingMenu) existingMenu.remove();
 
         const menu = document.createElement('div');
-        menu.className = 'file-context-menu absolute bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-40 min-w-max';
+        menu.className = 'file-context-menu fixed bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-50 min-w-max';
         
         const menuItem = document.createElement('button');
         menuItem.type = 'button';
-        menuItem.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2';
+        menuItem.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 rounded-lg';
         menuItem.innerHTML = '<i class="bi bi-files text-red-600"></i>Make Copy for Export';
         menuItem.addEventListener('click', () => {
             stageExportCopy(file);
@@ -303,20 +305,41 @@
         menu.appendChild(menuItem);
         document.body.appendChild(menu);
 
-        // Position menu near trigger button
+        // Position menu near trigger button (using fixed positioning)
         const rect = triggerBtn.getBoundingClientRect();
-        menu.style.top = (rect.bottom + 5) + 'px';
-        menu.style.left = (rect.right - menu.offsetWidth) + 'px';
+        
+        // Calculate position - position menu to the right and below the button
+        let top = rect.bottom + 8;
+        let left = rect.left;
+        
+        // Adjust if menu would go off-screen to the right
+        setTimeout(() => {
+            const menuRect = menu.getBoundingClientRect();
+            if (menuRect.right > window.innerWidth - 10) {
+                left = window.innerWidth - menuRect.width - 10;
+            }
+            
+            // Adjust if menu would go off-screen below
+            if (menuRect.bottom > window.innerHeight - 10) {
+                top = rect.top - menuRect.height - 8;
+            }
+            
+            menu.style.top = top + 'px';
+            menu.style.left = left + 'px';
+        }, 0);
 
         // Close menu on click outside
+        const closeHandler = (e) => {
+            // Don't close if clicking the menu or the trigger button
+            if (!menu.contains(e.target) && e.target !== triggerBtn && !triggerBtn.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        
         setTimeout(() => {
-            document.addEventListener('click', function closeMenu(e) {
-                if (!menu.contains(e.target) && e.target !== triggerBtn) {
-                    menu.remove();
-                    document.removeEventListener('click', closeMenu);
-                }
-            });
-        }, 0);
+            document.addEventListener('click', closeHandler);
+        }, 100);
     }
 
     function stageExportCopy(file) {
@@ -447,6 +470,7 @@
 
     storageSearch.addEventListener('input', (e) => {
         const searchQuery = e.target.value;
+        console.log('[StorageSearch] Searching for:', searchQuery);
         loadStorageFiles(null, searchQuery);
     });
 
