@@ -317,8 +317,11 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
             </div>
             <button 
                 type="button" 
-                class="copy-file-btn"
-                onclick="if(window.copyStorageFile){window.copyStorageFile('${file.id}','${escapeHtml(file.name).replace(/'/g, "\\'")}','${file.size_formatted}','${file.path||''}');}return false;"
+                class="copy-file-btn-action"
+                data-file-id="${escapeHtml(file.id)}"
+                data-file-name="${escapeHtml(file.name)}"
+                data-file-size="${escapeHtml(file.size_formatted)}"
+                data-file-path="${escapeHtml(file.path || '')}"
                 style="
                     position: relative;
                     width: 100%;
@@ -347,7 +350,32 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
             </button>
         `;
         
-        console.log('[FileCard] Card created with inline onclick handler');
+        // Attach event listener AFTER adding to DOM
+        setTimeout(() => {
+            const btn = row.querySelector('.copy-file-btn-action');
+            if (btn) {
+                // Store file object reference
+                btn.__fileData = file;
+                
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log('[FileCopy] ✅ Button clicked:', this.__fileData.name);
+                    
+                    // Call staging function
+                    if (window.exportFulfillment && window.exportFulfillment.stageFile) {
+                        window.exportFulfillment.stageFile(this.__fileData);
+                    } else {
+                        stageExportCopy(this.__fileData);
+                    }
+                    return false;
+                });
+                
+                console.log('[FileCard] Event listener attached to button');
+            }
+        }, 0);
+        
+        console.log('[FileCard] Card created');
         return row;
     }
     
