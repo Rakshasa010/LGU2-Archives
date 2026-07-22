@@ -360,18 +360,28 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log('[FileCopy] ✅ Button clicked:', this.__fileData.name);
+                    
+                    console.log('[FileCopy] ========================================');
+                    console.log('[FileCopy] ✅ Button clicked!');
+                    console.log('[FileCopy] File name:', this.__fileData.name);
+                    console.log('[FileCopy] File ID:', this.__fileData.id);
+                    console.log('[FileCopy] File data:', this.__fileData);
+                    console.log('[FileCopy] ========================================');
                     
                     // Call staging function
                     if (window.exportFulfillment && window.exportFulfillment.stageFile) {
+                        console.log('[FileCopy] Calling window.exportFulfillment.stageFile...');
                         window.exportFulfillment.stageFile(this.__fileData);
                     } else {
+                        console.log('[FileCopy] Calling stageExportCopy directly...');
                         stageExportCopy(this.__fileData);
                     }
                     return false;
                 });
                 
-                console.log('[FileCard] Event listener attached to button');
+                console.log('[FileCard] Event listener attached to button for:', file.name);
+            } else {
+                console.error('[FileCard] ❌ Button not found in row!');
             }
         }, 0);
         
@@ -409,18 +419,25 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
     }
 
     function stageExportCopy(file) {
+        console.log('[StageExport] Starting staging for:', file);
+        console.log('[StageExport] Current request ID:', currentDetailRequest);
+        
         if (!currentDetailRequest) {
+            console.error('[StageExport] ❌ No request selected!');
             showError('No request selected');
             return;
         }
 
-        // Show loading state on the button
+        console.log('[StageExport] Showing loading toast...');
         showInfo('Staging file copy...');
 
         const payload = {
             file_id: file.id,
             request_id: currentDetailRequest
         };
+        
+        console.log('[StageExport] Payload:', payload);
+        console.log('[StageExport] Calling API: api/stage-export-copy.php');
 
         fetch('api/stage-export-copy.php', {
             method: 'POST',
@@ -430,11 +447,16 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
             body: JSON.stringify(payload)
         })
             .then(response => {
-                if (!response.ok) throw new Error('Failed to stage file');
+                console.log('[StageExport] API Response status:', response.status);
+                if (!response.ok) throw new Error('Failed to stage file - HTTP ' + response.status);
                 return response.json();
             })
             .then(data => {
+                console.log('[StageExport] API Response data:', data);
+                
                 if (data.success) {
+                    console.log('[StageExport] ✅ Success! File staged:', data.data.file_name);
+                    
                     currentStagedFile = {
                         id: data.data.staged_file_id,
                         name: data.data.file_name,
@@ -442,27 +464,33 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
                     };
 
                     // Update detail modal with staged file info
+                    console.log('[StageExport] Updating detail modal...');
                     document.getElementById('staged-file-name').textContent = data.data.file_name;
                     document.getElementById('staged-file-size').textContent = data.data.file_size_formatted;
                     stagedAttachmentContainer.classList.remove('hidden');
 
                     // Enable export button
+                    console.log('[StageExport] Enabling export button...');
                     detailExportBtn.disabled = false;
                     detailExportBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-white', 'dark:bg-slate-700');
                     detailExportBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'font-semibold');
                     detailExportBtn.innerHTML = '<i class="bi bi-box-arrow-up mr-2"></i>Export Package';
 
                     // Close storage modal and show detail modal
+                    console.log('[StageExport] Closing storage modal...');
                     closeStorageModal();
                     
+                    console.log('[StageExport] Showing success message...');
                     showSuccess('File staged successfully! You can now export.');
                 } else {
+                    console.error('[StageExport] ❌ API returned error:', data.error);
                     showError('Failed to stage file: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('Error staging file:', error);
-                showError('Error staging file copy');
+                console.error('[StageExport] ❌ Exception:', error);
+                console.error('[StageExport] Error details:', error.message);
+                showError('Error staging file copy: ' + error.message);
             });
     }
 
