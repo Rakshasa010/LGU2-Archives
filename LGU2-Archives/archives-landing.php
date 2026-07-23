@@ -992,7 +992,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     }
     $conn->close();
     ?>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
     <script>
         (function() {
             const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
