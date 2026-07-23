@@ -1,9 +1,12 @@
 # Configuration files with secrets
 config.php
+api/chat-api.php  # Added because it contains the API key!
+
+# Error log file
+error.log
 
 # Temporary files
 *.tmp
-*.log
 
 # OS files
 .DS_Store

@@ -1,9 +1,10 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', '../error.log');
+ini_set('display_errors', 0);
 session_start();
 require '../authdatabase.php';
-require '../config.php'; // Include our config file with API key
 
 header('Content-Type: application/json');
 
@@ -14,12 +15,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Configuration
-if (!isset($GEMINI_API_KEY) || $GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Please set your Gemini API key in config.php!']);
-    exit;
-}
+// Configuration - API Key directly here (WARNING: DO NOT COMMIT THIS FILE TO GITHUB!)
+$GEMINI_API_KEY = 'AQ.Ab8RN6La9CSLEmmEEROhg6_9IBavxzoNDbeJ7E9JzW5DMzURyQ';
 $GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $GEMINI_API_KEY;
 
 // Get input data
@@ -109,8 +106,7 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
-// Add these options for SSL (if needed)
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
 $response = curl_exec($ch);
@@ -140,8 +136,7 @@ if ($httpCode === 200) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Failed to get response from AI',
-        'debug' => $response
+        'error' => 'Failed to get response from AI: ' . $response
     ]);
 }
 ?>
