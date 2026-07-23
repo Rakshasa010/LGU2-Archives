@@ -1,4 +1,6 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
 require '../authdatabase.php';
 
@@ -103,10 +105,23 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
+// Add these options for SSL (if needed)
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
 $response = curl_exec($ch);
+$curlError = curl_error($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
+
+if ($curlError) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Curl error: ' . $curlError
+    ]);
+    exit;
+}
 
 // Handle the response
 if ($httpCode === 200) {
