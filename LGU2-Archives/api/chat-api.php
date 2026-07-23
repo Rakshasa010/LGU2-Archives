@@ -12,7 +12,8 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Configuration - Replace with your Gemini API key
-$GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'; // User should replace this
+// Get your API key from https://aistudio.google.com/app/apikey
+$GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'; // User must replace this with their actual key
 $GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $GEMINI_API_KEY;
 
 // Get input data

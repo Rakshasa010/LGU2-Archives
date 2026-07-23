@@ -137,6 +137,7 @@ const ChatWidget = {
             });
             
             const data = await response.json();
+            console.log('API Response:', data);
             
             // Remove typing indicator
             document.getElementById('typing-indicator').remove();
@@ -144,12 +145,13 @@ const ChatWidget = {
             if (data.success) {
                 this.addMessage(data.response, false);
             } else {
-                this.addMessage('Sorry, I encountered an error. Please try again.', false);
+                this.addMessage('Sorry, I encountered an error: ' + (data.error || 'Unknown error'), false);
             }
         } catch (error) {
             // Remove typing indicator
             document.getElementById('typing-indicator').remove();
-            this.addMessage('Sorry, I encountered an error. Please try again.', false);
+            console.error('Fetch Error:', error);
+            this.addMessage('Sorry, I encountered an error: ' + error.message, false);
         }
     }
 };
