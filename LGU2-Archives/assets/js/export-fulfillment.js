@@ -302,101 +302,121 @@ window.copyStorageFile = function(fileIdStr, fileNameStr, fileSizeStr, filePathS
     }
 
     function createFileRow(file) {
-        console.log('[FileCard] Creating card for:', file.name, file.id);
-        
-        const row = document.createElement('div');
-        row.className = 'file-card-item bg-white dark:bg-slate-800 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-lg p-4';
-        row.style.cssText = 'position: relative; transition: all 0.2s;';
-        
-        // Build the HTML content directly
-        const fileTypeIcon = getFileIcon(file.file_type);
-        
-        row.innerHTML = `
-            <div class="file-info" style="pointer-events: none; margin-bottom: 12px;">
-                <div style="display: flex; align-items: start; gap: 12px;">
-                    <div style="flex-shrink: 0;">
-                        ${fileTypeIcon}
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                        <p style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 4px;" class="dark:text-gray-100">${escapeHtml(file.name)}</p>
-                        <p style="font-size: 12px; color: #6b7280;" class="dark:text-gray-400">${file.size_formatted}</p>
-                        <p style="font-size: 11px; color: #9ca3af; margin-top: 4px;" class="dark:text-gray-500">${file.uploaded_at || 'Unknown date'}</p>
-                    </div>
+    console.log('[FileCard] Creating card for:', file.name, file.id);
+    
+    const row = document.createElement('div');
+    row.className = 'file-card-item bg-white dark:bg-slate-800 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-600 hover:shadow-lg p-4';
+    row.style.cssText = 'position: relative; transition: all 0.2s;';
+    
+    // Build the HTML content directly
+    const fileTypeIcon = getFileIcon(file.file_type);
+    const hasVersions = file.versions && file.versions.length > 1;
+    
+    row.innerHTML = `
+        <div class="file-info" style="pointer-events: none; margin-bottom: 12px;">
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <div style="flex-shrink: 0;">
+                    ${fileTypeIcon}
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <p style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 4px;" class="dark:text-gray-100">${escapeHtml(file.name)}</p>
+                    <p style="font-size: 12px; color: #6b7280;" class="dark:text-gray-400">${file.size_formatted} • v${file.version || 1}${hasVersions ? ` (${file.versions.length} versions)` : ''}</p>
+                    <p style="font-size: 11px; color: #9ca3af; margin-top: 4px;" class="dark:text-gray-500">${file.uploaded_at || 'Unknown date'}</p>
                 </div>
             </div>
-            <button 
-                type="button" 
-                class="copy-file-btn-action"
-                data-file-id="${escapeHtml(file.id)}"
-                data-file-name="${escapeHtml(file.name)}"
-                data-file-size="${escapeHtml(file.size_formatted)}"
-                data-file-path="${escapeHtml(file.path || '')}"
-                style="
-                    position: relative;
-                    width: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    padding: 10px 16px;
-                    background-color: #dc2626;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 14px;
-                    cursor: pointer;
-                    z-index: 100;
-                    pointer-events: auto;
-                    transition: background-color 0.2s;
-                "
-                onmouseover="this.style.backgroundColor='#b91c1c'"
-                onmouseout="this.style.backgroundColor='#dc2626'"
-                onmousedown="this.style.backgroundColor='#991b1b'"
-                onmouseup="this.style.backgroundColor='#b91c1c'">
-                <i class="bi bi-files"></i>
-                <span>Make a Copy</span>
-            </button>
-        `;
-        
-        // Attach event listener AFTER adding to DOM
-        setTimeout(() => {
-            const btn = row.querySelector('.copy-file-btn-action');
-            if (btn) {
-                // Store file object reference
-                btn.__fileData = file;
+        </div>
+        ${hasVersions ? `
+        <div style="margin-bottom: 8px;">
+            <select class="version-select" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
+                ${file.versions.map(v => `<option value="${escapeHtml(v.id)}" data-path="${escapeHtml(v.path || '')}">Version ${v.version} • ${new Date(v.created_at).toLocaleString()}</option>`).join('')}
+            </select>
+        </div>
+        ` : ''}
+        <button 
+            type="button" 
+            class="copy-file-btn-action"
+            data-file-id="${escapeHtml(file.id)}"
+            data-file-name="${escapeHtml(file.name)}"
+            data-file-size="${escapeHtml(file.size_formatted)}"
+            data-file-path="${escapeHtml(file.path || '')}"
+            style="
+                position: relative;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 10px 16px;
+                background-color: #dc2626;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 14px;
+                cursor: pointer;
+                z-index: 100;
+                pointer-events: auto;
+                transition: background-color 0.2s;
+            "
+            onmouseover="this.style.backgroundColor='#b91c1c'"
+            onmouseout="this.style.backgroundColor='#dc2626'"
+            onmousedown="this.style.backgroundColor='#991b1b'"
+            onmouseup="this.style.backgroundColor='#b91c1c'">
+            <i class="bi bi-files"></i>
+            <span>Make a Copy</span>
+        </button>
+    `;
+    
+    // Attach event listener AFTER adding to DOM
+    setTimeout(() => {
+        const btn = row.querySelector('.copy-file-btn-action');
+        const versionSelect = row.querySelector('.version-select');
+        if (btn) {
+            // Store file object reference
+            btn.__fileData = file;
+            
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
                 
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    
-                    console.log('[FileCopy] ========================================');
-                    console.log('[FileCopy] ✅ Button clicked!');
-                    console.log('[FileCopy] File name:', this.__fileData.name);
-                    console.log('[FileCopy] File ID:', this.__fileData.id);
-                    console.log('[FileCopy] File data:', this.__fileData);
-                    console.log('[FileCopy] ========================================');
-                    
-                    // Call staging function
-                    if (window.exportFulfillment && window.exportFulfillment.stageFile) {
-                        console.log('[FileCopy] Calling window.exportFulfillment.stageFile...');
-                        window.exportFulfillment.stageFile(this.__fileData);
-                    } else {
-                        console.log('[FileCopy] Calling stageExportCopy directly...');
-                        stageExportCopy(this.__fileData);
+                console.log('[FileCopy] ========================================');
+                console.log('[FileCopy] ✅ Button clicked!');
+                console.log('[FileCopy] File name:', this.__fileData.name);
+                
+                let selectedFile = this.__fileData;
+                if (versionSelect) {
+                    const selectedVersionId = versionSelect.value;
+                    const selectedVersionData = this.__fileData.versions.find(v => v.id === selectedVersionId);
+                    if (selectedVersionData) {
+                        selectedFile = { ...this.__fileData, ...selectedVersionData, id: selectedVersionId, path: selectedVersionData.path };
+                        console.log('[FileCopy] Selected version:', selectedVersionData.version);
                     }
-                    return false;
-                });
+                }
                 
-                console.log('[FileCard] Event listener attached to button for:', file.name);
-            } else {
-                console.error('[FileCard] ❌ Button not found in row!');
-            }
-        }, 0);
-        
-        console.log('[FileCard] Card created');
-        return row;
-    }
+                console.log('[FileCopy] File ID:', selectedFile.id);
+                console.log('[FileCopy] File data:', selectedFile);
+                console.log('[FileCopy] ========================================');
+                
+                // Call staging function
+                if (window.exportFulfillment && window.exportFulfillment.stageFile) {
+                    console.log('[FileCopy] Calling window.exportFulfillment.stageFile...');
+                    window.exportFulfillment.stageFile(selectedFile);
+                } else {
+                    console.log('[FileCopy] Calling stageExportCopy directly...');
+                    stageExportCopy(selectedFile);
+                }
+                return false;
+            });
+            
+            console.log('[FileCard] Event listener attached to button for:', file.name);
+        } else {
+            console.error('[FileCard] ❌ Button not found in row!');
+        }
+    }, 0);
+    
+    console.log('[FileCard] Card created');
+    return row;
+}
     
     // Expose staging function to global scope
     window.exportFulfillment = window.exportFulfillment || {};

@@ -125,7 +125,7 @@ try {
 
 function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
     $files = [];
-    $query = "SELECT id, name, file_path, file_size, created_at FROM archive_files ";
+    $query = "SELECT id, name, file_path, file_size, created_at, version FROM archive_files WHERE parent_version_id IS NULL ";
     $conditions = [];
     $params = [];
     $types = '';
@@ -143,7 +143,7 @@ function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
     }
     
     if (!empty($conditions)) {
-        $query .= " WHERE " . implode(" AND ", $conditions);
+        $query .= " AND " . implode(" AND ", $conditions);
     }
     
     $query .= " ORDER BY name ASC";
@@ -156,13 +156,19 @@ function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
     }
     
     $stmt = $conn->prepare($query);
-    if ($stmt && !empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    if ($stmt) {
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         
         while ($row = $result->fetch_assoc()) {
             $ext = strtolower(pathinfo($row['file_path'], PATHINFO_EXTENSION));
+            
+            // Get all versions for this file
+            $versions = getArchiveVersions($conn, $row['id']);
+            
             $files[] = [
                 'id' => 'arch_file_' . $row['id'],
                 'type' => 'file',
@@ -172,7 +178,9 @@ function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
                 'path' => $row['file_path'],
                 'size' => (int)$row['file_size'],
                 'size_formatted' => formatFileSize($row['file_size']),
-                'uploaded_at' => $row['created_at']
+                'uploaded_at' => $row['created_at'],
+                'version' => (int)($row['version'] ?? 1),
+                'versions' => $versions
             ];
         }
         
@@ -185,7 +193,7 @@ function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
 
 function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
     $files = [];
-    $query = "SELECT id, title, file_path, created_at FROM legislative_records WHERE parent_version_id IS NULL ";
+    $query = "SELECT id, title, file_path, created_at, version FROM legislative_records WHERE parent_version_id IS NULL ";
     $conditions = [];
     $params = [];
     $types = '';
@@ -238,6 +246,9 @@ function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
             $fileSize = file_exists($filePath) ? filesize($filePath) : 0;
             $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
             
+            // Get all versions for this file
+            $versions = getLegislativeVersions($conn, $row['id']);
+            
             $files[] = [
                 'id' => 'leg_file_' . $row['id'],
                 'type' => 'file',
@@ -247,7 +258,9 @@ function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
                 'path' => $filePath,
                 'size' => $fileSize,
                 'size_formatted' => formatFileSize($fileSize),
-                'uploaded_at' => $row['created_at']
+                'uploaded_at' => $row['created_at'],
+                'version' => (int)($row['version'] ?? 1),
+                'versions' => $versions
             ];
         }
         
@@ -256,6 +269,82 @@ function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
     }
     
     return $files;
+}
+
+function getLegislativeVersions($conn, $file_id) {
+    $versions = [];
+    $root_id = $file_id;
+    
+    // Find root id if this is a version
+    $findParent = $conn->prepare("SELECT parent_version_id FROM legislative_records WHERE id = ?");
+    if ($findParent) {
+        $findParent->bind_param("i", $file_id);
+        $findParent->execute();
+        $res = $findParent->get_result();
+        if ($row = $res->fetch_assoc()) {
+            $root_id = $row['parent_version_id'] ? $row['parent_version_id'] : $file_id;
+        }
+        $res->free();
+        $findParent->close();
+    }
+    
+    $sql = "SELECT id, title, version, created_at, author, file_path FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param("ii", $root_id, $root_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($v = $result->fetch_assoc()) {
+            $versions[] = [
+                'id' => 'leg_file_' . $v['id'],
+                'version' => (int)$v['version'],
+                'title' => $v['title'],
+                'created_at' => $v['created_at'],
+                'author' => $v['author'],
+                'path' => $v['file_path']
+            ];
+        }
+        $result->free();
+        $stmt->close();
+    }
+    return $versions;
+}
+
+function getArchiveVersions($conn, $file_id) {
+    $versions = [];
+    $root_id = $file_id;
+    
+    $findParent = $conn->prepare("SELECT parent_version_id FROM archive_files WHERE id = ?");
+    if ($findParent) {
+        $findParent->bind_param("i", $file_id);
+        $findParent->execute();
+        $res = $findParent->get_result();
+        if ($row = $res->fetch_assoc()) {
+            $root_id = $row['parent_version_id'] ? (int)$row['parent_version_id'] : $file_id;
+        }
+        $res->free();
+        $findParent->close();
+    }
+    
+    $sql = "SELECT id, name, version, created_at, file_path FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param("ii", $root_id, $root_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($v = $result->fetch_assoc()) {
+            $versions[] = [
+                'id' => 'arch_file_' . $v['id'],
+                'version' => (int)$v['version'],
+                'title' => $v['name'],
+                'created_at' => $v['created_at'],
+                'path' => $v['file_path']
+            ];
+        }
+        $result->free();
+        $stmt->close();
+    }
+    return $versions;
 }
 
 function countArchiveFiles($conn, $folder_id, $search) {
