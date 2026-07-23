@@ -900,28 +900,18 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
                             <div class="flex items-center justify-between mb-3">
                                 <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">Latest Archive Files Visit</h2>
-                                <button id="latest-files-toggle" type="button" class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors" aria-expanded="true" aria-controls="latestFilesList">
-                                    <span id="latest-files-toggle-text">Hide List</span>
+                                <button id="latest-files-toggle" type="button"
+                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
+                                    aria-expanded="true" aria-controls="latestFilesList">
+                                    <span id="latest-files-toggle-text">Hide</span>
                                     <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-xs"></i>
                                 </button>
                             </div>
-                            <div id="latestFilesList" class="space-y-3" data-fetch-url="fetch_latest_files.php">
-                                <div class="skeleton-grid" aria-hidden="true">
-                                    <div class="skeleton p-3">
-                                        <div class="skeleton-thumb"></div>
-                                        <div class="skeleton-title skeleton-text mt-3"></div>
-                                        <div class="skeleton-line skeleton-text" style="width:80%"></div>
-                                    </div>
-                                    <div class="skeleton p-3">
-                                        <div class="skeleton-thumb"></div>
-                                        <div class="skeleton-title skeleton-text mt-3"></div>
-                                        <div class="skeleton-line skeleton-text" style="width:60%"></div>
-                                    </div>
-                                    <div class="skeleton p-3">
-                                        <div class="skeleton-thumb"></div>
-                                        <div class="skeleton-title skeleton-text mt-3"></div>
-                                        <div class="skeleton-line skeleton-text" style="width:70%"></div>
-                                    </div>
+                            <!-- Loading state shown while fetch is in-flight -->
+                            <div id="latestFilesList" class="space-y-2">
+                                <div id="latest-files-loading" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    <i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>
+                                    Loading recent files…
                                 </div>
                             </div>
                         </div>
@@ -1026,6 +1016,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }]
                     },
                     options: {
+                        animation: false,
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
@@ -1050,6 +1041,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }]
                     },
                     options: {
+                        animation: false,
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
@@ -1281,6 +1273,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         datasets: [{ data: data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444'] }]
                     },
                     options: { 
+                        animation: false,
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { 
@@ -1309,7 +1302,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(dlBar.getContext('2d'), {
                     type: 'bar',
                     data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, backgroundColor: 'rgba(255,255,255,0.9)' }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
                 });
             }
             var recMini = document.getElementById('qaRecordsMini');
@@ -1317,7 +1310,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(recMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
             var dlMini = document.getElementById('qaDownloadsMini');
@@ -1325,7 +1318,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(dlMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
             var upMini = document.getElementById('qaUploadsMini');
@@ -1333,7 +1326,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(upMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
             var recLine = document.getElementById('qaRecordsLine');
@@ -1341,7 +1334,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(recLine.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true, tension: 0.3 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var fu = document.getElementById('uploadsByFolderChart');
@@ -1357,6 +1350,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         ]
                     },
                     options: {
+                        animation: false,
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { position: 'bottom' } },
@@ -1376,7 +1370,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             { label: '8-30d', data: catEarlier, backgroundColor: '#6b7280' }
                         ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var ffd = document.getElementById('filesByFolderDonut');
@@ -1387,7 +1381,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         labels: ffLabels,
                         datasets: [{ data: ffValues, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } } }
+                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } } }
                 });
             }
             var d1 = document.getElementById('dupLegBar');
@@ -1395,7 +1389,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(d1.getContext('2d'), {
                     type: 'bar',
                     data: { labels: dupLegLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupLegCounts, backgroundColor:'#dc2626' }] },
-                    options: { indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                    options: { animation: false, indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var d2 = document.getElementById('dupFileBar');
@@ -1403,7 +1397,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(d2.getContext('2d'), {
                     type: 'bar',
                     data: { labels: dupFileLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupFileCounts, backgroundColor:'#2563eb' }] },
-                    options: { indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                    options: { animation: false, indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var fuFilter = document.getElementById('fu-filter');
@@ -1466,24 +1460,24 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     new Chart(elBar.getContext('2d'), {
                         type: 'bar',
                         data: { labels: labels, datasets: [{ label:'Downloads', data: downloads, backgroundColor:'rgba(255,99,132,0.7)'}] },
-                        options: { responsive:true, maintainAspectRatio: false, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
+                        options: { animation: false, responsive:true, maintainAspectRatio: false, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
                     });
                 }
 
                 // Records mini
                 const elRecMini = document.getElementById('qaRecordsMini');
                 if (elRecMini) {
-                    new Chart(elRecMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
+                    new Chart(elRecMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
                 }
 
                 const elDLMini = document.getElementById('qaDownloadsMini');
                 if (elDLMini) {
-                    new Chart(elDLMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false}}} });
+                    new Chart(elDLMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false}}} });
                 }
 
                 const elRecordsLine = document.getElementById('qaRecordsLine');
                 if (elRecordsLine) {
-                    new Chart(elRecordsLine.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
+                    new Chart(elRecordsLine.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
                 }
 
                 // Records by type (pie) - build from PHP $qa_by_type
@@ -1492,7 +1486,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 const typeVals = typeKeys.map(k=>byType[k]);
                 const elByType = document.getElementById('qaRecordsByType');
                 if (elByType && typeKeys.length>0) {
-                    new Chart(elByType.getContext('2d'), { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'right'}}} });
+                    new Chart(elByType.getContext('2d'), { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'right'}}} });
                 }
 
                 // Uploads by folder stacked bar (if exists)
@@ -1502,7 +1496,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 const upEarlier = <?php echo json_encode($uploads_earlier ?? []); ?>;
                 const elUploads = document.getElementById('uploadsByFolderChart');
                 if (elUploads && upLabels.length>0) {
-                    new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
+                    new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
                 }
             }catch(e){console.warn('Chart init error',e);}
         })();
