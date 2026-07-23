@@ -310,21 +310,25 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     </div>
 
                     <!-- Analytics Overview Section -->
-                    <div class="mb-8">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                            <i class="bi bi-graph-up text-red-600"></i>
+                    <div style="margin-bottom: 24px;">
+                        <h3 style="font-size: 17px; font-weight: bold; color: #111827; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <i class="bi bi-graph-up" style="color: #dc2626;"></i>
                             Analytics Overview
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <!-- Storage Usage (Line Chart) -->
-                            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
-                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Storage Usage (Last 7 Days)</h4>
-                                <canvas id="storageUsageChart"></canvas>
+                            <div style="background: white; border-radius: 10px; padding: 12px 14px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Storage Usage (Last 7 Days)</h4>
+                                <div style="position:relative; height:110px;">
+                                    <canvas id="storageUsageChart" style="width:100%; height:100%;"></canvas>
+                                </div>
                             </div>
                             <!-- Folders / File Types (Bar Chart) -->
-                            <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700 shadow-sm">
-                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Files by Source</h4>
-                                <canvas id="filesBySourceChart"></canvas>
+                            <div style="background: white; border-radius: 10px; padding: 12px 14px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Files by Source</h4>
+                                <div style="position:relative; height:110px;">
+                                    <canvas id="filesBySourceChart" style="width:100%; height:100%;"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -566,7 +570,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     </div>
 
                     <!-- Quick Analytics -->
-                    <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
+                    <div style="margin-top:24px; background: white; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.04); border:1px solid #e5e7eb; padding:12px 14px;">
                             <?php
                             require 'authdatabase.php';
                             $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
@@ -711,10 +715,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             $qa_series_records = array_values($series_records);
                             $qa_series_records_merged = array_values($series_records_merged);
                             ?>
-                            <div class="flex items-end justify-between gap-3 flex-wrap">
+                            <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                                 <div>
-                                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Quick Reports & Analytics</h2>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    <h2 style="font-size:20px; font-weight:bold; color:#1f2937;">Quick Reports & Analytics</h2>
+                                    <div style="font-size:12px; color:#6b7280;">
                                         <?php
                                         $range = ($f_from ? $f_from : 'Start') . ' — ' . ($f_to ? $f_to : 'End');
                                         echo htmlspecialchars($range);
@@ -723,57 +727,63 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                         ?>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <input id="qa-from" type="date" value="<?php echo htmlspecialchars($f_from ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                    <input id="qa-to" type="date" value="<?php echo htmlspecialchars($f_to ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                    <select id="qa-type" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <input id="qa-from" type="date" value="<?php echo htmlspecialchars($f_from ?? ''); ?>" style="padding:6px 8px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:white; color:#1f2937;">
+                                    <input id="qa-to" type="date" value="<?php echo htmlspecialchars($f_to ?? ''); ?>" style="padding:6px 8px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:white; color:#1f2937;">
+                                    <select id="qa-type" style="padding:6px 8px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:white; color:#1f2937;">
                                         <option value="">All Types</option>
                                         <?php foreach ($types_list as $t): ?>
                                             <option value="<?php echo htmlspecialchars($t); ?>" <?php echo ($fa_type === $t ? 'selected' : ''); ?>><?php echo htmlspecialchars($t); ?></option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <select id="qa-event" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <select id="qa-event" style="padding:6px 8px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:white; color:#1f2937;">
                                         <option value="">All Events</option>
                                         <option value="download" <?php echo ($safe_event === 'download' ? 'selected' : ''); ?>>Download</option>
                                         <option value="upload" <?php echo ($safe_event === 'upload' ? 'selected' : ''); ?>>Upload</option>
                                     </select>
-                                    <button id="qa-apply" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
+                                    <button id="qa-apply" style="padding:8px 12px; font-size:14px; border-radius:8px; background:#dc2626; color:white; border:none; cursor:pointer;">Apply</button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Records</div>
-                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_total_records; ?></div>
-                                    <canvas id="qaRecordsMini" height="40"></canvas>
+                            <!-- Stat summary cards: 3 columns side-by-side -->
+                            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px;">
+                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
+                                    <div style="font-size:12px; color:#4b5563; margin-bottom:2px;">Total Records</div>
+                                    <div style="font-size:18px; font-weight:bold; color:#1f2937; margin-bottom:4px;"><?php echo $qa_total_records; ?></div>
+                                    <canvas id="qaRecordsMini" height="32" style="max-height:32px; width:100%;"></canvas>
                                 </div>
-                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Downloads</div>
-                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsMini" height="40"></canvas>
+                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
+                                    <div style="font-size:12px; color:#4b5563; margin-bottom:2px;">Total Downloads</div>
+                                    <div style="font-size:18px; font-weight:bold; color:#1f2937; margin-bottom:4px;"><?php echo $qa_downloads; ?></div>
+                                    <canvas id="qaDownloadsMini" height="32" style="max-height:32px; width:100%;"></canvas>
                                 </div>
-                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Total Uploads</div>
-                                    <div class="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 mb-1"><?php echo $qa_uploads; ?></div>
-                                    <canvas id="qaUploadsMini" height="40"></canvas>
+                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
+                                    <div style="font-size:12px; color:#4b5563; margin-bottom:2px;">Total Uploads</div>
+                                    <div style="font-size:18px; font-weight:bold; color:#1f2937; margin-bottom:4px;"><?php echo $qa_uploads; ?></div>
+                                    <canvas id="qaUploadsMini" height="32" style="max-height:32px; width:100%;"></canvas>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records Trend</div>
-                                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 14 days</div>
+                            <!-- Chart row: Records Trend + Records by Type side-by-side -->
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                                        <div style="font-weight:600; font-size:14px; color:#1f2937;">Records Trend</div>
+                                        <div style="font-size:11px; color:#6b7280;">Last 14 days</div>
                                     </div>
-                                    <canvas id="qaRecordsLine" height="200"></canvas>
-                                </div>
-                                <div class="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Records by Type</div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[11px] text-gray-600 dark:text-gray-400"><?php echo count($qa_by_type); ?> types</span>
-                                        <button id="rbt-toggle" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600" title="Toggle absolute/percentage">ABS</button>
+                                    <div style="position:relative; height:120px;">
+                                        <canvas id="qaRecordsLine" style="width:100%; height:100%;"></canvas>
                                     </div>
                                 </div>
-                                    <canvas id="qaRecordsByType" height="200"></canvas>
+                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                                        <div style="font-weight:600; font-size:14px; color:#1f2937;">Records by Type</div>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span style="font-size:11px; color:#4b5563;"><?php echo count($qa_by_type); ?> types</span>
+                                            <button id="rbt-toggle" style="font-size:10px; padding:2px 6px; border-radius:4px; border:1px solid #d1d5db; background:white; color:#374151; cursor:pointer;" title="Toggle absolute/percentage">ABS</button>
+                                        </div>
+                                    </div>
+                                    <div style="position:relative; height:120px;">
+                                        <canvas id="qaRecordsByType" style="width:100%; height:100%;"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -824,53 +834,55 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             }
                         }
                         ?>
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">Folders & Uploads</h2>
+                        <div style="background:white; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.04); border:1px solid #e5e7eb; padding:12px 14px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                                <h2 style="font-size:18px; font-weight:bold; color:#1f2937;">Folders & Uploads</h2>
                             </div>
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                                <div class="lg:col-span-1">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</div>
-                                        <a href="storage.php" class="text-sm text-red-600 dark:text-red-400 hover:underline">View All</a>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start;">
+                                <div>
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                        <div style="font-weight:600; color:#1f2937;">Recent Uploads</div>
+                                        <a href="storage.php" style="font-size:14px; color:#dc2626; text-decoration:underline;">View All</a>
                                     </div>
-                                    <div class="mb-2">
-                                        <select id="fu-filter" class="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <div style="margin-bottom:8px;">
+                                        <select id="fu-filter" style="width:100%; padding:6px 8px; font-size:14px; border-radius:8px; border:1px solid #d1d5db; background:white; color:#1f2937;">
                                             <option value="">All Folders</option>
                                             <?php foreach ($uploads_labels as $lab): ?>
                                                 <option value="<?php echo htmlspecialchars($lab); ?>"><?php echo htmlspecialchars($lab); ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
-                                    <div id="fu-cards" class="grid grid-cols-1 gap-3">
+                                    <div id="fu-cards" style="display:grid; grid-template-columns:1fr; gap:12px;">
                                         <?php foreach ($recent_uploads as $u): ?>
                                             <?php
                                             $link = 'folder_view.php?id=' . urlencode($u['folder_id']);
                                             if (($u['src'] ?? '') === 'legislative') $link .= '&legislative=true';
                                             ?>
-                                            <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>" class="file-card block bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-700 py-1.5 px-3 hover:shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-slate-700">
-                                                <div class="flex items-center justify-between">
-                                                    <div class="min-w-0">
-                                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['name']); ?></div>
-                                                        <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($u['folder_name']); ?> • <?php echo htmlspecialchars($u['created_at']); ?></div>
+                                            <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>" class="file-card" style="display:block; background:white; border-radius:4px; border:1px solid #e5e7eb; padding:6px 12px;">
+                                                <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                    <div style="min-width:0;">
+                                                        <div style="font-size:14px; font-weight:500; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo htmlspecialchars($u['name']); ?></div>
+                                                        <div style="font-size:11px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo htmlspecialchars($u['folder_name']); ?> • <?php echo htmlspecialchars($u['created_at']); ?></div>
                                                     </div>
-                                                    <div class="ml-2 text-gray-400">
+                                                    <div style="margin-left:8px; color:#9ca3af;">
                                                         <i class="bi bi-chevron-right text-xs"></i>
                                                     </div>
                                                 </div>
                                             </a>
                                         <?php endforeach; ?>
                                         <?php if (empty($recent_uploads)): ?>
-                                            <div class="text-gray-500">No uploads yet.</div>
+                                            <div style="color:#6b7280;">No uploads yet.</div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <div class="lg:col-span-2">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <div class="font-semibold text-sm text-gray-800 dark:text-gray-100">Uploads by Folder</div>
-                                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Last 30 days</div>
+                                <div>
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                                        <div style="font-weight:600; font-size:14px; color:#1f2937;">Uploads by Folder</div>
+                                        <div style="font-size:11px; color:#6b7280;">Last 30 days</div>
                                     </div>
-                                    <canvas id="uploadsByFolderChart" height="100"></canvas>
+                                    <div style="position:relative; height:160px;">
+                                        <canvas id="uploadsByFolderChart" style="width:100%; height:100%;"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1015,6 +1027,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: { display: false }
                         }
@@ -1038,6 +1051,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: { display: false }
                         }
@@ -1267,7 +1281,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         datasets: [{ data: data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444'] }]
                     },
                     options: { 
-                        responsive: true, 
+                        responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { 
                             legend: { position: 'bottom' },
                             tooltip: { callbacks: { label: function(ctx){
@@ -1294,7 +1309,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(dlBar.getContext('2d'), {
                     type: 'bar',
                     data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, backgroundColor: 'rgba(255,255,255,0.9)' }] },
-                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
                 });
             }
             var recMini = document.getElementById('qaRecordsMini');
@@ -1302,7 +1317,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(recMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
             var dlMini = document.getElementById('qaDownloadsMini');
@@ -1310,7 +1325,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(dlMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
             var upMini = document.getElementById('qaUploadsMini');
@@ -1318,7 +1333,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(upMini.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
                 });
             }
             var recLine = document.getElementById('qaRecordsLine');
@@ -1326,7 +1341,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(recLine.getContext('2d'), {
                     type: 'line',
                     data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true, tension: 0.3 }] },
-                    options: { responsive: true, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var fu = document.getElementById('uploadsByFolderChart');
@@ -1343,6 +1358,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { legend: { position: 'bottom' } },
                         scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
                     }
@@ -1360,7 +1376,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             { label: '8-30d', data: catEarlier, backgroundColor: '#6b7280' }
                         ]
                     },
-                    options: { responsive: true, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var ffd = document.getElementById('filesByFolderDonut');
@@ -1371,7 +1387,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         labels: ffLabels,
                         datasets: [{ data: ffValues, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
                     },
-                    options: { responsive: true, plugins:{ legend:{ position:'bottom' } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } } }
                 });
             }
             var d1 = document.getElementById('dupLegBar');
@@ -1379,7 +1395,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(d1.getContext('2d'), {
                     type: 'bar',
                     data: { labels: dupLegLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupLegCounts, backgroundColor:'#dc2626' }] },
-                    options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                    options: { indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var d2 = document.getElementById('dupFileBar');
@@ -1387,7 +1403,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 new Chart(d2.getContext('2d'), {
                     type: 'bar',
                     data: { labels: dupFileLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupFileCounts, backgroundColor:'#2563eb' }] },
-                    options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                    options: { indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
                 });
             }
             var fuFilter = document.getElementById('fu-filter');
@@ -1450,24 +1466,24 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     new Chart(elBar.getContext('2d'), {
                         type: 'bar',
                         data: { labels: labels, datasets: [{ label:'Downloads', data: downloads, backgroundColor:'rgba(255,99,132,0.7)'}] },
-                        options: { responsive:true, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
+                        options: { responsive:true, maintainAspectRatio: false, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
                     });
                 }
 
                 // Records mini
                 const elRecMini = document.getElementById('qaRecordsMini');
                 if (elRecMini) {
-                    new Chart(elRecMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{responsive:true,plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
+                    new Chart(elRecMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
                 }
 
                 const elDLMini = document.getElementById('qaDownloadsMini');
                 if (elDLMini) {
-                    new Chart(elDLMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{responsive:true,plugins:{legend:{display:false}}} });
+                    new Chart(elDLMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false}}} });
                 }
 
                 const elRecordsLine = document.getElementById('qaRecordsLine');
                 if (elRecordsLine) {
-                    new Chart(elRecordsLine.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{responsive:true,plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
+                    new Chart(elRecordsLine.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
                 }
 
                 // Records by type (pie) - build from PHP $qa_by_type
@@ -1476,7 +1492,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 const typeVals = typeKeys.map(k=>byType[k]);
                 const elByType = document.getElementById('qaRecordsByType');
                 if (elByType && typeKeys.length>0) {
-                    new Chart(elByType.getContext('2d'), { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{responsive:true,plugins:{legend:{position:'right'}}} });
+                    new Chart(elByType.getContext('2d'), { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'right'}}} });
                 }
 
                 // Uploads by folder stacked bar (if exists)
@@ -1486,7 +1502,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 const upEarlier = <?php echo json_encode($uploads_earlier ?? []); ?>;
                 const elUploads = document.getElementById('uploadsByFolderChart');
                 if (elUploads && upLabels.length>0) {
-                    new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{responsive:true, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
+                    new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
                 }
             }catch(e){console.warn('Chart init error',e);}
         })();
