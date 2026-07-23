@@ -76,110 +76,97 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     sidebar?.classList.add('sidebar-collapsed');
 }
 
-// Render Latest Files (Server-side fetch)
-(function(){
+// Render Latest Files (fetched from server once on load)
+(function () {
     function escapeHtml(text) {
         if (!text) return '';
         return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    function fmtBytes(b){
+    function fmtBytes(b) {
         if (!b || b <= 0) return '';
-        var u = ['B','KB','MB','GB','TB'];
-        var e = Math.floor(Math.log(b)/Math.log(1024));
-        return (b/Math.pow(1024, e)).toFixed(2)+' '+u[e];
+        var u = ['B', 'KB', 'MB', 'GB', 'TB'];
+        var e = Math.floor(Math.log(b) / Math.log(1024));
+        return (b / Math.pow(1024, e)).toFixed(1) + '\u00a0' + u[e];
     }
+
+    // Simple colour map for legislative types
+    var TYPE_COLOUR = {
+        'Ordinance':        'text-orange-600 dark:text-orange-400',
+        'Resolution':       'text-blue-600   dark:text-blue-400',
+        'Public Hearing':   'text-green-600  dark:text-green-400',
+        'Meeting':          'text-purple-600 dark:text-purple-400',
+        'Billing':          'text-red-600    dark:text-red-400'
+    };
+
+    function buildRow(file) {
+        var title    = escapeHtml(file.title  || 'Untitled');
+        var size     = fmtBytes(file.size_bytes);
+        var date     = escapeHtml(file.date   || '');
+        var iconCls  = 'bi bi-file-earmark-text text-gray-500 dark:text-gray-400';
+        var metaParts = [];
+
+        var href = '#';
+
+        if (file.source === 'archive') {
+            iconCls = 'bi bi-file-earmark text-blue-500';
+            if (file.folder_name) metaParts.push(escapeHtml(file.folder_name));
+            if (size)             metaParts.push(size);
+            if (date)             metaParts.push(date);
+            href = 'folder_view.php?id=' + encodeURIComponent(file.folder_id || '') + '&highlight=' + encodeURIComponent(file.id || '');
+        } else {
+            // legislative
+            var tc = TYPE_COLOUR[file.type] || 'text-gray-500 dark:text-gray-400';
+            iconCls = 'bi bi-file-text ' + tc;
+            if (file.type)   metaParts.push('<span class="font-medium">' + escapeHtml(file.type) + '</span>');
+            if (file.author) metaParts.push(escapeHtml(file.author));
+            if (size)        metaParts.push(size);
+            if (date)        metaParts.push(date);
+            href = file.folder_id
+                ? 'folder_view.php?id=' + encodeURIComponent(file.folder_id) + '&legislative=true&highlight=' + encodeURIComponent(file.id || '')
+                : '#';
+        }
+
+        var meta = metaParts.join(' <span class="opacity-40">·</span> ');
+
+        return '<a href="' + href + '" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-600 group">' +
+            '<i class="' + iconCls + ' text-xl flex-shrink-0"></i>' +
+            '<div class="min-w-0 flex-1">' +
+                '<div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate" title="' + title + '">' + title + '</div>' +
+                '<div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">' + meta + '</div>' +
+            '</div>' +
+        '</a>';
+    }
+
     function renderLatest() {
-        const container = document.getElementById('latestFilesList');
+        var container = document.getElementById('latestFilesList');
         if (!container) return;
 
-        fetch('fetch_latest_files.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.files.length > 0) {
-                    const html = data.files.map(file => {
-                        let icon = '';
-                        let subtext = '';
-                        let downloadAction = '';
-                        let previewAction = '';
-                        let size = file.size_bytes ? fmtBytes(file.size_bytes) : '';
+        // Show loading state immediately so skeleton / stale content is never visible
+        container.innerHTML =
+            '<div class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">' +
+            '<i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>Loading recent files…</div>';
 
-                        if (file.source === 'archive') {
-                            icon = '<i class="bi bi-file-earmark-text text-2xl text-blue-500"></i>';
-                            subtext = `In: ${escapeHtml(file.folder_name)}${size ? ' • '+size : ''}`;
-                            downloadAction = `<a href="${file.download_url}" target="_blank" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download" onclick="event.stopPropagation()"><i class="bi bi-download"></i></a>`;
-                            const archiveFolderUrl = `folder_view.php?id=${file.folder_id}&highlight=${file.id}`;
-                            previewAction = `<a href="${archiveFolderUrl}&preview=1" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview" onclick="event.stopPropagation()"><i class="bi bi-eye"></i></a>`;
-                            
-                            return `
-                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:hover:border-slate-600 cursor-pointer" onclick="window.location.href='${archiveFolderUrl}'">
-                                <div class="flex items-center space-x-3 min-w-0">
-                                    <div class="flex-shrink-0">${icon}</div>
-                                    <div class="min-w-0">
-                                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">${subtext} • ${file.date}</div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
-                                    ${previewAction}${downloadAction}
-                                </div>
-                            </div>`;
-                        } else {
-                            // Legislative
-                            const typeIcons = {
-                                'Ordinance': 'text-orange-600',
-                                'Resolution': 'text-blue-600',
-                                'Public Hearing': 'text-green-600',
-                                'Meeting': 'text-purple-600',
-                                'Billing': 'text-red-600',
-                                'Legislative Session': 'text-indigo-600'
-                            };
-                            
-                            const colorClass = typeIcons[file.type] || 'text-gray-600';
-                            icon = `<i class="bi bi-file-text ${colorClass} text-2xl"></i>`;
-                            subtext = `${escapeHtml(file.type)} • ${escapeHtml(file.author)}${size ? ' • '+size : ''}`;
-                            
-                            const dlUrl = `download.php?${file.download_params}`;
-                            downloadAction = `<button onclick="event.stopPropagation(); window.open('${dlUrl}', 'downloadPopup', 'width=520,height=520')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Download"><i class="bi bi-download"></i></button>`;
-                            
-                            const folderId = file.folder_id || '';
-                            const redirectUrl = folderId 
-                                ? `folder_view.php?id=${folderId}&legislative=true&highlight=${file.id}`
-                                : `folder_view.php?highlight=${file.id}`;
-                            previewAction = `<a href="${redirectUrl}&preview=1" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Preview" onclick="event.stopPropagation()"><i class="bi bi-eye"></i></a>`;
-                            
-                            return `
-                            <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors group border border-transparent hover:border-gray-200 dark:hover:border-slate-600 cursor-pointer" onclick="window.location.href='${redirectUrl}'">
-                                <div class="flex items-center space-x-3 min-w-0">
-                                    <div class="flex-shrink-0">${icon}</div>
-                                    <div class="min-w-0">
-                                        <div class="font-medium text-gray-800 dark:text-gray-200 truncate" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">${subtext} • ${file.date}</div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
-                                    ${previewAction}${downloadAction}
-                                </div>
-                            </div>`;
-                        }
-                    }).join('');
-                    container.innerHTML = html;
+        fetch('fetch_latest_files.php')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success && Array.isArray(data.files) && data.files.length > 0) {
+                    container.innerHTML = data.files.map(buildRow).join('');
                 } else {
-                    container.innerHTML = `
-                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                            <i class="bi bi-folder2-open text-3xl mb-2 block opacity-50"></i>
-                            <p>No recent files found</p>
-                        </div>`;
+                    container.innerHTML =
+                        '<div class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">' +
+                        '<i class="bi bi-folder2-open text-2xl block mb-2 opacity-50"></i>No recent files found.</div>';
                 }
             })
-            .catch(err => {
-                console.error(err);
-                container.innerHTML = '<div class="text-sm text-red-500">Error loading files</div>';
+            .catch(function () {
+                container.innerHTML =
+                    '<div class="py-6 text-center text-sm text-red-500 dark:text-red-400">' +
+                    '<i class="bi bi-exclamation-circle text-xl block mb-1"></i>Could not load files. Please refresh.</div>';
             });
     }
 
@@ -188,7 +175,8 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     } else {
         renderLatest();
     }
-    window.addEventListener('focus', renderLatest);
+    // Expose so other scripts (e.g. after upload) can trigger a refresh manually
+    window.refreshLatestFiles = renderLatest;
 })();
 
 (function(){
