@@ -130,14 +130,26 @@ const ChatWidget = {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
         try {
+            console.log('Sending request to api/chat-api.php with message:', message);
             const response = await fetch('api/chat-api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
             });
             
-            const data = await response.json();
-            console.log('API Response:', data);
+            console.log('Response status:', response.status, response.statusText);
+            const responseText = await response.text(); // First get as text to debug
+            console.log('Raw response text:', responseText);
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Failed to parse JSON:', e);
+                data = { success: false, error: 'Invalid JSON response: ' + responseText };
+            }
+            
+            console.log('API Response (parsed):', data);
             
             // Remove typing indicator
             document.getElementById('typing-indicator').remove();
@@ -150,7 +162,8 @@ const ChatWidget = {
         } catch (error) {
             // Remove typing indicator
             document.getElementById('typing-indicator').remove();
-            console.error('Fetch Error:', error);
+            console.error('Fetch Error (full):', error);
+            console.error('Error stack:', error.stack);
             this.addMessage('Sorry, I encountered an error: ' + error.message, false);
         }
     }
