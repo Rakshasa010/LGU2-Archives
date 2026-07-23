@@ -3,6 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
 require '../authdatabase.php';
+require '../config.php'; // Include our config file with API key
 
 header('Content-Type: application/json');
 
@@ -13,9 +14,12 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Configuration - Replace with your Gemini API key
-// Get your API key from https://aistudio.google.com/app/apikey
-$GEMINI_API_KEY = 'AQ.Ab8RN6KF-it_EXKJ_5YwPZeu_s0CAE1z9M12ejMwDUoikJSDpg'; // User must replace this with their actual key
+// Configuration
+if (!isset($GEMINI_API_KEY) || $GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Please set your Gemini API key in config.php!']);
+    exit;
+}
 $GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $GEMINI_API_KEY;
 
 // Get input data
