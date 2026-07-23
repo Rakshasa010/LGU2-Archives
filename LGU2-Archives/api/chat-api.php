@@ -15,8 +15,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Configuration - API Key directly here (WARNING: DO NOT COMMIT THIS FILE TO GITHUB!)
-$GEMINI_API_KEY = 'AQ.Ab8RN6La9CSLEmmEEROhg6_9IBavxzoNDbeJ7E9JzW5DMzURyQ';
+// Configuration - API Key (WARNING: DO NOT COMMIT THIS FILE TO GITHUB!)
+// REMINDER: Valid Gemini API keys start with "AIza..."!
+$GEMINI_API_KEY = 'AQ.Ab8RN6Jh03MQnYZW0LmJ4Oc3qB6MXNF0knwxsfwsrkz4fIpZgg'; // <-- Replace this with your REAL "AIza..." key!
 $GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $GEMINI_API_KEY;
 
 // Get input data
@@ -98,7 +99,7 @@ $requestData = [
     ]
 ];
 
-// Send request to Gemini API
+// Send request to Gemini API with better error handling
 $ch = curl_init($GEMINI_API_URL);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
@@ -106,13 +107,21 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true); // Enable SSL verification for security
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose logging for debugging
+curl_setopt($ch, CURLOPT_STDERR, fopen('../error.log', 'a')); // Log curl verbose output to error.log
 
 $response = curl_exec($ch);
 $curlError = curl_error($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
+
+// Log everything to error.log for debugging
+file_put_contents('../error.log', "\n--- Debug Info ---\n", FILE_APPEND);
+file_put_contents('../error.log', "HTTP Code: $httpCode\n", FILE_APPEND);
+file_put_contents('../error.log', "Curl Error: $curlError\n", FILE_APPEND);
+file_put_contents('../error.log', "Response: $response\n", FILE_APPEND);
 
 if ($curlError) {
     http_response_code(500);
@@ -136,7 +145,8 @@ if ($httpCode === 200) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Failed to get response from AI: ' . $response
+        'error' => 'Failed to get response from AI. Check error.log on server for details.',
+        'debug' => $response
     ]);
 }
 ?>
