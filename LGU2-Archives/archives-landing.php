@@ -318,17 +318,17 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         </h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <!-- Storage Usage (Line Chart) -->
-                            <div style="background: white; border-radius: 10px; padding: 12px 14px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Storage Usage (Last 7 Days)</h4>
-                                <div style="position:relative; height:110px;">
-                                    <canvas id="storageUsageChart" style="width:100%; height:100%;"></canvas>
+                            <div class="bg-white rounded-[10px] p-3 border border-gray-200 shadow-sm">
+                                <h4 class="text-xs font-semibold text-gray-700 mb-2">Storage Usage (Last 7 Days)</h4>
+                                <div class="relative w-full h-[110px]">
+                                    <canvas id="storageUsageChart"></canvas>
                                 </div>
                             </div>
                             <!-- Folders / File Types (Bar Chart) -->
-                            <div style="background: white; border-radius: 10px; padding: 12px 14px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Files by Source</h4>
-                                <div style="position:relative; height:110px;">
-                                    <canvas id="filesBySourceChart" style="width:100%; height:100%;"></canvas>
+                            <div class="bg-white rounded-[10px] p-3 border border-gray-200 shadow-sm">
+                                <h4 class="text-xs font-semibold text-gray-700 mb-2">Files by Source</h4>
+                                <div class="relative w-full h-[110px]">
+                                    <canvas id="filesBySourceChart"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -747,43 +747,49 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                             <!-- Stat summary cards: 3 columns side-by-side -->
                             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px;">
-                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
-                                    <div style="font-size:12px; color:#4b5563; margin-bottom:2px;">Total Records</div>
-                                    <div style="font-size:18px; font-weight:bold; color:#1f2937; margin-bottom:4px;"><?php echo $qa_total_records; ?></div>
-                                    <canvas id="qaRecordsMini" height="32" style="max-height:32px; width:100%;"></canvas>
+                                <div class="p-2.5 rounded-[10px] bg-white border border-gray-200">
+                                    <div class="text-xs text-gray-600 mb-0.5">Total Records</div>
+                                    <div class="text-xl font-bold text-gray-800 mb-1"><?php echo $qa_total_records; ?></div>
+                                    <div class="relative w-full h-8">
+                                        <canvas id="qaRecordsMini"></canvas>
+                                    </div>
                                 </div>
-                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
-                                    <div style="font-size:12px; color:#4b5563; margin-bottom:2px;">Total Downloads</div>
-                                    <div style="font-size:18px; font-weight:bold; color:#1f2937; margin-bottom:4px;"><?php echo $qa_downloads; ?></div>
-                                    <canvas id="qaDownloadsMini" height="32" style="max-height:32px; width:100%;"></canvas>
+                                <div class="p-2.5 rounded-[10px] bg-white border border-gray-200">
+                                    <div class="text-xs text-gray-600 mb-0.5">Total Downloads</div>
+                                    <div class="text-xl font-bold text-gray-800 mb-1"><?php echo $qa_downloads; ?></div>
+                                    <div class="relative w-full h-8">
+                                        <canvas id="qaDownloadsMini"></canvas>
+                                    </div>
                                 </div>
-                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
-                                    <div style="font-size:12px; color:#4b5563; margin-bottom:2px;">Total Uploads</div>
-                                    <div style="font-size:18px; font-weight:bold; color:#1f2937; margin-bottom:4px;"><?php echo $qa_uploads; ?></div>
-                                    <canvas id="qaUploadsMini" height="32" style="max-height:32px; width:100%;"></canvas>
+                                <div class="p-2.5 rounded-[10px] bg-white border border-gray-200">
+                                    <div class="text-xs text-gray-600 mb-0.5">Total Uploads</div>
+                                    <div class="text-xl font-bold text-gray-800 mb-1"><?php echo $qa_uploads; ?></div>
+                                    <div class="relative w-full h-8">
+                                        <canvas id="qaUploadsMini"></canvas>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Chart row: Records Trend + Records by Type side-by-side -->
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
-                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                                        <div style="font-weight:600; font-size:14px; color:#1f2937;">Records Trend</div>
-                                        <div style="font-size:11px; color:#6b7280;">Last 14 days</div>
+                                <div class="p-2.5 rounded-[10px] bg-white border border-gray-200">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="font-semibold text-sm text-gray-800">Records Trend</div>
+                                        <div class="text-[11px] text-gray-500">Last 14 days</div>
                                     </div>
-                                    <div style="position:relative; height:120px;">
-                                        <canvas id="qaRecordsLine" style="width:100%; height:100%;"></canvas>
+                                    <div class="relative w-full h-[120px]">
+                                        <canvas id="qaRecordsLine"></canvas>
                                     </div>
                                 </div>
-                                <div style="padding:10px 12px; border-radius:10px; background:white; border:1px solid #e5e7eb;">
-                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                                        <div style="font-weight:600; font-size:14px; color:#1f2937;">Records by Type</div>
-                                        <div style="display:flex; align-items:center; gap:8px;">
-                                            <span style="font-size:11px; color:#4b5563;"><?php echo count($qa_by_type); ?> types</span>
-                                            <button id="rbt-toggle" style="font-size:10px; padding:2px 6px; border-radius:4px; border:1px solid #d1d5db; background:white; color:#374151; cursor:pointer;" title="Toggle absolute/percentage">ABS</button>
+                                <div class="p-2.5 rounded-[10px] bg-white border border-gray-200">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="font-semibold text-sm text-gray-800">Records by Type</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] text-gray-600"><?php echo count($qa_by_type); ?> types</span>
+                                            <button id="rbt-toggle" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-700 cursor-pointer" title="Toggle absolute/percentage">ABS</button>
                                         </div>
                                     </div>
-                                    <div style="position:relative; height:120px;">
-                                        <canvas id="qaRecordsByType" style="width:100%; height:100%;"></canvas>
+                                    <div class="relative w-full h-[120px]">
+                                        <canvas id="qaRecordsByType"></canvas>
                                     </div>
                                 </div>
                             </div>
@@ -877,12 +883,12 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                     </div>
                                 </div>
                                 <div>
-                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                                        <div style="font-weight:600; font-size:14px; color:#1f2937;">Uploads by Folder</div>
-                                        <div style="font-size:11px; color:#6b7280;">Last 30 days</div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="font-semibold text-sm text-gray-800">Uploads by Folder</div>
+                                        <div class="text-[11px] text-gray-500">Last 30 days</div>
                                     </div>
-                                    <div style="position:relative; height:160px;">
-                                        <canvas id="uploadsByFolderChart" style="width:100%; height:100%;"></canvas>
+                                    <div class="relative w-full h-[160px]">
+                                        <canvas id="uploadsByFolderChart"></canvas>
                                     </div>
                                 </div>
                             </div>
@@ -997,61 +1003,71 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     ?>
 
     <script>
-        (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js is not loaded');
+                return;
+            }
             const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
             
             // Initialize Storage Usage Chart
-            const storageCtx = document.getElementById('storageUsageChart')?.getContext('2d');
-            if (storageCtx) {
-                new Chart(storageCtx, {
-                    type: 'line',
-                    data: {
-                        labels: dashboardData.storage_last7.map(d => d.date),
-                        datasets: [{
-                            label: 'Storage Used (Bytes)',
-                            data: dashboardData.storage_last7.map(d => d.value),
-                            borderColor: '#dc2626',
-                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        animation: false,
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
+            const storageCanvas = document.getElementById('storageUsageChart');
+            if (storageCanvas) {
+                const storageCtx = storageCanvas.getContext('2d');
+                if (storageCtx) {
+                    new Chart(storageCtx, {
+                        type: 'line',
+                        data: {
+                            labels: dashboardData.storage_last7.map(d => d.date),
+                            datasets: [{
+                                label: 'Storage Used (Bytes)',
+                                data: dashboardData.storage_last7.map(d => d.value),
+                                borderColor: '#dc2626',
+                                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            animation: false,
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
             
             // Initialize Files by Source Chart
-            const sourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
-            if (sourceCtx) {
-                new Chart(sourceCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: dashboardData.files_by_source.labels,
-                        datasets: [{
-                            label: 'Files',
-                            data: dashboardData.files_by_source.data,
-                            backgroundColor: ['#dc2626', '#3b82f6'],
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        animation: false,
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
+            const sourceCanvas = document.getElementById('filesBySourceChart');
+            if (sourceCanvas) {
+                const sourceCtx = sourceCanvas.getContext('2d');
+                if (sourceCtx) {
+                    new Chart(sourceCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: dashboardData.files_by_source.labels,
+                            datasets: [{
+                                label: 'Files',
+                                data: dashboardData.files_by_source.data,
+                                backgroundColor: ['#dc2626', '#3b82f6'],
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            animation: false,
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
-        })();
+        });
         
         (function() {
             const STORAGE_KEY = 'archives_shown_notif_ids';
@@ -1235,7 +1251,11 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
     <script>
-        (function(){
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js is not loaded');
+                return;
+            }
             var byType = <?php echo json_encode($qa_by_type ?? []); ?>;
             var seriesLabels = <?php echo json_encode($qa_series_labels ?? []); ?>;
             var seriesDownloads = <?php echo json_encode($qa_series_downloads ?? []); ?>;
@@ -1256,18 +1276,20 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             var dupLegCounts = <?php echo json_encode($dup_leg_counts ?? []); ?>;
             var dupFileLabels = <?php echo json_encode($dup_file_labels ?? []); ?>;
             var dupFileCounts = <?php echo json_encode($dup_file_counts ?? []); ?>;
-            var typeCtx = document.getElementById('qaRecordsByType');
+            var typeCanvas = document.getElementById('qaRecordsByType');
             var rbtToggle = document.getElementById('rbt-toggle');
             var rbtChart = null;
             var rbtMode = localStorage.getItem('rbtMode') || 'abs';
             function renderRbt() {
+                if (!typeCanvas) return;
+                var typeCtx = typeCanvas.getContext('2d');
                 if (!typeCtx) return;
                 var labels = Object.keys(byType);
                 var values = Object.values(byType);
                 var total = values.reduce(function(a,b){return a+b;},0) || 1;
                 var data = (rbtMode === 'pct') ? values.map(function(v){ return +(v*100/total).toFixed(2); }) : values;
                 if (rbtChart) { rbtChart.destroy(); }
-                rbtChart = new Chart(typeCtx.getContext('2d'), {
+                rbtChart = new Chart(typeCtx, {
                     type: 'doughnut',
                     data: {
                         labels: labels,
@@ -1300,106 +1322,136 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             }
             var dlBar = document.getElementById('qaDownloadsBar');
             if (dlBar) {
-                new Chart(dlBar.getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, backgroundColor: 'rgba(255,255,255,0.9)' }] },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
-                });
+                var dlBarCtx = dlBar.getContext('2d');
+                if (dlBarCtx) {
+                    new Chart(dlBarCtx, {
+                        type: 'bar',
+                        data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, backgroundColor: 'rgba(255,255,255,0.9)' }] },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#fff'} , grid:{ display:false } }, y:{ ticks:{ display:false }, grid:{ display:false } } } }
+                    });
+                }
             }
             var recMini = document.getElementById('qaRecordsMini');
             if (recMini) {
-                new Chart(recMini.getContext('2d'), {
-                    type: 'line',
-                    data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
-                });
+                var recMiniCtx = recMini.getContext('2d');
+                if (recMiniCtx) {
+                    new Chart(recMiniCtx, {
+                        type: 'line',
+                        data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    });
+                }
             }
             var dlMini = document.getElementById('qaDownloadsMini');
             if (dlMini) {
-                new Chart(dlMini.getContext('2d'), {
-                    type: 'line',
-                    data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
-                });
+                var dlMiniCtx = dlMini.getContext('2d');
+                if (dlMiniCtx) {
+                    new Chart(dlMiniCtx, {
+                        type: 'line',
+                        data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    });
+                }
             }
             var upMini = document.getElementById('qaUploadsMini');
             if (upMini) {
-                new Chart(upMini.getContext('2d'), {
-                    type: 'line',
-                    data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
-                });
+                var upMiniCtx = upMini.getContext('2d');
+                if (upMiniCtx) {
+                    new Chart(upMiniCtx, {
+                        type: 'line',
+                        data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+                    });
+                }
             }
             var recLine = document.getElementById('qaRecordsLine');
             if (recLine) {
-                new Chart(recLine.getContext('2d'), {
-                    type: 'line',
-                    data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true, tension: 0.3 }] },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
-                });
+                var recLineCtx = recLine.getContext('2d');
+                if (recLineCtx) {
+                    new Chart(recLineCtx, {
+                        type: 'line',
+                        data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true, tension: 0.3 }] },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ maxRotation: 0, autoSkip: true } }, y:{ beginAtZero:true, precision:0 } } }
+                    });
+                }
             }
             var fu = document.getElementById('uploadsByFolderChart');
             if (fu) {
-                new Chart(fu.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: fuLabels,
-                        datasets: [
-                            { label: 'Last 7d', data: fuLast7, backgroundColor: '#2563eb' },
-                            { label: 'Prev 7d', data: fuPrev7, backgroundColor: '#f97316' },
-                            { label: '8-30d', data: fuEarlier, backgroundColor: '#6b7280' }
-                        ]
-                    },
-                    options: {
-                        animation: false,
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { position: 'bottom' } },
-                        scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
-                    }
-                });
+                var fuCtx = fu.getContext('2d');
+                if (fuCtx) {
+                    new Chart(fuCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: fuLabels,
+                            datasets: [
+                                { label: 'Last 7d', data: fuLast7, backgroundColor: '#2563eb' },
+                                { label: 'Prev 7d', data: fuPrev7, backgroundColor: '#f97316' },
+                                { label: '8-30d', data: fuEarlier, backgroundColor: '#6b7280' }
+                            ]
+                        },
+                        options: {
+                            animation: false,
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom' } },
+                            scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
+                        }
+                    });
+                }
             }
             var rbc = document.getElementById('recordsByCategoryChart');
             if (rbc) {
-                new Chart(rbc.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: catLabels,
-                        datasets: [
-                            { label: 'Last 7d', data: catLast7, backgroundColor: '#dc2626' },
-                            { label: 'Prev 7d', data: catPrev7, backgroundColor: '#f97316' },
-                            { label: '8-30d', data: catEarlier, backgroundColor: '#6b7280' }
-                        ]
-                    },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
-                });
+                var rbcCtx = rbc.getContext('2d');
+                if (rbcCtx) {
+                    new Chart(rbcCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: catLabels,
+                            datasets: [
+                                { label: 'Last 7d', data: catLast7, backgroundColor: '#dc2626' },
+                                { label: 'Prev 7d', data: catPrev7, backgroundColor: '#f97316' },
+                                { label: '8-30d', data: catEarlier, backgroundColor: '#6b7280' }
+                            ]
+                        },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
+                    });
+                }
             }
             var ffd = document.getElementById('filesByFolderDonut');
             if (ffd) {
-                new Chart(ffd.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ffLabels,
-                        datasets: [{ data: ffValues, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
-                    },
-                    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } } }
-                });
+                var ffdCtx = ffd.getContext('2d');
+                if (ffdCtx) {
+                    new Chart(ffdCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ffLabels,
+                            datasets: [{ data: ffValues, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
+                        },
+                        options: { animation: false, responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } } }
+                    });
+                }
             }
             var d1 = document.getElementById('dupLegBar');
             if (d1) {
-                new Chart(d1.getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: dupLegLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupLegCounts, backgroundColor:'#dc2626' }] },
-                    options: { animation: false, indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
-                });
+                var d1Ctx = d1.getContext('2d');
+                if (d1Ctx) {
+                    new Chart(d1Ctx, {
+                        type: 'bar',
+                        data: { labels: dupLegLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupLegCounts, backgroundColor:'#dc2626' }] },
+                        options: { animation: false, indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                    });
+                }
             }
             var d2 = document.getElementById('dupFileBar');
             if (d2) {
-                new Chart(d2.getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: dupFileLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupFileCounts, backgroundColor:'#2563eb' }] },
-                    options: { animation: false, indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
-                });
+                var d2Ctx = d2.getContext('2d');
+                if (d2Ctx) {
+                    new Chart(d2Ctx, {
+                        type: 'bar',
+                        data: { labels: dupFileLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'…' : s; }), datasets: [{ label:'Count', data: dupFileCounts, backgroundColor:'#2563eb' }] },
+                        options: { animation: false, indexAxis:'y', responsive:true, maintainAspectRatio: false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, precision:0 } } }
+                    });
+                }
             }
             var fuFilter = document.getElementById('fu-filter');
             if (fuFilter) {
@@ -1412,7 +1464,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     });
                 });
             }
-        })();
+        });
     </script>
     <script>
         (function(){
@@ -1445,7 +1497,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         })();
     </script>
     <script>
-        (function(){
+        document.addEventListener('DOMContentLoaded', function() {
             if (typeof Chart === 'undefined') return;
             try{
                 const labels = <?php echo json_encode($qa_series_labels ?? []); ?>;
@@ -1458,27 +1510,39 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 // Downloads bar
                 const elBar = document.getElementById('qaDownloadsBar');
                 if (elBar) {
-                    new Chart(elBar.getContext('2d'), {
-                        type: 'bar',
-                        data: { labels: labels, datasets: [{ label:'Downloads', data: downloads, backgroundColor:'rgba(255,99,132,0.7)'}] },
-                        options: { animation: false, responsive:true, maintainAspectRatio: false, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
-                    });
+                    const elBarCtx = elBar.getContext('2d');
+                    if (elBarCtx) {
+                        new Chart(elBarCtx, {
+                            type: 'bar',
+                            data: { labels: labels, datasets: [{ label:'Downloads', data: downloads, backgroundColor:'rgba(255,99,132,0.7)'}] },
+                            options: { animation: false, responsive:true, maintainAspectRatio: false, plugins:{tooltip:{mode:'index',intersect:false},legend:{display:true,position:'top'}}, interaction:{mode:'index',intersect:false} }
+                        });
+                    }
                 }
 
                 // Records mini
                 const elRecMini = document.getElementById('qaRecordsMini');
                 if (elRecMini) {
-                    new Chart(elRecMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
+                    const elRecMiniCtx = elRecMini.getContext('2d');
+                    if (elRecMiniCtx) {
+                        new Chart(elRecMiniCtx, { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(54,162,235,0.9)',fill:true,backgroundColor:'rgba(54,162,235,0.15)'}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false},tooltip:{mode:'nearest'}}} });
+                    }
                 }
 
                 const elDLMini = document.getElementById('qaDownloadsMini');
                 if (elDLMini) {
-                    new Chart(elDLMini.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false}}} });
+                    const elDLMiniCtx = elDLMini.getContext('2d');
+                    if (elDLMiniCtx) {
+                        new Chart(elDLMiniCtx, { type:'line', data:{labels:labels,datasets:[{label:'Downloads',data:downloads,borderColor:'rgba(255,159,64,0.9)',fill:true,backgroundColor:'rgba(255,159,64,0.12)'}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:false}}} });
+                    }
                 }
 
                 const elRecordsLine = document.getElementById('qaRecordsLine');
                 if (elRecordsLine) {
-                    new Chart(elRecordsLine.getContext('2d'), { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
+                    const elRecordsLineCtx = elRecordsLine.getContext('2d');
+                    if (elRecordsLineCtx) {
+                        new Chart(elRecordsLineCtx, { type:'line', data:{labels:labels,datasets:[{label:'Records',data:records,borderColor:'rgba(75,192,192,0.9)',fill:false},{label:'Merged',data:merged,borderColor:'rgba(153,102,255,0.9)',fill:false}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{display:true,position:'top'},tooltip:{mode:'nearest'}}} });
+                    }
                 }
 
                 // Records by type (pie) - build from PHP $qa_by_type
@@ -1487,7 +1551,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 const typeVals = typeKeys.map(k=>byType[k]);
                 const elByType = document.getElementById('qaRecordsByType');
                 if (elByType && typeKeys.length>0) {
-                    new Chart(elByType.getContext('2d'), { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'right'}}} });
+                    const elByTypeCtx = elByType.getContext('2d');
+                    if (elByTypeCtx) {
+                        new Chart(elByTypeCtx, { type:'doughnut', data:{labels:typeKeys,datasets:[{data:typeVals, backgroundColor:typeKeys.map((_,i)=>['#4ade80','#60a5fa','#f97316','#f87171','#a78bfa'][i%5])}]}, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'right'}}} });
+                    }
                 }
 
                 // Uploads by folder stacked bar (if exists)
@@ -1497,10 +1564,13 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 const upEarlier = <?php echo json_encode($uploads_earlier ?? []); ?>;
                 const elUploads = document.getElementById('uploadsByFolderChart');
                 if (elUploads && upLabels.length>0) {
-                    new Chart(elUploads.getContext('2d'), { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
+                    const elUploadsCtx = elUploads.getContext('2d');
+                    if (elUploadsCtx) {
+                        new Chart(elUploadsCtx, { type:'bar', data:{ labels: upLabels, datasets:[ { label:'Last 7', data:upLast7, backgroundColor:'rgba(99,102,241,0.9)' }, { label:'Prev 7', data:upPrev7, backgroundColor:'rgba(96,165,250,0.8)' }, { label:'Earlier', data:upEarlier, backgroundColor:'rgba(34,197,94,0.7)'} ] }, options:{animation: false, responsive:true, maintainAspectRatio: false, plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}}, interaction:{mode:'index',intersect:false}, scales:{x:{stacked:true}, y:{stacked:true}} } });
+                    }
                 }
             }catch(e){console.warn('Chart init error',e);}
-        })();
+        });
 
         // Shared storage API + unified updates (sidebar + dashboard)
         (function initStorageSync() {
