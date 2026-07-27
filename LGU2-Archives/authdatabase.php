@@ -5,6 +5,9 @@ $username = "las_adminsql";
 $password = "lasadminsql123";  // Default XAMPP MySQL password is empty
 $dbname = "las_lgu2_archives";  // Database name
 
+// Include guard: skip connection setup + migration if already connected
+if (!isset($conn) || !($conn instanceof mysqli)) {
+
 // Create connection
 $conn = new mysqli($servername, $username, $password);
 
@@ -386,6 +389,8 @@ if ($check_old_vault && $check_old_vault->num_rows > 0) {
 
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
+
+} // end include guard
 
 // Database setup completed - no output when included
 

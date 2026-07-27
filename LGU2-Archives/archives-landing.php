@@ -137,8 +137,6 @@ $dashboard_chart_data['files_by_source'] = [
     'data' => [$leg_count, $arch_count]
 ];
 
-$conn->close();
-
 $display_name = $user_data['full_name'] ?? 'User';
 $profile_picture = $user_data['profile_picture'] ?? null;
 $is_admin = isset($user_data['role']) && strtolower($user_data['role']) === 'admin';
@@ -570,7 +568,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     <!-- Quick Reports & Analytics (matches report_analytics.php lines 651-791 outer structure exactly) -->
                     <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6 mt-2 mb-6">
                         <?php
-                        require 'authdatabase.php';
                         $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
                         $fa_end = isset($_GET['end']) ? $_GET['end'] : null;
                         $fa_type = isset($_GET['type']) ? $_GET['type'] : null;
@@ -981,7 +978,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     <div id="toast-container" class="fixed right-6 bottom-6 z-50 space-y-2 flex flex-col items-end pointer-events-none"></div>
 
     <?php
-    require 'authdatabase.php';
     $notif_data = [];
     if ($r = $conn->query("SELECT id, content, about, status, time, date FROM notifications WHERE status='unread' ORDER BY date DESC, id DESC LIMIT 5")) {
         while ($row = $r->fetch_assoc()) {
@@ -1013,7 +1009,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             while ($row = $r->fetch_assoc()) { $dup_file_labels[] = $row['label']; $dup_file_counts[] = (int)$row['c']; }
         }
     }
-    $conn->close();
     ?>
 
     <script>

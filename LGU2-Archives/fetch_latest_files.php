@@ -3,7 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-require 'authdatabase.php';
+require_once 'authdatabase.php';
 
 // Ensure no output has been sent before headers
 if (headers_sent()) {
