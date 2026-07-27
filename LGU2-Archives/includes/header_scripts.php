@@ -11,6 +11,7 @@
         }
     }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/theme-head.js"></script>
 <link rel="stylesheet" href="assets/css/skeletons.css">
 <script src="assets/js/ui-enhancements.js"></script>
@@ -23,3 +24,4 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
