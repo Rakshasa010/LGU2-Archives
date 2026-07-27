@@ -173,6 +173,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <?php include 'includes/header_scripts.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">

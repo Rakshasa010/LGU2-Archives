@@ -13,7 +13,6 @@
 </script>
 <script src="assets/js/theme-head.js"></script>
 <link rel="stylesheet" href="assets/css/skeletons.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="assets/js/ui-enhancements.js"></script>
 <!-- Dark mode CSS variables -->
 <link rel="stylesheet" href="assets/css/vars.css">
