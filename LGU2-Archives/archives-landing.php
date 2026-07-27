@@ -309,32 +309,24 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         </div>
                     </div>
 
-                    <!-- Analytics Overview Section -->
-                    <div class="mb-6">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div class="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                <i class="bi bi-graph-up text-red-600 dark:text-red-400"></i>
+                    <!-- Analytics Overview Section (exact same structure as report_analytics.php lines 793-816) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Storage Usage (Last 7 Days)</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Trend</span>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Analytics Overview</h3>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="storageUsageChart"></canvas>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="card p-4 sm:p-5 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-semibold text-sm text-gray-800 dark:text-gray-100">Storage Usage (Last 7 Days)</h4>
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">Trend</span>
-                                </div>
-                                <div class="relative w-full h-40 md:h-44">
-                                    <canvas id="storageUsageChart"></canvas>
-                                </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Files by Source</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo $leg_count + $arch_count; ?> total</span>
                             </div>
-                            <div class="card p-4 sm:p-5 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h4 class="font-semibold text-sm text-gray-800 dark:text-gray-100">Files by Source</h4>
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300"><?php echo $leg_count + $arch_count; ?> total</span>
-                                </div>
-                                <div class="relative w-full h-40 md:h-44">
-                                    <canvas id="filesBySourceChart"></canvas>
-                                </div>
+                            <div class="relative w-full h-64 md:h-72 flex justify-center">
+                                <canvas id="filesBySourceChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -575,8 +567,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         </aside>
                     </div>
 
-                    <!-- Quick Reports & Analytics -->
-                    <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 mt-2 mb-6">
+                    <!-- Quick Reports & Analytics (matches report_analytics.php lines 651-791 outer structure exactly) -->
+                    <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6 mt-2 mb-6">
                         <?php
                         require 'authdatabase.php';
                         $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
@@ -721,115 +713,88 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $qa_series_records = array_values($series_records);
                         $qa_series_records_merged = array_values($series_records_merged);
                         ?>
-                        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <div class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                                        <i class="bi bi-bar-chart-fill text-orange-600 dark:text-orange-400"></i>
-                                    </div>
-                                    <h2 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">Quick Reports & Analytics</h2>
-                                </div>
-                                <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                                    <?php
-                                    $range = ($f_from ? $f_from : 'Start') . ' — ' . ($f_to ? $f_to : 'End');
-                                    echo htmlspecialchars($range);
-                                    echo $fa_type ? ' • '.htmlspecialchars($fa_type) : '';
-                                    echo $safe_event ? ' • '.htmlspecialchars(ucfirst($safe_event)) : '';
-                                    ?>
-                                </div>
-                            </div>
+                        <!-- Filter bar: exact structure matches report_analytics.php lines 763-788 -->
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
                             <div class="flex flex-wrap items-center gap-2">
-                                <input id="qa-from" type="date" value="<?php echo htmlspecialchars($f_from ?? ''); ?>" class="px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
-                                <input id="qa-to" type="date" value="<?php echo htmlspecialchars($f_to ?? ''); ?>" class="px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
-                                <select id="qa-type" class="px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                                <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
+                                <input id="qa-from" type="date" value="<?php echo htmlspecialchars($f_from ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
+                                <input id="qa-to" type="date" value="<?php echo htmlspecialchars($f_to ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <select id="qa-type" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                     <option value="">All Types</option>
                                     <?php foreach ($types_list as $t): ?>
                                         <option value="<?php echo htmlspecialchars($t); ?>" <?php echo ($fa_type === $t ? 'selected' : ''); ?>><?php echo htmlspecialchars($t); ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                                <select id="qa-event" class="px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
+                                <select id="qa-event" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                                     <option value="">All Events</option>
                                     <option value="download" <?php echo ($safe_event === 'download' ? 'selected' : ''); ?>>Download</option>
                                     <option value="upload" <?php echo ($safe_event === 'upload' ? 'selected' : ''); ?>>Upload</option>
                                 </select>
-                                <button id="qa-apply" class="px-3.5 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm hover:shadow transition-all duration-200">Apply</button>
+                                <div class="flex md:justify-end ml-auto">
+                                    <button id="qa-apply" class="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
+                                </div>
                             </div>
                         </div>
-                        <!-- Stat summary cards: 3 columns side-by-side -->
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                            <div class="card p-4 rounded-xl bg-gradient-to-br from-red-50/60 to-white dark:from-red-900/10 dark:to-slate-800 border border-red-100/60 dark:border-slate-700/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                        <i class="bi bi-file-earmark-text text-red-600 dark:text-red-400"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Records</div>
-                                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $qa_total_records; ?></div>
+                        <!-- KPI Stat cards: exact wrapper structure matches report_analytics.php lines 679-717 -->
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Records</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5"><?php echo $qa_total_records; ?></div>
                                     </div>
                                 </div>
-                                <div class="relative w-full h-10">
+                                <div class="relative w-full h-10 mt-3">
                                     <canvas id="qaRecordsMini"></canvas>
                                 </div>
                             </div>
-                            <div class="card p-4 rounded-xl bg-gradient-to-br from-blue-50/60 to-white dark:from-blue-900/10 dark:to-slate-800 border border-blue-100/60 dark:border-slate-700/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                        <i class="bi bi-download text-blue-600 dark:text-blue-400"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Downloads</div>
-                                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $qa_downloads; ?></div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 flex items-center justify-center"><i class="bi bi-download"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Downloads</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5"><?php echo $qa_downloads; ?></div>
                                     </div>
                                 </div>
-                                <div class="relative w-full h-10">
+                                <div class="relative w-full h-10 mt-3">
                                     <canvas id="qaDownloadsMini"></canvas>
                                 </div>
                             </div>
-                            <div class="card p-4 rounded-xl bg-gradient-to-br from-green-50/60 to-white dark:from-green-900/10 dark:to-slate-800 border border-green-100/60 dark:border-slate-700/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                        <i class="bi bi-cloud-upload text-green-600 dark:text-green-400"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Uploads</div>
-                                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-100"><?php echo $qa_uploads; ?></div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300 flex items-center justify-center"><i class="bi bi-cloud-upload"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Uploads</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5"><?php echo $qa_uploads; ?></div>
                                     </div>
                                 </div>
-                                <div class="relative w-full h-10">
+                                <div class="relative w-full h-10 mt-3">
                                     <canvas id="qaUploadsMini"></canvas>
                                 </div>
                             </div>
                         </div>
-                        <!-- Chart row: Records Trend + Records by Type side-by-side -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="card p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 shadow-sm hover:shadow-md transition-all duration-300">
+                        <!-- Chart grid: exact wrappers match report_analytics.php lines 864-885 (1 lg-col-2 grid) -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                                 <div class="flex items-center justify-between mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                                            <i class="bi bi-graph-up-arrow text-red-600 dark:text-red-400 text-sm"></i>
-                                        </div>
-                                        <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Trend</h3>
-                                    </div>
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">Last 14 days</span>
+                                    <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Trend</h3>
+                                    <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Last 14 days</span>
                                 </div>
-                                <div class="relative w-full h-40 md:h-44">
+                                <div class="relative w-full h-64 md:h-72">
                                     <canvas id="qaRecordsLine"></canvas>
                                 </div>
                             </div>
-                            <div class="card p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 shadow-sm hover:shadow-md transition-all duration-300">
+                            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                                 <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</h3>
                                     <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
-                                            <i class="bi bi-pie-chart-fill text-orange-600 dark:text-orange-400 text-sm"></i>
-                                        </div>
-                                        <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</h3>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[11px] px-2 py-0.5 rounded bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 font-medium"><?php echo count($qa_by_type); ?> types</span>
-                                        <button id="rbt-toggle" class="text-[11px] px-2 py-0.5 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors font-medium" title="Toggle absolute/percentage">ABS</button>
+                                        <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($qa_by_type); ?> types</span>
+                                        <button id="rbt-toggle" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors" title="Toggle absolute/percentage">ABS</button>
                                     </div>
                                 </div>
-                                <div class="relative w-full h-40 md:h-44">
+                                <div class="relative w-full h-64 md:h-72 flex justify-center">
                                     <canvas id="qaRecordsByType"></canvas>
                                 </div>
                             </div>
@@ -890,106 +855,85 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     $folder_counts_labels = $folder_counts_labels ?? [];
                     $folder_counts_values = $folder_counts_values ?? [];
                     ?>
-                    <!-- Folders & Uploads Section -->
-                    <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 mb-6">
-                        <div class="flex items-center justify-between mb-5">
-                            <div class="flex items-center gap-2">
-                                <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                    <i class="bi bi-folder-symlink-fill text-blue-600 dark:text-blue-400"></i>
-                                </div>
-                                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">Folders & Uploads</h2>
+                    <!-- Folders & Uploads: exact grid pattern matches report_analytics.php lines 864-885 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</h3>
+                                <a href="storage.php" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+                                    View All <i class="bi bi-arrow-right ml-1 text-[10px]"></i>
+                                </a>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-                            <div class="flex flex-col">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                                            <i class="bi bi-clock-history text-red-600 dark:text-red-400 text-sm"></i>
-                                        </div>
-                                        <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</h3>
-                                    </div>
-                                    <a href="storage.php" class="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline transition-colors">
-                                        View All <i class="bi bi-arrow-right ml-1 text-xs"></i>
-                                    </a>
-                                </div>
-                                <div class="mb-3">
-                                    <select id="fu-filter" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors">
-                                        <option value="">All Folders</option>
-                                        <?php foreach ($uploads_labels as $lab): ?>
-                                            <option value="<?php echo htmlspecialchars($lab); ?>"><?php echo htmlspecialchars($lab); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div id="fu-cards" class="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
-                                    <?php foreach ($recent_uploads as $u): ?>
-                                        <?php
-                                        $link = 'folder_view.php?id=' . urlencode($u['folder_id']);
-                                        if (($u['src'] ?? '') === 'legislative') $link .= '&legislative=true';
-                                        ?>
-                                        <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>"
-                                           class="group file-card block p-3 rounded-xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:border-red-200 dark:hover:border-red-900/50 transition-all duration-200">
-                                            <div class="flex items-center justify-between">
-                                                <div class="min-w-0 flex-1">
-                                                    <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors"><?php echo htmlspecialchars($u['name']); ?></div>
-                                                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                                                        <span class="inline-flex items-center gap-1">
-                                                            <i class="bi bi-folder2 text-[10px]"></i><?php echo htmlspecialchars($u['folder_name']); ?>
-                                                        </span>
-                                                        <span class="mx-1.5">•</span>
-                                                        <span class="inline-flex items-center gap-1">
-                                                            <i class="bi bi-calendar3 text-[10px]"></i><?php echo htmlspecialchars(date('M j, Y g:i A', strtotime($u['created_at']))); ?>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
-                                                    <i class="bi bi-chevron-right text-base"></i>
+                            <div class="mb-3">
+                                <select id="fu-filter" class="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <option value="">All Folders</option>
+                                    <?php foreach ($uploads_labels as $lab): ?>
+                                        <option value="<?php echo htmlspecialchars($lab); ?>"><?php echo htmlspecialchars($lab); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div id="fu-cards" class="flex flex-col gap-2 max-h-72 md:max-h-80 overflow-y-auto pr-1">
+                                <?php foreach ($recent_uploads as $u): ?>
+                                    <?php
+                                    $link = 'folder_view.php?id=' . urlencode($u['folder_id']);
+                                    if (($u['src'] ?? '') === 'legislative') $link .= '&legislative=true';
+                                    ?>
+                                    <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate"><?php echo htmlspecialchars($u['name']); ?></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i><?php echo htmlspecialchars($u['folder_name']); ?>
+                                                    </span>
+                                                    <span class="mx-1.5">•</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i><?php echo htmlspecialchars(date('M j, Y g:i A', strtotime($u['created_at']))); ?>
+                                                    </span>
                                                 </div>
                                             </div>
-                                        </a>
-                                    <?php endforeach; ?>
-                                    <?php if (empty($recent_uploads)): ?>
-                                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                                            <i class="bi bi-inbox text-3xl mb-2 opacity-50"></i>
-                                            <p class="text-sm">No uploads yet.</p>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
                                         </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <div class="card p-4 sm:p-5 rounded-xl bg-gradient-to-br from-gray-50/60 to-white dark:from-slate-800 dark:to-slate-800/80 border border-gray-100 dark:border-slate-700/60 shadow-sm">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                                            <i class="bi bi-bar-chart-steps text-green-600 dark:text-green-400 text-sm"></i>
-                                        </div>
-                                        <h3 class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</h3>
+                                    </a>
+                                <?php endforeach; ?>
+                                <?php if (empty($recent_uploads)): ?>
+                                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                        <i class="bi bi-inbox text-3xl mb-2 opacity-50"></i>
+                                        <p class="text-sm">No uploads yet.</p>
                                     </div>
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 font-medium">Last 30 days</span>
-                                </div>
-                                <div class="relative w-full h-56 md:h-60">
-                                    <canvas id="uploadsByFolderChart"></canvas>
-                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Last 30 days</span>
+                            </div>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="uploadsByFolderChart"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Latest Archives Section (dynamic: shows recent files visited) -->
-                    <div class="card p-4 sm:p-5 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300">
-                            <div class="flex items-center justify-between mb-3">
-                                <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">Latest Archive Files Visit</h2>
-                                <button id="latest-files-toggle" type="button"
-                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
-                                    aria-expanded="true" aria-controls="latestFilesList">
-                                    <span id="latest-files-toggle-text">Hide</span>
-                                    <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-xs"></i>
-                                </button>
-                            </div>
-                            <!-- Loading state shown while fetch is in-flight -->
-                            <div id="latestFilesList" class="space-y-2">
-                                <div id="latest-files-loading" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    <i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>
-                                    Loading recent files…
-                                </div>
+                    <!-- Latest Archives Section (dynamic: shows recent files visited) - exact card wrapper -->
+                    <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold text-gray-800 dark:text-gray-100">Latest Archive Files Visit</h3>
+                            <button id="latest-files-toggle" type="button"
+                                class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
+                                aria-expanded="true" aria-controls="latestFilesList">
+                                <span id="latest-files-toggle-text">Hide</span>
+                                <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-[10px]"></i>
+                            </button>
+                        </div>
+                        <!-- Loading state shown while fetch is in-flight -->
+                        <div id="latestFilesList" class="space-y-2">
+                            <div id="latest-files-loading" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>
+                                Loading recent files…
                             </div>
                         </div>
                     </div>
@@ -1332,7 +1276,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const dupFileLabels = <?php echo json_encode($dup_file_labels ?? []); ?>;
         const dupFileCounts = <?php echo json_encode($dup_file_counts ?? []); ?>;
 
-        function labelsAndData(obj) { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; }
+        const labelsAndData = (obj) => { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; };
+        const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const rbt = labelsAndData(byType);
 
         // Mini sparkline: Records
