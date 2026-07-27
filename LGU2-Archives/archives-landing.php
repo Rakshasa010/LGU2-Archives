@@ -1017,59 +1017,131 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     ?>
 
     <script>
+        // #region debug-point A:chart-debug-helper
+        window.__dbgCharts = function(hypothesisId, msg, data) {
+            fetch("http://127.0.0.1:7777/event", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessionId: "charts-blank-card",
+                    runId: "pre-fix",
+                    hypothesisId: hypothesisId,
+                    location: "archives-landing.php",
+                    msg: msg,
+                    data: data || {},
+                    ts: Date.now()
+                })
+            }).catch(function(){});
+        };
+        window.addEventListener('error', function(e) {
+            window.__dbgCharts('B', '[DEBUG] window.error', {
+                message: e.message || null,
+                source: e.filename || null,
+                line: e.lineno || null,
+                column: e.colno || null
+            });
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            var reason = e && e.reason;
+            window.__dbgCharts('B', '[DEBUG] window.unhandledrejection', {
+                message: reason && reason.message ? reason.message : String(reason)
+            });
+        });
+        window.__dbgCharts('A', '[DEBUG] chart helper ready', {
+            chartType: typeof window.Chart,
+            readyState: document.readyState
+        });
+        // #endregion
+    </script>
+    <script>
         // Analytics Overview Charts (uses same pattern as report_analytics.php)
+        // #region debug-point A:analytics-overview-init
         const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
         const storageLabels = dashboardData.storage_last7.map(d => d.date);
         const storageValues = dashboardData.storage_last7.map(d => d.value);
         const sourceLabels = dashboardData.files_by_source.labels;
         const sourceValues = dashboardData.files_by_source.data;
+        window.__dbgCharts('A', '[DEBUG] analytics init start', {
+            chartType: typeof window.Chart,
+            storageCanvas: !!document.getElementById('storageUsageChart'),
+            sourceCanvas: !!document.getElementById('filesBySourceChart'),
+            storagePoints: storageValues.length,
+            sourcePoints: sourceValues.length
+        });
 
         const storageUsageCtx = document.getElementById('storageUsageChart')?.getContext('2d');
         if (storageUsageCtx) {
-            new Chart(storageUsageCtx, {
-                type: 'line',
-                data: {
-                    labels: storageLabels,
-                    datasets: [{
-                        label: 'Storage Used (Bytes)',
-                        data: storageValues,
-                        borderColor: '#dc2626',
-                        backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                        tension: 0.3,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { ticks: { maxRotation: 0, autoSkip: true } },
-                        y: { beginAtZero: true, precision: 0 }
+            try {
+                new Chart(storageUsageCtx, {
+                    type: 'line',
+                    data: {
+                        labels: storageLabels,
+                        datasets: [{
+                            label: 'Storage Used (Bytes)',
+                            data: storageValues,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxRotation: 0, autoSkip: true } },
+                            y: { beginAtZero: true, precision: 0 }
+                        }
                     }
-                }
-            });
+                });
+                window.__dbgCharts('A', '[DEBUG] storage chart created', {
+                    width: document.getElementById('storageUsageChart')?.width || null,
+                    height: document.getElementById('storageUsageChart')?.height || null
+                });
+            } catch (err) {
+                window.__dbgCharts('C', '[DEBUG] storage chart failed', {
+                    message: err && err.message ? err.message : String(err)
+                });
+                throw err;
+            }
+        } else {
+            window.__dbgCharts('C', '[DEBUG] storage chart context missing', {});
         }
         const filesBySourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
         if (filesBySourceCtx) {
-            new Chart(filesBySourceCtx, {
-                type: 'bar',
-                data: {
-                    labels: sourceLabels,
-                    datasets: [{
-                        label: 'Files',
-                        data: sourceValues,
-                        backgroundColor: ['#dc2626', '#3b82f6']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, precision: 0 } }
-                }
-            });
+            try {
+                new Chart(filesBySourceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sourceLabels,
+                        datasets: [{
+                            label: 'Files',
+                            data: sourceValues,
+                            backgroundColor: ['#dc2626', '#3b82f6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, precision: 0 } }
+                    }
+                });
+                window.__dbgCharts('A', '[DEBUG] source chart created', {
+                    width: document.getElementById('filesBySourceChart')?.width || null,
+                    height: document.getElementById('filesBySourceChart')?.height || null
+                });
+            } catch (err) {
+                window.__dbgCharts('C', '[DEBUG] source chart failed', {
+                    message: err && err.message ? err.message : String(err)
+                });
+                throw err;
+            }
+        } else {
+            window.__dbgCharts('C', '[DEBUG] source chart context missing', {});
         }
+        // #endregion
     </script>
     <script>
         (function() {
@@ -1255,6 +1327,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     <?php include 'includes/footer_scripts.php'; ?>
     <script>
         // Quick Reports & Analytics Charts (uses exact same pattern as report_analytics.php lines 1195-1217)
+        // #region debug-point C:quick-reports-init
         const byType = <?php echo json_encode($qa_by_type ?? []); ?>;
         const seriesLabels = <?php echo json_encode($qa_series_labels ?? []); ?>;
         const seriesDownloads = <?php echo json_encode($qa_series_downloads ?? []); ?>;
@@ -1279,15 +1352,35 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const labelsAndData = (obj) => { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; };
         const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const rbt = labelsAndData(byType);
+        window.__dbgCharts('C', '[DEBUG] quick reports init start', {
+            chartType: typeof window.Chart,
+            recordsMini: !!document.getElementById('qaRecordsMini'),
+            downloadsMini: !!document.getElementById('qaDownloadsMini'),
+            uploadsMini: !!document.getElementById('qaUploadsMini'),
+            recordsLine: !!document.getElementById('qaRecordsLine'),
+            recordsByType: !!document.getElementById('qaRecordsByType'),
+            uploadsByFolder: !!document.getElementById('uploadsByFolderChart'),
+            seriesLabels: seriesLabels.length,
+            seriesDownloads: seriesDownloads.length,
+            seriesUploads: seriesUploads.length,
+            seriesRecords: seriesRecords.length,
+            byTypeLabels: rbt.labels.length,
+            folderLabels: fuLabels.length
+        });
 
         // Mini sparkline: Records
         const qaRecordsMiniCtx = document.getElementById('qaRecordsMini')?.getContext('2d');
         if (qaRecordsMiniCtx) {
-            new Chart(qaRecordsMiniCtx, {
-                type: 'line',
-                data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            try {
+                new Chart(qaRecordsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                window.__dbgCharts('C', '[DEBUG] qaRecordsMini failed', { message: err && err.message ? err.message : String(err) });
+                throw err;
+            }
         }
 
         // Mini sparkline: Downloads
@@ -1313,19 +1406,24 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         // Records Trend Line
         const qaRecordsLineCtx = document.getElementById('qaRecordsLine')?.getContext('2d');
         if (qaRecordsLineCtx) {
-            new Chart(qaRecordsLineCtx, {
-                type: 'line',
-                data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true }] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { ticks: { maxRotation: 0, autoSkip: true } },
-                        y: { beginAtZero: true, precision: 0 }
+            try {
+                new Chart(qaRecordsLineCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxRotation: 0, autoSkip: true } },
+                            y: { beginAtZero: true, precision: 0 }
+                        }
                     }
-                }
-            });
+                });
+            } catch (err) {
+                window.__dbgCharts('C', '[DEBUG] qaRecordsLine failed', { message: err && err.message ? err.message : String(err) });
+                throw err;
+            }
         }
 
         // Records by Type Doughnut (with ABS/% toggle - special pattern)
@@ -1339,30 +1437,35 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             const total = values.reduce((a, b) => a + b, 0) || 1;
             const data = (rbtMode === 'pct') ? values.map(v => +(v * 100 / total).toFixed(2)) : values;
             if (rbtChart) rbtChart.destroy();
-            rbtChart = new Chart(qaRecordsByTypeCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{ data: data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) {
-                                    const idx = ctx.dataIndex;
-                                    const raw = values[idx];
-                                    const pct = (raw * 100 / total).toFixed(2) + '%';
-                                    return labels[idx] + ': ' + (rbtMode === 'pct' ? pct : raw);
+            try {
+                rbtChart = new Chart(qaRecordsByTypeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const idx = ctx.dataIndex;
+                                        const raw = values[idx];
+                                        const pct = (raw * 100 / total).toFixed(2) + '%';
+                                        return labels[idx] + ': ' + (rbtMode === 'pct' ? pct : raw);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            } catch (err) {
+                window.__dbgCharts('C', '[DEBUG] qaRecordsByType failed', { message: err && err.message ? err.message : String(err) });
+                throw err;
+            }
             const toggle = document.getElementById('rbt-toggle');
             if (toggle) toggle.textContent = (rbtMode === 'pct' ? '%' : 'ABS');
         }
@@ -1379,23 +1482,28 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         // Uploads by Folder grouped bar
         const uploadsByFolderChartCtx = document.getElementById('uploadsByFolderChart')?.getContext('2d');
         if (uploadsByFolderChartCtx) {
-            new Chart(uploadsByFolderChartCtx, {
-                type: 'bar',
-                data: {
-                    labels: fuLabels,
-                    datasets: [
-                        { label: 'Last 7d', data: fuLast7, backgroundColor: '#2563eb' },
-                        { label: 'Prev 7d', data: fuPrev7, backgroundColor: '#f97316' },
-                        { label: '8-30d', data: fuEarlier, backgroundColor: '#6b7280' }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
-                }
-            });
+            try {
+                new Chart(uploadsByFolderChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: fuLabels,
+                        datasets: [
+                            { label: 'Last 7d', data: fuLast7, backgroundColor: '#2563eb' },
+                            { label: 'Prev 7d', data: fuPrev7, backgroundColor: '#f97316' },
+                            { label: '8-30d', data: fuEarlier, backgroundColor: '#6b7280' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
+                    }
+                });
+            } catch (err) {
+                window.__dbgCharts('C', '[DEBUG] uploadsByFolderChart failed', { message: err && err.message ? err.message : String(err) });
+                throw err;
+            }
         }
 
         // Optional canvases (safe guards)
@@ -1454,6 +1562,12 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             });
         }
+        window.__dbgCharts('D', '[DEBUG] quick reports init complete', {
+            storageCardVisible: !!document.getElementById('storageUsageChart')?.offsetParent,
+            recordsCardVisible: !!document.getElementById('qaRecordsLine')?.offsetParent,
+            uploadsCardVisible: !!document.getElementById('uploadsByFolderChart')?.offsetParent
+        });
+        // #endregion
     </script>
     <script>
         (function(){
