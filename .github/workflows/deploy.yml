@@ -28,25 +28,30 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          REMOTE_ROOT: ${{ secrets.REMOTE_ROOT || '/home/lassp6164/lgu2' }}
+          REMOTE_ROOT: '/home/lassp6164/public_html'
         run: |
           SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no"
 
           # Ensure deploy root exists
           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT"
 
-          # Sync the whole repo to the deploy root (keeps .env one dir above LGU2-Archives)
+          # Deploy the PHP application into public_html/LGU2-Archives
+          # Excludes uploads/storage so user files on the server are not deleted
           rsync -avz --delete \
             -e "ssh $SSH_OPTS" \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='node_modules' \
+            --exclude='uploads/' \
+            --exclude='storage/' \
             --exclude='*.log' \
             --exclude='.tmp_*' \
-            ./ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/"
+            ./LGU2-Archives/ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/LGU2-Archives/"
 
-          # Optional: create a symlink from public_html to the web folder if needed
-          # ssh $SSH_OPTS $SSH_USER@$SSH_HOST "ln -sfn $REMOTE_ROOT/LGU2-Archives /home/lassp6164/public_html"
+          # Deploy .env to public_html/.env (authdatabase.php looks for ../.env)
+          rsync -avz \
+            -e "ssh $SSH_OPTS" \
+            ./.env "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/.env"
 
       - name: Notify on success
         if: success()
