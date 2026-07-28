@@ -1,0 +1,17 @@
+# Deploy SSH keys
+lgu2_deploy_key
+lgu2_deploy_key.pub
+*.key
+*.pub
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*~

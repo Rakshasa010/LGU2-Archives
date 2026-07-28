@@ -1,0 +1,53 @@
+name: Deploy to indevfinite
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add remote host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+          REMOTE_ROOT: ${{ secrets.REMOTE_ROOT || '/home/lassp6164/lgu2' }}
+        run: |
+          SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no"
+
+          # Ensure deploy root exists
+          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT"
+
+          # Sync the whole repo to the deploy root (keeps .env one dir above LGU2-Archives)
+          rsync -avz --delete \
+            -e "ssh $SSH_OPTS" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='*.log' \
+            --exclude='.tmp_*' \
+            ./ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/"
+
+          # Optional: create a symlink from public_html to the web folder if needed
+          # ssh $SSH_OPTS $SSH_USER@$SSH_HOST "ln -sfn $REMOTE_ROOT/LGU2-Archives /home/lassp6164/public_html"
+
+      - name: Notify on success
+        if: success()
+        run: echo "Deployment to $SSH_HOST complete."
