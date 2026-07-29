@@ -809,10 +809,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
 
                     $all_files_union = [];
                     if ($has_archive) {
-                        $all_files_union[] = "SELECT f.id, f.name COLLATE utf8mb4_unicode_ci AS name, f.folder_id, f.created_at, fo.name COLLATE utf8mb4_unicode_ci AS folder_name, 'archive' COLLATE utf8mb4_unicode_ci AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
+                        $all_files_union[] = "SELECT f.id, f.name AS name, f.folder_id, f.created_at, fo.name AS folder_name, 'archive' AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
                     }
                     if ($has_leg) {
-                        $all_files_union[] = "SELECT lr.id, lr.title COLLATE utf8mb4_unicode_ci AS name, lr.folder_id, lr.created_at, lf.name COLLATE utf8mb4_unicode_ci AS folder_name, 'legislative' COLLATE utf8mb4_unicode_ci AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
+                        $all_files_union[] = "SELECT lr.id, lr.title AS name, lr.folder_id, lr.created_at, lf.name AS folder_name, 'legislative' AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
                     }
 
                     if (!empty($all_files_union)) {
