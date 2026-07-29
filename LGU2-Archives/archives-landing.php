@@ -1047,7 +1047,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             } catch (err) {
                 console.error('Storage chart failed:', err);
-                throw err;
             }
         }
         const filesBySourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
@@ -1072,7 +1071,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             } catch (err) {
                 console.error('Source chart failed:', err);
-                throw err;
             }
         }
         // #endregion
@@ -1297,7 +1295,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             } catch (err) {
                 console.error('qaRecordsMini failed:', err);
-                throw err;
             }
         }
 
@@ -1340,7 +1337,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             } catch (err) {
                 console.error('qaRecordsLine failed:', err);
-                throw err;
             }
         }
 
@@ -1382,7 +1378,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             } catch (err) {
                 console.error('qaRecordsByType failed:', err);
-                throw err;
             }
             const toggle = document.getElementById('rbt-toggle');
             if (toggle) toggle.textContent = (rbtMode === 'pct' ? '%' : 'ABS');
@@ -1420,7 +1415,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             } catch (err) {
                 console.error('uploadsByFolderChart failed:', err);
-                throw err;
             }
         }
 
