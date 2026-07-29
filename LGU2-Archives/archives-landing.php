@@ -1012,43 +1012,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     ?>
 
     <script>
-        // #region debug-point A:chart-debug-helper
-        window.__dbgCharts = function(hypothesisId, msg, data) {
-            fetch("http://127.0.0.1:7777/event", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sessionId: "charts-blank-card",
-                    runId: "pre-fix",
-                    hypothesisId: hypothesisId,
-                    location: "archives-landing.php",
-                    msg: msg,
-                    data: data || {},
-                    ts: Date.now()
-                })
-            }).catch(function(){});
-        };
-        window.addEventListener('error', function(e) {
-            window.__dbgCharts('B', '[DEBUG] window.error', {
-                message: e.message || null,
-                source: e.filename || null,
-                line: e.lineno || null,
-                column: e.colno || null
-            });
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            var reason = e && e.reason;
-            window.__dbgCharts('B', '[DEBUG] window.unhandledrejection', {
-                message: reason && reason.message ? reason.message : String(reason)
-            });
-        });
-        window.__dbgCharts('A', '[DEBUG] chart helper ready', {
-            chartType: typeof window.Chart,
-            readyState: document.readyState
-        });
-        // #endregion
-    </script>
-    <script>
         // Analytics Overview Charts (uses same pattern as report_analytics.php)
         // #region debug-point A:analytics-overview-init
         const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
@@ -1056,14 +1019,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const storageValues = dashboardData.storage_last7.map(d => d.value);
         const sourceLabels = dashboardData.files_by_source.labels;
         const sourceValues = dashboardData.files_by_source.data;
-        window.__dbgCharts('A', '[DEBUG] analytics init start', {
-            chartType: typeof window.Chart,
-            storageCanvas: !!document.getElementById('storageUsageChart'),
-            sourceCanvas: !!document.getElementById('filesBySourceChart'),
-            storagePoints: storageValues.length,
-            sourcePoints: sourceValues.length
-        });
-
         const storageUsageCtx = document.getElementById('storageUsageChart')?.getContext('2d');
         if (storageUsageCtx) {
             try {
@@ -1090,18 +1045,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }
                     }
                 });
-                window.__dbgCharts('A', '[DEBUG] storage chart created', {
-                    width: document.getElementById('storageUsageChart')?.width || null,
-                    height: document.getElementById('storageUsageChart')?.height || null
-                });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] storage chart failed', {
-                    message: err && err.message ? err.message : String(err)
-                });
+                console.error('Storage chart failed:', err);
                 throw err;
             }
-        } else {
-            window.__dbgCharts('C', '[DEBUG] storage chart context missing', {});
         }
         const filesBySourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
         if (filesBySourceCtx) {
@@ -1123,18 +1070,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         scales: { y: { beginAtZero: true, precision: 0 } }
                     }
                 });
-                window.__dbgCharts('A', '[DEBUG] source chart created', {
-                    width: document.getElementById('filesBySourceChart')?.width || null,
-                    height: document.getElementById('filesBySourceChart')?.height || null
-                });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] source chart failed', {
-                    message: err && err.message ? err.message : String(err)
-                });
+                console.error('Source chart failed:', err);
                 throw err;
             }
-        } else {
-            window.__dbgCharts('C', '[DEBUG] source chart context missing', {});
         }
         // #endregion
     </script>
@@ -1347,22 +1286,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const labelsAndData = (obj) => { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; };
         const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const rbt = labelsAndData(byType);
-        window.__dbgCharts('C', '[DEBUG] quick reports init start', {
-            chartType: typeof window.Chart,
-            recordsMini: !!document.getElementById('qaRecordsMini'),
-            downloadsMini: !!document.getElementById('qaDownloadsMini'),
-            uploadsMini: !!document.getElementById('qaUploadsMini'),
-            recordsLine: !!document.getElementById('qaRecordsLine'),
-            recordsByType: !!document.getElementById('qaRecordsByType'),
-            uploadsByFolder: !!document.getElementById('uploadsByFolderChart'),
-            seriesLabels: seriesLabels.length,
-            seriesDownloads: seriesDownloads.length,
-            seriesUploads: seriesUploads.length,
-            seriesRecords: seriesRecords.length,
-            byTypeLabels: rbt.labels.length,
-            folderLabels: fuLabels.length
-        });
-
         // Mini sparkline: Records
         const qaRecordsMiniCtx = document.getElementById('qaRecordsMini')?.getContext('2d');
         if (qaRecordsMiniCtx) {
@@ -1373,7 +1296,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] qaRecordsMini failed', { message: err && err.message ? err.message : String(err) });
+                console.error('qaRecordsMini failed:', err);
                 throw err;
             }
         }
@@ -1416,7 +1339,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] qaRecordsLine failed', { message: err && err.message ? err.message : String(err) });
+                console.error('qaRecordsLine failed:', err);
                 throw err;
             }
         }
@@ -1458,7 +1381,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] qaRecordsByType failed', { message: err && err.message ? err.message : String(err) });
+                console.error('qaRecordsByType failed:', err);
                 throw err;
             }
             const toggle = document.getElementById('rbt-toggle');
@@ -1496,7 +1419,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] uploadsByFolderChart failed', { message: err && err.message ? err.message : String(err) });
+                console.error('uploadsByFolderChart failed:', err);
                 throw err;
             }
         }
@@ -1557,10 +1480,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             });
         }
-        window.__dbgCharts('D', '[DEBUG] quick reports init complete', {
-            storageCardVisible: !!document.getElementById('storageUsageChart')?.offsetParent,
-            recordsCardVisible: !!document.getElementById('qaRecordsLine')?.offsetParent,
-            uploadsCardVisible: !!document.getElementById('uploadsByFolderChart')?.offsetParent
         });
         // #endregion
     </script>

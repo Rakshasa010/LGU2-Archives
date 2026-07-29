@@ -11,7 +11,6 @@
         }
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="assets/js/theme-head.js"></script>
 <link rel="stylesheet" href="assets/css/skeletons.css">
 <script src="assets/js/ui-enhancements.js"></script>
