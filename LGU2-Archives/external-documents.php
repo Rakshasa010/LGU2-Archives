@@ -128,10 +128,12 @@ function formatFileSize($bytes) {
 </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 min-h-screen">
-    <?php include 'includes/sidebar.php'; ?>
-
-    <div class="flex-1 lg:ml-64 min-h-screen">
-        <?php include 'includes/topbar.php'; ?>
+    <?php
+        $sidebar_active_page = 'external-documents';
+        $sidebar_include_overlay = true;
+        require_once 'includes/sidebar-centralized.php';
+    ?>
+    <div class="flex flex-col min-h-screen md:ml-72">
 
         <div class="p-4 sm:p-6 max-w-7xl mx-auto">
             <!-- Header -->
@@ -289,6 +291,8 @@ function formatFileSize($bytes) {
                 <?php endif; ?>
             <?php endif; ?>
         </div>
+    </div>
+    <?php include 'includes/footer.php'; ?>
     </div>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
