@@ -34,7 +34,7 @@ include 'includes/header_scripts.php';
     .llrm-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
 </style>
 
-<body class="bg-gray-50 dark:bg-slate-900 min-h-screen">
+<body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200 min-h-screen">
     <div>
     <?php
         $sidebar_active_page = 'llrm-integration';
@@ -113,7 +113,7 @@ include 'includes/header_scripts.php';
         </nav>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
+        <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
         <div class="p-4 sm:p-6 max-w-7xl mx-auto">
             <!-- Header -->
             <div class="mb-6">
