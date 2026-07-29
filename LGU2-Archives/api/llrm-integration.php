@@ -76,7 +76,12 @@ switch ($action) {
             echo json_encode(['success' => false, 'error' => 'Missing record_id']);
             break;
         }
-        echo json_encode($llrm->pushRecordById($conn, $recordId));
+        $sourceType = $_POST['source_type'] ?? ($jsonBody['source_type'] ?? 'legislative');
+        if ($sourceType === 'archive') {
+            echo json_encode($llrm->pushArchiveFileById($conn, $recordId));
+        } else {
+            echo json_encode($llrm->pushRecordById($conn, $recordId));
+        }
         break;
 
     case 'batch_push':

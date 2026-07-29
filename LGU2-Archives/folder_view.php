@@ -800,6 +800,10 @@ function formatFileSize($fileSize) {
                                                     <button onclick="openLegislativeVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
                                                         <i class="bi bi-clock-history"></i> <span>History</span>
                                                     </button>
+                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
+                                                    <button onclick="pushToLLRM(<?php echo $record['id']; ?>, 'legislative'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
+                                                        <i class="bi bi-cloud-upload"></i> <span>Push to LLRM</span>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -918,6 +922,10 @@ function formatFileSize($fileSize) {
                                                     <hr class="my-1 border-gray-200 dark:border-slate-600">
                                                     <button onclick="moveToHiddenFolder(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors">
                                                         <i class="bi bi-eye-slash-fill"></i> <span>Move to Hidden Folder</span>
+                                                    </button>
+                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
+                                                    <button onclick="pushArchiveFileToLLRM(<?php echo $file['id']; ?>); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
+                                                        <i class="bi bi-cloud-upload"></i> <span>Push to LLRM</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1360,6 +1368,47 @@ function formatFileSize($fileSize) {
             .catch(e => {
                 showNotification('Error', 'Connection error', 'error');
             });
+        }
+
+        function pushToLLRM(recordId, type) {
+            if (!confirm('Push this document to LLRM system?')) return;
+            showNotification('Info', 'Pushing to LLRM...', 'info');
+            const formData = new FormData();
+            formData.append('record_id', recordId);
+            fetch('api/llrm-integration.php?action=push', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Success', 'Document pushed to LLRM successfully! Ref: ' + (data.reference_number || 'N/A'), 'success');
+                } else {
+                    showNotification('Error', data.error || 'Failed to push to LLRM', 'error');
+                }
+            })
+            .catch(e => showNotification('Error', 'Connection error: ' + e, 'error'));
+        }
+
+        function pushArchiveFileToLLRM(fileId) {
+            if (!confirm('Push this archive file to LLRM system?')) return;
+            showNotification('Info', 'Pushing to LLRM...', 'info');
+            const formData = new FormData();
+            formData.append('record_id', fileId);
+            formData.append('source_type', 'archive');
+            fetch('api/llrm-integration.php?action=push', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Success', 'File pushed to LLRM successfully! Ref: ' + (data.reference_number || 'N/A'), 'success');
+                } else {
+                    showNotification('Error', data.error || 'Failed to push to LLRM', 'error');
+                }
+            })
+            .catch(e => showNotification('Error', 'Connection error: ' + e, 'error'));
         }
 
         document.getElementById('uploadBtn').addEventListener('click', function() {

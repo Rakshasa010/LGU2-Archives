@@ -384,6 +384,48 @@ class LLRMService {
         return $this->pushDocument($filePath, $record['title'], $docType, $options);
     }
 
+    /**
+     * Push an archive file from LAS archive_files table to LLRM
+     * 
+     * @param mysqli $conn Database connection
+     * @param int $fileId archive_files.id
+     */
+    public function pushArchiveFileById($conn, $fileId) {
+        $stmt = $conn->prepare("SELECT f.id, f.name, f.file_path, f.author, f.file_date, f.created_at, fo.name as folder_name FROM archive_files f JOIN archive_folders fo ON f.folder_id = fo.id WHERE f.id = ?");
+        $stmt->bind_param("i", $fileId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $file = $res->fetch_assoc();
+        $stmt->close();
+
+        if (!$file) {
+            return ['success' => false, 'error' => 'Archive file not found: ' . $fileId];
+        }
+
+        if (empty($file['file_path'])) {
+            return ['success' => false, 'error' => 'File has no file_path'];
+        }
+
+        $filePath = __DIR__ . '/../' . $file['file_path'];
+        if (!file_exists($filePath)) {
+            $filePath = $file['file_path'];
+            if (!file_exists($filePath)) {
+                return ['success' => false, 'error' => 'File not found on disk: ' . $file['file_path']];
+            }
+        }
+
+        $documentDate = !empty($file['file_date']) ? $file['file_date'] : date('Y-m-d', strtotime($file['created_at']));
+
+        $options = [
+            'external_id'  => 'LAS-ARCH-' . $file['id'],
+            'document_date' => $documentDate,
+            'description'   => 'Archive file from LAS folder: ' . ($file['folder_name'] ?? 'Unknown'),
+            'tags'          => 'archive,' . strtolower($file['folder_name'] ?? ''),
+        ];
+
+        return $this->pushDocument($filePath, $file['name'], 'archive', $options);
+    }
+
     // ─── Sync helpers ─────────────────────────────────────────────────
 
     /**
