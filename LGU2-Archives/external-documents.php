@@ -128,13 +128,85 @@ function formatFileSize($bytes) {
 </style>
 </head>
 <body class="bg-gray-50 dark:bg-slate-900 min-h-screen">
+    <div>
     <?php
         $sidebar_active_page = 'external-documents';
         $sidebar_include_overlay = true;
+        $sidebar_user_data = $user;
         require_once 'includes/sidebar-centralized.php';
     ?>
     <div class="flex flex-col min-h-screen md:ml-72">
+        <!-- Header / Navbar -->
+        <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sticky top-0 z-40 transition-colors duration-200">
+            <div class="px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
+                            <i class="bi bi-list text-2xl"></i>
+                        </button>
+                        <div class="mobile-only flex items-center ml-2">
+                            <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                        </div>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
+                        <div class="ml-2 md:ml-4 min-w-0">
+                            <h2 class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">External Documents</h2>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1 md:space-x-4">
+                        <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
+                            <svg class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                            <svg class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </button>
+                        <div class="relative">
+                            <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
+                                <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
+                                <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">0</span>
+                            </button>
+                            <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div class="p-4">
+                                    <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
+                                    <div id="notif-list" class="space-y-2">
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Loading notifications...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
+                                <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                <div class="hidden sm:block text-left">
+                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($user['full_name'] ?? 'User'); ?></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo (strtolower($user['role'] ?? '') === 'admin') ? 'Administrator' : 'User'; ?></p>
+                                </div>
+                                <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
+                            </button>
+                            <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                <div class="py-2">
+                                    <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
+                                        <i class="bi bi-gear mr-2"></i>Account Settings
+                                    </a>
+                                    <form action="logout.php" method="POST" class="block w-full">
+                                        <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                            <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
 
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
         <div class="p-4 sm:p-6 max-w-7xl mx-auto">
             <!-- Header -->
             <div class="mb-6">
@@ -292,7 +364,11 @@ function formatFileSize($bytes) {
             <?php endif; ?>
         </div>
     </div>
+        </div>
+    </div>
     <?php include 'includes/footer.php'; ?>
+        </main>
+        </div>
     </div>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
