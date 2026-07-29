@@ -1094,7 +1094,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 if (ids.indexOf(id) !== -1) return;
                 ids.push(id);
                 if (ids.length > MAX_STORED_IDS) ids.splice(0, ids.length - MAX_STORED_IDS);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)); } catch(e) {}
             }
 
             const notifsToShow = initialNotifs.filter(function(n) {
@@ -1342,7 +1342,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
 
         // Records by Type Doughnut (with ABS/% toggle - special pattern)
         let rbtChart = null;
-        let rbtMode = localStorage.getItem('rbtMode') || 'abs';
+        let rbtMode = 'abs';
+        try { rbtMode = localStorage.getItem('rbtMode') || 'abs'; } catch(e) {}
         function renderRbt() {
             const qaRecordsByTypeCtx = document.getElementById('qaRecordsByType')?.getContext('2d');
             if (!qaRecordsByTypeCtx) return;
@@ -1387,7 +1388,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         if (rbtToggle) {
             rbtToggle.addEventListener('click', function() {
                 rbtMode = (rbtMode === 'abs') ? 'pct' : 'abs';
-                localStorage.setItem('rbtMode', rbtMode);
+                try { localStorage.setItem('rbtMode', rbtMode); } catch(e) {}
                 renderRbt();
             });
         }
@@ -1765,12 +1766,12 @@ For detailed information, visit the Storage Overview dashboard.`;
                 var searches = getRecentSearches().filter(function(item) { return item !== term; });
                 searches.unshift(term);
                 searches = searches.slice(0, 5);
-                localStorage.setItem(recentStorageKey, JSON.stringify(searches));
+                try { localStorage.setItem(recentStorageKey, JSON.stringify(searches)); } catch(e) {}
                 renderRecentSearches();
             }
 
             function clearRecentSearches() {
-                localStorage.removeItem(recentStorageKey);
+                try { localStorage.removeItem(recentStorageKey); } catch(e) {}
                 renderRecentSearches();
             }
 
