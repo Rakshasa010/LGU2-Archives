@@ -9,7 +9,7 @@ const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
 // Desktop sidebar toggle
 sidebarToggle?.addEventListener('click', () => {
     sidebar?.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', sidebar?.classList.contains('sidebar-collapsed'));
+    try { localStorage.setItem('sidebarCollapsed', sidebar?.classList.contains('sidebar-collapsed')); } catch(e) {}
 });
 
 // Mobile sidebar toggle
@@ -72,9 +72,7 @@ document.addEventListener('click', (e) => {
 });
 
 // Restore sidebar state
-if (localStorage.getItem('sidebarCollapsed') === 'true') {
-    sidebar?.classList.add('sidebar-collapsed');
-}
+try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classList.add('sidebar-collapsed'); } } catch(e) {}
 
 // Render Latest Files (fetched from server once on load)
 (function () {
@@ -388,13 +386,15 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
         grid.classList.toggle('lg:grid-cols-4', !isList);
     }
     function loadLayout(){
-        var m = localStorage.getItem('dashboardLayout') || 'grid';
+        var m = 'grid';
+        try { m = localStorage.getItem('dashboardLayout') || 'grid'; } catch(e) {}
         applyLayout(m);
     }
     function toggleLayout(){
-        var m = localStorage.getItem('dashboardLayout') || 'grid';
+        var m = 'grid';
+        try { m = localStorage.getItem('dashboardLayout') || 'grid'; } catch(e) {}
         var next = m === 'grid' ? 'list' : 'grid';
-        localStorage.setItem('dashboardLayout', next);
+        try { localStorage.setItem('dashboardLayout', next); } catch(e) {}
         applyLayout(next);
     }
     var layoutBtn = document.getElementById('layoutToggle');
@@ -405,13 +405,15 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
         document.body.classList.toggle('compact', !!flag);
     }
     function loadCompact(){
-        var c = localStorage.getItem('compactMode') === 'true';
+        var c = false;
+        try { c = localStorage.getItem('compactMode') === 'true'; } catch(e) {}
         applyCompact(c);
     }
     function toggleCompact(){
-        var c = localStorage.getItem('compactMode') === 'true';
+        var c = false;
+        try { c = localStorage.getItem('compactMode') === 'true'; } catch(e) {}
         var next = !c;
-        localStorage.setItem('compactMode', String(next));
+        try { localStorage.setItem('compactMode', String(next)); } catch(e) {}
         applyCompact(next);
     }
     var compactBtn = document.getElementById('compactToggle');
