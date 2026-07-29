@@ -23,7 +23,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="assets/js/chart.umd.min.js"></script>
 <!-- Mobile responsive -->
 <link rel="stylesheet" href="assets/css/mobile-responsive.css">
 <script src="assets/js/mobile-responsive.js"></script>
