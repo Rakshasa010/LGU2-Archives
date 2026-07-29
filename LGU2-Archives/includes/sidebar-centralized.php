@@ -135,7 +135,9 @@ html, body {
         <?php echo $sidebar_link('archives-landing.php', 'bi bi-speedometer2', 'Dashboard Archives', 'dashboard'); ?>
         <?php echo $sidebar_link('storage.php', 'bi bi-folder', 'Main Storage Archives', 'storage'); ?>
         <?php echo $sidebar_link('export.php', 'bi bi-cloud-upload', 'Export', 'export'); ?>
+        <?php echo $sidebar_link('external-documents.php', 'bi bi-cloud-arrow-down', 'External Documents', 'external-documents'); ?>
         <?php if ($sidebar_is_admin): ?>
+        <?php echo $sidebar_link('llrm-integration.php', 'bi bi-cloud-arrow-up-down', 'LLRM Integration', 'llrm-integration'); ?>
         <a href="recent_deleted.php" class="hidden"></a>
         <?php endif; ?>
         
@@ -236,7 +238,9 @@ html, body {
             <?php echo $sidebar_link('archives-landing.php', 'bi bi-speedometer2', 'Dashboard Archives', 'dashboard', true); ?>
             <?php echo $sidebar_link('storage.php', 'bi bi-folder', 'Main Storage Archives', 'storage', true); ?>
             <?php echo $sidebar_link('export.php', 'bi bi-cloud-upload', 'Export', 'export', true); ?>
+            <?php echo $sidebar_link('external-documents.php', 'bi bi-cloud-arrow-down', 'External Documents', 'external-documents', true); ?>
             <?php if ($sidebar_is_admin): ?>
+            <?php echo $sidebar_link('llrm-integration.php', 'bi bi-cloud-arrow-up-down', 'LLRM Integration', 'llrm-integration', true); ?>
             <a href="recent_deleted.php" class="hidden"></a>
             <?php endif; ?>
             
