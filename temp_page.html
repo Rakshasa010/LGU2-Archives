@@ -1,0 +1,2314 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>Archives - Document Management | City of Valenzuela</title>
+    <meta name="description" content="Legislative Records Management System - City Government of Valenzuela, Metropolitan Manila">
+    <meta name="keywords" content="Archives, Valenzuela, Legislative Records, Document Management">
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+    <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+    <script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    primary: { DEFAULT: '#dc2626', light: '#f97316' }
+                }
+            }
+        }
+    }
+</script>
+<script src="assets/js/theme-head.js"></script>
+<link rel="stylesheet" href="assets/css/skeletons.css">
+<script src="assets/js/ui-enhancements.js"></script>
+<!-- Dark mode CSS variables -->
+<link rel="stylesheet" href="assets/css/vars.css">
+<!-- Toastify for toasts (MVP) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<!-- DataTables (requires jQuery) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="assets/js/chart.umd.min.js"></script>
+<!-- Mobile responsive -->
+<link rel="stylesheet" href="assets/css/mobile-responsive.css">
+<script src="assets/js/mobile-responsive.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
+    <style>
+        .compact .p-6 { padding: 0.75rem; }
+        .compact .text-xl { font-size: 1.1rem; }
+        .compact .text-3xl { font-size: 1.5rem; }
+    </style>
+</head>
+<body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
+    <div>
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden opacity-0 pointer-events-none transition-all duration-300" aria-hidden="true"></div>
+<style>
+/* Reset default margins and padding */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+@media (min-width: 768px) {
+    /* Desktop sidebar - fixed positioning with NO gaps */
+#sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: 0 !important;
+    width: 18rem !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    z-index: 30 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    /* Hide scrollbar */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+    
+/* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT - NO GAPS */
+@media (min-width: 768px) {
+    /* Main content takes remaining space using absolute positioning */
+    .flex.flex-col.min-h-screen {
+        position: absolute !important;
+        left: 18rem !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: auto !important;
+        width: calc(100% - 18rem) !important;
+        min-height: 100vh !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: visible !important;
+        border: none !important;
+        outline: none !important;
+    }
+    
+    /* Ensure navbar and main elements have no top spacing */
+    .flex.flex-col.min-h-screen > * {
+        margin-top: 0 !important;
+    }
+    
+    .flex.flex-col.min-h-screen > nav:first-child {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        top: 0 !important;
+    }
+}
+
+}
+
+@media (max-width: 767px) {
+    body {
+        padding-left: 0 !important;
+    }
+}
+</style>
+<div id="mobile-sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:hidden w-72 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white z-50 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden flex flex-col shadow-[0_25px_70px_rgba(0,0,0,0.35)] visible">
+    <div class="p-4 border-b border-white/10 sidebar-header bg-white/5 backdrop-blur-sm">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3 sidebar-logo">
+                <div class="bg-white rounded-full p-1.5 shadow-lg">
+                    <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" class="w-9 h-9 object-contain">
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">LAS</h1>
+                    <p class="text-xs text-red-200">City of Valenzuela</p>
+                </div>
+            </div>
+            <button id="close-mobile-sidebar" class="text-white/80 p-2 hover:bg-red-700/50 hover:text-white rounded-lg transition-all duration-200 hover:rotate-90" aria-label="Close sidebar">
+                <i class="bi bi-x-lg text-xl"></i>
+            </button>
+        </div>
+    </div>
+    <nav class="flex-1 py-4 px-3 overflow-y-auto">
+        <a href="archives-landing.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)] bg-gradient-to-r from-red-600/90 to-orange-500/80 ring-1 ring-white/20 border border-white/15 shadow-[0_12px_30px_rgba(185,28,28,0.3)]" aria-label="Dashboard Archives"><i class="bi bi-speedometer2 mr-3 text-lg"></i><span>Dashboard Archives</span></a>        <a href="storage.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Main Storage Archives"><i class="bi bi-folder mr-3 text-lg"></i><span>Main Storage Archives</span></a>        <a href="export.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Export"><i class="bi bi-cloud-upload mr-3 text-lg"></i><span>Export</span></a>                <a href="recent_deleted.php" class="hidden"></a>
+                
+        <!-- Version Tracking with Dropdown (Mobile) -->
+        <div class="mb-1.5">
+            <div class="group flex w-full items-center justify-between px-4 py-3 text-white/90 hover:text-white rounded-2xl transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]">
+                <a href="version_tracking.php" class="flex items-center gap-3" aria-current="false">
+                    <i class="bi bi-book text-lg"></i>
+                    <span>Version Tracking</span>
+                </a>
+                <button type="button" id="version-tracking-toggle-mobile" aria-expanded="false" aria-controls="version-tracking-submenu-mobile" class="text-xs transition-transform duration-200 hover:bg-white/10 p-1 rounded-lg" onclick="event.stopPropagation();">
+                    <i class="bi bi-chevron-down" id="version-tracking-chevron-mobile"></i>
+                </button>
+            </div>
+            <div id="version-tracking-submenu-mobile" class="mt-1 ml-4 space-y-1 overflow-hidden max-h-0 transition-all duration-300">
+                <!-- Legislative Folders -->
+                <a href="version_tracking.php?folder=ordinances" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-orange-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-file-earmark-text text-orange-400"></i>
+                    </div>
+                    <span>Ordinances & Resolutions</span>
+                </a>
+                <a href="version_tracking.php?folder=billing" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-green-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-receipt text-green-400"></i>
+                    </div>
+                    <span>Billing</span>
+                </a>
+                <a href="version_tracking.php?folder=public-hearings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-megaphone text-blue-400"></i>
+                    </div>
+                    <span>Public Hearings</span>
+                </a>
+                <a href="version_tracking.php?folder=meetings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-purple-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-journal-text text-purple-400"></i>
+                    </div>
+                    <span>Meeting Records</span>
+                </a>
+                
+                <!-- Dynamic Archive Folders -->
+                                                        <a href="version_tracking.php?folder=archive_5" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-folder-fill text-slate-400"></i>
+                        </div>
+                        <span>67</span>
+                    </a>
+                                        <a href="version_tracking.php?folder=archive_3" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-folder-fill text-slate-400"></i>
+                        </div>
+                        <span>wild thoughts</span>
+                    </a>
+                                        <a href="version_tracking.php?folder=archive_2" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-folder-fill text-slate-400"></i>
+                        </div>
+                        <span>anything</span>
+                    </a>
+                                        <a href="version_tracking.php?folder=archive_1" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-folder-fill text-slate-400"></i>
+                        </div>
+                        <span>ordinances</span>
+                    </a>
+                                                </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-red-700/50">
+            <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+            <a href="report_analytics.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Reports &amp; Analytics"><i class="bi bi-graph-up mr-3 text-lg"></i><span>Reports &amp; Analytics</span></a>        </div>
+        <div class="mt-4 pt-4 border-t border-red-700/50">
+            <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                        <a href="user_management.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="User Management"><i class="bi bi-people mr-3 text-lg"></i><span>User Management</span></a>                        <a href="audit-logs.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Audit Logs"><i class="bi bi-shield-check mr-3 text-lg"></i><span>Audit Logs</span></a>        </div>
+        <div class="mt-6 pt-4 border-t border-red-700/50 px-2">
+            <div class="text-xs font-semibold text-red-200 mb-2 px-2 uppercase tracking-wide">Centralized Storage Overview</div>
+            <div class="bg-gradient-to-br from-red-900/50 to-red-800/30 backdrop-blur-lg rounded-xl p-4 border border-red-700/50 hover:border-red-600/70 transition-all">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs text-red-100 font-medium">Capacity Used</span>
+                    <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="mobile-storage-pct">0%</span>
+                </div>
+                <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                    <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="mobile-storage-bar" style="width: 0%;"></div>
+                </div>
+                <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
+                <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
+                <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
+            </div>
+        </div>
+    </nav>
+</div>
+<aside id="sidebar" class="sidebar sidebar-expanded w-64 bg-gradient-to-b from-[#6b0f0f] via-[#bf1e2e] to-[#4b0f0f] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out h-screen fixed left-0 top-0 z-50 shadow-[16px_0_45px_rgba(0,0,0,0.24)] border-r border-white/10 backdrop-blur-xl hidden md:flex">
+    <div class="p-6 border-b border-white/10 sidebar-logo bg-white/5 backdrop-blur-sm">
+        <a href="archives-landing.php" class="flex items-center space-x-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
+            <div class="bg-white rounded-full shadow-md flex items-center justify-center overflow-hidden transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" style="width: 70px; height: 70px;">
+                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela Logo" style="width: 100%; height: 100%;" class="object-contain">
+            </div>
+            <div class="transform transition-all duration-300 group-hover:translate-x-1 sidebar-text">
+                <h1 class="text-lg font-bold">LAS</h1>
+                <p class="text-xs text-red-200">City of Valenzuela</p>
+            </div>
+        </a>
+    </div>
+    <nav class="flex-1 py-4 overflow-y-auto">
+        <div class="px-4 space-y-1">
+            <a href="archives-landing.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)] bg-gradient-to-r from-red-600/90 to-orange-500/80 ring-1 ring-white/20 border border-white/15 shadow-[0_12px_30px_rgba(185,28,28,0.3)]" aria-label="Dashboard Archives"><i class="bi bi-speedometer2 mr-3"></i><span class="sidebar-text">Dashboard Archives</span></a>            <a href="storage.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Main Storage Archives"><i class="bi bi-folder mr-3"></i><span class="sidebar-text">Main Storage Archives</span></a>            <a href="export.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Export"><i class="bi bi-cloud-upload mr-3"></i><span class="sidebar-text">Export</span></a>                        <a href="recent_deleted.php" class="hidden"></a>
+                        
+            <!-- Version Tracking with Dropdown (Desktop) -->
+            <div class="mb-1.5">
+                <div class="group flex w-full items-center justify-between px-4 py-3 text-white/90 hover:text-white rounded-2xl transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]">
+                    <a href="version_tracking.php" class="flex items-center gap-3" aria-current="false">
+                        <i class="bi bi-book"></i>
+                        <span class="sidebar-text">Version Tracking</span>
+                    </a>
+                    <button type="button" id="version-tracking-toggle-desktop" aria-expanded="false" aria-controls="version-tracking-submenu-desktop" class="text-xs transition-transform duration-200 hover:bg-white/10 p-1 rounded-lg" onclick="event.stopPropagation();">
+                        <i class="bi bi-chevron-down" id="version-tracking-chevron-desktop"></i>
+                    </button>
+                </div>
+                <div id="version-tracking-submenu-desktop" class="mt-1 ml-4 space-y-1 overflow-hidden max-h-0 transition-all duration-300">
+                    <!-- Legislative Folders -->
+                    <a href="version_tracking.php?folder=ordinances" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-orange-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-file-earmark-text text-orange-400"></i>
+                        </div>
+                        <span class="sidebar-text">Ordinances & Resolutions</span>
+                    </a>
+                    <a href="version_tracking.php?folder=billing" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-green-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-receipt text-green-400"></i>
+                        </div>
+                        <span class="sidebar-text">Billing</span>
+                    </a>
+                    <a href="version_tracking.php?folder=public-hearings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-megaphone text-blue-400"></i>
+                        </div>
+                        <span class="sidebar-text">Public Hearings</span>
+                    </a>
+                    <a href="version_tracking.php?folder=meetings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-journal-text text-purple-400"></i>
+                        </div>
+                        <span class="sidebar-text">Meeting Records</span>
+                    </a>
+                    
+                    <!-- Dynamic Archive Folders -->
+                                                                    <a href="version_tracking.php?folder=archive_5" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                                <i class="bi bi-folder-fill text-slate-400"></i>
+                            </div>
+                            <span class="sidebar-text">67</span>
+                        </a>
+                                                <a href="version_tracking.php?folder=archive_3" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                                <i class="bi bi-folder-fill text-slate-400"></i>
+                            </div>
+                            <span class="sidebar-text">wild thoughts</span>
+                        </a>
+                                                <a href="version_tracking.php?folder=archive_2" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                                <i class="bi bi-folder-fill text-slate-400"></i>
+                            </div>
+                            <span class="sidebar-text">anything</span>
+                        </a>
+                                                <a href="version_tracking.php?folder=archive_1" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                            <div class="w-8 h-8 rounded-lg bg-slate-100/20 flex items-center justify-center mr-3">
+                                <i class="bi bi-folder-fill text-slate-400"></i>
+                            </div>
+                            <span class="sidebar-text">ordinances</span>
+                        </a>
+                                                            </div>
+            </div>
+        </div>
+        <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
+            <div class="text-xs font-semibold text-red-200 mb-2 px-2">ANALYTICS</div>
+            <a href="report_analytics.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Reports &amp; Analytics"><i class="bi bi-graph-up mr-3"></i><span class="sidebar-text">Reports &amp; Analytics</span></a>        </div>
+        <div class="mt-4 pt-4 mx-4 border-t border-red-700/50">
+            <div class="text-xs font-semibold text-red-200 mb-2 px-2">ADMINISTRATION</div>
+                        <a href="user_management.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="User Management"><i class="bi bi-people mr-3"></i><span class="sidebar-text">User Management</span></a>                        <a href="audit-logs.php" class="group flex w-full items-center px-4 py-3 text-white/90 hover:text-white rounded-2xl mb-1.5 transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]" aria-label="Audit Logs"><i class="bi bi-shield-check mr-3"></i><span class="sidebar-text">Audit Logs</span></a>        </div>
+        <div class="mt-6 pt-4 mx-4 border-t border-white/10">
+            <div class="text-xs font-semibold text-red-100 mb-2 px-2 uppercase tracking-[0.2em]">Centralized Storage Overview</div>
+            <div class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] hover:border-white/25 transition-all cursor-pointer" title="Click to view storage details">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs text-red-100 font-medium">Capacity Used</span>
+                    <span class="text-sm font-bold text-white rounded-full px-2 py-0.5 bg-red-600/40" id="desktop-storage-pct">0%</span>
+                </div>
+                <div class="w-full bg-red-900/60 rounded-full h-2.5 overflow-hidden mb-3 shadow-inner">
+                    <div class="bg-gradient-to-r from-red-400 to-orange-500 h-2.5 rounded-full transition-all duration-500" id="desktop-storage-bar" style="width: 0%;"></div>
+                </div>
+                <div class="text-xs text-red-100/80" id="desktop-storage-text">0 B of 50 GB</div>
+                <div class="mt-2 text-xs text-red-100/60" id="desktop-storage-files">0 files tracked</div>
+                <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
+            </div>
+        </div>
+    </nav>
+</aside>
+<script>
+// Defensive layout helper: ensure fixed desktop sidebar doesn't cover main content.
+(function(){
+    function adjustMainOffset(){
+        try{
+            var aside = document.getElementById('sidebar');
+            if(!aside) return;
+            var w = window.innerWidth || document.documentElement.clientWidth;
+            
+            // Reset any default margins/padding first
+            document.documentElement.style.margin = '0';
+            document.documentElement.style.padding = '0';
+            document.body.style.margin = '0';
+            
+            // Apply padding to body on md+ (desktop) where sidebar is visible and fixed
+            if(w >= 768){
+                document.body.style.paddingLeft = '16rem';
+            } else {
+                // remove padding on small screens where sidebar is hidden
+                document.body.style.paddingLeft = '0';
+            }
+        }catch(e){ console && console.warn && console.warn('sidebar layout adjust failed', e); }
+    }
+    window.addEventListener('resize', adjustMainOffset);
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adjustMainOffset); else adjustMainOffset();
+})();
+
+// Version Tracking dropdown functionality
+(function() {
+    function setupVersionTrackingDropdown(toggleId, submenuId, chevronId) {
+        var toggle = document.getElementById(toggleId);
+        var submenu = document.getElementById(submenuId);
+        var chevron = document.getElementById(chevronId);
+        
+        if (!toggle || !submenu) return;
+        
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var isExpanded = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
+            
+            if (isExpanded) {
+                // Collapse
+                submenu.style.maxHeight = '0px';
+                submenu.style.opacity = '0';
+                toggle.setAttribute('aria-expanded', 'false');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            } else {
+                // Expand
+                submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                submenu.style.opacity = '1';
+                toggle.setAttribute('aria-expanded', 'true');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!toggle.contains(e.target) && !submenu.contains(e.target)) {
+                submenu.style.maxHeight = '0px';
+                submenu.style.opacity = '0';
+                toggle.setAttribute('aria-expanded', 'false');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            }
+        });
+    }
+    
+    // Initialize dropdown for both mobile and desktop
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setupVersionTrackingDropdown('version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile');
+            setupVersionTrackingDropdown('version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop');
+        });
+    } else {
+        setupVersionTrackingDropdown('version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile');
+        setupVersionTrackingDropdown('version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop');
+    }
+})();
+</script>        <div class="flex flex-col min-h-screen md:ml-72">
+            <!-- Header / Navbar -->
+            <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-white/70 dark:border-slate-700/70 shadow-[0_10px_35px_rgba(15,23,42,0.08)] sticky top-0 z-40 transition-colors duration-200">
+                <div class="px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <!-- Left Side: Toggle buttons and Logo -->
+                        <div class="flex items-center">
+                            <!-- Sidebar Toggle Button (Desktop) -->
+
+                            <!-- Mobile Menu Button -->
+                            <button id="mobile-menu-btn" class="mobile-toggle text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:outline-none p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200">
+                                <i class="bi bi-list text-2xl"></i>
+                            </button>
+                            
+                            <!-- Logo (Mobile) -->
+                            <div class="mobile-only flex items-center ml-2">
+                                <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela" class="w-10 h-10 object-contain">
+                            </div>
+                        </div>
+                        
+                        <!-- Page Title & Breadcrumb -->
+                        <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
+                            <div class="ml-2 md:ml-4 min-w-0">
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h2>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side Actions -->
+                        <div class="flex items-center space-x-1 md:space-x-4">
+                            <!-- Dark Mode Toggle -->
+                            <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle theme">
+                                <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>
+                                <svg id="sunIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </button>
+                        
+                            <!-- Notification Dropdown (placed beside theme toggle) -->
+                            <div class="relative">
+                                <button id="notification-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative" title="Notifications">
+                                    <i class="bi bi-bell-fill text-xl text-gray-700 dark:text-gray-300"></i>
+                                    <span id="notif-count" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full">3</span>
+                                </button>
+
+                                <div id="notification-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                                    <div class="p-4">
+                                        <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Notifications</div>
+                                        <div id="notif-list" class="space-y-2">
+                                            <div class="text-sm text-gray-600 dark:text-gray-400">Loading notifications...</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="px-4 py-2 border-t border-gray-200 dark:border-slate-700">
+                                        <a href="audit-logs.php" class="block text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                            View All Notifications
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- User Profile Dropdown (moved right of notification) -->
+                             <div class="relative">
+                                <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
+                                                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                                                <div class="hidden sm:block text-left">
+                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none">Admin User</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                                </div>
+                                <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xs hidden sm:inline"></i>
+                            </button>
+                            
+                                <!-- Profile Dropdown -->
+                                <div id="profile-dropdown" class="hidden absolute left-1/2 transform -translate-x-1/2 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 transition-colors duration-200">
+                                    <div class="py-2">
+                                        <a href="profile_management.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
+                                            <i class="bi bi-gear mr-2"></i>Account Settings
+                                        </a>
+                                        <form action="logout.php" method="POST" class="block w-full">
+                                            <button type="submit" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer w-full text-left">
+                                                <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-slate-900">
+                <!-- 
+                  Removed 'max-w-7xl mx-auto' to allow full screen scaling, 
+                  and replaced with 'w-full' plus expanded responsive padding to maximize screen usage while keeping content breathing room.
+                -->
+                <div class="w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+                    <!-- Enhanced Header Section -->
+                    <div class="mb-8">
+                        <div class="text-center lg:text-left">
+                            <h1 class="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-red-600 via-red-700 to-red-800 bg-clip-text text-transparent mb-3">
+                                Document Archives
+                            </h1>
+                            <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0">
+                                Advanced search and management for ordinances, resolutions, hearings, sessions, and archive records
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Overview Section (exact same structure as report_analytics.php lines 793-816) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Storage Usage (Last 7 Days)</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Trend</span>
+                            </div>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="storageUsageChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Files by Source</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">32 total</span>
+                            </div>
+                            <div class="relative w-full h-64 md:h-72 flex justify-center">
+                                <canvas id="filesBySourceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Responsive Layout: Search + Storage Overview -->
+                    <div class="grid gap-6 lg:gap-8 xl:grid-cols-[1fr_400px] 2xl:grid-cols-[1fr_450px] items-start">
+                        
+                        <!-- Main Search Section -->
+                        <div class="w-full">
+                            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+                                <!-- Search Header -->
+                                <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                            <i class="bi bi-search text-red-600 dark:text-red-400 text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Advanced Search</h2>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">Find documents across all archives</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Search Content -->
+                                <div class="p-6">
+                                    <!-- Search Input -->
+                                    <div class="relative mb-6">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                        <input type="text" id="legislativeSearchInput" 
+                                               class="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200" 
+                                               placeholder="Search archives, ordinances, hearings, sessions, authors..."
+                                               autocomplete="off">
+                                        <button id="legislativeSearchBtn" 
+                                                class="absolute right-2 top-2 bottom-2 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg">
+                                            Search
+                                        </button>
+                                    </div>
+
+                                    <!-- Filter Chips -->
+                                    <div class="mb-6">
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
+                                            <div class="flex flex-wrap gap-2">
+                                                <button type="button" data-filter="legislative" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-file-text mr-2"></i>Legislative
+                                                </button>
+                                                <button type="button" data-filter="archive_files" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-file-earmark mr-2"></i>Archive Files
+                                                </button>
+                                                <button type="button" data-filter="folders" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-folder mr-2"></i>Folders
+                                                </button>
+                                                <button type="button" data-filter="authors" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                    <i class="bi bi-person mr-2"></i>Authors
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Sort Options -->
+                                        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                                            <div class="flex items-center gap-3">
+                                                <label for="searchSortSelect" class="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</label>
+                                                <select id="searchSortSelect" class="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                                    <option value="relevance">Relevance</option>
+                                                    <option value="newest">Newest first</option>
+                                                    <option value="date">Date</option>
+                                                </select>
+                                            </div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                <i class="bi bi-info-circle mr-1"></i>
+                                                <span id="searchResultCount">Ready to search</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Search Results Section -->
+                                    <div class="relative">
+                                        <div id="searchPopup" class="hidden mt-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden">
+                                            <div class="p-6">
+                                                <!-- Recent Searches -->
+                                                <div class="mb-6">
+                                                    <div class="flex items-center justify-between mb-3">
+                                                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                            <i class="bi bi-clock-history text-gray-500"></i>
+                                                            Recent searches
+                                                        </h3>
+                                                        <button id="clearRecentBtn" type="button" class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">
+                                                            Clear all
+                                                        </button>
+                                                    </div>
+                                                    <div id="recentSearchesList" class="flex flex-wrap gap-2"></div>
+                                                </div>
+
+                                                <!-- Search Results -->
+                                                <div id="searchResultsPanel" class="hidden">
+                                                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-slate-600">
+                                                        <div>
+                                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="searchResultsCount">0 results found</h3>
+                                                            <p class="text-sm text-gray-600 dark:text-gray-400" id="searchResultsSubtitle">Showing filtered archive matches</p>
+                                                        </div>
+                                                        <button id="clearSearchBtn" type="button" class="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                            Clear search
+                                                        </button>
+                                                    </div>
+                                                    <div id="searchResultsList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                                                    
+                                                    <!-- Related Topics -->
+                                                    <div id="searchRelated" class="hidden mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
+                                                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Related topics</h4>
+                                                        <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Empty State -->
+                                                <div id="searchEmptyState" class="text-center py-8">
+                                                    <div class="w-16 h-16 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                        <i class="bi bi-search text-2xl text-gray-500 dark:text-gray-400"></i>
+                                                    </div>
+                                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Search Document Archives</h3>
+                                                    <p class="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">Start typing to find ordinances, folders, archive files, or authors. Results will appear here.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Storage Overview Section -->
+                        <aside class="w-full">
+                            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden sticky top-6">
+                                <!-- Storage Header -->
+                                <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                                <i class="bi bi-hdd-stack text-red-600 dark:text-red-400 text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Storage Overview</h2>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">Real-time analytics</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" id="storage-details-btn" title="Details">
+                                                <i class="bi bi-info-circle"></i>
+                                            </button>
+                                            <button class="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" id="storage-refresh-btn" title="Refresh">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Storage Content -->
+                                <div class="p-6">
+                                    <!-- Skeleton Loader -->
+                                    <div id="storage-skeleton" class="hidden">
+                                        <div class="animate-pulse">
+                                            <div class="w-48 h-48 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
+                                            <div class="space-y-3">
+                                                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded"></div>
+                                                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4"></div>
+                                                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Storage Chart and Stats -->
+                                    <div id="storage-content" class="text-center">
+                                        <!-- Donut Chart -->
+                                        <div class="relative w-48 h-48 mx-auto mb-6">
+                                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                                <!-- Background circle -->
+                                                <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="12" class="text-gray-200 dark:text-slate-700" opacity="0.3"/>
+                                                <!-- Progress circle -->
+                                                <circle id="donutProgress" cx="100" cy="100" r="80" fill="none" stroke-width="12" 
+                                                        class="text-red-500" stroke-linecap="round" 
+                                                        stroke-dasharray="502.65" stroke-dashoffset="502.65"
+                                                        style="transition: stroke-dashoffset 1s ease-in-out"/>
+                                            </svg>
+                                            <!-- Center content -->
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="text-center">
+                                                    <div class="text-3xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent" id="storagePercentage">0.1%</div>
+                                                    <div class="text-sm text-gray-600 dark:text-gray-400">Used</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Storage Stats -->
+                                        <div class="space-y-4">
+                                            <!-- Used Space -->
+                                            <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Used Space</span>
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">57 files</span>
+                                                </div>
+                                                <div class="text-2xl font-bold text-red-600 dark:text-red-400 mb-2" id="storageUsed">74.97 MB</div>
+                                                <div class="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                                                    <div class="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500" style="width: 0.1%;"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Available Space -->
+                                            <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Space</span>
+                                                    <span class="text-sm text-green-600 dark:text-green-400">
+                                                        <i class="bi bi-check-circle mr-1"></i>Optimal                                                    </span>
+                                                </div>
+                                                <div class="text-2xl font-bold text-green-600 dark:text-green-400">49.93 GB</div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400">of 50 GB total</div>
+                                            </div>
+
+                                            <!-- Quick Actions -->
+                                            <div class="pt-4 border-t border-gray-100 dark:border-slate-700">
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <a href="storage.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium">
+                                                        <i class="bi bi-folder"></i>
+                                                        Browse
+                                                    </a>
+                                                    <a href="export.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium">
+                                                        <i class="bi bi-download"></i>
+                                                        Export
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <!-- Quick Reports & Analytics (matches report_analytics.php lines 651-791 outer structure exactly) -->
+                    <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6 mt-2 mb-6">
+                                                <!-- Filter bar: exact structure matches report_analytics.php lines 763-788 -->
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
+                                <input id="qa-from" type="date" value="" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
+                                <input id="qa-to" type="date" value="" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                <select id="qa-type" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <option value="">All Types</option>
+                                                                            <option value="Meeting" >Meeting</option>
+                                                                            <option value="Ordinance" >Ordinance</option>
+                                                                            <option value="Public Hearing" >Public Hearing</option>
+                                                                    </select>
+                                <select id="qa-event" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <option value="">All Events</option>
+                                    <option value="download" >Download</option>
+                                    <option value="upload" >Upload</option>
+                                </select>
+                                <div class="flex md:justify-end ml-auto">
+                                    <button id="qa-apply" class="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- KPI Stat cards: exact wrapper structure matches report_analytics.php lines 679-717 -->
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Records</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">24</div>
+                                    </div>
+                                </div>
+                                <div class="relative w-full h-10 mt-3">
+                                    <canvas id="qaRecordsMini"></canvas>
+                                </div>
+                            </div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 flex items-center justify-center"><i class="bi bi-download"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Downloads</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">5</div>
+                                    </div>
+                                </div>
+                                <div class="relative w-full h-10 mt-3">
+                                    <canvas id="qaDownloadsMini"></canvas>
+                                </div>
+                            </div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300 flex items-center justify-center"><i class="bi bi-cloud-upload"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total Uploads</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">4</div>
+                                    </div>
+                                </div>
+                                <div class="relative w-full h-10 mt-3">
+                                    <canvas id="qaUploadsMini"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Chart grid: exact wrappers match report_analytics.php lines 864-885 (1 lg-col-2 grid) -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Trend</h3>
+                                    <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Last 14 days</span>
+                                </div>
+                                <div class="relative w-full h-64 md:h-72">
+                                    <canvas id="qaRecordsLine"></canvas>
+                                </div>
+                            </div>
+                            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</h3>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">7 types</span>
+                                        <button id="rbt-toggle" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors" title="Toggle absolute/percentage">ABS</button>
+                                    </div>
+                                </div>
+                                <div class="relative w-full h-64 md:h-72 flex justify-center">
+                                    <canvas id="qaRecordsByType"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                                        <!-- Folders & Uploads: exact grid pattern matches report_analytics.php lines 864-885 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</h3>
+                                <a href="storage.php" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+                                    View All <i class="bi bi-arrow-right ml-1 text-[10px]"></i>
+                                </a>
+                            </div>
+                            <div class="mb-3">
+                                <select id="fu-filter" class="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
+                                    <option value="">All Folders</option>
+                                                                            <option value="67">67</option>
+                                                                            <option value="anything">anything</option>
+                                                                            <option value="ordinances">ordinances</option>
+                                                                            <option value="wild thoughts">wild thoughts</option>
+                                                                    </select>
+                            </div>
+                            <div id="fu-cards" class="flex flex-col gap-2 max-h-72 md:max-h-80 overflow-y-auto pr-1">
+                                                                                                        <a href="folder_view.php?id=5" data-folder="67"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">ITSP4C-Course-Outline.pdf</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>67                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Mar 12, 2026 6:57 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=3" data-folder="wild thoughts"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">MARKETING_BOOKKEEPING.docx</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>wild thoughts                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Mar 12, 2026 6:47 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=2" data-folder="anything"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">OJT_NARRATIVE_REPORT-20-27_Deluna.docx</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>anything                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Mar 12, 2026 6:40 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=2" data-folder="anything"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">ordinance_3714.pdf</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>anything                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Feb 25, 2026 5:42 PM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=1" data-folder="ordinances"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">ordinance_3709.pdf</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>ordinances                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Feb 25, 2026 3:01 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=1" data-folder="ordinances"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">ordinance_3712.pdf</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>ordinances                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Feb 25, 2026 2:42 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=1" data-folder="ordinances"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">ordinance_3713.pdf</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>ordinances                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Feb 25, 2026 2:39 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                                        <a href="folder_view.php?id=1" data-folder="ordinances"
+                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">ordinance,3714.pdf</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-folder2 text-[10px]"></i>ordinances                                                    </span>
+                                                    <span class="mx-1.5">ΓÇó</span>
+                                                    <span class="inline-flex items-center gap-1">
+                                                        <i class="bi bi-calendar3 text-[10px]"></i>Feb 25, 2026 2:23 AM                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
+                                                <i class="bi bi-chevron-right text-base"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                                                                            </div>
+                        </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Last 30 days</span>
+                            </div>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="uploadsByFolderChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Latest Archives Section (dynamic: shows recent files visited) - exact card wrapper -->
+                    <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold text-gray-800 dark:text-gray-100">Latest Archive Files Visit</h3>
+                            <button id="latest-files-toggle" type="button"
+                                class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
+                                aria-expanded="true" aria-controls="latestFilesList">
+                                <span id="latest-files-toggle-text">Hide</span>
+                                <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-[10px]"></i>
+                            </button>
+                        </div>
+                        <!-- Loading state shown while fetch is in-flight -->
+                        <div id="latestFilesList" class="space-y-2">
+                            <div id="latest-files-loading" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>
+                                Loading recent filesΓÇª
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        
+<!-- Footer Component -->
+<footer style="background-color: #0f172a; color: white; padding: 3rem 2rem; margin-top: 2rem;">
+    <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">
+        <!-- Column 1: Left -->
+        <div>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <div style="width: 40px; height: 40px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                <span style="font-weight: bold; font-size: 1.25rem;">SPVALENZUELA</span>
+            </div>
+            <p style="color: #94a3b8; line-height: 1.6; margin-bottom: 1.5rem;">
+                The legislative branch of the City Government of Valenzuela, committed to transparent governance and sustainable urban development.
+            </p>
+            <div style="display: flex; gap: 0.75rem;">
+                <a href="#" style="width: 36px; height: 36px; background-color: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">
+                    <i class="bi bi-facebook"></i>
+                </a>
+                <a href="#" style="width: 36px; height: 36px; background-color: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">
+                    <i class="bi bi-twitter-x"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Column 2: Quick Links -->
+        <div>
+            <h3 style="font-weight: bold; font-size: 1.125rem; margin-bottom: 1rem;">Quick Links</h3>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+                <li><a href="#" style="color: #94a3b8; text-decoration: none;">Legislative Archives</a></li>
+                <li><a href="#" style="color: #94a3b8; text-decoration: none;">Session Calendars</a></li>
+                <li><a href="#" style="color: #94a3b8; text-decoration: none;">Public Consultations</a></li>
+                <li><a href="#" style="color: #94a3b8; text-decoration: none;">Committee Reports</a></li>
+            </ul>
+        </div>
+
+        <!-- Column 3: Contact Us -->
+        <div>
+            <h3 style="font-weight: bold; font-size: 1.125rem; margin-bottom: 1rem;">Contact Us</h3>
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; color: #94a3b8;">
+                <i class="bi bi-geo-alt" style="color: #ef4444; margin-top: 2px;"></i>
+                <span>Valenzuela City Hall, MacArthur Highway, Valenzuela</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; color: #94a3b8;">
+                <i class="bi bi-telephone" style="color: #ef4444;"></i>
+                <span>(02) 8352-1000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div style="max-width: 1200px; margin: 2.5rem auto 0; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+        <p style="color: #94a3b8; font-size: 0.875rem; margin: 0;">
+            &copy; 2026 SPVALENZUELA. All rights reserved.
+        </p>
+        <div style="display: flex; gap: 1.5rem;">
+            <a href="#" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem;">Privacy Policy</a>
+            <a href="#" style="color: #94a3b8; text-decoration: none; font-size: 0.875rem;">Terms of Service</a>
+        </div>
+    </div>
+</footer>
+        </div>
+    </div>
+
+    <!-- Storage Details Modal -->
+    <div id="storageDetailsModal" class="hidden fixed inset-0 z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100">Storage Details</div>
+                    <button id="storageDetailsClose" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button>
+                </div>
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Largest files</div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs text-gray-500">
+                            <tr><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Source</th><th class="py-2 pr-3">Size</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v1_bcc026ab-f622-4c73-8c5f-ccf747ad797f__1_.mp4</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">7.41 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v1_Ordinance_1330.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">4.92 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v1_Resolution-3720-2026.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">2.3 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">OJT_NARRATIVE_REPORT-20-27_Deluna.docx</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Archive</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">2 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v1_ORD-1312.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.88 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v1_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v2_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v3_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v4_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v5_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v6_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v7_ordinance_3722.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.68 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">ITSP4C-Course-Outline.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Archive</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.54 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">ordinance_3713.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Archive</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.39 MB</td>
+                            </tr>
+                                                        <tr>
+                                <td class="py-2 pr-3 break-all">v1_ordinance_3709.pdf</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">Legislative</td>
+                                <td class="py-2 pr-3 whitespace-nowrap">1.38 MB</td>
+                            </tr>
+                                                                                </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container: same style as recent_deleted.php, stacked; only unseen notifications shown once -->
+    <div id="toast-container" class="fixed right-6 bottom-6 z-50 space-y-2 flex flex-col items-end pointer-events-none"></div>
+
+    
+    <script>
+        // Analytics Overview Charts (uses same pattern as report_analytics.php)
+        // #region debug-point A:analytics-overview-init
+        const dashboardData = {"storage_last7":[{"date":"2026-07-23","value":44109373},{"date":"2026-07-24","value":10738374},{"date":"2026-07-25","value":16264625},{"date":"2026-07-26","value":16198582},{"date":"2026-07-27","value":37728299},{"date":"2026-07-28","value":38231722},{"date":"2026-07-29","value":23852086}],"files_by_source":{"labels":["Legislative","Archives"],"data":[24,8]}};
+        const storageLabels = dashboardData.storage_last7.map(d => d.date);
+        const storageValues = dashboardData.storage_last7.map(d => d.value);
+        const sourceLabels = dashboardData.files_by_source.labels;
+        const sourceValues = dashboardData.files_by_source.data;
+        const storageUsageCtx = document.getElementById('storageUsageChart')?.getContext('2d');
+        if (storageUsageCtx) {
+            try {
+                new Chart(storageUsageCtx, {
+                    type: 'line',
+                    data: {
+                        labels: storageLabels,
+                        datasets: [{
+                            label: 'Storage Used (Bytes)',
+                            data: storageValues,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxRotation: 0, autoSkip: true } },
+                            y: { beginAtZero: true, precision: 0 }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Storage chart failed:', err);
+            }
+        }
+        const filesBySourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
+        if (filesBySourceCtx) {
+            try {
+                new Chart(filesBySourceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sourceLabels,
+                        datasets: [{
+                            label: 'Files',
+                            data: sourceValues,
+                            backgroundColor: ['#dc2626', '#3b82f6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, precision: 0 } }
+                    }
+                });
+            } catch (err) {
+                console.error('Source chart failed:', err);
+            }
+        }
+        // #endregion
+    </script>
+    <script>
+        (function() {
+            const STORAGE_KEY = 'archives_shown_notif_ids';
+            const MAX_STORED_IDS = 100;
+            const initialNotifs = [] || [];
+
+            function getShownIds() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    return raw ? JSON.parse(raw) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+            function markAsShown(id) {
+                const ids = getShownIds();
+                if (ids.indexOf(id) !== -1) return;
+                ids.push(id);
+                if (ids.length > MAX_STORED_IDS) ids.splice(0, ids.length - MAX_STORED_IDS);
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)); } catch(e) {}
+            }
+
+            const notifsToShow = initialNotifs.filter(function(n) {
+                return n.id && getShownIds().indexOf(String(n.id)) === -1;
+            });
+
+            const ctn = document.getElementById('toast-container');
+            function showToast(n) {
+                const el = document.createElement('div');
+                el.setAttribute('role', 'status');
+                el.setAttribute('aria-live', 'polite');
+                el.className = 'pointer-events-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all duration-300 ease-out font-semibold max-w-sm';
+                const text = (n.about || 'Notification') + (n.content ? ': ' + (n.content.length > 60 ? n.content.slice(0, 60) + 'ΓÇª' : n.content) : '');
+                el.textContent = text;
+                ctn.appendChild(el);
+                requestAnimationFrame(function() {
+                    el.classList.remove('opacity-0', 'translate-y-4');
+                    el.classList.add('opacity-100', 'translate-y-0');
+                });
+                markAsShown(n.id);
+                setTimeout(function() {
+                    el.classList.remove('opacity-100', 'translate-y-0');
+                    el.classList.add('opacity-0', 'translate-y-4');
+                    setTimeout(function() { el.remove(); }, 300);
+                }, 2800);
+            }
+
+            var delay = 0;
+            notifsToShow.forEach(function(n) {
+                setTimeout(function() { showToast(n); }, delay);
+                delay += 1400;
+            });
+        })();
+    </script>
+    <script>
+        (function(){
+            var uploads = [{"id":"13","name":"ITSP4C-Course-Outline.pdf","folder_id":"5","folder_name":"67","src":"archive","created_at":"2026-03-12 06:57:33"},{"id":"12","name":"MARKETING_BOOKKEEPING.docx","folder_id":"3","folder_name":"wild thoughts","src":"archive","created_at":"2026-03-12 06:47:10"},{"id":"11","name":"OJT_NARRATIVE_REPORT-20-27_Deluna.docx","folder_id":"2","folder_name":"anything","src":"archive","created_at":"2026-03-12 06:40:31"},{"id":"9","name":"ordinance_3714.pdf","folder_id":"2","folder_name":"anything","src":"archive","created_at":"2026-02-25 17:42:41"},{"id":"8","name":"ordinance_3709.pdf","folder_id":"1","folder_name":"ordinances","src":"archive","created_at":"2026-02-25 03:01:34"},{"id":"6","name":"ordinance_3712.pdf","folder_id":"1","folder_name":"ordinances","src":"archive","created_at":"2026-02-25 02:42:03"},{"id":"4","name":"ordinance_3713.pdf","folder_id":"1","folder_name":"ordinances","src":"archive","created_at":"2026-02-25 02:39:30"},{"id":"1","name":"ordinance,3714.pdf","folder_id":"1","folder_name":"ordinances","src":"archive","created_at":"2026-02-25 02:23:41"}] || [];
+            var ctn = document.getElementById('toast-container');
+            var KEY = 'archives_shown_upload_ids';
+            function getShown(){
+                try{ var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+            }
+            function mark(id){
+                try{
+                    var ids = getShown();
+                    if (ids.indexOf(String(id)) === -1) {
+                        ids.push(String(id));
+                        if (ids.length > 120) ids.splice(0, ids.length - 120);
+                        localStorage.setItem(KEY, JSON.stringify(ids));
+                    }
+                }catch(e){}
+            }
+            function showUploadToast(u){
+                if (!ctn) return;
+                var el = document.createElement('div');
+                el.setAttribute('role','status');
+                el.setAttribute('aria-live','polite');
+                el.className = 'pointer-events-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-3 rounded-lg shadow-xl opacity-0 transform translate-y-4 transition-all duration-300 ease-out font-semibold max-w-sm';
+                var txt = 'New upload: ' + String(u.name || u.title || 'File') + (u.folder_name ? ' ΓÇó ' + String(u.folder_name) : '');
+                el.textContent = txt;
+                ctn.appendChild(el);
+                requestAnimationFrame(function(){ el.classList.remove('opacity-0','translate-y-4'); el.classList.add('opacity-100','translate-y-0'); });
+                mark(u.id || (u.name || ''));
+                setTimeout(function(){
+                    el.classList.remove('opacity-100','translate-y-0');
+                    el.classList.add('opacity-0','translate-y-4');
+                    setTimeout(function(){ el.remove(); }, 300);
+                }, 2600);
+            }
+            var shown = getShown();
+            var now = Date.now();
+            uploads.filter(function(u){
+                if (!u || !u.id) return false;
+                if (shown.indexOf(String(u.id)) !== -1) return false;
+                var t = Date.parse(u.created_at || u.raw_date || '');
+                if (isNaN(t)) return true;
+                return (now - t) <= 3*24*60*60*1000;
+            }).slice(0, 6).forEach(function(u, idx){
+                setTimeout(function(){ showUploadToast(u); }, idx * 1000);
+            });
+        })();
+    </script>
+    <!-- Modal -->
+    <div id="createFolderModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal()"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Create New Folder</h2>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeModal()">&times;</button>
+                </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imagePreviewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeImagePreview()"></div>
+            <div class="inline-block align-bottom bg-white dark:bg-slate-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle max-w-4xl w-full border border-gray-200 dark:border-slate-700">
+                <div class="absolute top-0 right-0 pt-4 pr-4 z-10">
+                    <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none bg-white/50 dark:bg-slate-800/50 rounded-full p-1 backdrop-blur-sm" onclick="closeImagePreview()">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="bg-gray-100 dark:bg-slate-900 flex items-center justify-center min-h-[50vh] max-h-[85vh] p-4 relative" id="previewImageContainer">
+                    <img id="previewModalImage" src="" alt="Preview" class="max-w-full max-h-[80vh] object-contain shadow-lg rounded" />
+                    <div id="previewLoading" class="absolute inset-0 flex items-center justify-center bg-gray-100/80 dark:bg-slate-900/80">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between border-t border-gray-200 dark:border-slate-700">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 truncate pr-4" id="previewModalTitle">Image Preview</h3>
+                    <button type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeImagePreview()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function openImagePreview(url, title) {
+            const modal = document.getElementById('imagePreviewModal');
+            const img = document.getElementById('previewModalImage');
+            const tit = document.getElementById('previewModalTitle');
+            const loader = document.getElementById('previewLoading');
+            if(modal && img) {
+                tit.textContent = title || 'Image Preview';
+                img.classList.add('hidden');
+                loader.classList.remove('hidden');
+                img.onload = function() {
+                    loader.classList.add('hidden');
+                    img.classList.remove('hidden');
+                };
+                img.src = url;
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        function closeImagePreview() {
+            const modal = document.getElementById('imagePreviewModal');
+            if(modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+                document.getElementById('previewModalImage').src = '';
+            }
+        }
+    </script>
+                <div class="mb-6">
+                    <label for="folderName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Folder Name:</label>
+                    <input type="text" id="folderName" 
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                           placeholder="Enter folder name" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button onclick="closeModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Cancel</button>
+                    <button id="createBtn" class="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 text-white rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/recent-views.js"></script>
+    <script src="assets/js/archives.js"></script>
+    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/highlight-record.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
+<!-- Chat Widget -->
+<script src="assets/js/chat-widget.js"></script>
+    <script>
+        // Quick Reports & Analytics Charts (uses exact same pattern as report_analytics.php lines 1195-1217)
+        // #region debug-point C:quick-reports-init
+        const byType = {"Meeting":5,"Ordinance":14,"Public Hearing":5,"ordinances":4,"anything":2,"wild thoughts":1,"67":1};
+        const seriesLabels = ["2026-07-16","2026-07-17","2026-07-18","2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-24","2026-07-25","2026-07-26","2026-07-27","2026-07-28","2026-07-29"];
+        const seriesDownloads = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        const seriesUploads = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        const seriesRecords = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        const seriesRecordsMerged = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        const fuLabels = ["67","anything","ordinances","wild thoughts"];
+        const fuLast7 = [0,0,0,0];
+        const fuPrev7 = [0,0,0,0];
+        const fuEarlier = [0,0,0,0];
+        const catLabels = [];
+        const catLast7 = [];
+        const catPrev7 = [];
+        const catEarlier = [];
+        const ffLabels = [];
+        const ffValues = [];
+        const dupLegLabels = ["ordinance,3722","ordinance,3719","Joel Tagay"];
+        const dupLegCounts = [7,5,2];
+        const dupFileLabels = [];
+        const dupFileCounts = [];
+
+        const labelsAndData = (obj) => { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; };
+        const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
+        const rbt = labelsAndData(byType);
+        // Mini sparkline: Records
+        const qaRecordsMiniCtx = document.getElementById('qaRecordsMini')?.getContext('2d');
+        if (qaRecordsMiniCtx) {
+            try {
+                new Chart(qaRecordsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesRecordsMerged, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                console.error('qaRecordsMini failed:', err);
+            }
+        }
+
+        // Mini sparkline: Downloads
+        const qaDownloadsMiniCtx = document.getElementById('qaDownloadsMini')?.getContext('2d');
+        if (qaDownloadsMiniCtx) {
+            new Chart(qaDownloadsMiniCtx, {
+                type: 'line',
+                data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.2)', fill: true, tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+        }
+
+        // Mini sparkline: Uploads
+        const qaUploadsMiniCtx = document.getElementById('qaUploadsMini')?.getContext('2d');
+        if (qaUploadsMiniCtx) {
+            new Chart(qaUploadsMiniCtx, {
+                type: 'line',
+                data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+        }
+
+        // Records Trend Line
+        const qaRecordsLineCtx = document.getElementById('qaRecordsLine')?.getContext('2d');
+        if (qaRecordsLineCtx) {
+            try {
+                new Chart(qaRecordsLineCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxRotation: 0, autoSkip: true } },
+                            y: { beginAtZero: true, precision: 0 }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('qaRecordsLine failed:', err);
+            }
+        }
+
+        // Records by Type Doughnut (with ABS/% toggle - special pattern)
+        let rbtChart = null;
+        let rbtMode = 'abs';
+        try { rbtMode = localStorage.getItem('rbtMode') || 'abs'; } catch(e) {}
+        function renderRbt() {
+            const qaRecordsByTypeCtx = document.getElementById('qaRecordsByType')?.getContext('2d');
+            if (!qaRecordsByTypeCtx) return;
+            const labels = rbt.labels;
+            const values = rbt.data;
+            const total = values.reduce((a, b) => a + b, 0) || 1;
+            const data = (rbtMode === 'pct') ? values.map(v => +(v * 100 / total).toFixed(2)) : values;
+            if (rbtChart) rbtChart.destroy();
+            try {
+                rbtChart = new Chart(qaRecordsByTypeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const idx = ctx.dataIndex;
+                                        const raw = values[idx];
+                                        const pct = (raw * 100 / total).toFixed(2) + '%';
+                                        return labels[idx] + ': ' + (rbtMode === 'pct' ? pct : raw);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('qaRecordsByType failed:', err);
+            }
+            const toggle = document.getElementById('rbt-toggle');
+            if (toggle) toggle.textContent = (rbtMode === 'pct' ? '%' : 'ABS');
+        }
+        renderRbt();
+        const rbtToggle = document.getElementById('rbt-toggle');
+        if (rbtToggle) {
+            rbtToggle.addEventListener('click', function() {
+                rbtMode = (rbtMode === 'abs') ? 'pct' : 'abs';
+                try { localStorage.setItem('rbtMode', rbtMode); } catch(e) {}
+                renderRbt();
+            });
+        }
+
+        // Uploads by Folder grouped bar
+        const uploadsByFolderChartCtx = document.getElementById('uploadsByFolderChart')?.getContext('2d');
+        if (uploadsByFolderChartCtx) {
+            try {
+                new Chart(uploadsByFolderChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: fuLabels,
+                        datasets: [
+                            { label: 'Last 7d', data: fuLast7, backgroundColor: '#2563eb' },
+                            { label: 'Prev 7d', data: fuPrev7, backgroundColor: '#f97316' },
+                            { label: '8-30d', data: fuEarlier, backgroundColor: '#6b7280' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { x: { stacked: false }, y: { beginAtZero: true, precision: 0 } }
+                    }
+                });
+            } catch (err) {
+                console.error('uploadsByFolderChart failed:', err);
+            }
+        }
+
+        // Optional canvases (safe guards)
+        const recordsByCategoryChartCtx = document.getElementById('recordsByCategoryChart')?.getContext('2d');
+        if (recordsByCategoryChartCtx) {
+            new Chart(recordsByCategoryChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: catLabels,
+                    datasets: [
+                        { label: 'Last 7d', data: catLast7, backgroundColor: '#dc2626' },
+                        { label: 'Prev 7d', data: catPrev7, backgroundColor: '#f97316' },
+                        { label: '8-30d', data: catEarlier, backgroundColor: '#6b7280' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, precision: 0 } } }
+            });
+        }
+
+        const filesByFolderDonutCtx = document.getElementById('filesByFolderDonut')?.getContext('2d');
+        if (filesByFolderDonutCtx) {
+            new Chart(filesByFolderDonutCtx, {
+                type: 'doughnut',
+                data: { labels: ffLabels, datasets: [{ data: ffValues, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ef4444','#06b6d4','#84cc16'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        const dupLegBarCtx = document.getElementById('dupLegBar')?.getContext('2d');
+        if (dupLegBarCtx) {
+            new Chart(dupLegBarCtx, {
+                type: 'bar',
+                data: { labels: dupLegLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'ΓÇª' : s; }), datasets: [{ label: 'Count', data: dupLegCounts, backgroundColor: '#dc2626' }] },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, precision: 0 } } }
+            });
+        }
+
+        const dupFileBarCtx = document.getElementById('dupFileBar')?.getContext('2d');
+        if (dupFileBarCtx) {
+            new Chart(dupFileBarCtx, {
+                type: 'bar',
+                data: { labels: dupFileLabels.map(function(s){ return s.length>18 ? s.slice(0,18)+'ΓÇª' : s; }), datasets: [{ label: 'Count', data: dupFileCounts, backgroundColor: '#2563eb' }] },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, precision: 0 } } }
+            });
+        }
+
+        // Folder filter for recent uploads list
+        const fuFilter = document.getElementById('fu-filter');
+        if (fuFilter) {
+            fuFilter.addEventListener('change', function() {
+                const val = this.value || '';
+                const items = document.querySelectorAll('#fu-cards [data-folder]');
+                items.forEach(function(el) {
+                    const fld = el.getAttribute('data-folder') || '';
+                    el.style.display = (!val || fld === val) ? '' : 'none';
+                });
+            });
+        }
+        });
+        // #endregion
+    </script>
+    <script>
+        (function(){
+            var bar = document.getElementById('storage-usage-bar');
+            var modal = document.getElementById('storageDetailsModal');
+            var closeBtn = document.getElementById('storageDetailsClose');
+            bar && bar.addEventListener('click', function(){ modal && modal.classList.remove('hidden'); });
+            closeBtn && closeBtn.addEventListener('click', function(){ modal && modal.classList.add('hidden'); });
+            modal && modal.addEventListener('click', function(e){ if (e.target === modal) modal.classList.add('hidden'); });
+        })();
+    </script>
+    <script>
+        (function(){
+            var applyBtn = document.getElementById('qa-apply');
+            function applyFilters(){
+                var p = new URLSearchParams(window.location.search);
+                var from = document.getElementById('qa-from')?.value || '';
+                var to = document.getElementById('qa-to')?.value || '';
+                var type = document.getElementById('qa-type')?.value || '';
+                var event = document.getElementById('qa-event')?.value || '';
+                ['start','end','type','event'].forEach(function(k){ p.delete(k); });
+                if (from) p.set('start', from);
+                if (to) p.set('end', to);
+                if (type) p.set('type', type);
+                if (event) p.set('event', event);
+                var url = window.location.pathname + (p.toString() ? ('?'+p.toString()) : '');
+                window.location.assign(url);
+            }
+            applyBtn && applyBtn.addEventListener('click', applyFilters);
+        })();
+    </script>
+    <script>
+        // Shared storage API + unified updates (sidebar + dashboard)
+        (function initStorageSync() {
+            function fmtBytes(bytes) {
+                if (!isFinite(bytes) || bytes < 0) return '0 B';
+                const units = ['B','KB','MB','GB','TB'];
+                let idx = 0;
+                let val = bytes;
+                while (val >= 1024 && idx < units.length - 1) {
+                    val /= 1024;
+                    idx++;
+                }
+                return (Math.round(val * 10) / 10) + ' ' + units[idx];
+            }
+            function applyStorageData(data) {
+                if (!data || !data.success) return;
+                const pct = data.percentage ?? 0;
+                const usedText = data.usedText ?? '0 B';
+                const totalText = data.totalText ?? '50 GB';
+                const fileCount = data.fileCount ?? 0;
+                const usedBytes = data.bytes ?? 0;
+                const capacityBytes = data.capacityBytes ?? (50 * 1024 * 1024 * 1024);
+                const availableBytes = Math.max(0, capacityBytes - usedBytes);
+                const availableText = fmtBytes(availableBytes);
+
+                // Sidebar (mobile + desktop)
+                const mobileBar = document.getElementById('mobile-storage-bar');
+                const mobilePct = document.getElementById('mobile-storage-pct');
+                const mobileText = document.getElementById('mobile-storage-text');
+                const mobileFiles = document.getElementById('mobile-storage-files');
+                if (mobileBar) mobileBar.style.width = pct + '%';
+                if (mobilePct) mobilePct.textContent = pct + '%';
+                if (mobileText) mobileText.textContent = usedText + ' of ' + totalText;
+                if (mobileFiles) mobileFiles.textContent = fileCount + ' files tracked';
+
+                const desktopBar = document.getElementById('desktop-storage-bar');
+                const desktopPct = document.getElementById('desktop-storage-pct');
+                const desktopText = document.getElementById('desktop-storage-text');
+                const desktopFiles = document.getElementById('desktop-storage-files');
+                if (desktopBar) desktopBar.style.width = pct + '%';
+                if (desktopPct) desktopPct.textContent = pct + '%';
+                if (desktopText) desktopText.textContent = usedText + ' of ' + totalText;
+                if (desktopFiles) desktopFiles.textContent = fileCount + ' files tracked';
+
+                // Dashboard overview
+                const pctEl = document.getElementById('storagePercentage');
+                const usedEl = document.getElementById('storageUsed');
+                const totalEl = document.getElementById('storageTotal');
+                const statusEl = document.getElementById('storageStatus');
+                const detailUsed = document.getElementById('detailUsed');
+                const detailAvailable = document.getElementById('detailAvailable');
+                const detailTotal = document.getElementById('detailTotal');
+                const usedBar = document.getElementById('usedSpaceBar');
+                const availBar = document.getElementById('availableSpaceBar');
+                const donutProgress = document.getElementById('donutProgress');
+                const lastUpdate = document.getElementById('lastUpdateTime');
+
+                if (pctEl) pctEl.textContent = pct + '%';
+                if (usedEl) usedEl.textContent = usedText;
+                if (totalEl) totalEl.textContent = 'of ' + totalText;
+                if (detailUsed) detailUsed.textContent = usedText;
+                if (detailAvailable) detailAvailable.textContent = availableText;
+                if (detailTotal) detailTotal.textContent = totalText;
+                if (usedBar) usedBar.style.width = pct + '%';
+                if (availBar) availBar.style.width = Math.max(0, 100 - pct) + '%';
+                if (donutProgress) {
+                    const circumference = 565.48;
+                    const offset = circumference - (pct / 100) * circumference;
+                    donutProgress.style.strokeDashoffset = offset;
+                }
+                if (lastUpdate) lastUpdate.textContent = 'just now';
+
+                if (statusEl) {
+                    let status = 'Optimal';
+                    if (pct >= 90) status = 'Critical';
+                    else if (pct >= 75) status = 'Warning';
+                    statusEl.textContent = status;
+                }
+            }
+            function fetchStorageData() {
+                return fetch('archives-landing.php?action=get_storage_data')
+                    .then(res => res.json())
+                    .then(data => { applyStorageData(data); return data; })
+                    .catch(err => { console.warn('Storage update error:', err); });
+            }
+
+            window.fetchStorageData = fetchStorageData;
+            fetchStorageData();
+            setInterval(fetchStorageData, 60000);
+        })();
+
+        // Storage Overview Button Handlers & Skeleton Loading
+        (function initStorageOverview() {
+            const detailsBtn = document.getElementById('storage-details-btn');
+            const refreshBtn = document.getElementById('storage-refresh-btn');
+            const cleanupBtn = document.getElementById('storage-cleanup-btn');
+            const exportBtn = document.getElementById('storage-export-btn');
+            
+            // Details Button - Show storage breakdown toast
+            if (detailsBtn) {
+                detailsBtn.addEventListener('click', function() {
+                    const pct = document.getElementById('storagePercentage')?.textContent || '0%';
+                    const used = document.getElementById('storageUsed')?.textContent || '0 B';
+                    const status = document.getElementById('storageStatus')?.textContent || 'Optimal';
+                    
+                    // Create and show toast
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-lg shadow-xl max-w-sm transform transition-all duration-300 animate-pulse';
+                    toast.innerHTML = `
+                        <div class="font-semibold mb-2">Storage Details</div>
+                        <div class="text-sm space-y-1">
+                            <div>Usage: <span class="font-bold">${pct}</span></div>
+                            <div>Space Used: <span class="font-bold">${used}</span></div>
+                            <div>Status: <span class="font-bold">${status}</span></div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('animate-pulse');
+                        toast.classList.add('opacity-0', 'translate-y-4');
+                        setTimeout(() => toast.remove(), 300);
+                    }, 4000);
+                });
+            }
+            
+            // Refresh Button - Reload storage data with spinner
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    const originalHTML = refreshBtn.innerHTML;
+                    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise mr-1 animate-spin"></i>Refreshing...';
+                    refreshBtn.disabled = true;
+                    Promise.resolve(window.fetchStorageData && window.fetchStorageData())
+                        .then(function(){
+                            const successToast = document.createElement('div');
+                            successToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
+                            successToast.textContent = 'Γ£ô Storage data refreshed';
+                            document.body.appendChild(successToast);
+                            setTimeout(() => successToast.remove(), 3000);
+                        })
+                        .finally(function(){
+                            refreshBtn.innerHTML = originalHTML;
+                            refreshBtn.disabled = false;
+                        });
+                });
+            }
+            
+            // Cleanup Button - Show cleanup notification
+            if (cleanupBtn) {
+                cleanupBtn.addEventListener('click', function() {
+                    const btn = this;
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-arrow-repeat mr-2 animate-spin"></i>Cleaning...';
+                    btn.disabled = true;
+                    
+                    // Simulate cleanup process
+                    setTimeout(() => {
+                        const cleanupToast = document.createElement('div');
+                        cleanupToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-4 rounded-lg shadow-xl max-w-sm';
+                        cleanupToast.innerHTML = `
+                            <div class="font-semibold mb-2">≡ƒº╣ Cleanup Complete</div>
+                            <div class="text-sm">Temporary files cleaned. Refresh to see updated storage.</div>
+                        `;
+                        document.body.appendChild(cleanupToast);
+                        
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        
+                        setTimeout(() => cleanupToast.remove(), 4000);
+                    }, 1500);
+                });
+            }
+            
+            // Export Button - Generate and download report
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function() {
+                    const btn = this;
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-cloud-download mr-2 animate-bounce"></i>Generating...';
+                    btn.disabled = true;
+                    
+                    const pct = document.getElementById('storagePercentage')?.textContent || '0%';
+                    const used = document.getElementById('storageUsed')?.textContent || '0 B';
+                    const timestamp = new Date().toLocaleString();
+                    
+                    // Generate CSV report
+                    const reportContent = `Storage Analysis Report
+Generated: ${timestamp}
+
+SUMMARY
+Storage Percentage: ${pct}
+Storage Used: ${used}
+Total Capacity: 50 GB
+Status: ${document.getElementById('storageStatus')?.textContent}
+
+This is an automatically generated storage analysis report.
+For detailed information, visit the Storage Overview dashboard.`;
+                    
+                    // Create download
+                    setTimeout(() => {
+                        const blob = new Blob([reportContent], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `storage-report-${new Date().toISOString().split('T')[0]}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                        
+                        const exportToast = document.createElement('div');
+                        exportToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
+                        exportToast.innerHTML = 'Γ£ô Report downloaded successfully';
+                        document.body.appendChild(exportToast);
+                        
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        
+                        setTimeout(() => exportToast.remove(), 3000);
+                    }, 1200);
+                });
+            }
+        })();
+    </script>
+    <script>
+        (function() {
+            var input = document.getElementById('legislativeSearchInput');
+            var button = document.getElementById('legislativeSearchBtn');
+            var clearBtn = document.getElementById('clearSearchBtn');
+            var searchPopup = document.getElementById('searchPopup');
+            var recentSearchesList = document.getElementById('recentSearchesList');
+            var clearRecentBtn = document.getElementById('clearRecentBtn');
+            var searchResultsPanel = document.getElementById('searchResultsPanel');
+            var searchEmptyState = document.getElementById('searchEmptyState');
+            var searchResultsCount = document.getElementById('searchResultsCount');
+            var searchResultsList = document.getElementById('searchResultsList');
+            var searchRelated = document.getElementById('searchRelated');
+            var searchRelatedChips = document.getElementById('searchRelatedChips');
+            var filterButtons = document.querySelectorAll('.search-filter-chip');
+            var sortSelect = document.getElementById('searchSortSelect');
+            var activeFilters = [];
+            var recentStorageKey = 'archivesRecentSearches';
+
+            function getRecentSearches() {
+                try {
+                    var raw = localStorage.getItem(recentStorageKey) || '[]';
+                    var parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveRecentSearch(term) {
+                if (!term) return;
+                var searches = getRecentSearches().filter(function(item) { return item !== term; });
+                searches.unshift(term);
+                searches = searches.slice(0, 5);
+                try { localStorage.setItem(recentStorageKey, JSON.stringify(searches)); } catch(e) {}
+                renderRecentSearches();
+            }
+
+            function clearRecentSearches() {
+                try { localStorage.removeItem(recentStorageKey); } catch(e) {}
+                renderRecentSearches();
+            }
+
+            function renderRecentSearches() {
+                if (!recentSearchesList) return;
+                var searches = getRecentSearches();
+                recentSearchesList.innerHTML = '';
+                if (searches.length === 0) {
+                    recentSearchesList.innerHTML = '<span class="text-sm text-gray-500 dark:text-gray-400">No recent searches yet.</span>';
+                    return;
+                }
+                searches.forEach(function(term) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors';
+                    btn.textContent = term;
+                    btn.addEventListener('click', function() {
+                        if (input) {
+                            input.value = term;
+                            performSearch(term);
+                        }
+                    });
+                    recentSearchesList.appendChild(btn);
+                });
+            }
+
+            function getSelectedFilters() {
+                return activeFilters.slice();
+            }
+
+            function updateFilterUI() {
+                filterButtons.forEach(function(button) {
+                    var filter = button.getAttribute('data-filter');
+                    if (activeFilters.indexOf(filter) >= 0) {
+                        button.classList.add('bg-red-600', 'text-white');
+                        button.classList.remove('bg-gray-100', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-gray-200');
+                    } else {
+                        button.classList.remove('bg-red-600', 'text-white');
+                        button.classList.add('bg-gray-100', 'dark:bg-slate-700', 'text-gray-700', 'dark:text-gray-200');
+                    }
+                });
+            }
+
+            function toggleFilter(filter) {
+                var index = activeFilters.indexOf(filter);
+                if (index >= 0) {
+                    activeFilters.splice(index, 1);
+                } else {
+                    activeFilters.push(filter);
+                }
+                updateFilterUI();
+            }
+
+            function showPopup() {
+                if (searchPopup) searchPopup.classList.remove('hidden');
+            }
+
+            function hidePopup() {
+                if (searchPopup) searchPopup.classList.add('hidden');
+            }
+
+            function toggleResultState(showResults) {
+                if (!searchResultsPanel || !searchEmptyState) return;
+                if (showResults) {
+                    searchResultsPanel.classList.remove('hidden');
+                    searchEmptyState.classList.add('hidden');
+                } else {
+                    searchResultsPanel.classList.add('hidden');
+                    searchEmptyState.classList.remove('hidden');
+                }
+            }
+
+            function renderRelated(items) {
+                if (!searchRelated || !searchRelatedChips) return;
+                searchRelatedChips.innerHTML = '';
+                if (!Array.isArray(items) || items.length === 0) {
+                    searchRelated.classList.add('hidden');
+                    return;
+                }
+                searchRelated.classList.remove('hidden');
+                items.slice(0, 6).forEach(function(item) {
+                    var chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors';
+                    chip.textContent = item.label;
+                    chip.addEventListener('click', function() {
+                        if (input) {
+                            input.value = item.query || item.label;
+                            performSearch(input.value.trim());
+                        }
+                    });
+                    searchRelatedChips.appendChild(chip);
+                });
+            }
+
+            function normalizeDate(item) {
+                if (item.created_at) {
+                    return new Date(item.created_at).getTime() || 0;
+                }
+                if (item.year) {
+                    var month = item.month ? new Date(item.month + ' 1, ' + item.year).getTime() : 0;
+                    return month || (item.year * 1000);
+                }
+                return 0;
+            }
+
+            function sortEntries(entries, term) {
+                var mode = sortSelect ? sortSelect.value : 'relevance';
+                if (mode === 'newest' || mode === 'date') {
+                    return entries.slice().sort(function(a, b) {
+                        return normalizeDate(b) - normalizeDate(a);
+                    });
+                }
+                return entries.slice().sort(function(a, b) {
+                    var titleA = (a.title || '').toLowerCase();
+                    var titleB = (b.title || '').toLowerCase();
+                    var termLower = term.toLowerCase();
+                    var score = function(item) {
+                        var value = (item.title || '').toLowerCase();
+                        if (value === termLower) return 3;
+                        if (value.startsWith(termLower)) return 2;
+                        if (value.includes(termLower)) return 1;
+                        return 0;
+                    };
+                    return score(b) - score(a);
+                });
+            }
+
+            function buildResultLink(item) {
+                if (item.source === 'legislative' && item.folder_id) {
+                    return 'folder_view.php?id=' + encodeURIComponent(item.folder_id) + '&legislative=true&highlight=' + encodeURIComponent(item.id);
+                }
+                if (item.kind === 'folder') {
+                    return 'folder_view.php?id=' + encodeURIComponent(item.id);
+                }
+                if (item.kind === 'file' && item.folder_id) {
+                    return 'folder_view.php?id=' + encodeURIComponent(item.folder_id) + '&highlight=' + encodeURIComponent(item.id);
+                }
+                return '#';
+            }
+
+            function renderSearchResults(data, term) {
+                if (!searchResultsList || !searchResultsCount) return;
+                var entries = Array.isArray(data.results) ? data.results : [];
+                entries = sortEntries(entries, term);
+                searchResultsList.innerHTML = '';
+                if (entries.length === 0) {
+                    searchResultsCount.textContent = 'No results found';
+                    toggleResultState(false);
+                    renderRelated(data.related || []);
+                    return;
+                }
+                searchResultsCount.textContent = entries.length + ' results found';
+                toggleResultState(true);
+                entries.slice(0, 15).forEach(function(item) {
+                    var meta = [];
+                    if (item.source === 'legislative') {
+                        if (item.author) meta.push(item.author);
+                        if (item.month && item.year) meta.push(item.month + ' ' + item.year);
+                        else if (item.year) meta.push(item.year);
+                    } else if (item.source === 'archive') {
+                        if (item.type) meta.push(item.type);
+                        if (item.folder_name) meta.push('Folder: ' + item.folder_name);
+                    }
+                    var link = buildResultLink(item);
+                    var anchor = document.createElement('a');
+                    anchor.href = link;
+                    anchor.className = 'block rounded-2xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-3 transition hover:shadow-md';
+                    anchor.innerHTML = '<div class="flex items-start justify-between gap-3">' +
+                                       '<div class="min-w-0">' +
+                                       '<p class="text-sm font-semibold text-gray-900 dark:text-white truncate">' + (item.title || 'Untitled') + '</p>' +
+                                       '<p class="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">' + (meta.filter(Boolean).join(' ΓÇó ') || item.type || item.source || '') + '</p>' +
+                                       '</div>' +
+                                       '<span class="whitespace-nowrap rounded-full bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-200 px-2 py-1 text-[10px] uppercase tracking-[0.18em] font-semibold">' + (item.type || item.source || '').toUpperCase() + '</span>' +
+                                       '</div>';
+                    searchResultsList.appendChild(anchor);
+                });
+                renderRelated(data.related || []);
+            }
+
+            function performSearch(term) {
+                if (!input || !button) return;
+                if (!term) {
+                    input.focus();
+                    return;
+                }
+                addSearchTerm(term);
+                showPopup();
+                toggleResultState(true);
+                if (searchResultsCount) searchResultsCount.textContent = 'Searching...';
+                if (searchResultsList) searchResultsList.innerHTML = '<div class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Loading resultsΓÇª</div>';
+                var data = 'search=' + encodeURIComponent(term) + '&filters=' + encodeURIComponent(JSON.stringify(getSelectedFilters()));
+                fetch('search_records.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: data
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        if (searchResultsCount) searchResultsCount.textContent = 'Search failed';
+                        if (searchResultsList) searchResultsList.innerHTML = '<div class="py-6 text-center text-sm text-red-600 dark:text-red-400">Unable to fetch results.</div>';
+                        renderRelated([]);
+                        return;
+                    }
+                    renderSearchResults(data, term);
+                })
+                .catch(function() {
+                    if (searchResultsCount) searchResultsCount.textContent = 'Search error';
+                    if (searchResultsList) searchResultsList.innerHTML = '<div class="py-6 text-center text-sm text-red-600 dark:text-red-400">Network error. Try again.</div>';
+                    renderRelated([]);
+                });
+            }
+
+            function addSearchTerm(term) {
+                saveRecentSearch(term);
+            }
+
+            if (button && input) {
+                button.addEventListener('click', function() {
+                    performSearch(input.value.trim());
+                });
+            }
+
+            if (input) {
+                input.addEventListener('focus', function() {
+                    renderRecentSearches();
+                    showPopup();
+                    toggleResultState(false);
+                });
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        performSearch(input.value.trim());
+                    }
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    if (input) input.value = '';
+                    toggleResultState(false);
+                    renderRecentSearches();
+                });
+            }
+
+            if (clearRecentBtn) {
+                clearRecentBtn.addEventListener('click', function() {
+                    clearRecentSearches();
+                });
+            }
+
+            filterButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var filter = button.getAttribute('data-filter');
+                    toggleFilter(filter);
+                });
+            });
+
+            if (sortSelect) {
+                sortSelect.addEventListener('change', function() {
+                    if (input && input.value.trim()) {
+                        performSearch(input.value.trim());
+                    }
+                });
+            }
+
+            document.addEventListener('click', function(event) {
+                if (!searchPopup || !input) return;
+                if (searchPopup.contains(event.target) || event.target === input || event.target === button) return;
+                hidePopup();
+            });
+
+            renderRecentSearches();
+            updateFilterUI();
+        })();
+    </script>
+    <script>
+        (function() {
+            var toggleBtn = document.getElementById('latest-files-toggle');
+            var list = document.getElementById('latestFilesList');
+            var txt = document.getElementById('latest-files-toggle-text');
+            var icon = document.getElementById('latest-files-toggle-icon');
+            if (!toggleBtn || !list || !txt || !icon) return;
+
+            function setExpanded(expanded) {
+                list.classList.toggle('hidden', !expanded);
+                toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                txt.textContent = expanded ? 'Hide List' : 'Show List';
+                icon.className = expanded ? 'bi bi-chevron-up text-xs' : 'bi bi-chevron-down text-xs';
+            }
+
+            setExpanded(true);
+            toggleBtn.addEventListener('click', function() {
+                var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+                setExpanded(!expanded);
+            });
+        })();
+    </script>
+</body>
+</html>
