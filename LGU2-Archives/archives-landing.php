@@ -1475,7 +1475,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 });
             });
         }
-        });
         // #endregion
     </script>
     <script>
