@@ -21,6 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         $confirm = $_POST['confirm_password'] ?? '';
+        $zipPassword = trim((string)($_POST['zip_password'] ?? ''));
+        $zipPasswordConfirm = trim((string)($_POST['zip_password_confirm'] ?? ''));
         $uid = (int)$_SESSION['user_id'];
         $ok = false;
         if ($confirm !== '') {
@@ -38,7 +40,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$ok) {
             http_response_code(403);
             header('Content-Type: text/html; charset=UTF-8');
-            echo '<!doctype html><html><head><meta charset="utf-8"><title>Export</title><style>body{font-family:Arial;padding:24px;color:#222}</style></head><body><h3>Export Blocked</h3><p>Invalid password. Please try again.</p></body></html>';
+            echo '<!doctype html><html><head><meta charset="utf-8"><title>Export</title><style>body{font-family:Arial;padding:24px;color:#222}</style></head><body><h3>Export Blocked</h3><p>Invalid account password. Use the same password you use to log in.</p></body></html>';
+            $conn->close();
+            exit();
+        }
+        if ($zipPassword === '' || strlen($zipPassword) < 4) {
+            http_response_code(400);
+            header('Content-Type: text/html; charset=UTF-8');
+            echo '<!doctype html><html><head><meta charset="utf-8"><title>Export</title><style>body{font-family:Arial;padding:24px;color:#222}</style></head><body><h3>Export Blocked</h3><p>ZIP password is required and must be at least 4 characters.</p></body></html>';
+            $conn->close();
+            exit();
+        }
+        if ($zipPassword !== $zipPasswordConfirm) {
+            http_response_code(400);
+            header('Content-Type: text/html; charset=UTF-8');
+            echo '<!doctype html><html><head><meta charset="utf-8"><title>Export</title><style>body{font-family:Arial;padding:24px;color:#222}</style></head><body><h3>Export Blocked</h3><p>ZIP passwords do not match. Please try again.</p></body></html>';
             $conn->close();
             exit();
         }
@@ -72,6 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->close();
             exit();
         }
+        $zip->setPassword($zipPassword);
+        $zipEncryptMethod = defined('ZipArchive::EM_AES_256') ? ZipArchive::EM_AES_256 : (defined('ZipArchive::EM_AES_128') ? ZipArchive::EM_AES_128 : null);
+        $addEncryptedFile = function($disk, $entry) use ($zip, $zipEncryptMethod) {
+            $zip->addFile($disk, $entry);
+            if ($zipEncryptMethod !== null && method_exists($zip, 'setEncryptionName')) {
+                $zip->setEncryptionName($entry, $zipEncryptMethod);
+            }
+        };
         $root = realpath(__DIR__);
         $safe = function($s){ $s = preg_replace('/[^a-zA-Z0-9\\-_ ]/', '_', (string)$s); return trim($s) !== '' ? $s : 'Unknown'; };
         $leg = $conn->prepare("SELECT title, type, file_path, created_at FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ?");
@@ -86,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($disk && strpos($disk, $root) === 0 && is_file($disk)) {
                     $base = basename($disk);
                     $entry = $year . '/' . $type . '/' . $base;
-                    $zip->addFile($disk, $entry);
+                    $addEncryptedFile($disk, $entry);
                 }
             }
             $leg->close();
@@ -103,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($disk && strpos($disk, $root) === 0 && is_file($disk)) {
                     $base = basename($disk);
                     $entry = $year . '/Archives/' . $folder . '/' . $base;
-                    $zip->addFile($disk, $entry);
+                    $addEncryptedFile($disk, $entry);
                 }
             }
             $arc->close();
@@ -778,6 +802,8 @@ if (isset($_SESSION['user_id'])) {
                                 <input type="hidden" name="action" value="export_year_zip">
                                 <input type="hidden" name="year" id="year-export-input" value="">
                                 <input type="hidden" name="confirm_password" id="year-export-pass" value="">
+                                <input type="hidden" name="zip_password" id="year-export-zip-pass" value="">
+                                <input type="hidden" name="zip_password_confirm" id="year-export-zip-pass-confirm" value="">
                             </form>
                         </div>
                         <div id="yearly-archives-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
@@ -791,7 +817,26 @@ if (isset($_SESSION['user_id'])) {
                                     <div class="text-sm text-gray-600 dark:text-gray-400">Enter your password to continue.</div>
                                 </div>
                                 <div class="space-y-3">
-                                    <input type="password" id="year-export-password-input" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="Password" />
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">Enter your account password and provide the ZIP password for the export.</div>
+                                    <div id="year-export-zip-mode-text" class="text-xs text-gray-500 dark:text-gray-400">First time? Create a ZIP password below.</div>
+                                    <div class="relative">
+                                        <input type="password" id="year-export-password-input" class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="Account password" />
+                                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" data-toggle-password="year-export-password-input" aria-label="Show account password">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="relative">
+                                        <input type="password" id="year-export-zip-password-input" class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="Create ZIP password (min 4 chars)" />
+                                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" data-toggle-password="year-export-zip-password-input" aria-label="Show ZIP password">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div id="year-export-zip-confirm-wrap" class="relative">
+                                        <input type="password" id="year-export-zip-password-confirm-input" class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="Confirm ZIP password" />
+                                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" data-toggle-password="year-export-zip-password-confirm-input" aria-label="Show ZIP confirmation password">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
                                     <div class="flex justify-end gap-2 pt-2">
                                         <button type="button" id="year-export-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
                                         <button type="button" id="year-export-confirm" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export</button>
@@ -1732,14 +1777,54 @@ if (isset($_SESSION['user_id'])) {
         (function(){
             var modal = document.getElementById('year-export-modal');
             var passInput = document.getElementById('year-export-password-input');
+            var zipPassInput = document.getElementById('year-export-zip-password-input');
+            var zipPassConfirmInput = document.getElementById('year-export-zip-password-confirm-input');
+            var zipConfirmWrap = document.getElementById('year-export-zip-confirm-wrap');
+            var zipModeText = document.getElementById('year-export-zip-mode-text');
             var passField = document.getElementById('year-export-pass');
+            var zipPassField = document.getElementById('year-export-zip-pass');
+            var zipPassConfirmField = document.getElementById('year-export-zip-pass-confirm');
             var yearField = document.getElementById('year-export-input');
             var confirmBtn = document.getElementById('year-export-confirm');
             var cancelBtn = document.getElementById('year-export-cancel');
             var pendingYear = '';
+            var ZIP_STORAGE_KEY = 'year_export_zip_password';
+            function showExportError(message){
+                if (typeof showToast === 'function') {
+                    try { showToast(message, 'error'); } catch (e) { alert(message); }
+                } else {
+                    alert(message);
+                }
+            }
+            function getSavedZipPassword(){
+                try { return localStorage.getItem(ZIP_STORAGE_KEY) || ''; } catch (e) { return ''; }
+            }
+            function setSavedZipPassword(value){
+                try { if (value) localStorage.setItem(ZIP_STORAGE_KEY, value); else localStorage.removeItem(ZIP_STORAGE_KEY); } catch (e) {}
+            }
+            function updateZipMode(){
+                var saved = getSavedZipPassword();
+                var hasSaved = !!saved;
+                if (zipModeText) {
+                    zipModeText.textContent = hasSaved ? 'Using your saved ZIP password. Enter it again to continue.' : 'First time? Create a ZIP password below.';
+                }
+                if (zipConfirmWrap) {
+                    zipConfirmWrap.style.display = hasSaved ? 'none' : '';
+                }
+                if (zipPassConfirmInput) {
+                    zipPassConfirmInput.value = '';
+                }
+                if (zipPassInput) {
+                    zipPassInput.value = '';
+                    zipPassInput.placeholder = hasSaved ? 'ZIP password' : 'Create ZIP password (min 4 chars)';
+                }
+            }
             window.openYearExport = function(y){
                 pendingYear = y;
                 passInput && (passInput.value = '');
+                zipPassInput && (zipPassInput.value = '');
+                zipPassConfirmInput && (zipPassConfirmInput.value = '');
+                updateZipMode();
                 modal && modal.classList.remove('hidden');
                 setTimeout(function(){ passInput && passInput.focus(); }, 50);
             };
@@ -1748,11 +1833,47 @@ if (isset($_SESSION['user_id'])) {
                 pendingYear = '';
             }
             cancelBtn && cancelBtn.addEventListener('click', closeModal);
+            document.querySelectorAll('[data-toggle-password]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    var targetId = btn.getAttribute('data-toggle-password');
+                    var input = targetId ? document.getElementById(targetId) : null;
+                    if (!input) return;
+                    var showing = input.type === 'text';
+                    input.type = showing ? 'password' : 'text';
+                    var icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.className = showing ? 'bi bi-eye' : 'bi bi-eye-slash';
+                    }
+                    btn.setAttribute('aria-label', showing ? 'Show ' + (targetId === 'year-export-password-input' ? 'account password' : targetId === 'year-export-zip-password-input' ? 'ZIP password' : 'ZIP confirmation password') : 'Hide ' + (targetId === 'year-export-password-input' ? 'account password' : targetId === 'year-export-zip-password-input' ? 'ZIP password' : 'ZIP confirmation password'));
+                });
+            });
             confirmBtn && confirmBtn.addEventListener('click', function(){
                 var p = passInput ? passInput.value : '';
-                if (!p || !pendingYear) return;
+                var zipP = zipPassInput ? zipPassInput.value : '';
+                var zipPC = zipPassConfirmInput ? zipPassConfirmInput.value : '';
+                var saved = getSavedZipPassword();
+                if (!p || !pendingYear) {
+                    showExportError('Please enter your account password and select a year.');
+                    return;
+                }
+                if (!zipP || zipP.length < 4) {
+                    showExportError('ZIP password must be at least 4 characters.');
+                    return;
+                }
+                if (!saved) {
+                    if (!zipPC || zipP !== zipPC) {
+                        showExportError('ZIP passwords do not match.');
+                        return;
+                    }
+                    setSavedZipPassword(zipP);
+                } else if (saved && zipP !== saved) {
+                    showExportError('The ZIP password does not match your saved password.');
+                    return;
+                }
                 if (yearField) yearField.value = pendingYear;
                 if (passField) passField.value = p;
+                if (zipPassField) zipPassField.value = zipP;
+                if (zipPassConfirmField) zipPassConfirmField.value = zipP;
                 var form = document.getElementById('year-export-form');
                 if (form) {
                     if (typeof showToast === 'function') { try { showToast('Starting export for '+pendingYear, 'success'); } catch(e){} }
