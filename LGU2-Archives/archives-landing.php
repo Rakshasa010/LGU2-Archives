@@ -380,33 +380,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                     </div>
-<!-- Storage Overview Section -->
-                    <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 items-start mb-6">
-                        <aside class="w-full xl:order-2">
-                            <div class="space-y-4 xl:sticky xl:top-6">
-                                <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h3 class="font-semibold text-gray-800 dark:text-gray-100">Latest Archive Files Visit</h3>
-                                        <button id="latest-files-toggle" type="button"
-                                            class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
-                                            aria-expanded="true" aria-controls="latestFilesList">
-                                            <span id="latest-files-toggle-text">Hide</span>
-                                            <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-[10px]"></i>
-                                        </button>
-                                    </div>
-                                    <div id="latestFilesList" class="space-y-2">
-                                        <div id="latest-files-loading" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                                            <i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>
-                                            Loading recent files…
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </aside>
-
-                        <div class="w-full">
+<!-- Quick Reports & Analytics Section -->
                     <!-- Quick Reports & Analytics (matches report_analytics.php lines 651-791 outer structure exactly) -->
-                    <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6 mt-2 mb-6">
+                    <div class="card bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 p-4 sm:p-6 mb-6">
                         <?php
                         $fa_start = isset($_GET['start']) ? $_GET['start'] : null;
                         $fa_end = isset($_GET['end']) ? $_GET['end'] : null;
@@ -612,134 +588,133 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6 items-start">
                         <!-- Main Search Section -->
-                        <div class="w-full">
-                            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
-                                <!-- Search Header -->
-                                <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                                            <i class="bi bi-search text-red-600 dark:text-red-400 text-lg"></i>
+                        <div class="w-full xl:order-2">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+                            <!-- Search Header -->
+                            <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                        <i class="bi bi-search text-red-600 dark:text-red-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Advanced Search</h2>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Find documents across all archives</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Search Content -->
+                            <div class="p-6">
+                                <!-- Search Input -->
+                                <div class="relative mb-6">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input type="text" id="legislativeSearchInput" 
+                                           class="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200" 
+                                           placeholder="Search archives, ordinances, hearings, sessions, authors..."
+                                           autocomplete="off">
+                                    <button id="legislativeSearchBtn" 
+                                            class="absolute right-2 top-2 bottom-2 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg">
+                                        Search
+                                    </button>
+                                </div>
+
+                                <!-- Filter Chips -->
+                                <div class="mb-6">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button type="button" data-filter="legislative" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                <i class="bi bi-file-text mr-2"></i>Legislative
+                                            </button>
+                                            <button type="button" data-filter="archive_files" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                <i class="bi bi-file-earmark mr-2"></i>Archive Files
+                                            </button>
+                                            <button type="button" data-filter="folders" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                <i class="bi bi-folder mr-2"></i>Folders
+                                            </button>
+                                            <button type="button" data-filter="authors" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
+                                                <i class="bi bi-person mr-2"></i>Authors
+                                            </button>
                                         </div>
-                                        <div>
-                                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Advanced Search</h2>
-                                            <p class="text-sm text-gray-600 dark:text-gray-400">Find documents across all archives</p>
+                                    </div>
+                                    
+                                    <!-- Sort Options -->
+                                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                                        <div class="flex items-center gap-3">
+                                            <label for="searchSortSelect" class="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</label>
+                                            <select id="searchSortSelect" class="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                                <option value="relevance">Relevance</option>
+                                                <option value="newest">Newest first</option>
+                                                <option value="date">Date</option>
+                                            </select>
+                                        </div>
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            <i class="bi bi-info-circle mr-1"></i>
+                                            <span id="searchResultCount">Ready to search</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Search Content -->
-                                <div class="p-6">
-                                    <!-- Search Input -->
-                                    <div class="relative mb-6">
-                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
-                                        <input type="text" id="legislativeSearchInput" 
-                                               class="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200" 
-                                               placeholder="Search archives, ordinances, hearings, sessions, authors..."
-                                               autocomplete="off">
-                                        <button id="legislativeSearchBtn" 
-                                                class="absolute right-2 top-2 bottom-2 px-6 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg">
-                                            Search
-                                        </button>
-                                    </div>
-
-                                    <!-- Filter Chips -->
-                                    <div class="mb-6">
-                                        <div class="flex flex-wrap items-center gap-3">
-                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
-                                            <div class="flex flex-wrap gap-2">
-                                                <button type="button" data-filter="legislative" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
-                                                    <i class="bi bi-file-text mr-2"></i>Legislative
-                                                </button>
-                                                <button type="button" data-filter="archive_files" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
-                                                    <i class="bi bi-file-earmark mr-2"></i>Archive Files
-                                                </button>
-                                                <button type="button" data-filter="folders" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
-                                                    <i class="bi bi-folder mr-2"></i>Folders
-                                                </button>
-                                                <button type="button" data-filter="authors" class="search-filter-chip px-4 py-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-all duration-200 border border-gray-200 dark:border-slate-600">
-                                                    <i class="bi bi-person mr-2"></i>Authors
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Sort Options -->
-                                        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
-                                            <div class="flex items-center gap-3">
-                                                <label for="searchSortSelect" class="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</label>
-                                                <select id="searchSortSelect" class="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500">
-                                                    <option value="relevance">Relevance</option>
-                                                    <option value="newest">Newest first</option>
-                                                    <option value="date">Date</option>
-                                                </select>
-                                            </div>
-                                            <div class="text-sm text-gray-500 dark:text-gray-400">
-                                                <i class="bi bi-info-circle mr-1"></i>
-                                                <span id="searchResultCount">Ready to search</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Search Results Section -->
-                                    <div class="relative">
-                                        <div id="searchPopup" class="hidden mt-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden">
-                                            <div class="p-6">
-                                                <!-- Recent Searches -->
-                                                <div class="mb-6">
-                                                    <div class="flex items-center justify-between mb-3">
-                                                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                                            <i class="bi bi-clock-history text-gray-500"></i>
-                                                            Recent searches
-                                                        </h3>
-                                                        <button id="clearRecentBtn" type="button" class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">
-                                                            Clear all
-                                                        </button>
-                                                    </div>
-                                                    <div id="recentSearchesList" class="flex flex-wrap gap-2"></div>
+                                <!-- Search Results Section -->
+                                <div class="relative">
+                                    <div id="searchPopup" class="hidden mt-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden">
+                                        <div class="p-6">
+                                            <!-- Recent Searches -->
+                                            <div class="mb-6">
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                        <i class="bi bi-clock-history text-gray-500"></i>
+                                                        Recent searches
+                                                    </h3>
+                                                    <button id="clearRecentBtn" type="button" class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">
+                                                        Clear all
+                                                    </button>
                                                 </div>
+                                                <div id="recentSearchesList" class="flex flex-wrap gap-2"></div>
+                                            </div>
 
-                                                <!-- Search Results -->
-                                                <div id="searchResultsPanel" class="hidden">
-                                                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-slate-600">
-                                                        <div>
-                                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="searchResultsCount">0 results found</h3>
-                                                            <p class="text-sm text-gray-600 dark:text-gray-400" id="searchResultsSubtitle">Showing filtered archive matches</p>
-                                                        </div>
-                                                        <button id="clearSearchBtn" type="button" class="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                                                            Clear search
-                                                        </button>
+                                            <!-- Search Results -->
+                                            <div id="searchResultsPanel" class="hidden">
+                                                <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-slate-600">
+                                                    <div>
+                                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="searchResultsCount">0 results found</h3>
+                                                        <p class="text-sm text-gray-600 dark:text-gray-400" id="searchResultsSubtitle">Showing filtered archive matches</p>
                                                     </div>
-                                                    <div id="searchResultsList" class="space-y-3 max-h-96 overflow-y-auto"></div>
-                                                    
-                                                    <!-- Related Topics -->
-                                                    <div id="searchRelated" class="hidden mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
-                                                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Related topics</h4>
-                                                        <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
-                                                    </div>
+                                                    <button id="clearSearchBtn" type="button" class="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                        Clear search
+                                                    </button>
                                                 </div>
+                                                <div id="searchResultsList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                                                
+                                                <!-- Related Topics -->
+                                                <div id="searchRelated" class="hidden mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
+                                                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Related topics</h4>
+                                                    <div id="searchRelatedChips" class="flex flex-wrap gap-2"></div>
+                                                </div>
+                                            </div>
 
-                                                <!-- Empty State -->
-                                                <div id="searchEmptyState" class="text-center py-8">
-                                                    <div class="w-16 h-16 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                        <i class="bi bi-search text-2xl text-gray-500 dark:text-gray-400"></i>
-                                                    </div>
-                                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Search Document Archives</h3>
-                                                    <p class="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">Start typing to find ordinances, folders, archive files, or authors. Results will appear here.</p>
+                                            <!-- Empty State -->
+                                            <div id="searchEmptyState" class="text-center py-8">
+                                                <div class="w-16 h-16 bg-gray-200 dark:bg-slate-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <i class="bi bi-search text-2xl text-gray-500 dark:text-gray-400"></i>
                                                 </div>
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Search Document Archives</h3>
+                                                <p class="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">Start typing to find ordinances, folders, archive files, or authors. Results will appear here.</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                    </div>
-                </div>
-            </div>
-
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden mb-6">
+                        </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-1">
                         <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -829,10 +804,12 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
 
-                    <!-- Analytics Overview Section (exact same structure as report_analytics.php lines 793-816) -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+
+                    <!-- Analytics Overview Section: 3 charts side by side in one row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Storage Usage (Last 7 Days)</h3>
@@ -849,6 +826,33 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                             <div class="relative w-full h-64 md:h-72 flex justify-center">
                                 <canvas id="filesBySourceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Last 30 days</span>
+                            </div>
+                            <div class="relative w-full h-64 md:h-72">
+                                <canvas id="uploadsByFolderChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold text-gray-800 dark:text-gray-100">Latest Archive Files Visit</h3>
+                            <button id="latest-files-toggle" type="button"
+                                class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
+                                aria-expanded="true" aria-controls="latestFilesList">
+                                <span id="latest-files-toggle-text">Hide</span>
+                                <i id="latest-files-toggle-icon" class="bi bi-chevron-up text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div id="latestFilesList" class="space-y-2">
+                            <div id="latest-files-loading" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>
+                                Loading recent files…
                             </div>
                         </div>
                     </div>
@@ -885,68 +889,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         </div>
     </div>
     
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Uploads by Folder</h3>
-                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">Last 30 days</span>
-                            </div>
-                            <div class="relative w-full h-64 md:h-72">
-                                <canvas id="uploadsByFolderChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Uploads</h3>
-                                <a href="storage.php" class="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
-                                    View All <i class="bi bi-arrow-right ml-1 text-[10px]"></i>
-                                </a>
-                            </div>
-                            <div class="mb-3">
-                                <select id="fu-filter" class="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                    <option value="">All Folders</option>
-                                    <?php foreach ($uploads_labels as $lab): ?>
-                                        <option value="<?php echo htmlspecialchars($lab); ?>"><?php echo htmlspecialchars($lab); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div id="fu-cards" class="flex flex-col gap-2 max-h-72 md:max-h-80 overflow-y-auto pr-1">
-                                <?php foreach ($recent_uploads as $u): ?>
-                                    <?php
-                                    $link = 'folder_view.php?id=' . urlencode($u['folder_id']);
-                                    if (($u['src'] ?? '') === 'legislative') $link .= '&legislative=true';
-                                    ?>
-                                    <a href="<?php echo htmlspecialchars($link); ?>" data-folder="<?php echo htmlspecialchars($u['folder_name']); ?>"
-                                       class="group block p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all duration-200">
-                                        <div class="flex items-center justify-between">
-                                            <div class="min-w-0 flex-1">
-                                                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate"><?php echo htmlspecialchars($u['name']); ?></div>
-                                                <div class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                                                    <span class="inline-flex items-center gap-1">
-                                                        <i class="bi bi-folder2 text-[10px]"></i><?php echo htmlspecialchars($u['folder_name']); ?>
-                                                    </span>
-                                                    <span class="mx-1.5">•</span>
-                                                    <span class="inline-flex items-center gap-1">
-                                                        <i class="bi bi-calendar3 text-[10px]"></i><?php echo htmlspecialchars(date('M j, Y g:i A', strtotime($u['created_at']))); ?>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="ml-3 flex-shrink-0 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors">
-                                                <i class="bi bi-chevron-right text-base"></i>
-                                            </div>
-                                        </div>
-                                    </a>
-                                <?php endforeach; ?>
-                                <?php if (empty($recent_uploads)): ?>
-                                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                                        <i class="bi bi-inbox text-3xl mb-2 opacity-50"></i>
-                                        <p class="text-sm">No uploads yet.</p>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
             </main>
         <?php include 'includes/footer.php'; ?>
         </div>
@@ -1525,18 +1467,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             });
         }
 
-        // Folder filter for recent uploads list
-        const fuFilter = document.getElementById('fu-filter');
-        if (fuFilter) {
-            fuFilter.addEventListener('change', function() {
-                const val = this.value || '';
-                const items = document.querySelectorAll('#fu-cards [data-folder]');
-                items.forEach(function(el) {
-                    const fld = el.getAttribute('data-folder') || '';
-                    el.style.display = (!val || fld === val) ? '' : 'none';
-                });
-            });
-        }
         window.__dbgCharts('D', '[DEBUG] quick reports init complete', {
             storageCardVisible: !!document.getElementById('storageUsageChart')?.offsetParent,
             recordsCardVisible: !!document.getElementById('qaRecordsLine')?.offsetParent,
@@ -2137,6 +2067,32 @@ For detailed information, visit the Storage Overview dashboard.`;
                 var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
                 setExpanded(!expanded);
             });
+        })();
+    </script>
+    <script src="assets/js/folder-otp.js"></script>
+    <script>
+        (function () {
+            if (!window.folderOTP) return;
+            // Advanced search results: require OTP before opening a folder
+            var searchList = document.getElementById('searchResultsList');
+            if (searchList) {
+                searchList.addEventListener('click', function (e) {
+                    var link = e.target.closest('a[href*="folder_view.php"]');
+                    if (!link) return;
+                    e.preventDefault();
+                    window.folderOTP.guard(link.href);
+                });
+            }
+            // Latest Archive Files Visit: require OTP before opening a folder
+            var latestList = document.getElementById('latestFilesList');
+            if (latestList) {
+                latestList.addEventListener('click', function (e) {
+                    var link = e.target.closest('a[href*="folder_view.php"]');
+                    if (!link) return;
+                    e.preventDefault();
+                    window.folderOTP.guard(link.href);
+                });
+            }
         })();
     </script>
 </body>

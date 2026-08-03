@@ -1928,6 +1928,21 @@ if (isset($_SESSION['user_id'])) {
             }
         })();
     </script>
+
+<script src="assets/js/folder-otp.js"></script>
+    <script>
+    (function () {
+        var grid = document.getElementById('archive-folders-grid');
+        if (!grid || !window.folderOTP) return;
+        grid.addEventListener('click', function (e) {
+            if (e.target.closest('.bi-three-dots')) return;
+            var link = e.target.closest('a[href*="folder_view.php"]');
+            if (!link) return;
+            e.preventDefault();
+            window.folderOTP.guard(link.href);
+        });
+    })();
+    </script>
         </div>
     </div>
     <?php include 'includes/footer_scripts.php'; ?>
