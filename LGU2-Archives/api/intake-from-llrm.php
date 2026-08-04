@@ -42,6 +42,7 @@ if (empty($raw_input) && isset($GLOBALS['HTTP_RAW_POST_DATA'])) {
 }
 
 require_once '../authdatabase.php';
+require_once __DIR__ . '/../includes/pinata.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -217,6 +218,20 @@ if (!empty($data['file_content']) && !empty($data['file_name'])) {
     }
 }
 
+// --- Pin the received file to Pinata IPFS (best-effort; local copy is always kept) ---
+$ipfsCid = null;
+$mimeType = null;
+if (!empty($file_path) && isset($target_path) && is_file($target_path)) {
+    $mimeType = function_exists('mime_content_type') ? mime_content_type($target_path) : null;
+    if (!$mimeType) { $mimeType = 'application/octet-stream'; }
+    $pinataResult = pinata_upload_file($target_path, basename($target_path), ['record' => 'legislative', 'source_system' => $source_system]);
+    if ($pinataResult['success']) {
+        $ipfsCid = $pinataResult['cid'];
+    } else {
+        error_log('Pinata pin failed for ' . basename($target_path) . ': ' . ($pinataResult['error'] ?? 'unknown error'));
+    }
+}
+
 // --- Check for duplicates (same title + type from same source system) ---
 $duplicate = false;
 if ($source_record_id) {
@@ -241,10 +256,10 @@ if ($duplicate) {
 }
 
 // --- Insert into legislative_records ---
-$insertSql = "INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+$insertSql = "INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, created_at, ipfs_cid, mime_type)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)";
 $insertStmt = $conn->prepare($insertSql);
-$insertStmt->bind_param("ssssssiii",
+$insertStmt->bind_param("ssssssiiiss",
     $title,
     $type,
     $month,
@@ -253,7 +268,9 @@ $insertStmt->bind_param("ssssssiii",
     $file_path,
     $folder_id,
     $version,
-    $parent_version_id
+    $parent_version_id,
+    $ipfsCid,
+    $mimeType
 );
 
 if ($insertStmt->execute()) {
@@ -284,6 +301,8 @@ if ($insertStmt->execute()) {
         'message' => 'Record archived successfully',
         'folder_id' => $folder_id,
         'file_path' => $file_path,
+        'ipfs_cid' => $ipfsCid,
+        'ipfs_url' => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
         'source_system' => $source_system,
         'source_record_id' => $source_record_id
     ]);

@@ -1,5 +1,6 @@
 <?php
 require 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -26,6 +27,16 @@ if (!$file) {
 
 $file_path = $file['file_path'];
 $file_name = $file['name'];
+$ipfs_cid = $file['ipfs_cid'] ?? null;
+
+// Check for view action
+$is_view = isset($_GET['view']) && $_GET['view'] == '1';
+
+// Serve via the Pinata dedicated gateway when an IPFS CID is stored.
+// Falls back to the local copy below when no CID exists or Pinata isn't configured.
+if (!empty($ipfs_cid) && pinata_is_configured()) {
+    pinata_stream_cid($ipfs_cid, $is_view, $file_name);
+}
 
 if (!file_exists($file_path)) {
     // Try absolute path
@@ -43,8 +54,6 @@ if (!$mime_type) {
     $mime_type = 'application/octet-stream';
 }
 
-// Check for view action
-$is_view = isset($_GET['view']) && $_GET['view'] == '1';
 $disposition = $is_view ? 'inline' : 'attachment';
 
 // Set headers

@@ -1,5 +1,6 @@
  <?php
 require_once 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 
 header('Content-Type: application/json');
 
@@ -206,11 +207,23 @@ switch ($action) {
         }
 
         if (move_uploaded_file($file['tmp_name'], $target_path)) {
+            // Pin the file to Pinata IPFS (best-effort; local copy is always kept)
+            $absPath = realpath($target_path) ?: (__DIR__ . '/' . $target_path);
+            $mimeType = function_exists('mime_content_type') ? mime_content_type($absPath) : null;
+            if (!$mimeType) { $mimeType = 'application/octet-stream'; }
+            $ipfsCid = null;
+            $pinataResult = pinata_upload_file($absPath, basename($absPath), ['record' => 'legislative', 'folder_id' => (string)$folder_id]);
+            if ($pinataResult['success']) {
+                $ipfsCid = $pinataResult['cid'];
+            } else {
+                error_log('Pinata pin failed for ' . basename($absPath) . ': ' . ($pinataResult['error'] ?? 'unknown error'));
+            }
+
             // Check if columns exist (graceful fallback if DB update failed)
             $cols = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'version'");
             if ($cols->num_rows > 0) {
-                $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, version_notes, unique_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("ssssssiiiss", $title, $type, $month, $year, $author, $target_path, $folder_id, $version, $parent_version_id, $version_notes, $unq);
+                $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, version_notes, unique_number, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssssssiiissss", $title, $type, $month, $year, $author, $target_path, $folder_id, $version, $parent_version_id, $version_notes, $unq, $ipfsCid, $mimeType);
             } else {
                 // Fallback for old schema
                 $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -218,7 +231,7 @@ switch ($action) {
             }
             
             if ($stmt->execute()) {
-                echo json_encode(['success' => true, 'id' => $conn->insert_id, 'version' => $version]);
+                echo json_encode(['success' => true, 'id' => $conn->insert_id, 'version' => $version, 'ipfs_cid' => $ipfsCid, 'ipfs_url' => $ipfsCid ? pinata_gateway_url($ipfsCid) : null]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
             }

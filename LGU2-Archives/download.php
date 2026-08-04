@@ -1,6 +1,7 @@
 <?php
 // Include database connection
 include 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -38,7 +39,7 @@ function log_analytics_event(mysqli $conn, array $event): void {
 
 
 function get_legislative_file_info(mysqli $conn, int $id): ?array {
-    $stmt = $conn->prepare("SELECT file_path, title, type, month, year, author FROM legislative_records WHERE id = ?");
+    $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author FROM legislative_records WHERE id = ?");
     if (!$stmt) return null;
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -132,6 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         if ($fileInfo && isset($fileInfo['file_path'])) {
             $path = resolve_local_path($fileInfo['file_path']);
+            $ipfsCid = $fileInfo['ipfs_cid'] ?? null;
+            // When the file only exists on IPFS, keep rendering the preview —
+            // view_file below serves it through the Pinata gateway.
+            if (!$path && !empty($ipfsCid) && pinata_is_configured()) {
+                $path = $fileInfo['file_path'];
+            }
             if ($path) {
                 $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
                 $viewUrl = 'download.php?action=view_file&id=' . urlencode((string)$idInt);
@@ -211,6 +218,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             http_response_code(404);
             echo 'File not found';
             exit;
+        }
+        // Serve via the Pinata dedicated gateway when an IPFS CID is stored.
+        $ipfsCid = $info['ipfs_cid'] ?? null;
+        if (!empty($ipfsCid) && pinata_is_configured()) {
+            pinata_stream_cid($ipfsCid, true, basename((string)$info['file_path']));
         }
         $path = resolve_local_path((string)$info['file_path']);
         if (!$path) {

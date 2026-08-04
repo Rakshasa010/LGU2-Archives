@@ -16,6 +16,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require '../authdatabase.php';
+require_once __DIR__ . '/../includes/pinata.php';
 
 header('Content-Type: application/json');
 
@@ -125,7 +126,7 @@ try {
 
 function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
     $files = [];
-    $query = "SELECT id, name, file_path, file_size, created_at, version FROM archive_files WHERE parent_version_id IS NULL ";
+    $query = "SELECT id, name, file_path, file_size, ipfs_cid, created_at, version FROM archive_files WHERE parent_version_id IS NULL ";
     $conditions = [];
     $params = [];
     $types = '';
@@ -180,6 +181,8 @@ function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
                 'size_formatted' => formatFileSize($row['file_size']),
                 'uploaded_at' => $row['created_at'],
                 'version' => (int)($row['version'] ?? 1),
+                'ipfs_cid' => $row['ipfs_cid'] ?? null,
+                'ipfs_url' => !empty($row['ipfs_cid']) ? pinata_gateway_url($row['ipfs_cid']) : null,
                 'versions' => $versions
             ];
         }
@@ -193,7 +196,7 @@ function fetchArchiveFiles($conn, $folder_id, $search, $limit, $offset) {
 
 function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
     $files = [];
-    $query = "SELECT id, title, file_path, created_at, version FROM legislative_records WHERE parent_version_id IS NULL ";
+    $query = "SELECT id, title, file_path, ipfs_cid, created_at, version FROM legislative_records WHERE parent_version_id IS NULL ";
     $conditions = [];
     $params = [];
     $types = '';
@@ -260,6 +263,8 @@ function fetchLegislativeFiles($conn, $folder_id, $search, $limit, $offset) {
                 'size_formatted' => formatFileSize($fileSize),
                 'uploaded_at' => $row['created_at'],
                 'version' => (int)($row['version'] ?? 1),
+                'ipfs_cid' => $row['ipfs_cid'] ?? null,
+                'ipfs_url' => !empty($row['ipfs_cid']) ? pinata_gateway_url($row['ipfs_cid']) : null,
                 'versions' => $versions
             ];
         }
@@ -288,7 +293,7 @@ function getLegislativeVersions($conn, $file_id) {
         $findParent->close();
     }
     
-    $sql = "SELECT id, title, version, created_at, author, file_path FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
+    $sql = "SELECT id, title, version, created_at, author, file_path, ipfs_cid FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param("ii", $root_id, $root_id);
@@ -301,7 +306,9 @@ function getLegislativeVersions($conn, $file_id) {
                 'title' => $v['title'],
                 'created_at' => $v['created_at'],
                 'author' => $v['author'],
-                'path' => $v['file_path']
+                'path' => $v['file_path'],
+                'ipfs_cid' => $v['ipfs_cid'] ?? null,
+                'ipfs_url' => !empty($v['ipfs_cid']) ? pinata_gateway_url($v['ipfs_cid']) : null
             ];
         }
         $result->free();
@@ -326,7 +333,7 @@ function getArchiveVersions($conn, $file_id) {
         $findParent->close();
     }
     
-    $sql = "SELECT id, name, version, created_at, file_path FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
+    $sql = "SELECT id, name, version, created_at, file_path, ipfs_cid FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC";
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param("ii", $root_id, $root_id);
@@ -338,7 +345,9 @@ function getArchiveVersions($conn, $file_id) {
                 'version' => (int)$v['version'],
                 'title' => $v['name'],
                 'created_at' => $v['created_at'],
-                'path' => $v['file_path']
+                'path' => $v['file_path'],
+                'ipfs_cid' => $v['ipfs_cid'] ?? null,
+                'ipfs_url' => !empty($v['ipfs_cid']) ? pinata_gateway_url($v['ipfs_cid']) : null
             ];
         }
         $result->free();

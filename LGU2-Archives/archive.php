@@ -24,6 +24,7 @@ ini_set('log_errors', 1);
 $raw_input = file_get_contents('php://input');
 
 require_once 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -73,6 +74,8 @@ $conn->query("CREATE TABLE IF NOT EXISTS external_documents (
     file_name VARCHAR(255) NULL,
     file_size BIGINT DEFAULT 0,
     file_type VARCHAR(100) NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    mime_type VARCHAR(100) NULL,
     source_system VARCHAR(50) NOT NULL DEFAULT 'llrm',
     external_id VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -145,6 +148,8 @@ switch ($action) {
         $fileName = null;
         $fileSize = 0;
         $fileType = null;
+        $ipfsCid = null;
+        $mimeType = null;
 
         if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
             $fileName = $_FILES['file']['name'];
@@ -189,6 +194,16 @@ switch ($action) {
 
             if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
                 $filePath = 'uploads/external/' . date('Y-m') . '/' . $finalName;
+
+                // Pin the uploaded file to Pinata IPFS (best-effort; local copy is always kept)
+                $mimeType = function_exists('mime_content_type') ? mime_content_type($targetPath) : null;
+                if (!$mimeType) { $mimeType = $fileType ?: 'application/octet-stream'; }
+                $pinataResult = pinata_upload_file($targetPath, $finalName, ['record' => 'external_document', 'reference_number' => $referenceNumber]);
+                if ($pinataResult['success']) {
+                    $ipfsCid = $pinataResult['cid'];
+                } else {
+                    error_log('Pinata pin failed for ' . $finalName . ': ' . ($pinataResult['error'] ?? 'unknown error'));
+                }
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'error' => 'Failed to save uploaded file']);
@@ -204,11 +219,11 @@ switch ($action) {
         // --- Insert into external_documents ---
         $insertSql = "INSERT INTO external_documents 
             (title, document_type, document_date, status, description, tags, reference_number, 
-             file_path, file_name, file_size, file_type, source_system, external_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+             file_path, file_name, file_size, file_type, ipfs_cid, mime_type, source_system, external_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
         $insertStmt = $conn->prepare($insertSql);
-        $insertStmt->bind_param("sssssssssssss",
+        $insertStmt->bind_param("sssssssssssssss",
             $title,
             $documentType,
             $documentDate,
@@ -220,6 +235,8 @@ switch ($action) {
             $fileName,
             $fileSize,
             $fileType,
+            $ipfsCid,
+            $mimeType,
             $sourceSystem,
             $externalId
         );
@@ -258,6 +275,8 @@ switch ($action) {
                     'file_path'       => $filePath,
                     'file_name'       => $fileName,
                     'file_size'       => $fileSize,
+                    'ipfs_cid'        => $ipfsCid,
+                    'ipfs_url'        => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
                     'created_at'      => date('Y-m-d H:i:s'),
                 ],
                 'message'  => 'Document received and saved successfully.',

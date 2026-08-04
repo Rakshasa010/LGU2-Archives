@@ -1,5 +1,6 @@
 <?php
 require 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -125,7 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'file_date' => "DATE DEFAULT NULL",
                     'unique_number' => "VARCHAR(100) DEFAULT NULL",
                     'version' => "INT DEFAULT 1",
-                    'parent_version_id' => "INT NULL"
+                    'parent_version_id' => "INT NULL",
+                    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+                    'mime_type' => "VARCHAR(100) DEFAULT NULL"
                 ];
                 foreach ($cols_needed as $col => $def) {
                     if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
@@ -143,7 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'version' => "INT DEFAULT 1",
                     'parent_version_id' => "INT NULL",
                     'folder_id' => "INT DEFAULT NULL",
-                    'file_size' => "BIGINT DEFAULT NULL"
+                    'file_size' => "BIGINT DEFAULT NULL",
+                    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+                    'mime_type' => "VARCHAR(100) DEFAULT NULL"
                 ];
                 foreach ($cols_needed as $col => $def) {
                     if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
@@ -179,6 +184,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if (move_uploaded_file($tmp_name, $file_path)) {
                         $final_name = basename($file_path);
+
+                        // Pin the file to Pinata IPFS (best-effort; the local copy is always kept)
+                        $mimeType = function_exists('mime_content_type') ? mime_content_type($file_path) : null;
+                        if (!$mimeType) { $mimeType = 'application/octet-stream'; }
+                        $ipfsCid = null;
+                        $pinataResult = pinata_upload_file($file_path, $final_name, ['record' => 'archive', 'folder_id' => (string)$current_folder_id]);
+                        if ($pinataResult['success']) {
+                            $ipfsCid = $pinataResult['cid'];
+                        } else {
+                            log_upload_error("Pinata pin failed for $final_name: " . ($pinataResult['error'] ?? 'unknown error'));
+                        }
+
                         $unq = empty($unq_base) ? null : ($unq_base . ($count > 1 ? "-$i" : ''));
                         $isBlankUnq = empty($unq);
                         $version = 1;
@@ -240,16 +257,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         if ($is_legislative) {
-                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)");
                             $month = $fdate ? date('F', strtotime($fdate)) : date('F');
                             $year = $fdate ? date('Y', strtotime($fdate)) : date('Y');
                             $type = $current_folder['type'];
                             $fileSize = filesize($file_path);
-                            $stmt->bind_param("ssssssssiiiss", $safe_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes);
+                            $stmt->bind_param("ssssssssiiissss", $safe_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
                         } else {
                             $fileSize = filesize($file_path);
-                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->bind_param("issssssiis", $current_folder_id, $safe_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes);
+                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, version_notes, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->bind_param("issssssiisss", $current_folder_id, $safe_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
                         }
 
                         if ($stmt->execute()) {
@@ -287,6 +304,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'file_date' => $fdate,
                                 'unique_number' => $unq,
                                 'size' => $bytes,
+                                'ipfs_cid' => $ipfsCid,
+                                'ipfs_url' => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'folder_id' => $current_folder_id
                             ];

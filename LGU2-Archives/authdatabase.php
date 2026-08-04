@@ -70,6 +70,8 @@ $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     folder_id INT NULL,
     file_size BIGINT NULL,
     version_notes TEXT NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    mime_type VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP NULL
 )";
@@ -97,7 +99,9 @@ $leg_cols_needed = [
     'parent_version_id' => "INT NULL",
     'folder_id' => "INT NULL",
     'file_size' => "BIGINT NULL",
-    'version_notes' => "TEXT NULL"
+    'version_notes' => "TEXT NULL",
+    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+    'mime_type' => "VARCHAR(100) DEFAULT NULL"
 ];
 foreach ($leg_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
@@ -273,6 +277,8 @@ $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
     parent_version_id INT NULL,
     file_size BIGINT NULL,
     version_notes TEXT NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    mime_type VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_folder_id (folder_id)
 )";
@@ -286,7 +292,9 @@ $archive_cols_needed = [
     'version' => "INT DEFAULT 1",
     'parent_version_id' => "INT NULL",
     'file_size' => "BIGINT NULL",
-    'version_notes' => "TEXT NULL"
+    'version_notes' => "TEXT NULL",
+    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+    'mime_type' => "VARCHAR(100) DEFAULT NULL"
 ];
 foreach ($archive_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
@@ -429,6 +437,41 @@ if ($check_old_vault && $check_old_vault->num_rows > 0) {
 
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
+
+// Create external_documents table (documents pushed from external systems, e.g. LLRM)
+$external_docs_sql = "CREATE TABLE IF NOT EXISTS external_documents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    document_type VARCHAR(50) NOT NULL DEFAULT 'archive',
+    document_date DATE NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'archived',
+    description TEXT NULL,
+    tags VARCHAR(500) NULL,
+    reference_number VARCHAR(100) NULL,
+    file_path VARCHAR(500) NULL,
+    file_name VARCHAR(255) NULL,
+    file_size BIGINT DEFAULT 0,
+    file_type VARCHAR(100) NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    source_system VARCHAR(50) NOT NULL DEFAULT 'llrm',
+    external_id VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_ref (reference_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+$conn->query($external_docs_sql);
+
+// Add Pinata IPFS columns to external_documents if missing
+$external_docs_cols = [
+    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+    'mime_type' => "VARCHAR(100) DEFAULT NULL"
+];
+foreach ($external_docs_cols as $col => $def) {
+    $chk = $conn->query("SHOW COLUMNS FROM external_documents LIKE '$col'");
+    if ($chk && $chk->num_rows == 0) {
+        $conn->query("ALTER TABLE external_documents ADD COLUMN $col $def");
+    }
+}
 
 } // end include guard
 
