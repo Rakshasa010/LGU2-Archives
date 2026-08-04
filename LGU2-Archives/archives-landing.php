@@ -800,8 +800,58 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     </div>
 
 
+<<<<<<< HEAD
                     <!-- Analytics Overview Section: 3 charts side by side in one row -->
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+=======
+                    $all_files_union = [];
+                    if ($has_archive) {
+                        $all_files_union[] = "SELECT f.id, f.name AS name, f.folder_id, f.created_at, fo.name AS folder_name, 'archive' AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
+                    }
+                    if ($has_leg) {
+                        $all_files_union[] = "SELECT lr.id, lr.title AS name, lr.folder_id, lr.created_at, lf.name AS folder_name, 'legislative' AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
+                    }
+
+                    if (!empty($all_files_union)) {
+                        $all_files_sql = implode(" UNION ALL ", $all_files_union);
+                        $q = "
+                            SELECT folder_name AS folder,
+                                   SUM(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS last7,
+                                   SUM(CASE WHEN created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 1 ELSE 0 END) AS prev7,
+                                   SUM(CASE WHEN created_at < DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS earlier
+                            FROM ($all_files_sql) all_files
+                            GROUP BY folder_name
+                            ORDER BY folder_name
+                        ";
+                        if ($r = $conn->query($q)) {
+                            while ($row = $r->fetch_assoc()) {
+                                $uploads_labels[] = $row['folder'];
+                                $uploads_last7[] = (int)$row['last7'];
+                                $uploads_prev7[] = (int)$row['prev7'];
+                                $uploads_earlier[] = (int)$row['earlier'];
+                            }
+                        }
+                    }
+
+                    $recent_uploads = [];
+                    if (!empty($all_files_union)) {
+                        $recent_sql = "SELECT id, name, folder_id, folder_name, src, created_at FROM ($all_files_sql) all_files ORDER BY created_at DESC LIMIT 12";
+                        if ($r = $conn->query($recent_sql)) {
+                            while ($row = $r->fetch_assoc()) $recent_uploads[] = $row;
+                        }
+                    }
+
+                    // Initialize missing chart variables with defaults for JS safety
+                    $cat_labels = $cat_labels ?? [];
+                    $cat_last7 = $cat_last7 ?? [];
+                    $cat_prev7 = $cat_prev7 ?? [];
+                    $cat_earlier = $cat_earlier ?? [];
+                    $folder_counts_labels = $folder_counts_labels ?? [];
+                    $folder_counts_values = $folder_counts_values ?? [];
+                    ?>
+                    <!-- Folders & Uploads: exact grid pattern matches report_analytics.php lines 864-885 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+>>>>>>> a4f240d1a1c92aa380262f804434f14515fb3b39
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Storage Usage (Last 7 Days)</h3>
@@ -926,43 +976,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     ?>
 
     <script>
-        // #region debug-point A:chart-debug-helper
-        window.__dbgCharts = function(hypothesisId, msg, data) {
-            fetch("http://127.0.0.1:7777/event", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sessionId: "charts-blank-card",
-                    runId: "pre-fix",
-                    hypothesisId: hypothesisId,
-                    location: "archives-landing.php",
-                    msg: msg,
-                    data: data || {},
-                    ts: Date.now()
-                })
-            }).catch(function(){});
-        };
-        window.addEventListener('error', function(e) {
-            window.__dbgCharts('B', '[DEBUG] window.error', {
-                message: e.message || null,
-                source: e.filename || null,
-                line: e.lineno || null,
-                column: e.colno || null
-            });
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            var reason = e && e.reason;
-            window.__dbgCharts('B', '[DEBUG] window.unhandledrejection', {
-                message: reason && reason.message ? reason.message : String(reason)
-            });
-        });
-        window.__dbgCharts('A', '[DEBUG] chart helper ready', {
-            chartType: typeof window.Chart,
-            readyState: document.readyState
-        });
-        // #endregion
-    </script>
-    <script>
         // Analytics Overview Charts (uses same pattern as report_analytics.php)
         // #region debug-point A:analytics-overview-init
         const dashboardData = <?php echo json_encode($dashboard_chart_data); ?>;
@@ -970,14 +983,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const storageValues = dashboardData.storage_last7.map(d => d.value);
         const sourceLabels = dashboardData.files_by_source.labels;
         const sourceValues = dashboardData.files_by_source.data;
-        window.__dbgCharts('A', '[DEBUG] analytics init start', {
-            chartType: typeof window.Chart,
-            storageCanvas: !!document.getElementById('storageUsageChart'),
-            sourceCanvas: !!document.getElementById('filesBySourceChart'),
-            storagePoints: storageValues.length,
-            sourcePoints: sourceValues.length
-        });
-
         const storageUsageCtx = document.getElementById('storageUsageChart')?.getContext('2d');
         if (storageUsageCtx) {
             try {
@@ -1004,18 +1009,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }
                     }
                 });
-                window.__dbgCharts('A', '[DEBUG] storage chart created', {
-                    width: document.getElementById('storageUsageChart')?.width || null,
-                    height: document.getElementById('storageUsageChart')?.height || null
-                });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] storage chart failed', {
-                    message: err && err.message ? err.message : String(err)
-                });
-                throw err;
+                console.error('Storage chart failed:', err);
             }
-        } else {
-            window.__dbgCharts('C', '[DEBUG] storage chart context missing', {});
         }
         const filesBySourceCtx = document.getElementById('filesBySourceChart')?.getContext('2d');
         if (filesBySourceCtx) {
@@ -1037,18 +1033,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         scales: { y: { beginAtZero: true, precision: 0 } }
                     }
                 });
-                window.__dbgCharts('A', '[DEBUG] source chart created', {
-                    width: document.getElementById('filesBySourceChart')?.width || null,
-                    height: document.getElementById('filesBySourceChart')?.height || null
-                });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] source chart failed', {
-                    message: err && err.message ? err.message : String(err)
-                });
-                throw err;
+                console.error('Source chart failed:', err);
             }
-        } else {
-            window.__dbgCharts('C', '[DEBUG] source chart context missing', {});
         }
         // #endregion
     </script>
@@ -1071,7 +1058,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 if (ids.indexOf(id) !== -1) return;
                 ids.push(id);
                 if (ids.length > MAX_STORED_IDS) ids.splice(0, ids.length - MAX_STORED_IDS);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)); } catch(e) {}
             }
 
             const notifsToShow = initialNotifs.filter(function(n) {
@@ -1262,22 +1249,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const labelsAndData = (obj) => { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; };
         const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const rbt = labelsAndData(byType);
-        window.__dbgCharts('C', '[DEBUG] quick reports init start', {
-            chartType: typeof window.Chart,
-            recordsMini: !!document.getElementById('qaRecordsMini'),
-            downloadsMini: !!document.getElementById('qaDownloadsMini'),
-            uploadsMini: !!document.getElementById('qaUploadsMini'),
-            recordsLine: !!document.getElementById('qaRecordsLine'),
-            recordsByType: !!document.getElementById('qaRecordsByType'),
-            uploadsByFolder: !!document.getElementById('uploadsByFolderChart'),
-            seriesLabels: seriesLabels.length,
-            seriesDownloads: seriesDownloads.length,
-            seriesUploads: seriesUploads.length,
-            seriesRecords: seriesRecords.length,
-            byTypeLabels: rbt.labels.length,
-            folderLabels: fuLabels.length
-        });
-
         // Mini sparkline: Records
         const qaRecordsMiniCtx = document.getElementById('qaRecordsMini')?.getContext('2d');
         if (qaRecordsMiniCtx) {
@@ -1288,8 +1259,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] qaRecordsMini failed', { message: err && err.message ? err.message : String(err) });
-                throw err;
+                console.error('qaRecordsMini failed:', err);
             }
         }
 
@@ -1345,14 +1315,14 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] qaRecordsLine failed', { message: err && err.message ? err.message : String(err) });
-                throw err;
+                console.error('qaRecordsLine failed:', err);
             }
         }
 
         // Records by Type Doughnut (with ABS/% toggle - special pattern)
         let rbtChart = null;
-        let rbtMode = localStorage.getItem('rbtMode') || 'abs';
+        let rbtMode = 'abs';
+        try { rbtMode = localStorage.getItem('rbtMode') || 'abs'; } catch(e) {}
         function renderRbt() {
             const qaRecordsByTypeCtx = document.getElementById('qaRecordsByType')?.getContext('2d');
             if (!qaRecordsByTypeCtx) return;
@@ -1387,8 +1357,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] qaRecordsByType failed', { message: err && err.message ? err.message : String(err) });
-                throw err;
+                console.error('qaRecordsByType failed:', err);
             }
             const toggle = document.getElementById('rbt-toggle');
             if (toggle) toggle.textContent = (rbtMode === 'pct' ? '%' : 'ABS');
@@ -1398,7 +1367,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         if (rbtToggle) {
             rbtToggle.addEventListener('click', function() {
                 rbtMode = (rbtMode === 'abs') ? 'pct' : 'abs';
-                localStorage.setItem('rbtMode', rbtMode);
+                try { localStorage.setItem('rbtMode', rbtMode); } catch(e) {}
                 renderRbt();
             });
         }
@@ -1425,8 +1394,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     }
                 });
             } catch (err) {
-                window.__dbgCharts('C', '[DEBUG] uploadsByFolderChart failed', { message: err && err.message ? err.message : String(err) });
-                throw err;
+                console.error('uploadsByFolderChart failed:', err);
             }
         }
 
@@ -1474,11 +1442,26 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             });
         }
 
+<<<<<<< HEAD
         window.__dbgCharts('D', '[DEBUG] quick reports init complete', {
             storageCardVisible: !!document.getElementById('storageUsageChart')?.offsetParent,
             recordsCardVisible: !!document.getElementById('qaRecordsLine')?.offsetParent,
             uploadsCardVisible: !!document.getElementById('uploadsByFolderChart')?.offsetParent
         });
+=======
+        // Folder filter for recent uploads list
+        const fuFilter = document.getElementById('fu-filter');
+        if (fuFilter) {
+            fuFilter.addEventListener('change', function() {
+                const val = this.value || '';
+                const items = document.querySelectorAll('#fu-cards [data-folder]');
+                items.forEach(function(el) {
+                    const fld = el.getAttribute('data-folder') || '';
+                    el.style.display = (!val || fld === val) ? '' : 'none';
+                });
+            });
+        }
+>>>>>>> a4f240d1a1c92aa380262f804434f14515fb3b39
         // #endregion
     </script>
     <script>
@@ -1769,12 +1752,12 @@ For detailed information, visit the Storage Overview dashboard.`;
                 var searches = getRecentSearches().filter(function(item) { return item !== term; });
                 searches.unshift(term);
                 searches = searches.slice(0, 5);
-                localStorage.setItem(recentStorageKey, JSON.stringify(searches));
+                try { localStorage.setItem(recentStorageKey, JSON.stringify(searches)); } catch(e) {}
                 renderRecentSearches();
             }
 
             function clearRecentSearches() {
-                localStorage.removeItem(recentStorageKey);
+                try { localStorage.removeItem(recentStorageKey); } catch(e) {}
                 renderRecentSearches();
             }
 

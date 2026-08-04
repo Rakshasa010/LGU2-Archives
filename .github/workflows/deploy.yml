@@ -1,0 +1,58 @@
+name: Deploy to indevfinite
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add remote host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+          REMOTE_ROOT: '/home/lassp6164/public_html'
+        run: |
+          SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no"
+
+          # Ensure deploy root exists
+          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT"
+
+          # Deploy the PHP application into public_html/LGU2-Archives
+          # Excludes uploads/storage so user files on the server are not deleted
+          rsync -avz --delete \
+            -e "ssh $SSH_OPTS" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='uploads/' \
+            --exclude='storage/' \
+            --exclude='*.log' \
+            --exclude='.tmp_*' \
+            ./LGU2-Archives/ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/LGU2-Archives/"
+
+          # Deploy .env to public_html/.env (authdatabase.php looks for ../.env)
+          rsync -avz \
+            -e "ssh $SSH_OPTS" \
+            ./.env "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/.env"
+
+      - name: Notify on success
+        if: success()
+        run: echo "Deployment to $SSH_HOST complete."

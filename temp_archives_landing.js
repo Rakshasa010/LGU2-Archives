@@ -1,4 +1,4 @@
-// Sidebar toggle functionality
+﻿// Sidebar toggle functionality
 const sidebarToggle = document.getElementById('sidebar-toggle');
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const sidebar = document.getElementById('sidebar');
@@ -9,7 +9,7 @@ const closeMobileSidebar = document.getElementById('close-mobile-sidebar');
 // Desktop sidebar toggle
 sidebarToggle?.addEventListener('click', () => {
     sidebar?.classList.toggle('sidebar-collapsed');
-    try { localStorage.setItem('sidebarCollapsed', sidebar?.classList.contains('sidebar-collapsed')); } catch(e) {}
+    localStorage.setItem('sidebarCollapsed', sidebar?.classList.contains('sidebar-collapsed'));
 });
 
 // Mobile sidebar toggle
@@ -72,7 +72,9 @@ document.addEventListener('click', (e) => {
 });
 
 // Restore sidebar state
-try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classList.add('sidebar-collapsed'); } } catch(e) {}
+if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    sidebar?.classList.add('sidebar-collapsed');
+}
 
 // Render Latest Files (fetched from server once on load)
 (function () {
@@ -130,7 +132,7 @@ try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classL
                 : '#';
         }
 
-        var meta = metaParts.join(' <span class="opacity-40">·</span> ');
+        var meta = metaParts.join(' <span class="opacity-40">┬╖</span> ');
 
         return '<a href="' + href + '" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-600 group">' +
             '<i class="' + iconCls + ' text-xl flex-shrink-0"></i>' +
@@ -148,7 +150,7 @@ try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classL
         // Show loading state immediately so skeleton / stale content is never visible
         container.innerHTML =
             '<div class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">' +
-            '<i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>Loading recent files…</div>';
+            '<i class="bi bi-arrow-clockwise text-lg block mb-1 opacity-60"></i>Loading recent filesΓÇª</div>';
 
         fetch('fetch_latest_files.php')
             .then(function (r) { return r.json(); })
@@ -386,15 +388,13 @@ try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classL
         grid.classList.toggle('lg:grid-cols-4', !isList);
     }
     function loadLayout(){
-        var m = 'grid';
-        try { m = localStorage.getItem('dashboardLayout') || 'grid'; } catch(e) {}
+        var m = localStorage.getItem('dashboardLayout') || 'grid';
         applyLayout(m);
     }
     function toggleLayout(){
-        var m = 'grid';
-        try { m = localStorage.getItem('dashboardLayout') || 'grid'; } catch(e) {}
+        var m = localStorage.getItem('dashboardLayout') || 'grid';
         var next = m === 'grid' ? 'list' : 'grid';
-        try { localStorage.setItem('dashboardLayout', next); } catch(e) {}
+        localStorage.setItem('dashboardLayout', next);
         applyLayout(next);
     }
     var layoutBtn = document.getElementById('layoutToggle');
@@ -405,15 +405,13 @@ try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classL
         document.body.classList.toggle('compact', !!flag);
     }
     function loadCompact(){
-        var c = false;
-        try { c = localStorage.getItem('compactMode') === 'true'; } catch(e) {}
+        var c = localStorage.getItem('compactMode') === 'true';
         applyCompact(c);
     }
     function toggleCompact(){
-        var c = false;
-        try { c = localStorage.getItem('compactMode') === 'true'; } catch(e) {}
+        var c = localStorage.getItem('compactMode') === 'true';
         var next = !c;
-        try { localStorage.setItem('compactMode', String(next)); } catch(e) {}
+        localStorage.setItem('compactMode', String(next));
         applyCompact(next);
     }
     var compactBtn = document.getElementById('compactToggle');

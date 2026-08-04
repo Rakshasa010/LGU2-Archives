@@ -1,9 +1,22 @@
 <?php
-// Database configuration for XAMPP MySQL
-$servername = "localhost";
-$username = "las_adminsql";
-$password = "lasadminsql123";  // Default XAMPP MySQL password is empty
-$dbname = "las_lgu2_archives";  // Database name
+// Load database configuration from .env (project root)
+function load_env($path) {
+    $vars = [];
+    if (!file_exists($path)) return $vars;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        if (strpos(trim($line), '#') === 0 || strpos($line, '=') === false) continue;
+        [$key, $value] = explode('=', $line, 2);
+        $vars[trim($key)] = trim($value, " \t\n\r\0\"'");
+    }
+    return $vars;
+}
+$env = load_env(__DIR__ . '/../.env');
+
+// Database configuration from .env with XAMPP fallbacks
+$servername = $env['MYSQL_HOST'] ?? 'localhost';
+$username   = $env['MYSQL_USER'] ?? 'root';
+$password   = $env['MYSQL_PASSWORD'] ?? '';
+$dbname     = $env['MYSQL_DATABASE'] ?? 'las_lgu2_archives';
 
 // Include guard: skip connection setup + migration if already connected
 if (!isset($conn) || !($conn instanceof mysqli)) {
