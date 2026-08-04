@@ -324,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $num = count($uploadedFiles);
                 $ntime = date('h:i A'); $ndate = date('Y-m-d');
                 $ncontent = ($num > 1) ? "$num files uploaded in folder #$current_folder_id" : "New upload: {$uploadedFiles[0]['name']} in folder #$current_folder_id";
-                $nabout = 'Upload'; $nstatus = 'unread';
+                $nabout = 'Uploads'; $nstatus = 'unread';
                 if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
                     $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
                     $ins->execute(); $ins->close();

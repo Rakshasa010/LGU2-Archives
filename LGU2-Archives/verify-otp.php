@@ -32,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
         $_SESSION['user_id'] = $uid;
         $_SESSION['last_activity'] = time();
         
-        $conn->query("UPDATE users SET last_activity = NOW(), failed_attempts = 0, lockout_until = NULL WHERE id = " . $uid);
+        $conn->query("UPDATE users SET last_activity = NOW(), failed_attempts = 0, lockout_until = NULL, login_count = login_count + 1 WHERE id = " . $uid);
         $must = (int)($_SESSION['otp_must_change'] ?? 0);
         
         // Create notifications table if not exists and log successful login

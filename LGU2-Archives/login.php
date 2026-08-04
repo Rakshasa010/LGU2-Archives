@@ -57,27 +57,56 @@
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             if (isset($user['status']) && $user['status'] !== 'active') {
-                $error = "Your account is not active. Status: " . $user['status'];
+                if ($user['status'] === 'pending') {
+                    $error = "Your account is pending approval by an administrator.";
+                } elseif ($user['status'] === 'rejected') {
+                    $error = "Your account was rejected. Please contact support.";
+                } else {
+                    $error = "Your account is not active. Status: " . $user['status'];
+                }
             }
         } else {
-            // Register new Google user
+            // Register new Google user (status pending until admin approval)
             $temp_username = 'google_' . substr(md5(uniqid()), 0, 8);
             $temp_password = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
             $role = 'user';
-            $status = 'active'; 
+            $status = 'pending';
             $full_name = explode('@', $google_email)[0];
             
             $insert = $conn->prepare("INSERT INTO users (username, password, email, full_name, role, status) VALUES (?, ?, ?, ?, ?, ?)");
             $insert->bind_param("ssssss", $temp_username, $temp_password, $google_email, $full_name, $role, $status);
             if ($insert->execute()) {
+                $new_uid = $conn->insert_id;
                 $user = [
-                    'id' => $conn->insert_id,
+                    'id' => $new_uid,
                     'email' => $google_email,
                     'username' => $temp_username,
                     'full_name' => $full_name,
                     'must_change_password' => 0,
                     'dark_mode' => 0
                 ];
+                // Notify admins of the new pending Google sign-up
+                $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY, 
+                    time VARCHAR(20) NOT NULL, 
+                    date DATE NOT NULL, 
+                    content VARCHAR(255) NOT NULL, 
+                    about VARCHAR(100) NOT NULL, 
+                    status ENUM('unread','read') NOT NULL DEFAULT 'unread', 
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                if ($nt) {
+                    $ntime = date('h:i A');
+                    $ndate = date('Y-m-d');
+                    $ncontent = "New Google user pending approval: " . $full_name . " (" . $google_email . ")";
+                    $nabout = "User Management";
+                    $nstatus = "unread";
+                    $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                    $nt->execute();
+                    $nt->close();
+                }
+                $error = "Your account has been created and is pending approval by an administrator.";
             } else {
                 $error = "Failed to register new Google account.";
             }
@@ -474,7 +503,7 @@
                     </svg>
                 </div>
                 <h3 class="text-xl font-bold text-gray-900 dark:text-white">Sign in with Google</h3>
-                <p class="text-sm text-gray-500 mt-2">Enter your Google email to receive an OTP.</p>
+                <p class="text-sm text-gray-500 mt-2">Enter your Google email to continue. New accounts require admin approval.</p>
             </div>
             <form action="login.php" method="POST" class="space-y-4">
                 <input type="hidden" name="google_sso" value="1">

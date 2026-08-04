@@ -63,13 +63,19 @@
     $registrations_all = 0;
     $today_str = date('Y-m-d');
     
-    // Get distinct categories
-    $categories = [];
-    if ($cat_res = $conn->query("SELECT DISTINCT about FROM notifications ORDER BY about")) {
-        while ($cat_row = $cat_res->fetch_assoc()) {
-            $categories[] = $cat_row['about'];
-        }
-    }
+    // Fixed dropdown categories (only these appear in the filter)
+    $categories = [
+        'Uploads',
+        'Login',
+        'Profile Update',
+        'Security',
+        'User Registration',
+        'Export (Reports & Analytics)',
+        'Export (Archives ZIP)',
+        'Approval',
+        'Backup'
+    ];
+    sort($categories);
     
     if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
@@ -330,11 +336,19 @@
                                             // Decorate Badges
                                             $about = $note['about'];
                                             $badgeColor = 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
-                                            if (stripos($about, 'Login') !== false) {
-                                                $badgeColor = 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50';
-                                            } elseif (stripos($about, 'Register') !== false || stripos($about, 'Registration') !== false) {
-                                                $badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
-                                            }
+            if (stripos($about, 'Login') !== false) {
+                $badgeColor = 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50';
+            } elseif (stripos($about, 'Register') !== false || stripos($about, 'Registration') !== false) {
+                $badgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
+            } elseif (stripos($about, 'Upload') !== false) {
+                $badgeColor = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50';
+            } elseif (stripos($about, 'Export') !== false) {
+                $badgeColor = 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50';
+            } elseif (stripos($about, 'Profile Update') !== false) {
+                $badgeColor = 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50';
+            } elseif (stripos($about, 'Security') !== false) {
+                $badgeColor = 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
+            }
                                             ?>
                                             <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isUnread ? 'bg-[#fff5f5] dark:bg-red-900/20 border-l-[3px] border-l-red-500' : 'bg-white dark:bg-slate-800 border-l-[3px] border-l-transparent text-gray-700 dark:text-slate-300'; ?> hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors md:table-row flex flex-col md:flex-row mb-2 md:mb-0 border border-gray-100 dark:border-slate-700/50 md:border-0 rounded-lg md:rounded-none shadow-sm md:shadow-none">
                                                 <td class="px-4 py-3 text-sm font-medium opacity-70 text-center"><span class="md:hidden font-bold inline-block w-20 text-left">ID</span><?php echo (int)$note['id']; ?></td>

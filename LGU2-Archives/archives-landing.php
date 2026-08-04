@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/storage_shared.php';
 $user_id = $_SESSION['user_id'];
 $user_data = null;
 
-$stmt = $conn->prepare("SELECT full_name, profile_picture, role FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT full_name, profile_picture, role, login_count FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -211,6 +211,7 @@ if (!empty($all_files_union)) {
 $display_name = $user_data['full_name'] ?? 'User';
 $profile_picture = $user_data['profile_picture'] ?? null;
 $is_admin = isset($user_data['role']) && strtolower($user_data['role']) === 'admin';
+$welcome_greeting = ((int)($user_data['login_count'] ?? 0) <= 1) ? 'Welcome' : 'Welcome back';
 
 $profile_picture_url = null;
 if (is_string($profile_picture) && $profile_picture !== '') {
@@ -372,7 +373,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             <div class="text-center lg:text-left">
                                 <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($dashboard_date); ?></p>
                                 <h1 class="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
-                                    Hello, <?php echo htmlspecialchars($display_name); ?>!
+                                    <?php echo htmlspecialchars($welcome_greeting); ?>, <?php echo htmlspecialchars($display_name); ?>!
                                 </h1>
                                 <p class="max-w-2xl text-lg text-gray-600 dark:text-gray-300 mx-auto lg:mx-0 mt-3">
                                     Welcome to your dashboard. Here's an overview of your account and recent activity.
@@ -421,6 +422,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $qa_total_records = 0;
                         $qa_downloads = 0;
                         $qa_uploads = 0;
+                        $qa_files_with_versions = 0;
                         $qa_by_type = [];
                         if ($res = $conn->query("SELECT COUNT(*) AS t FROM legislative_records WHERE $where_rec")) {
                             if ($row = $res->fetch_assoc()) $qa_total_records = (int)$row['t'];
@@ -436,6 +438,26 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             if ($res = $conn->query("SELECT COUNT(*) AS c FROM archive_files WHERE $arch_where")) {
                                 if ($row = $res->fetch_assoc()) $qa_total_records += (int)$row['c'];
                             }
+                        }
+                        // Files with versions: total raw rows (archive_files + legislative_records, including every version)
+                        $qa_files_with_versions = 0;
+                        $arch_all_where = "1=1";
+                        if ($f_from) $arch_all_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                        if ($f_to) $arch_all_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                        if ($fa_type) {
+                            $arch_all_where .= " AND EXISTS (SELECT 1 FROM archive_folders afc WHERE afc.id = archive_files.folder_id AND afc.name = '".$conn->real_escape_string($fa_type)."')";
+                        }
+                        $leg_all_where = "1=1";
+                        if ($f_from) $leg_all_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                        if ($f_to) $leg_all_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                        if ($fa_type) $leg_all_where .= " AND type = '".$conn->real_escape_string($fa_type)."'";
+                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+                            if ($res = $conn->query("SELECT COUNT(*) AS c FROM archive_files WHERE $arch_all_where")) {
+                                if ($row = $res->fetch_assoc()) $qa_files_with_versions += (int)$row['c'];
+                            }
+                        }
+                        if ($res = $conn->query("SELECT COUNT(*) AS c FROM legislative_records WHERE $leg_all_where")) {
+                            if ($row = $res->fetch_assoc()) $qa_files_with_versions += (int)$row['c'];
                         }
                         if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
                             if ($res = $conn->query("SELECT COUNT(*) AS c FROM analytics_events WHERE $where_dl")) {
@@ -532,15 +554,31 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         foreach ($series_records_merged as $k => $v) {
                             $series_records_merged[$k] = $v + ($series_folders[$k] ?? 0);
                         }
+                        // Files with versions series: all rows (including every version), 14 days
+                        $series_files_with_versions = $days;
+                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+                            $wfv = "1=1";
+                            if ($f_from) $wfv .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                            if ($f_to) $wfv .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                            $qf = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM archive_files WHERE $wfv $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            if ($r = $conn->query($qf)) {
+                                while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_files_with_versions[$k])) $series_files_with_versions[$k] = (int)$row['c']; }
+                            }
+                        }
+                        $ql = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM legislative_records WHERE $leg_all_where $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                        if ($r = $conn->query($ql)) {
+                            while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_files_with_versions[$k])) $series_files_with_versions[$k] += (int)$row['c']; }
+                        }
                         $qa_series_labels = array_keys($days);
                         $qa_series_downloads = array_values($series_downloads);
                         $qa_series_uploads = array_values($series_folders);
                         $qa_series_records = array_values($series_records);
                         $qa_series_records_merged = array_values($series_records_merged);
+                        $qa_series_files_with_versions = array_values($series_files_with_versions);
                         ?>
             
                         <!-- KPI Stat cards: exact wrapper structure matches report_analytics.php lines 679-717 -->
-                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></div>
@@ -551,6 +589,19 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 </div>
                                 <div class="relative w-full h-10 mt-3">
                                     <canvas id="qaRecordsMini"></canvas>
+                                </div>
+                            </div>
+                            <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300 flex items-center justify-center"><i class="bi bi-layers"></i></div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Files with Versions</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5"><?php echo $qa_files_with_versions; ?></div>
+                                        <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5"><?php echo $qa_total_records; ?> unique documents</div>
+                                    </div>
+                                </div>
+                                <div class="relative w-full h-10 mt-3">
+                                    <canvas id="qaFilesVersionsMini"></canvas>
                                 </div>
                             </div>
                             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
@@ -1241,6 +1292,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         const seriesUploads = <?php echo json_encode($qa_series_uploads ?? []); ?>;
         const seriesRecords = <?php echo json_encode($qa_series_records ?? []); ?>;
         const seriesRecordsMerged = <?php echo json_encode($qa_series_records_merged ?? []); ?>;
+        const seriesFilesWithVersions = <?php echo json_encode($qa_series_files_with_versions ?? []); ?>;
         const fuLabels = <?php echo json_encode($uploads_labels ?? []); ?>;
         const fuLast7 = <?php echo json_encode($uploads_last7 ?? []); ?>;
         const fuPrev7 = <?php echo json_encode($uploads_prev7 ?? []); ?>;
@@ -1287,6 +1339,20 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             } catch (err) {
                 window.__dbgCharts('C', '[DEBUG] qaRecordsMini failed', { message: err && err.message ? err.message : String(err) });
                 throw err;
+            }
+        }
+
+        // Mini sparkline: Files with Versions
+        const qaFilesVersionsMiniCtx = document.getElementById('qaFilesVersionsMini')?.getContext('2d');
+        if (qaFilesVersionsMiniCtx) {
+            try {
+                new Chart(qaFilesVersionsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesFilesWithVersions, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                window.__dbgCharts && window.__dbgCharts('C', '[DEBUG] qaFilesVersionsMini failed', { message: err && err.message ? err.message : String(err) });
             }
         }
 

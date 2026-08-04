@@ -151,6 +151,14 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE users ADD COLUMN lockout_until DATETIME NULL AFTER failed_attempts");
 }
 
+// Add login_count column if it doesn't exist (used for "Welcome" vs "Welcome back" greeting)
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'login_count'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN login_count INT DEFAULT 0 AFTER lockout_until");
+    // Existing users have already signed in before, so mark them as returning
+    $conn->query("UPDATE users SET login_count = 1");
+}
+
 // Create analytics_events table (used by report_analytics.php)
 $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

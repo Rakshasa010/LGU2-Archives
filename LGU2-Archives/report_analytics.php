@@ -224,7 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
         $ntime = date('h:i A');
         $ndate = date('Y-m-d');
         $ncontent = 'Export requested: '.strtoupper($action).' by user #'.$uid;
-        $nabout = 'Export';
+        $nabout = 'Export (Reports & Analytics)';
         $nstatus = 'unread';
         $ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)");
         if ($ins) { $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus); $ins->execute(); $ins->close(); }

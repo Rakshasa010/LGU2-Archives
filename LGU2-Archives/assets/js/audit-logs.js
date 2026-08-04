@@ -99,6 +99,10 @@
         if (!about) return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
         if (/login/i.test(about)) return 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50';
         if (/register|registration/i.test(about)) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
+        if (/upload/i.test(about)) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50';
+        if (/export/i.test(about)) return 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50';
+        if (/profile update/i.test(about)) return 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50';
+        if (/security/i.test(about)) return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
         return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
     }
     function escapeHtml(s) {
@@ -236,8 +240,8 @@
                 while (aboutSel.options.length > 1) {
                     aboutSel.remove(1);
                 }
-                var staticAbout = ['Approval', 'Backup', 'Comment', 'Document Upload', 'Import', 'Message', 'Metadata', 'Permissions', 'Profile Update', 'Security', 'System Maintenance', 'User Management', 'User Registration'];
-                var combined = Array.from(new Set(staticAbout.concat(data.about_options || [])));
+                var staticAbout = ['Approval', 'Backup', 'Export (Archives ZIP)', 'Export (Reports & Analytics)', 'Login', 'Profile Update', 'Security', 'Uploads', 'User Registration'];
+                var combined = Array.from(new Set(staticAbout));
                 combined.sort();
                 combined.forEach(function (opt) {
                     if (!opt) return;

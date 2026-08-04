@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         )");
         $ntime = date('h:i A'); $ndate = date('Y-m-d');
         $ncontent = 'Yearly export requested: ' . $year . ' by user #' . $uid;
-        $nabout = 'Export'; $nstatus = 'unread';
+        $nabout = 'Export (Archives ZIP)'; $nstatus = 'unread';
         if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
             $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
             $ins->execute(); $ins->close();
