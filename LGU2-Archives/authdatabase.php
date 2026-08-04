@@ -13,16 +13,17 @@ function load_env($path) {
 $env = load_env(__DIR__ . '/../.env');
 
 // Database configuration from .env with XAMPP fallbacks
-$servername = $env['MYSQL_HOST'] ?? 'localhost';
-$username   = $env['MYSQL_USER'] ?? 'root';
-$password   = $env['MYSQL_PASSWORD'] ?? '';
-$dbname     = $env['MYSQL_DATABASE'] ?? 'las_lgu2_archives';
+$servername = $env['DB_HOST'] ?? $env['MYSQL_HOST'] ?? 'localhost';
+$username   = $env['DB_USER'] ?? $env['MYSQL_USER'] ?? 'root';
+$password   = $env['DB_PASSWORD'] ?? $env['MYSQL_PASSWORD'] ?? '';
+$dbname     = $env['DB_NAME'] ?? $env['MYSQL_DATABASE'] ?? 'las_lgu2_archives';
+$dbport     = (int)($env['DB_PORT'] ?? $env['MYSQL_PORT'] ?? 3306);
 
 // Include guard: skip connection setup + migration if already connected
 if (!isset($conn) || !($conn instanceof mysqli)) {
 
 // Create connection
-$conn = new mysqli($servername, $username, $password);
+$conn = new mysqli($servername, $username, $password, '', $dbport);
 
 // Check connection
 if ($conn->connect_error) {
@@ -114,6 +115,8 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) DEFAULT 'user',
     status ENUM('pending','active','rejected') NOT NULL DEFAULT 'active',
     profile_picture VARCHAR(255) DEFAULT NULL,
+    google_id VARCHAR(255) NULL UNIQUE,
+    google_picture VARCHAR(500) NULL,
     must_change_password TINYINT(1) NOT NULL DEFAULT 0,
     dark_mode TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -121,6 +124,18 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
 )";
 
 $conn->query($users_sql);
+
+// Add google_id column if it doesn't exist (Google OAuth)
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'google_id'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL UNIQUE AFTER email");
+}
+
+// Add google_picture column if it doesn't exist (Google OAuth)
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'google_picture'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN google_picture VARCHAR(500) NULL AFTER google_id");
+}
 
 // Add profile_picture column if it doesn't exist (for existing databases)
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_picture'");

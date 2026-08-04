@@ -45,137 +45,7 @@
         header("Location: verify-otp.php");
         exit();
     }
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['google_sso'])) {
-        include 'authdatabase.php';
-        $google_email = trim($_POST['google_email']);
-        
-        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, email, full_name, username, dark_mode FROM users WHERE email = ?");
-        $stmt->bind_param("s", $google_email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows > 0) {
-            $user = $result->fetch_assoc();
-            if (isset($user['status']) && $user['status'] !== 'active') {
-                if ($user['status'] === 'pending') {
-                    $error = "Your account is pending approval by an administrator.";
-                } elseif ($user['status'] === 'rejected') {
-                    $error = "Your account was rejected. Please contact support.";
-                } else {
-                    $error = "Your account is not active. Status: " . $user['status'];
-                }
-            }
-        } else {
-            // Register new Google user (status pending until admin approval)
-            $temp_username = 'google_' . substr(md5(uniqid()), 0, 8);
-            $temp_password = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-            $role = 'user';
-            $status = 'pending';
-            $full_name = explode('@', $google_email)[0];
-            
-            $insert = $conn->prepare("INSERT INTO users (username, password, email, full_name, role, status) VALUES (?, ?, ?, ?, ?, ?)");
-            $insert->bind_param("ssssss", $temp_username, $temp_password, $google_email, $full_name, $role, $status);
-            if ($insert->execute()) {
-                $new_uid = $conn->insert_id;
-                $user = [
-                    'id' => $new_uid,
-                    'email' => $google_email,
-                    'username' => $temp_username,
-                    'full_name' => $full_name,
-                    'must_change_password' => 0,
-                    'dark_mode' => 0
-                ];
-                // Notify admins of the new pending Google sign-up
-                $conn->query("CREATE TABLE IF NOT EXISTS notifications (
-                    id INT AUTO_INCREMENT PRIMARY KEY, 
-                    time VARCHAR(20) NOT NULL, 
-                    date DATE NOT NULL, 
-                    content VARCHAR(255) NOT NULL, 
-                    about VARCHAR(100) NOT NULL, 
-                    status ENUM('unread','read') NOT NULL DEFAULT 'unread', 
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )");
-                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
-                if ($nt) {
-                    $ntime = date('h:i A');
-                    $ndate = date('Y-m-d');
-                    $ncontent = "New Google user pending approval: " . $full_name . " (" . $google_email . ")";
-                    $nabout = "User Management";
-                    $nstatus = "unread";
-                    $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
-                    $nt->execute();
-                    $nt->close();
-                }
-                $error = "Your account has been created and is pending approval by an administrator.";
-            } else {
-                $error = "Failed to register new Google account.";
-            }
-        }
-        
-        if (!isset($error)) {
-            $otp = random_int(100000, 999999);
-            $_SESSION['otp_code'] = $otp;
-            $_SESSION['otp_expires'] = time() + 180;
-            $_SESSION['otp_user_id'] = (int)$user['id'];
-            $_SESSION['otp_must_change'] = (int)($user['must_change_password'] ?? 0);
-            $_SESSION['otp_dark_mode'] = (int)($user['dark_mode'] ?? 0);
-            $_SESSION['otp_pending'] = true;
-            
-            $toEmail = $google_email;
-            $cfgFile = __DIR__ . '/mail_config.php';
-            $sent = false;
-            
-            if (filter_var($toEmail, FILTER_VALIDATE_EMAIL) && file_exists($cfgFile)) {
-                $cfg = require $cfgFile;
-                $smtpUser = trim((string)($cfg['username'] ?? ''));
-                $smtpPass = trim((string)($cfg['password'] ?? ''));
-                if ($smtpUser !== '' && $smtpPass !== '') {
-                    require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
-                    require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';
-                    require_once __DIR__ . '/PHPMailer-master/src/SMTP.php';
-                    $mailer = new PHPMailer\PHPMailer\PHPMailer(true);
-                    $mailer->isSMTP();
-                    $mailer->Host = $cfg['host'] ?? 'smtp.gmail.com';
-                    $mailer->SMTPAuth = true;
-                    $mailer->Username = $smtpUser;
-                    $mailer->Password = $smtpPass;
-                    $enc = strtolower(trim($cfg['encryption'] ?? 'tls'));
-                    if ($enc === 'ssl') { $mailer->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; $mailer->Port = (int)($cfg['port'] ?? 465); }
-                    else { $mailer->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS; $mailer->Port = (int)($cfg['port'] ?? 587); }
-                    if (!empty($cfg['smtp_options'])) { $mailer->SMTPOptions = $cfg['smtp_options']; }
-                    $mailer->CharSet = 'UTF-8';
-                    $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'Archives');
-                    $mailer->addAddress($toEmail, ($user['full_name'] ?? '') ?: 'Google User');
-                    $mailer->Subject = 'Your Verification Code';
-                    $mailer->isHTML(true);
-                    $otpHtml = htmlspecialchars((string)$otp);
-                    $mailer->Body = '<div style="font-family:Arial,sans-serif;background:#f5f6f8;padding:24px;border-radius:12px;">
-                        <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:24px;border:1px solid #e5e7eb;">
-                            <div style="font-size:16px;color:#111827;margin-bottom:8px;">Your One-Time Password (OTP)</div>
-                            <div style="font-size:28px;letter-spacing:8px;font-weight:700;color:#dc2626;background:#fff7ed;border:1px dashed #fca5a5;padding:14px 16px;text-align:center;border-radius:10px;margin:12px 0;">' . $otpHtml . '</div>
-                            <div style="font-size:13px;color:#6b7280;">This code expires in <strong>3 minutes</strong>. If you did not request this, you can ignore this email.</div>
-                        </div>
-                    </div>';
-                    $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 3 minutes.';
-                    try { 
-                        $mailer->send(); 
-                        $sent = true; 
-                    } catch (Throwable $e) { 
-                        $sent = false;
-                        // Store the error message for debugging
-                        $_SESSION['email_error'] = $e->getMessage();
-                    }
-                }
-            }
-            // Store email send status in session for display on verify-otp page
-            $_SESSION['otp_email_status'] = $sent ? 'sent' : 'failed';
-            $_SESSION['otp_fallback'] = $sent ? null : $otp; // Show OTP if email failed
-            // Redirect to verify-otp.php
-            header("Location: verify-otp.php");
-            exit();
-        }
-
-    } elseif ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
         include 'authdatabase.php';
 
         $username = trim($_POST['username']);
@@ -338,6 +208,8 @@
             </div>
         <?php endif; ?>
 
+        <div id="sso-error-banner" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded"></div>
+
         <?php if (isset($_GET['registered'])): ?>
             <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
                 <?php 
@@ -411,7 +283,7 @@
                             <i class="bi bi-arrow-repeat animate-spin text-xl text-blue-600"></i>
                         </span>
                     </a>
-                    <a href="#" id="btn-google-sso" onclick="initiateSSO('google', this)" class="relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-red-500 transition-all duration-200 font-semibold overflow-hidden group">
+                    <a href="#" id="btn-google-sso" class="js-google-sso-btn relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-red-500 transition-all duration-200 font-semibold overflow-hidden group">
                         <div class="absolute inset-0 bg-red-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                         <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -420,7 +292,7 @@
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                         </svg>
                         <span class="text-sm relative z-10">Google</span>
-                        <span class="sso-spinner hidden absolute inset-0 bg-white/90 dark:bg-slate-800/90 flex items-center justify-center z-20">
+                        <span class="js-google-sso-spinner hidden absolute inset-0 bg-white/90 dark:bg-slate-800/90 items-center justify-center z-20">
                             <i class="bi bi-arrow-repeat animate-spin text-xl text-red-600"></i>
                         </span>
                     </a>
@@ -461,16 +333,12 @@
         }
     })();
     
-    // SSO Initialization Logic
+    // SSO Initialization Logic.
+    // Microsoft uses the mock sso.php handler; Google uses the Google
+    // Identity Services SDK via assets/js/google-sso.js (.js-google-sso-btn).
     function initiateSSO(provider, element) {
         event.preventDefault();
 
-        if (provider === 'google') {
-            document.getElementById('googleSsoModal').classList.remove('hidden');
-            document.getElementById('googleSsoModal').classList.add('flex');
-            return;
-        }
-        
         // Disable other buttons to prevent multiple clicks
         const allSsoBtns = document.querySelectorAll('#btn-ms-sso, #btn-google-sso, #login-btn');
         allSsoBtns.forEach(b => {
@@ -496,36 +364,6 @@
         }, 800);
     }
     </script>
-
-    <!-- Google SSO Modal -->
-    <div id="googleSsoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-bounce-in mx-4">
-            <button type="button" onclick="closeGoogleModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
-                ✕
-            </button>
-            <div class="text-center mb-6 mt-2">
-                <div class="w-16 h-16 bg-white rounded-full shadow-md flex items-center justify-center mx-auto mb-4 border border-gray-100">
-                    <svg class="w-8 h-8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Sign in with Google</h3>
-                <p class="text-sm text-gray-500 mt-2">Enter your Google email to continue. New accounts require admin approval.</p>
-            </div>
-            <form action="login.php" method="POST" class="space-y-4">
-                <input type="hidden" name="google_sso" value="1">
-                <div>
-                    <input type="email" name="google_email" required placeholder="name@gmail.com" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors">
-                </div>
-                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
-                    Send OTP to Email
-                </button>
-            </form>
-        </div>
-    </div>
 
     <!-- Terms & Conditions Modal -->
     <div id="termsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
@@ -571,10 +409,6 @@
             var m = document.getElementById('termsModal');
             if (m){ m.classList.add('hidden'); m.classList.remove('flex'); document.body.style.overflow = ''; }
         }
-        function closeGoogleModal() {
-            var m = document.getElementById('googleSsoModal');
-            if (m){ m.classList.add('hidden'); m.classList.remove('flex'); }
-        }
         document.getElementById('acceptTermsBtn')?.addEventListener('click', function(){
             var chk = document.getElementById('agreeTerms');
             if (chk){ chk.checked = true; }
@@ -582,5 +416,8 @@
         });
     </script>
 
+    <?php include __DIR__ . '/sso_config.php'; ?>
+    <script src="assets/js/google-sso.js"></script>
 
-
+</body>
+</html>
