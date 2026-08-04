@@ -32,11 +32,10 @@ jobs:
         run: |
           SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no"
 
-          # Ensure deploy root exists
-          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT"
+          # Create target subfolder inside user's home space safely
+          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT/LGU2-Archives"
 
           # Deploy the PHP application into public_html/LGU2-Archives
-          # Excludes uploads/storage so user files on the server are not deleted
           rsync -avz --delete \
             -e "ssh $SSH_OPTS" \
             --exclude='.git' \
@@ -48,7 +47,7 @@ jobs:
             --exclude='.tmp_*' \
             ./LGU2-Archives/ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/LGU2-Archives/"
 
-          # Deploy .env to public_html/.env (authdatabase.php looks for ../.env)
+          # Deploy .env to public_html/.env
           rsync -avz \
             -e "ssh $SSH_OPTS" \
             ./.env "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/.env"
