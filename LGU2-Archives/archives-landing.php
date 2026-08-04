@@ -800,58 +800,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     </div>
 
 
-<<<<<<< HEAD
                     <!-- Analytics Overview Section: 3 charts side by side in one row -->
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-=======
-                    $all_files_union = [];
-                    if ($has_archive) {
-                        $all_files_union[] = "SELECT f.id, f.name AS name, f.folder_id, f.created_at, fo.name AS folder_name, 'archive' AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
-                    }
-                    if ($has_leg) {
-                        $all_files_union[] = "SELECT lr.id, lr.title AS name, lr.folder_id, lr.created_at, lf.name AS folder_name, 'legislative' AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
-                    }
-
-                    if (!empty($all_files_union)) {
-                        $all_files_sql = implode(" UNION ALL ", $all_files_union);
-                        $q = "
-                            SELECT folder_name AS folder,
-                                   SUM(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS last7,
-                                   SUM(CASE WHEN created_at < DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) THEN 1 ELSE 0 END) AS prev7,
-                                   SUM(CASE WHEN created_at < DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS earlier
-                            FROM ($all_files_sql) all_files
-                            GROUP BY folder_name
-                            ORDER BY folder_name
-                        ";
-                        if ($r = $conn->query($q)) {
-                            while ($row = $r->fetch_assoc()) {
-                                $uploads_labels[] = $row['folder'];
-                                $uploads_last7[] = (int)$row['last7'];
-                                $uploads_prev7[] = (int)$row['prev7'];
-                                $uploads_earlier[] = (int)$row['earlier'];
-                            }
-                        }
-                    }
-
-                    $recent_uploads = [];
-                    if (!empty($all_files_union)) {
-                        $recent_sql = "SELECT id, name, folder_id, folder_name, src, created_at FROM ($all_files_sql) all_files ORDER BY created_at DESC LIMIT 12";
-                        if ($r = $conn->query($recent_sql)) {
-                            while ($row = $r->fetch_assoc()) $recent_uploads[] = $row;
-                        }
-                    }
-
-                    // Initialize missing chart variables with defaults for JS safety
-                    $cat_labels = $cat_labels ?? [];
-                    $cat_last7 = $cat_last7 ?? [];
-                    $cat_prev7 = $cat_prev7 ?? [];
-                    $cat_earlier = $cat_earlier ?? [];
-                    $folder_counts_labels = $folder_counts_labels ?? [];
-                    $folder_counts_values = $folder_counts_values ?? [];
-                    ?>
-                    <!-- Folders & Uploads: exact grid pattern matches report_analytics.php lines 864-885 -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
->>>>>>> a4f240d1a1c92aa380262f804434f14515fb3b39
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Storage Usage (Last 7 Days)</h3>
@@ -1442,26 +1392,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             });
         }
 
-<<<<<<< HEAD
-        window.__dbgCharts('D', '[DEBUG] quick reports init complete', {
-            storageCardVisible: !!document.getElementById('storageUsageChart')?.offsetParent,
-            recordsCardVisible: !!document.getElementById('qaRecordsLine')?.offsetParent,
-            uploadsCardVisible: !!document.getElementById('uploadsByFolderChart')?.offsetParent
-        });
-=======
-        // Folder filter for recent uploads list
-        const fuFilter = document.getElementById('fu-filter');
-        if (fuFilter) {
-            fuFilter.addEventListener('change', function() {
-                const val = this.value || '';
-                const items = document.querySelectorAll('#fu-cards [data-folder]');
-                items.forEach(function(el) {
-                    const fld = el.getAttribute('data-folder') || '';
-                    el.style.display = (!val || fld === val) ? '' : 'none';
-                });
-            });
-        }
->>>>>>> a4f240d1a1c92aa380262f804434f14515fb3b39
         // #endregion
     </script>
     <script>
