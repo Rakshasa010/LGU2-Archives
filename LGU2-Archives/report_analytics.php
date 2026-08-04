@@ -26,10 +26,32 @@ $stats = [];
 $result = $conn->query("SELECT COUNT(*) as total FROM legislative_records");
 $stats['total_records'] = ($result && $row = $result->fetch_assoc()) ? (int)$row['total'] : 0;
 
+// Include unique archive files (documents/files), counting each version group once
+if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+    $result = $conn->query("SELECT COUNT(*) as total FROM archive_files WHERE (parent_version_id IS NULL OR parent_version_id = 0)");
+    if ($result && $row = $result->fetch_assoc()) $stats['total_records'] += (int)$row['total'];
+}
+
 $result = $conn->query("SELECT type, COUNT(*) as cnt FROM legislative_records GROUP BY type");
 $stats['by_type'] = [];
 if ($result) {
     while ($r = $result->fetch_assoc()) $stats['by_type'][$r['type']] = (int)$r['cnt'];
+}
+
+// Include unique archive files (documents/files) into record type counts, mapped by folder name
+if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
+    $q = "SELECT fo.name AS folder_name, COUNT(f.id) AS cnt
+          FROM archive_files f
+          JOIN archive_folders fo ON fo.id = f.folder_id
+          WHERE (f.parent_version_id IS NULL OR f.parent_version_id = 0)
+          GROUP BY fo.id, fo.name";
+    if ($r = $conn->query($q)) {
+        while ($row = $r->fetch_assoc()) {
+            $mapped = trim($row['folder_name'] ?? '');
+            if ($mapped === '') $mapped = 'Unknown Folder';
+            $stats['by_type'][$mapped] = ($stats['by_type'][$mapped] ?? 0) + (int)$row['cnt'];
+        }
+    }
 }
 $is_admin = false;
 if (isset($_SESSION['user_id'])) {
@@ -147,7 +169,7 @@ $folder_query = $conn->query("
         af.created_at,
         u.full_name as created_by_name
     FROM archive_folders af
-    LEFT JOIN archive_files afi ON af.id = afi.folder_id
+    LEFT JOIN archive_files afi ON af.id = afi.folder_id AND (afi.parent_version_id IS NULL OR afi.parent_version_id = 0)
     LEFT JOIN users u ON af.created_by = u.id
     WHERE af.parent_id IS NULL
     GROUP BY af.id, af.name, af.created_at, u.full_name
@@ -438,7 +460,7 @@ if ($q_dl_series) {
 }
 
 // Build records query
-$rec_where = "created_at >= DATE_SUB(CURDATE(), INTERVAL $interval $interval_unit)";
+$rec_where = "(parent_version_id IS NULL OR parent_version_id = 0) AND created_at >= DATE_SUB(CURDATE(), INTERVAL $interval $interval_unit)";
 if ($f_start) $rec_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
 if ($f_end) $rec_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
 if ($safe_type) $rec_where .= " AND type = '".$safe_type."'";
@@ -448,6 +470,21 @@ if ($q_rec_series) {
     while ($r = $q_rec_series->fetch_assoc()) {
         $key = $r['d'];
         if (isset($series_records[$key])) $series_records[$key] = (int)$r['cnt'];
+    }
+}
+
+// Merge unique archive files (documents/files) into the records series
+if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+    $rec_arch_where = "(parent_version_id IS NULL OR parent_version_id = 0) AND created_at >= DATE_SUB(CURDATE(), INTERVAL $interval $interval_unit)";
+    if ($f_start) $rec_arch_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
+    if ($f_end) $rec_arch_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
+    if ($safe_type) $rec_arch_where .= " AND EXISTS (SELECT 1 FROM archive_folders afc WHERE afc.id = archive_files.folder_id AND afc.name = '".$safe_type."')";
+    $q_rec_arch = $conn->query("SELECT $date_format_sql AS d, COUNT(*) AS cnt FROM archive_files WHERE $rec_arch_where GROUP BY $date_format_sql ORDER BY d");
+    if ($q_rec_arch) {
+        while ($r = $q_rec_arch->fetch_assoc()) {
+            $key = $r['d'];
+            if (isset($series_records[$key])) $series_records[$key] += (int)$r['cnt'];
+        }
     }
 }
 

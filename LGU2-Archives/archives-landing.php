@@ -394,7 +394,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $f_to = null;
                         if ($fa_start) { $d = DateTime::createFromFormat('Y-m-d', $fa_start); if ($d) $f_from = $d->format('Y-m-d'); }
                         if ($fa_end) { $d = DateTime::createFromFormat('Y-m-d', $fa_end); if ($d) $f_to = $d->format('Y-m-d'); }
-                        $where_rec = "1=1";
+                        $where_rec = "(parent_version_id IS NULL OR parent_version_id = 0)";
                         if ($f_from) $where_rec .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                         if ($f_to) $where_rec .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
                         if ($fa_type) $where_rec .= " AND type = '".$conn->real_escape_string($fa_type)."'";
@@ -424,6 +424,18 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $qa_by_type = [];
                         if ($res = $conn->query("SELECT COUNT(*) AS t FROM legislative_records WHERE $where_rec")) {
                             if ($row = $res->fetch_assoc()) $qa_total_records = (int)$row['t'];
+                        }
+                        // Include unique archive files (documents/files), counting each version group once
+                        if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
+                            $arch_where = "(parent_version_id IS NULL OR parent_version_id = 0)";
+                            if ($f_from) $arch_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                            if ($f_to) $arch_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                            if ($fa_type) {
+                                $arch_where .= " AND EXISTS (SELECT 1 FROM archive_folders afc WHERE afc.id = archive_files.folder_id AND afc.name = '".$conn->real_escape_string($fa_type)."')";
+                            }
+                            if ($res = $conn->query("SELECT COUNT(*) AS c FROM archive_files WHERE $arch_where")) {
+                                if ($row = $res->fetch_assoc()) $qa_total_records += (int)$row['c'];
+                            }
                         }
                         if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
                             if ($res = $conn->query("SELECT COUNT(*) AS c FROM analytics_events WHERE $where_dl")) {
@@ -462,7 +474,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }
                         // Merge newest folders uploaded into record type counts
                         if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0 && $conn->query("SHOW TABLES LIKE 'archive_folders'")->num_rows > 0) {
-                            $af_where = "1=1";
+                            $af_where = "(f.parent_version_id IS NULL OR f.parent_version_id = 0)";
                             if ($f_from) $af_where .= " AND f.created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                             if ($f_to) $af_where .= " AND f.created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
                             $q = "SELECT fo.name AS folder_name, COUNT(f.id) AS cnt
@@ -508,7 +520,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_records[$k])) $series_records[$k] = (int)$row['c']; }
                         }
                         if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
-                            $wf = "1=1";
+                            $wf = "(parent_version_id IS NULL OR parent_version_id = 0)";
                             if ($f_from) $wf .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                             if ($f_to) $wf .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
                             $qf = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM archive_files WHERE $wf $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
@@ -526,29 +538,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $qa_series_records = array_values($series_records);
                         $qa_series_records_merged = array_values($series_records_merged);
                         ?>
-                        <!-- Filter bar: exact structure matches report_analytics.php lines 763-788 -->
-                        <div class="flex flex-wrap items-center gap-3 mb-4">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <label class="text-xs text-gray-600 dark:text-gray-400">From</label>
-                                <input id="qa-from" type="date" value="<?php echo htmlspecialchars($f_from ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                <label class="text-xs text-gray-600 dark:text-gray-400 ml-2">To</label>
-                                <input id="qa-to" type="date" value="<?php echo htmlspecialchars($f_to ?? ''); ?>" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                <select id="qa-type" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                    <option value="">All Types</option>
-                                    <?php foreach ($types_list as $t): ?>
-                                        <option value="<?php echo htmlspecialchars($t); ?>" <?php echo ($fa_type === $t ? 'selected' : ''); ?>><?php echo htmlspecialchars($t); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <select id="qa-event" class="px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
-                                    <option value="">All Events</option>
-                                    <option value="download" <?php echo ($safe_event === 'download' ? 'selected' : ''); ?>>Download</option>
-                                    <option value="upload" <?php echo ($safe_event === 'upload' ? 'selected' : ''); ?>>Upload</option>
-                                </select>
-                                <div class="flex md:justify-end ml-auto">
-                                    <button id="qa-apply" class="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Apply</button>
-                                </div>
-                            </div>
-                        </div>
+            
                         <!-- KPI Stat cards: exact wrapper structure matches report_analytics.php lines 679-717 -->
                         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
                             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
@@ -1326,7 +1316,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             try {
                 new Chart(qaRecordsLineCtx, {
                     type: 'line',
-                    data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true }] },
+                    data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecordsMerged, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.2)', fill: true }] },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,

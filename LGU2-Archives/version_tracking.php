@@ -181,6 +181,7 @@ $conn->close();
         .dark .toggle-track { background-color: rgba(30,41,59,.6); }
         .toggle-thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 9999px; background: white; transition: transform .2s ease; }
         .dark .toggle-thumb { transform: translateX(20px); }
+        .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
     </style>
 </head>
 <body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200">
@@ -402,11 +403,73 @@ $conn->close();
         <div class="flex items-center justify-center min-h-screen px-4">
             <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeVersionModal()"></div>
             <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-6 border border-gray-200 dark:border-slate-700">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 id="vm-title" class="text-2xl font-bold text-gray-800 dark:text-gray-200">Version History</h2>
-                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeVersionModal()">&times;</button>
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 leading-snug">Version History</h2>
+                        <div id="vm-title-wrap" class="hidden">
+                            <div class="flex items-start gap-1">
+                                <span id="vm-title" class="text-sm font-semibold text-gray-600 dark:text-gray-400 leading-snug"></span>
+                                <button id="vm-title-toggle" type="button" onclick="vtToggleTitle()" class="flex-shrink-0 mt-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" title="Show full filename">
+                                    <i id="vm-title-chevron" class="bi bi-chevron-down text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0 pt-1">
+                        <button onclick="vtOpenCompare()" class="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors whitespace-nowrap flex-shrink-0" title="Compare two or three versions side by side">
+                            <i class="bi bi-columns-gap mr-1"></i>Compare
+                        </button>
+                        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl flex-shrink-0" onclick="closeVersionModal()">&times;</button>
+                    </div>
                 </div>
                 <div id="vm-list" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 py-8">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closePreviewModal()"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="previewModalTitle" class="text-xl font-bold text-gray-800 dark:text-gray-200 truncate">Preview</h2>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closePreviewModal()">&times;</button>
+                </div>
+                <div id="previewModalBody" class="min-h-[50vh]"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Picker Modal -->
+    <div id="comparePickerModal" class="hidden fixed inset-0 z-[60] overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closeComparePicker()"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Compare Versions</h2>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeComparePicker()">&times;</button>
+                </div>
+                <div id="cmp-picker-body" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Viewer Modal -->
+    <div id="compareViewerModal" class="hidden fixed inset-0 z-[70] overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-2 py-6">
+            <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick="closeCompareViewer()"></div>
+            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-[1600px] p-6 border border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h2 id="cmp-viewer-title" class="text-lg font-bold text-gray-800 dark:text-gray-200 truncate">Compare</h2>
+                    <div class="flex items-center gap-2">
+                        <button onclick="vtSwapCompare()" class="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors" title="Swap the compared versions">
+                            <i class="bi bi-arrow-left-right mr-1"></i>Swap
+                        </button>
+                        <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl" onclick="closeCompareViewer()">&times;</button>
+                    </div>
+                </div>
+                <div id="cmp-viewer-body" class="overflow-x-auto"></div>
             </div>
         </div>
     </div>
@@ -420,6 +483,9 @@ $conn->close();
         let vtSortMode = 'daily';
         let vtCurrentPage = 1;
         let vtCurrentLoadContext = null;
+        let vtCompareVersions = [];
+        let vtCompareRecord = null;
+        let vtCompareState = null;
         const vtPageSize = 20;
         const vtPagination = new PaginationControls('vt-pagination', { onPageChange: function(page) { vtCurrentPage = page; if (vtCurrentLoadContext) vtCurrentLoadContext(); } });
 
@@ -499,6 +565,12 @@ $conn->close();
             return div.innerHTML;
         }
 
+        function vtQuote(obj) {
+            return JSON.stringify(obj)
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '\\u0027');
+        }
+
         function vtSelectFolderFromGrid(folder) {
             // Hide folder grid, show files section
             document.getElementById('vt-folder-grid-section').classList.add('hidden');
@@ -548,13 +620,13 @@ $conn->close();
                 .then(function(d) {
                     if (d.success && d.files) {
                         vtAllFiles = d.files.map(function(f) {
-                            return { id: f.id, title: f.name || f.title, created_at: f.created_at, version: f.version || 1, type: 'Archive', file_path: f.file_path, author: f.author };
+                            return { id: f.id, title: f.name || f.title, created_at: f.created_at, version: f.version || 1, version_count: f.version_count || 1, type: f.type || 'Legislative', file_path: f.file_path, author: f.author, unique_number: f.unique_number, version_notes: f.version_notes, file_date: f.file_date };
                         });
                     } else {
                         vtAllFiles = [];
                     }
                     document.getElementById('vt-stat-total').textContent = d.total || vtAllFiles.length;
-                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(function(f) { return f.version && f.version > 1; }).length;
+                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(function(f) { return f.version_count && f.version_count > 1; }).length;
                     var todayStr = new Date().toISOString().split('T')[0];
                     var todayCount = vtAllFiles.filter(function(f) { return f.created_at && f.created_at.startsWith(todayStr); }).length;
                     document.getElementById('vt-stat-today').textContent = todayCount;
@@ -711,9 +783,13 @@ $conn->close();
                                 title: f.title || f.name,
                                 created_at: f.created_at,
                                 version: f.version || 1,
+                                version_count: f.version_count || 1,
                                 type: 'Archive',
                                 file_path: f.file_path,
-                                author: f.author || f.created_by || 'System'
+                                author: f.author || f.created_by || 'System',
+                                unique_number: f.unique_number,
+                                version_notes: f.version_notes,
+                                file_date: f.file_date
                             };
                         });
                     } else {
@@ -721,7 +797,7 @@ $conn->close();
                     }
 
                     document.getElementById('vt-stat-total').textContent = d.total || vtAllFiles.length;
-                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
+                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version_count && f.version_count > 1).length;
                     
                     let todayCount = 0;
                     let todayStr = new Date().toISOString().split('T')[0];
@@ -782,15 +858,15 @@ $conn->close();
 
             if (key === 'phpFiles') {
                 vtAllFiles = [
-                    { id: 1, title: 'authdatabase.php', created_at: '2026-07-05T10:30:00Z', version: 2, type: 'PHP' },
-                    { id: 2, title: 'sidebar-centralized.php', created_at: '2026-07-04T09:15:00Z', version: 3, type: 'PHP' },
-                    { id: 3, title: 'storage.php', created_at: '2026-06-28T14:20:00Z', version: 1, type: 'PHP' },
-                    { id: 4, title: 'version_tracking.php', created_at: '2026-06-25T11:45:00Z', version: 5, type: 'PHP' },
-                    { id: 5, title: 'report_analytics.php', created_at: '2026-05-10T16:00:00Z', version: 2, type: 'PHP' }
+                    { id: 1, title: 'authdatabase.php', created_at: '2026-07-05T10:30:00Z', version: 2, version_count: 2, type: 'PHP', author: 'System', file_path: 'authdatabase.php' },
+                    { id: 2, title: 'sidebar-centralized.php', created_at: '2026-07-04T09:15:00Z', version: 3, version_count: 3, type: 'PHP', author: 'System', file_path: 'sidebar-centralized.php' },
+                    { id: 3, title: 'storage.php', created_at: '2026-06-28T14:20:00Z', version: 1, version_count: 1, type: 'PHP', author: 'System', file_path: 'storage.php' },
+                    { id: 4, title: 'version_tracking.php', created_at: '2026-06-25T11:45:00Z', version: 5, version_count: 5, type: 'PHP', author: 'System', file_path: 'version_tracking.php' },
+                    { id: 5, title: 'report_analytics.php', created_at: '2026-05-10T16:00:00Z', version: 2, version_count: 2, type: 'PHP', author: 'System', file_path: 'report_analytics.php' }
                 ];
                 
                 document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
-                document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
+                document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => (f.version_count || f.version || 1) > 1).length;
                 
                 let todayCount = 0;
                 let todayStr = new Date().toISOString().split('T')[0];
@@ -825,7 +901,7 @@ $conn->close();
                     });
 
                     document.getElementById('vt-stat-total').textContent = totalCount || vtAllFiles.length;
-                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => f.version && f.version > 1).length;
+                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => (f.version_count || f.version || 1) > 1).length;
                     
                     let todayCount = 0;
                     let todayStr = new Date().toISOString().split('T')[0];
@@ -919,6 +995,9 @@ $conn->close();
             }
 
             var verStr = record.version ? 'v' + record.version : 'v1.0';
+            var versionCount = record.version_count && record.version_count > 1 ? record.version_count : null;
+            var authorStr = record.author && String(record.author).trim() ? String(record.author) : '';
+            var unqStr = record.unique_number && String(record.unique_number).trim() ? String(record.unique_number) : '';
 
             var card = document.createElement('div');
             card.className = 'bg-white dark:bg-slate-800 shadow-lg rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden hover:border-gray-200 dark:hover:border-slate-600 hover:shadow-xl transition-all duration-200 group cursor-pointer flex flex-col h-full';
@@ -927,12 +1006,15 @@ $conn->close();
             card.innerHTML = `
                 <div class="h-32 w-full ${theme.bg} ${theme.border} flex items-center justify-center p-4 relative overflow-hidden">
                     <div class="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-slate-800 opacity-50"></div>
+                    ${versionCount ? `<div class="absolute top-3 right-3 z-20 text-[10px] font-bold px-2 py-1 rounded-full bg-red-600 text-white shadow-lg">${versionCount} version${versionCount > 1 ? 's' : ''}</div>` : ''}
                     <div class="w-16 h-16 rounded-xl bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-700 flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-300">
                         <i class="bi ${theme.icon} text-2xl ${theme.iconColor}"></i>
                     </div>
                 </div>
                 <div class="p-4 flex-1 flex flex-col">
-                    <div class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate mb-1" title="${record.title}">${record.title}</div>
+                    <div class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate mb-1" title="${escapeHtml(record.title)}">${escapeHtml(record.title)}</div>
+                    ${authorStr ? `<div class="text-xs text-gray-500 dark:text-gray-400 truncate mb-1"><i class="bi bi-person mr-1"></i>${escapeHtml(authorStr)}</div>` : ''}
+                    ${unqStr ? `<div class="text-[10px] text-gray-400 dark:text-gray-500 font-mono truncate mb-1">#${escapeHtml(unqStr)}</div>` : ''}
                     <div class="mt-auto flex items-center justify-between pt-3">
                         <div class="text-xs text-gray-500 dark:text-gray-400">${dateStr}</div>
                         <div class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${theme.pill}">${verStr}</div>
@@ -954,7 +1036,10 @@ $conn->close();
             }
 
             vtFilteredFiles = vtAllFiles.filter(function(file) {
-                return (file.title || '').toLowerCase().includes(query) || (file.name || '').toLowerCase().includes(query);
+                return (file.title || '').toLowerCase().includes(query)
+                    || (file.name || '').toLowerCase().includes(query)
+                    || (file.author || '').toLowerCase().includes(query)
+                    || (file.unique_number || '').toLowerCase().includes(query);
             });
 
             renderFiles(vtFilteredFiles);
@@ -962,9 +1047,30 @@ $conn->close();
 
         function openVersionHistory(record) {
             var list = document.getElementById('vm-list');
+            var titleWrap = document.getElementById('vm-title-wrap');
             var header = document.getElementById('vm-title');
-            header.textContent = 'Version History — ' + (record && record.title ? record.title : 'File');
+            var toggleBtn = document.getElementById('vm-title-toggle');
+            var chevron = document.getElementById('vm-title-chevron');
+            var fileName = (record && record.title ? String(record.title) : 'File');
+            header.textContent = fileName;
+            header.title = fileName;
+            if (toggleBtn) toggleBtn.classList.add('hidden');
+            if (chevron) chevron.className = 'bi bi-chevron-down text-sm';
+            header.classList.remove('line-clamp-1');
+            if (titleWrap) titleWrap.classList.add('hidden');
             list.innerHTML = '<div class="text-center py-4">Loading...</div>';
+            
+            // Show filename under the title once layout settles, add toggle only if it overflows
+            requestAnimationFrame(function(){
+                if (!titleWrap) return;
+                titleWrap.classList.remove('hidden');
+                requestAnimationFrame(function(){
+                    if (header.scrollWidth > header.clientWidth + 4) {
+                        header.classList.add('line-clamp-1');
+                        if (toggleBtn) toggleBtn.classList.remove('hidden');
+                    }
+                });
+            });
             
             // Check if it's an archive file (type 'Archive')
             const isArchiveFile = record && record.type === 'Archive';
@@ -974,23 +1080,35 @@ $conn->close();
                 fetch('archives_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
                 .then(r => r.json())
                 .then(d => {
+                    vtCompareVersions = (d.success && d.versions) ? d.versions : [];
+                    vtCompareRecord = record;
                     if(d.success) {
                         if(d.versions.length === 0) {
                             list.innerHTML = '<div class="text-center text-gray-500">No version history found.</div>';
                         } else {
-                            list.innerHTML = d.versions.map(v => `
-                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
-                                    <div>
-                                        <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                                            ${v.created_at} • ${record.author || 'System'}
+                            list.innerHTML = d.versions.map(v => {
+                                var notes = v.version_notes ? String(v.version_notes).trim() : '';
+                                var vAuthor = v.author || record.author || 'System';
+                                var unq = v.unique_number ? String(v.unique_number).trim() : '';
+                                return `
+                                <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                ${v.created_at} • ${vAuthor}
+                                                ${unq ? ' <span class="font-mono">#' + escapeHtml(unq) + '</span>' : ''}
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path || record.file_path, title: v.title || record.title, type: isArchiveFile ? 'Archive' : (record.type||'')})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
+                                            <a href="${v.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
                                         </div>
                                     </div>
-                                    <div class="flex space-x-2">
-                                        <a href="${record.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
-                                    </div>
+                                    ${notes ? '<div class="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-600 px-2 py-1"><span class="font-semibold">Change note:</span> ' + escapeHtml(notes) + '</div>' : ''}
                                 </div>
-                            `).join('');
+                            `;
+                            }).join('');
                         }
                     } else {
                         list.innerHTML = '<div class="text-red-500 text-center">Failed to load version history</div>';
@@ -1004,30 +1122,41 @@ $conn->close();
                 fetch('legislative_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
                 .then(r => r.json())
                 .then(d => {
+                    vtCompareVersions = (d.success && d.versions) ? d.versions : [];
+                    vtCompareRecord = record;
                     if(d.success) {
                         if(d.versions.length === 0) {
                             list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
                         } else {
-                            list.innerHTML = d.versions.map(v => `
-                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
-                                    <div>
-                                        <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                                            ${v.created_at} • ${v.author}
+                            list.innerHTML = d.versions.map(v => {
+                                var notes = v.version_notes ? String(v.version_notes).trim() : '';
+                                var unq = v.unique_number ? String(v.unique_number).trim() : '';
+                                return `
+                                <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                ${v.created_at} • ${v.author}
+                                                ${unq ? ' <span class="font-mono">#' + escapeHtml(unq) + '</span>' : ''}
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path, title: v.title || record.title, type: record.type||''})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
+                                            <a href="download.php?${new URLSearchParams({
+                                                id: v.id,
+                                                title: (record && record.title) ? record.title : (v.title || 'Document'),
+                                                type: (record && record.type) ? record.type : '',
+                                                month: (record && record.month) ? record.month : '',
+                                                year: (record && record.year) ? record.year : '',
+                                                author: (record && record.author) ? record.author : ''
+                                            }).toString()}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
                                         </div>
                                     </div>
-                                    <div class="flex space-x-2">
-                                        <a href="download.php?${new URLSearchParams({
-                                            id: v.id,
-                                            title: (record && record.title) ? record.title : (v.title || 'Document'),
-                                            type: (record && record.type) ? record.type : '',
-                                            month: (record && record.month) ? record.month : '',
-                                            year: (record && record.year) ? record.year : '',
-                                            author: (record && record.author) ? record.author : ''
-                                        }).toString()}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
-                                    </div>
+                                    ${notes ? '<div class="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-600 px-2 py-1"><span class="font-semibold">Change note:</span> ' + escapeHtml(notes) + '</div>' : ''}
                                 </div>
-                            `).join('');
+                            `;
+                            }).join('');
                         }
                     } else {
                         list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
@@ -1039,6 +1168,270 @@ $conn->close();
         }
         function closeVersionModal(){
             document.getElementById('versionModal').classList.add('hidden');
+        }
+
+        function vtPreviewFile(encodedPayload) {
+            var payload = typeof encodedPayload === 'string' ? JSON.parse(encodedPayload) : encodedPayload;
+            var fp = payload.file_path || '';
+            var title = payload.title || 'File';
+            var ext = (fp.split('.').pop() || '').toLowerCase().split('?')[0];
+
+            document.getElementById('previewModalTitle').textContent = 'Preview — ' + title;
+            var body = document.getElementById('previewModalBody');
+            body.innerHTML = '';
+
+            if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) {
+                body.innerHTML = '<img src="' + fp + '" alt="' + escapeHtml(title) + '" class="max-w-full max-h-full mx-auto object-contain rounded shadow-lg" style="max-height:65vh">';
+            } else if (ext === 'pdf') {
+                body.innerHTML = '<iframe src="' + fp + '" class="w-full h-full rounded border-0" style="height:65vh" title="' + escapeHtml(title) + '"></iframe>';
+            } else if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) {
+                body.innerHTML = '<iframe src="https://docs.google.com/gview?embedded=true&url=' + encodeURIComponent(window.location.origin + '/' + fp) + '" class="w-full h-full rounded border-0" style="height:65vh" title="' + escapeHtml(title) + '"></iframe>';
+            } else if (['mp4','webm','ogg','mp3','wav'].includes(ext)) {
+                var tag = ['mp3','wav'].includes(ext) ? 'audio' : 'video';
+                body.innerHTML = '<' + tag + ' controls src="' + fp + '" class="max-w-full mx-auto rounded" style="max-height:65vh"></' + tag + '>';
+            } else {
+                body.innerHTML = '<div class="text-center py-12 px-4">' +
+                    '<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center"><i class="bi bi-file-earmark text-2xl text-gray-400"></i></div>' +
+                    '<p class="text-gray-500 dark:text-gray-400 mb-4">No inline preview available for this file type.</p>' +
+                    '<a href="' + fp + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                '</div>';
+            }
+            document.getElementById('previewModal').classList.remove('hidden');
+        }
+        function closePreviewModal(){
+            var body = document.getElementById('previewModalBody');
+            if (body) body.innerHTML = '';
+            document.getElementById('previewModal').classList.add('hidden');
+        }
+
+        // ============ VERSION COMPARE (2-way / 3-way) ============
+        const VT_TEXT_EXTS = ['txt','md','log','php','js','css','html','htm','sql','json','xml','csv','py','c','cpp','java','yml','yaml','ini','sh','ts'];
+        const VT_IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+        const VT_VIDEO_EXTS = ['mp4','webm','ogg','mov','avi'];
+        const VT_AUDIO_EXTS = ['mp3','wav','m4a','aac','ogg'];
+        const VT_DOC_EXTS = ['doc','docx','xls','xlsx','ppt','pptx'];
+
+        function vtOpenCompare() {
+            if (!vtCompareVersions || vtCompareVersions.length < 2) {
+                alert('Need at least 2 versions to compare.');
+                return;
+            }
+            var body = document.getElementById('cmp-picker-body');
+            var options = vtCompareVersions.map(function(v, i) {
+                return '<option value="' + i + '">v' + v.version + ' — ' + (v.created_at || '') + '</option>';
+            }).join('');
+            var latest = vtCompareVersions.length - 1;
+            body.innerHTML =
+                '<div>' +
+                    '<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Compare mode</label>' +
+                    '<div class="inline-flex rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden w-full">' +
+                        '<button type="button" id="cmp-mode-2" onclick="vtSetCompareMode(2)" class="flex-1 px-4 py-2 text-sm font-medium bg-red-600 text-white">2 Versions</button>' +
+                        '<button type="button" id="cmp-mode-3" onclick="vtSetCompareMode(3)" class="flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">3 Versions</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div>' +
+                    '<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Baseline (oldest reference)</label>' +
+                    '<select id="cmp-sel-base" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">' + options + '</select>' +
+                '</div>' +
+                '<div>' +
+                    '<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Compare against</label>' +
+                    '<select id="cmp-sel-a" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">' + options + '</select>' +
+                '</div>' +
+                '<div id="cmp-sel-c-wrap" class="hidden">' +
+                    '<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Second comparison (3-way)</label>' +
+                    '<select id="cmp-sel-c" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">' + options + '</select>' +
+                '</div>' +
+                '<div class="flex justify-end space-x-3 pt-2">' +
+                    '<button onclick="closeComparePicker()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>' +
+                    '<button onclick="vtRunCompare()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">Compare</button>' +
+                '</div>';
+            document.getElementById('cmp-sel-base').value = String(0);
+            document.getElementById('cmp-sel-a').value = String(latest);
+            vtCompareMode = 2;
+            document.getElementById('comparePickerModal').classList.remove('hidden');
+        }
+        let vtCompareMode = 2;
+        function vtSetCompareMode(mode) {
+            vtCompareMode = mode;
+            var b2 = document.getElementById('cmp-mode-2');
+            var b3 = document.getElementById('cmp-mode-3');
+            var cWrap = document.getElementById('cmp-sel-c-wrap');
+            if (mode === 3) {
+                b2.className = 'flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700';
+                b3.className = 'flex-1 px-4 py-2 text-sm font-medium bg-red-600 text-white';
+                cWrap.classList.remove('hidden');
+            } else {
+                b2.className = 'flex-1 px-4 py-2 text-sm font-medium bg-red-600 text-white';
+                b3.className = 'flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700';
+                cWrap.classList.add('hidden');
+            }
+        }
+        function closeComparePicker() {
+            document.getElementById('comparePickerModal').classList.add('hidden');
+        }
+
+        function vtRunCompare() {
+            var baseIdx = parseInt(document.getElementById('cmp-sel-base').value);
+            var aIdx = parseInt(document.getElementById('cmp-sel-a').value);
+            var cIdx = vtCompareMode === 3 ? parseInt(document.getElementById('cmp-sel-c').value) : null;
+            var base = vtCompareVersions[baseIdx];
+            var a = vtCompareVersions[aIdx];
+            var c = (cIdx !== null && cIdx !== baseIdx && cIdx !== aIdx) ? vtCompareVersions[cIdx] : null;
+            closeComparePicker();
+            if (!base || !a) return;
+            var arr = [base, a];
+            if (c && vtCompareMode === 3) arr.push(c);
+            vtCompareState = arr;
+            document.getElementById('cmp-viewer-title').textContent = 'Compare — ' + (vtCompareRecord && vtCompareRecord.title ? vtCompareRecord.title : 'File');
+            document.getElementById('compareViewerModal').classList.remove('hidden');
+            var body = document.getElementById('cmp-viewer-body');
+            body.innerHTML = '<div class="text-center py-12 text-gray-500"><div class="animate-spin inline-block w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full mb-3"></div><div>Loading comparison...</div></div>';
+            vtBuildCompareViewer(arr, body);
+        }
+
+        function vtFileExt(fp) {
+            var s = String(fp || '').toLowerCase();
+            return s.indexOf('?') >= 0 ? s.split('?')[0].split('.').pop() : s.split('.').pop();
+        }
+
+        function vtBuildCompareViewer(versions, body) {
+            var ext = vtFileExt(versions[0].file_path || versions[0].title);
+            var header = versions.map(function(v, i) {
+                var color = ['bg-red-600', 'bg-blue-600', 'bg-green-600'][i % 3];
+                return '<div class="' + color + ' text-white text-center text-xs font-bold px-3 py-2 rounded-t-lg truncate">' +
+                    'v' + v.version + ' · ' + (v.author || 'System') + '</div>';
+            }).join('');
+            if (VT_TEXT_EXTS.indexOf(ext) >= 0) {
+                vtLoadTextCompare(versions, body);
+            } else if (VT_IMAGE_EXTS.indexOf(ext) >= 0) {
+                var imgs = versions.map(function(v) {
+                    return '<div class="flex-1 min-w-0"><img src="' + v.file_path + '" class="w-full h-auto object-contain rounded-lg" style="max-height:70vh"></div>';
+                }).join('');
+                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + header + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + imgs + '</div>';
+            } else if (VT_VIDEO_EXTS.indexOf(ext) >= 0) {
+                var vids = versions.map(function(v) {
+                    return '<div class="flex-1 min-w-0"><video controls src="' + v.file_path + '" class="w-full rounded-lg" style="max-height:70vh"></video></div>';
+                }).join('');
+                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + header + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + vids + '</div>';
+            } else if (VT_AUDIO_EXTS.indexOf(ext) >= 0) {
+                var auds = versions.map(function(v) {
+                    return '<div class="flex-1 min-w-0 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg"><audio controls src="' + v.file_path + '" class="w-full"></audio></div>';
+                }).join('');
+                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + header + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + auds + '</div>';
+            } else if (ext === 'pdf') {
+                var iframes = versions.map(function(v) {
+                    return '<div class="flex-1 min-w-0"><iframe src="' + v.file_path + '" class="w-full rounded-lg border-0" style="height:70vh"></iframe></div>';
+                }).join('');
+                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + header + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + iframes + '</div>';
+            } else {
+                var cards = versions.map(function(v) {
+                    return '<div class="flex-1 min-w-0 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg text-center">' +
+                        '<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">No inline preview for this file type.</p>' +
+                        '<a href="' + v.file_path + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                    '</div>';
+                }).join('');
+                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + header + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + cards + '</div>';
+            }
+        }
+
+        function vtLoadTextCompare(versions, body) {
+            var colors = ['bg-red-600', 'bg-blue-600', 'bg-green-600'];
+            var fetchPromises = versions.map(function(v) {
+                return fetch(v.file_path).then(function(r) { return r.ok ? r.text() : ''; }).catch(function() { return ''; });
+            });
+            Promise.all(fetchPromises).then(function(texts) {
+                var baseLines = vtSplitLines(texts[0]);
+                var colsHtml = '';
+                versions.forEach(function(v, idx) {
+                    var otherLines = vtSplitLines(texts[idx]);
+                    var align = vtLcsAlign(baseLines, otherLines);
+                    var header = '<div class="' + colors[idx % 3] + ' text-white text-center text-xs font-bold px-3 py-2 truncate">' +
+                        'v' + v.version + ' · ' + (v.author || 'System') + '</div>';
+                    var rowsHtml = '';
+                    align.forEach(function(row) {
+                        var bTxt = row.a === null ? '' : vtEsc(row.a);
+                        var oTxt = row.b === null ? '' : vtEsc(row.b);
+                        var bBg = row.a !== null && row.b === null ? 'bg-red-500/20' : '';
+                        var oBg = row.b !== null && row.a === null ? 'bg-green-500/20' : '';
+                        rowsHtml += '<div class="flex">' +
+                            '<div class="w-10 flex-shrink-0 text-right pr-2 text-[10px] text-gray-400 dark:text-gray-600 select-none leading-5">' + (row.a !== null ? row.aLine : '') + '</div>' +
+                            '<div class="flex-1 px-2 leading-5 whitespace-pre-wrap break-words ' + bBg + '">' + bTxt + '</div>' +
+                            '<div class="w-10 flex-shrink-0 text-right pr-2 text-[10px] text-gray-400 dark:text-gray-600 select-none leading-5">' + (row.b !== null ? row.bLine : '') + '</div>' +
+                            '<div class="flex-1 px-2 leading-5 whitespace-pre-wrap break-words ' + oBg + '">' + oTxt + '</div>' +
+                        '</div>';
+                    });
+                    colsHtml += '<div class="flex-1 min-w-0 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">' +
+                        header + '<div class="max-h-[70vh] overflow-y-auto font-mono text-xs text-gray-800 dark:text-gray-200">' + rowsHtml + '</div>' +
+                    '</div>';
+                });
+                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + colsHtml + '</div>';
+            });
+        }
+
+        function vtSplitLines(text) {
+            return String(text || '').replace(/\r\n/g, '\n').split('\n');
+        }
+
+        function vtEsc(s) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(s == null ? '' : String(s)));
+            return div.innerHTML;
+        }
+
+        // LCS-based line alignment: returns [{a, aLine, b, bLine}] where a/b are line texts (null if absent)
+        function vtLcsAlign(a, b) {
+            var n = a.length, m = b.length;
+            var dp = [];
+            for (var i = 0; i <= n; i++) dp.push(new Array(m + 1).fill(0));
+            for (var i = n - 1; i >= 0; i--) {
+                for (var j = m - 1; j >= 0; j--) {
+                    dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+                }
+            }
+            var rows = [];
+            var i = 0, j = 0;
+            while (i < n && j < m) {
+                if (a[i] === b[j]) {
+                    rows.push({ a: a[i], aLine: i + 1, b: b[j], bLine: j + 1 });
+                    i++; j++;
+                } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+                    rows.push({ a: a[i], aLine: i + 1, b: null, bLine: '' });
+                    i++;
+                } else {
+                    rows.push({ a: null, aLine: '', b: b[j], bLine: j + 1 });
+                    j++;
+                }
+            }
+            while (i < n) { rows.push({ a: a[i], aLine: i + 1, b: null, bLine: '' }); i++; }
+            while (j < m) { rows.push({ a: null, aLine: '', b: b[j], bLine: j + 1 }); j++; }
+            return rows;
+        }
+
+        function vtSwapCompare() {
+            if (!vtCompareState || vtCompareState.length < 2) return;
+            var tmp = vtCompareState[0];
+            vtCompareState[0] = vtCompareState[1];
+            vtCompareState[1] = tmp;
+            var body = document.getElementById('cmp-viewer-body');
+            vtBuildCompareViewer(vtCompareState, body);
+        }
+
+        function closeCompareViewer() {
+            document.getElementById('compareViewerModal').classList.add('hidden');
+            document.getElementById('cmp-viewer-body').innerHTML = '';
+        }
+
+        function vtToggleTitle() {
+            var header = document.getElementById('vm-title');
+            var chevron = document.getElementById('vm-title-chevron');
+            var isClamped = header.classList.contains('line-clamp-1');
+            if (isClamped) {
+                header.classList.remove('line-clamp-1');
+                chevron.className = 'bi bi-chevron-up text-sm';
+            } else {
+                header.classList.add('line-clamp-1');
+                chevron.className = 'bi bi-chevron-down text-sm';
+            }
         }
     </script>
     <script src="assets/js/archives-landing.js"></script>

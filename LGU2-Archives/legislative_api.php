@@ -33,6 +33,11 @@ function ensure_structure($conn) {
         $conn->query("ALTER TABLE legislative_records ADD COLUMN parent_version_id INT NULL");
         // optional FK omitted to avoid circular issues on older schemas
     }
+    // Add version_notes column if missing (for change-log tracking)
+    $checkNotes = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'version_notes'");
+    if ($checkNotes->num_rows == 0) {
+        $conn->query("ALTER TABLE legislative_records ADD COLUMN version_notes TEXT NULL");
+    }
 }
 
 // Initialize structure
@@ -105,31 +110,41 @@ switch ($action) {
         $date = $_POST['fileDate'] ?? date('Y-m-d');
         $month = date('F', strtotime($date));
         $year = date('Y', strtotime($date));
+        $version_notes = $_POST['version_notes'] ?? null;
+        $unq = $_POST['fileUniqueNumber'] ?? null;
 
-        // Check for duplicate
-        if (!isset($_POST['force_version'])) {
-            $checkSql = "SELECT id, version FROM legislative_records WHERE title = ? AND " . ($folder_id ? "folder_id = ?" : "folder_id IS NULL") . " AND parent_version_id IS NULL";
-            $checkStmt = $conn->prepare($checkSql);
-            if ($folder_id) $checkStmt->bind_param("si", $title, $folder_id);
-            else $checkStmt->bind_param("s", $title);
-            
-            $checkStmt->execute();
-            $checkRes = $checkStmt->get_result();
-            if ($row = $checkRes->fetch_assoc()) {
-                echo json_encode([
-                    'success' => false, 
-                    'duplicate' => true, 
-                    'existing_id' => $row['id'],
-                    'message' => 'File already exists. Create new version?'
-                ]);
-                exit;
+        // AUTOMATIC VERSIONING: if a matching document family exists (same title + author + unique number),
+        // this upload automatically becomes the next version — no confirmation needed.
+        $root_row = null;
+        $matchSql = "SELECT id, unique_number FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND COALESCE(unique_number,'') = COALESCE(?, '') AND parent_version_id IS NULL" . ($folder_id ? " AND folder_id = ?" : " AND folder_id IS NULL") . " LIMIT 1";
+        $matchStmt = $conn->prepare($matchSql);
+        if ($folder_id) {
+            $matchStmt->bind_param("sssi", $title, $author, $unq, $folder_id);
+        } else {
+            $matchStmt->bind_param("sss", $title, $author, $unq);
+        }
+        $matchStmt->execute();
+        $root_row = $matchStmt->get_result()->fetch_assoc();
+        $matchStmt->close();
+
+        $isBlankUnq = empty($unq);
+        if (!$root_row && $isBlankUnq) {
+            $matchSql = "SELECT id, unique_number FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND parent_version_id IS NULL" . ($folder_id ? " AND folder_id = ?" : " AND folder_id IS NULL") . " LIMIT 1";
+            $matchStmt = $conn->prepare($matchSql);
+            if ($folder_id) {
+                $matchStmt->bind_param("ssi", $title, $author, $folder_id);
+            } else {
+                $matchStmt->bind_param("ss", $title, $author);
             }
+            $matchStmt->execute();
+            $root_row = $matchStmt->get_result()->fetch_assoc();
+            $matchStmt->close();
         }
 
         // Handle versioning
         $version = 1;
         $parent_version_id = null;
-        
+
         if (isset($_POST['parent_id'])) {
             $parent_id = (int)$_POST['parent_id'];
             // Get max version from the family of versions
@@ -142,6 +157,22 @@ switch ($action) {
                 $version = ($vRow['max_ver'] ?? 1) + 1;
             }
             $parent_version_id = $parent_id;
+        } elseif ($root_row) {
+            $root_id = (int)$root_row['id'];
+            $verSql = "SELECT MAX(version) as max_ver FROM legislative_records WHERE id = ? OR parent_version_id = ?";
+            $verStmt = $conn->prepare($verSql);
+            $verStmt->bind_param("ii", $root_id, $root_id);
+            $verStmt->execute();
+            $verRes = $verStmt->get_result();
+            if ($vRow = $verRes->fetch_assoc()) {
+                $version = ($vRow['max_ver'] ?? 1) + 1;
+            }
+            $parent_version_id = $root_id;
+            // Inherit the family's unique number if none was provided
+            if ($isBlankUnq && !empty($root_row['unique_number'])) {
+                $unq = $root_row['unique_number'];
+                $isBlankUnq = false;
+            }
         }
 
         // Create upload directory
@@ -178,8 +209,8 @@ switch ($action) {
             // Check if columns exist (graceful fallback if DB update failed)
             $cols = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'version'");
             if ($cols->num_rows > 0) {
-                $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("ssssssiii", $title, $type, $month, $year, $author, $target_path, $folder_id, $version, $parent_version_id);
+                $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, version_notes, unique_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssssssiiiss", $title, $type, $month, $year, $author, $target_path, $folder_id, $version, $parent_version_id, $version_notes, $unq);
             } else {
                 // Fallback for old schema
                 $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -244,7 +275,7 @@ switch ($action) {
         if ($page > $total_pages) $page = $total_pages;
         $offset = ($page - 1) * $page_size;
         
-        $sql = "SELECT id, title, version, created_at, author FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC LIMIT ?, ?";
+        $sql = "SELECT id, title, version, created_at, author, file_path, unique_number, file_date, version_notes FROM legislative_records WHERE id = ? OR parent_version_id = ? ORDER BY version DESC LIMIT ?, ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("iiii", $root_id, $root_id, $offset, $page_size);
         $stmt->execute();
@@ -295,7 +326,8 @@ switch ($action) {
         if ($page > $total_pages) $page = $total_pages;
         $offset = ($page - 1) * $page_size;
         
-        $sql = "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.created_at, lr.last_accessed, lr.version, lr.folder_id, lr.file_path
+        $sql = "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.created_at, lr.last_accessed, lr.version, lr.folder_id, lr.file_path, lr.unique_number, lr.file_date, lr.version_notes,
+                        (SELECT COUNT(*) FROM legislative_records lv WHERE lv.id = lr.id OR lv.parent_version_id = lr.id) AS version_count
                 FROM legislative_records lr
                 WHERE $where_sql
                 ORDER BY lr.year DESC, lr.month DESC, lr.created_at DESC

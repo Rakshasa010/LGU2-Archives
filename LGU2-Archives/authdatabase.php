@@ -55,6 +55,7 @@ $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     parent_version_id INT NULL,
     folder_id INT NULL,
     file_size BIGINT NULL,
+    version_notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP NULL
 )";
@@ -81,7 +82,8 @@ $leg_cols_needed = [
     'version' => "INT DEFAULT 1",
     'parent_version_id' => "INT NULL",
     'folder_id' => "INT NULL",
-    'file_size' => "BIGINT NULL"
+    'file_size' => "BIGINT NULL",
+    'version_notes' => "TEXT NULL"
 ];
 foreach ($leg_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
@@ -234,6 +236,7 @@ $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
     version INT DEFAULT 1,
     parent_version_id INT NULL,
     file_size BIGINT NULL,
+    version_notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_folder_id (folder_id)
 )";
@@ -246,7 +249,8 @@ $archive_cols_needed = [
     'unique_number' => "VARCHAR(100) DEFAULT NULL",
     'version' => "INT DEFAULT 1",
     'parent_version_id' => "INT NULL",
-    'file_size' => "BIGINT NULL"
+    'file_size' => "BIGINT NULL",
+    'version_notes' => "TEXT NULL"
 ];
 foreach ($archive_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {

@@ -86,10 +86,92 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
               $_SESSION['otp_dark_mode'], $_SESSION['otp_must_change']);
         
         if ($must === 1) {
-            echo "<script>$themeScript window.location.href = 'profile.php?force=1';</script>";
+            $target = 'profile.php?force=1';
         } else {
-            echo "<script>$themeScript window.location.href = 'archives-landing.php';</script>";
+            $target = 'archives-landing.php';
         }
+        ?>
+        <!DOCTYPE html>
+        <html lang="en" class="h-full">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Signing you in… - Archives</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <script src="assets/js/login-head.js"></script>
+            <link rel="stylesheet" href="assets/css/login.css">
+            <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
+            <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+            <style>
+                @keyframes skeleton-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+                @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+                @keyframes fade-in{from{opacity:0}to{opacity:1}}
+                .animate-fade-in{animation:fade-in .5s ease-out forwards}
+                .skeleton-pulse{animation:skeleton-pulse 1.4s ease-in-out infinite}
+                .spinner{border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;width:28px;height:28px;animation:spin .8s linear infinite}
+            </style>
+        </head>
+        <body class="min-h-screen flex items-center justify-center p-4">
+            <div class="bg-anim">
+                <div class="layer1"></div>
+                <div class="layer2"></div>
+                <div class="grid"></div>
+                <div class="blob b1"></div>
+                <div class="blob b2"></div>
+            </div>
+
+            <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 relative animate-fade-in">
+                <div class="text-center mb-8">
+                    <div class="mx-auto w-20 h-20 rounded-full shadow-lg bg-white flex items-center justify-center -mt-12 mb-4 ring-4 ring-white dark:ring-slate-900">
+                        <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-14 h-14 object-contain">
+                    </div>
+                    <div class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">LAS</div>
+                    <div class="text-sm text-gray-700 dark:text-gray-300">Legislative Archive System</div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                        <div class="spinner"></div>
+                        <div class="text-xl font-bold text-gray-900 dark:text-white">Signing you in…</div>
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">Verifying your session and loading your archive</div>
+
+                    <div class="space-y-4">
+                        <div class="space-y-2">
+                            <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3"></div>
+                            <div class="skeleton-pulse h-14 bg-gray-200 dark:bg-slate-700 rounded-xl w-full"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4"></div>
+                            <div class="skeleton-pulse h-14 bg-gray-200 dark:bg-slate-700 rounded-xl w-full"></div>
+                        </div>
+                        <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-2/3"></div>
+                        <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                (function(){
+                    var target = <?php echo json_encode($target); ?>;
+                    var themeScript = <?php echo json_encode($themeScript); ?>;
+                    try { eval(themeScript); } catch (e) {}
+                    var t = 2500;
+                    var el = document.createElement('div');
+                    el.className = 'fixed inset-0 z-50 bg-white dark:bg-slate-900 transition-opacity duration-300';
+                    el.style.opacity = '0';
+                    document.body.appendChild(el);
+                    setTimeout(function(){
+                        el.style.opacity = '1';
+                    }, 50);
+                    setTimeout(function(){
+                        window.location.href = target;
+                    }, t);
+                })();
+            </script>
+        </body>
+        </html>
+        <?php
         exit();
     }
 }

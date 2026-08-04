@@ -38,12 +38,18 @@ if ($action === 'get_files') {
         folder_id INT NOT NULL,
         name VARCHAR(255) NOT NULL,
         file_path VARCHAR(1024) NOT NULL,
+        author VARCHAR(255) DEFAULT NULL,
+        unique_number VARCHAR(100) DEFAULT NULL,
+        file_date DATE DEFAULT NULL,
         version INT DEFAULT 1,
         parent_version_id INT NULL,
+        file_size BIGINT NULL,
+        version_notes TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+    // Total = number of unique version groups (name + author + unique_number)
     $total = 0;
-    if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ?")) {
+    if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM archive_files WHERE folder_id = ? GROUP BY name, COALESCE(author,''), COALESCE(unique_number,'')) t")) {
         $stc->bind_param("i", $folder_id);
         $stc->execute();
         $rc = $stc->get_result();
@@ -54,7 +60,27 @@ if ($action === 'get_files') {
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $rows = [];
-    if ($st = $conn->prepare("SELECT id, name, file_path, version, parent_version_id, created_at FROM archive_files WHERE folder_id = ? ORDER BY created_at DESC LIMIT ?, ?")) {
+    // Only the latest version of each group is returned, with a version_count
+    $sql = "SELECT af.id, af.name, af.file_path, af.author, af.unique_number, af.file_date, af.version, af.parent_version_id, af.version_notes, af.created_at,
+                (SELECT COUNT(*) FROM archive_files af2
+                 WHERE af2.folder_id = af.folder_id
+                   AND af2.name = af.name
+                   AND COALESCE(af2.author,'') = COALESCE(af.author,'')
+                   AND COALESCE(af2.unique_number,'') = COALESCE(af.unique_number,'')
+                ) AS version_count
+            FROM archive_files af
+            WHERE af.folder_id = ?
+              AND NOT EXISTS (
+                SELECT 1 FROM archive_files af3
+                WHERE af3.folder_id = af.folder_id
+                  AND af3.name = af.name
+                  AND COALESCE(af3.author,'') = COALESCE(af.author,'')
+                  AND COALESCE(af3.unique_number,'') = COALESCE(af.unique_number,'')
+                  AND (af3.version > af.version OR (af3.version = af.version AND af3.id > af.id))
+              )
+            ORDER BY af.created_at DESC
+            LIMIT ?, ?";
+    if ($st = $conn->prepare($sql)) {
         $st->bind_param("iii", $folder_id, $offset, $page_size);
         $st->execute();
         $res = $st->get_result();
@@ -62,8 +88,14 @@ if ($action === 'get_files') {
             $rows[] = [
                 'id'=>(int)$r['id'],
                 'title'=>$r['name'],
+                'name'=>$r['name'],
                 'file_path'=>$r['file_path'],
+                'author'=>$r['author'] ?? 'System',
+                'unique_number'=>$r['unique_number'],
+                'file_date'=>$r['file_date'],
                 'version'=> (int)($r['version'] ?? 1),
+                'version_count'=> (int)($r['version_count'] ?? 1),
+                'version_notes'=>$r['version_notes'],
                 'parent_version_id'=> isset($r['parent_version_id']) ? (int)$r['parent_version_id'] : null,
                 'created_at'=>$r['created_at']
             ];
@@ -82,8 +114,13 @@ if ($action === 'get_versions') {
         folder_id INT NOT NULL,
         name VARCHAR(255) NOT NULL,
         file_path VARCHAR(1024) NOT NULL,
+        author VARCHAR(255) DEFAULT NULL,
+        unique_number VARCHAR(100) DEFAULT NULL,
+        file_date DATE DEFAULT NULL,
         version INT DEFAULT 1,
         parent_version_id INT NULL,
+        file_size BIGINT NULL,
+        version_notes TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
     $root = $id;
@@ -109,7 +146,7 @@ if ($action === 'get_versions') {
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $versions = [];
-    if ($st2 = $conn->prepare("SELECT id, name, version, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
+    if ($st2 = $conn->prepare("SELECT id, name, author, unique_number, file_date, file_path, version, version_notes, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
         $st2->bind_param("iiii", $root, $root, $offset, $page_size);
         $st2->execute();
         $res2 = $st2->get_result();
@@ -117,7 +154,12 @@ if ($action === 'get_versions') {
             $versions[] = [
                 'id'=>(int)$v['id'],
                 'title'=>$v['name'],
+                'author'=>$v['author'] ?? 'System',
+                'unique_number'=>$v['unique_number'],
+                'file_date'=>$v['file_date'],
+                'file_path'=>$v['file_path'],
                 'version'=>(int)($v['version'] ?? 1),
+                'version_notes'=>$v['version_notes'],
                 'created_at'=>$v['created_at'],
             ];
         }

@@ -109,10 +109,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $author = $_POST['fileAuthor'] ?? null;
             $fdate = $_POST['fileDate'] ?? null;
             $unq_base = $_POST['fileUniqueNumber'] ?? null;
+            $version_notes = $_POST['versionNotes'] ?? null;
             if ($fdate === '') $fdate = null;
 
             $uploadedFiles = [];
             $errors = [];
+            $versionedFiles = [];
             $target_dir = $is_legislative ? "uploads/legislative/" . $current_folder_id . "/" : "uploads/archives/" . $current_folder_id . "/";
             if (!file_exists($target_dir)) { @mkdir($target_dir, 0777, true); }
 
@@ -182,6 +184,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $version = 1;
                         $parent_version_id = null;
 
+                        // AUTOMATIC VERSIONING: if a matching document family already exists
+                        // (same name + author + unique number), this upload automatically becomes
+                        // the next version — no confirmation or notes required.
+                        $vtbl = $is_legislative ? 'legislative_records' : 'archive_files';
+                        $vname_col = $is_legislative ? 'title' : 'name';
+                        $root_row = null;
+                        if ($matchStmt = $conn->prepare("SELECT id, unique_number FROM $vtbl WHERE folder_id = ? AND $vname_col = ? AND COALESCE(author,'') = COALESCE(?, '') AND COALESCE(unique_number,'') = COALESCE(?, '') AND parent_version_id IS NULL LIMIT 1")) {
+                            $matchStmt->bind_param("isss", $current_folder_id, $safe_name, $author, $unq);
+                            $matchStmt->execute();
+                            $root_row = $matchStmt->get_result()->fetch_assoc();
+                            $matchStmt->close();
+                        }
+                        // If no unique number was provided, fall back to name + author only
+                        if (!$root_row && $isBlankUnq) {
+                            if ($matchStmt = $conn->prepare("SELECT id, unique_number FROM $vtbl WHERE folder_id = ? AND $vname_col = ? AND COALESCE(author,'') = COALESCE(?, '') AND parent_version_id IS NULL LIMIT 1")) {
+                                $matchStmt->bind_param("iss", $current_folder_id, $safe_name, $author);
+                                $matchStmt->execute();
+                                $root_row = $matchStmt->get_result()->fetch_assoc();
+                                $matchStmt->close();
+                            }
+                        }
+                        if ($root_row) {
+                            $root_id = (int)$root_row['id'];
+                            if ($verStmt = $conn->prepare("SELECT MAX(version) AS mx FROM $vtbl WHERE id = ? OR parent_version_id = ?")) {
+                                $verStmt->bind_param("ii", $root_id, $root_id);
+                                $verStmt->execute();
+                                $verRes = $verStmt->get_result();
+                                if ($vRow = $verRes->fetch_assoc()) $version = ((int)($vRow['mx'] ?? 0)) + 1;
+                                $verStmt->close();
+                            }
+                            $parent_version_id = $root_id;
+                            // Inherit the family's unique number if the new upload had none
+                            if ($isBlankUnq && !empty($root_row['unique_number'])) {
+                                $unq = $root_row['unique_number'];
+                                $isBlankUnq = false;
+                            }
+                        }
+
                         // Get folder's document prefix and last sequence
                         $folderPrefix = $current_folder['document_prefix'] ?? generate_document_prefix($current_folder['name']);
                         $lastSequence = $current_folder['last_sequence_number'] ?? 0;
@@ -200,16 +240,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         if ($is_legislative) {
-                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                             $month = $fdate ? date('F', strtotime($fdate)) : date('F');
                             $year = $fdate ? date('Y', strtotime($fdate)) : date('Y');
                             $type = $current_folder['type'];
                             $fileSize = filesize($file_path);
-                            $stmt->bind_param("ssssssssiiis", $final_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize);
+                            $stmt->bind_param("ssssssssiiiss", $safe_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes);
                         } else {
                             $fileSize = filesize($file_path);
-                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->bind_param("issssssii", $current_folder_id, $final_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize);
+                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->bind_param("issssssiis", $current_folder_id, $safe_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes);
                         }
 
                         if ($stmt->execute()) {
@@ -241,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $uploadedFiles[] = [
                                 'id' => $new_id,
-                                'name' => $final_name,
+                                'name' => $safe_name,
                                 'file_path' => $file_path,
                                 'author' => $author,
                                 'file_date' => $fdate,
@@ -250,6 +290,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'folder_id' => $current_folder_id
                             ];
+                            if ($version > 1) {
+                                $versionedFiles[] = ['name' => $safe_name, 'version' => $version];
+                            }
                         } else {
                             $db_err = $stmt->error;
                             log_upload_error("Database insertion failed for $name: $db_err");
@@ -289,6 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode([
                     'success' => true, 
                     'files' => $uploadedFiles,
+                    'versioned' => $versionedFiles,
                     'errors' => $errors
                 ]);
             } else {
@@ -996,6 +1040,10 @@ function formatFileSize($fileSize) {
                     <input type="text" id="fileUniqueNumber" name="fileUniqueNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="Enter unique number">
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Version Notes / What changed?</label>
+                    <textarea id="versionNotes" name="versionNotes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="e.g., Added final approval signature"></textarea>
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
                     <input type="file" id="fileInput" name="files" accept="image/*,video/*,.pdf,.doc,.docx,.txt" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
                     <div id="file-list-preview" class="mt-2 space-y-1"></div>
@@ -1375,6 +1423,7 @@ function formatFileSize($fileSize) {
             formData.append('fileAuthor', document.getElementById('fileAuthor').value);
             formData.append('fileDate', document.getElementById('fileDate').value);
             formData.append('fileUniqueNumber', document.getElementById('fileUniqueNumber').value);
+            formData.append('versionNotes', document.getElementById('versionNotes').value);
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append('files[]', fileInput.files[i]);
             }
@@ -1391,7 +1440,11 @@ function formatFileSize($fileSize) {
                 document.getElementById('upload-progress').classList.add('hidden');
                 if (data.success) {
                     closeUploadModal();
-                    showNotification('Success', data.files.length + ' file(s) uploaded successfully!', 'success');
+                    let msg = data.files.length + ' file(s) uploaded successfully!';
+                    if (data.versioned && data.versioned.length) {
+                        msg = data.versioned.length + ' file(s) uploaded as new version(s)';
+                    }
+                    showNotification('Success', msg, 'success');
                     setTimeout(() => window.location.reload(), 800);
                 } else {
                     showNotification('Error', data.message || 'Failed to upload files', 'error');
