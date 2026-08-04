@@ -28,15 +28,15 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          REMOTE_ROOT: '/home/lassp6164/public_html'
+          # Use relative path so cPanel's jailed SSH doesn't try to touch /home
+          REMOTE_ROOT: 'public_html'
         run: |
           SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no"
 
-          # Ensure deploy root exists
-          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT"
+          # Safely create the destination subfolder inside public_html
+          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT/LGU2-Archives"
 
           # Deploy the PHP application into public_html/LGU2-Archives
-          # Excludes uploads/storage so user files on the server are not deleted
           rsync -avz --delete \
             -e "ssh $SSH_OPTS" \
             --exclude='.git' \
@@ -48,7 +48,7 @@ jobs:
             --exclude='.tmp_*' \
             ./LGU2-Archives/ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/LGU2-Archives/"
 
-          # Deploy .env to public_html/.env (authdatabase.php looks for ../.env)
+          # Deploy .env to public_html/.env
           rsync -avz \
             -e "ssh $SSH_OPTS" \
             ./.env "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/.env"
