@@ -28,11 +28,12 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-          REMOTE_ROOT: '/home/lassp6164/public_html'
+          # Use relative path so cPanel's jailed SSH doesn't try to touch /home
+          REMOTE_ROOT: 'public_html'
         run: |
           SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no"
 
-          # Create target subfolder inside user's home space safely
+          # Safely create the destination subfolder inside public_html
           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_ROOT/LGU2-Archives"
 
           # Deploy the PHP application into public_html/LGU2-Archives
