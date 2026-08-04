@@ -229,10 +229,11 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE archive_folders ADD INDEX idx_parent_id (parent_id)");
 }
 
-// Add document_prefix and last_sequence_number columns to archive_folders
+// Add document_prefix, last_sequence_number and pinata_group_id columns to archive_folders
 $archive_folder_cols = [
     'document_prefix' => "VARCHAR(255) NULL",
-    'last_sequence_number' => "INT DEFAULT 0"
+    'last_sequence_number' => "INT DEFAULT 0",
+    'pinata_group_id' => "VARCHAR(64) NULL"
 ];
 foreach ($archive_folder_cols as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM archive_folders LIKE '$col'")->num_rows == 0) {
@@ -254,10 +255,11 @@ $leg_folders_sql = "CREATE TABLE IF NOT EXISTS legislative_folders (
 )";
 $conn->query($leg_folders_sql);
 
-// Add document_prefix and last_sequence_number columns to legislative_folders
+// Add document_prefix, last_sequence_number and pinata_group_id columns to legislative_folders
 $leg_folder_cols = [
     'document_prefix' => "VARCHAR(255) NULL",
-    'last_sequence_number' => "INT DEFAULT 0"
+    'last_sequence_number' => "INT DEFAULT 0",
+    'pinata_group_id' => "VARCHAR(64) NULL"
 ];
 foreach ($leg_folder_cols as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM legislative_folders LIKE '$col'")->num_rows == 0) {

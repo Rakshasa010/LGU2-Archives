@@ -198,9 +198,19 @@ switch ($action) {
                 // Pin the uploaded file to Pinata IPFS (best-effort; local copy is always kept)
                 $mimeType = function_exists('mime_content_type') ? mime_content_type($targetPath) : null;
                 if (!$mimeType) { $mimeType = $fileType ?: 'application/octet-stream'; }
-                $pinataResult = pinata_upload_file($targetPath, $finalName, ['record' => 'external_document', 'reference_number' => $referenceNumber]);
+                $pinataGroupId = null;
+                $groupInfo = pinata_ensure_group('LAS/External Documents');
+                if ($groupInfo['success']) {
+                    $pinataGroupId = $groupInfo['id'];
+                } elseif (!empty($groupInfo['error'])) {
+                    error_log('Pinata group setup failed for External Documents: ' . $groupInfo['error']);
+                }
+                $pinataResult = pinata_upload_file($targetPath, $finalName, ['record' => 'external_document', 'reference_number' => $referenceNumber], $pinataGroupId);
                 if ($pinataResult['success']) {
                     $ipfsCid = $pinataResult['cid'];
+                    if (!empty($pinataResult['group']) && empty($pinataResult['group']['success'])) {
+                        error_log('Pinata group add failed for ' . $finalName . ': ' . ($pinataResult['group']['error'] ?? 'unknown error'));
+                    }
                 } else {
                     error_log('Pinata pin failed for ' . $finalName . ': ' . ($pinataResult['error'] ?? 'unknown error'));
                 }

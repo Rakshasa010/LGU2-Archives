@@ -189,9 +189,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $mimeType = function_exists('mime_content_type') ? mime_content_type($file_path) : null;
                         if (!$mimeType) { $mimeType = 'application/octet-stream'; }
                         $ipfsCid = null;
-                        $pinataResult = pinata_upload_file($file_path, $final_name, ['record' => 'archive', 'folder_id' => (string)$current_folder_id]);
+                        $pinataGroupId = null;
+                        $groupInfo = pinata_ensure_folder_group($conn, $is_legislative ? 'legislative_folders' : 'archive_folders', $current_folder_id, $current_folder['name'] ?? '');
+                        if ($groupInfo['success']) {
+                            $pinataGroupId = $groupInfo['id'];
+                        } elseif (!empty($groupInfo['error'])) {
+                            log_upload_error("Pinata group setup failed for folder #$current_folder_id: " . $groupInfo['error']);
+                        }
+                        $pinataResult = pinata_upload_file($file_path, $final_name, ['record' => 'archive', 'folder_id' => (string)$current_folder_id], $pinataGroupId);
                         if ($pinataResult['success']) {
                             $ipfsCid = $pinataResult['cid'];
+                            if (!empty($pinataResult['group']) && empty($pinataResult['group']['success'])) {
+                                log_upload_error("Pinata group add failed for $final_name: " . ($pinataResult['group']['error'] ?? 'unknown error'));
+                            }
                         } else {
                             log_upload_error("Pinata pin failed for $final_name: " . ($pinataResult['error'] ?? 'unknown error'));
                         }

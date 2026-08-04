@@ -224,9 +224,21 @@ $mimeType = null;
 if (!empty($file_path) && isset($target_path) && is_file($target_path)) {
     $mimeType = function_exists('mime_content_type') ? mime_content_type($target_path) : null;
     if (!$mimeType) { $mimeType = 'application/octet-stream'; }
-    $pinataResult = pinata_upload_file($target_path, basename($target_path), ['record' => 'legislative', 'source_system' => $source_system]);
+    $pinataGroupId = null;
+    if (!empty($folder_id)) {
+        $groupInfo = pinata_ensure_folder_group($conn, 'legislative_folders', $folder_id, $folder_name ?? '');
+        if ($groupInfo['success']) {
+            $pinataGroupId = $groupInfo['id'];
+        } elseif (!empty($groupInfo['error'])) {
+            error_log('Pinata group setup failed for folder #' . $folder_id . ': ' . $groupInfo['error']);
+        }
+    }
+    $pinataResult = pinata_upload_file($target_path, basename($target_path), ['record' => 'legislative', 'source_system' => $source_system], $pinataGroupId);
     if ($pinataResult['success']) {
         $ipfsCid = $pinataResult['cid'];
+        if (!empty($pinataResult['group']) && empty($pinataResult['group']['success'])) {
+            error_log('Pinata group add failed for ' . basename($target_path) . ': ' . ($pinataResult['group']['error'] ?? 'unknown error'));
+        }
     } else {
         error_log('Pinata pin failed for ' . basename($target_path) . ': ' . ($pinataResult['error'] ?? 'unknown error'));
     }

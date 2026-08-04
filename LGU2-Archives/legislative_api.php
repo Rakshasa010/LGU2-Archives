@@ -212,9 +212,29 @@ switch ($action) {
             $mimeType = function_exists('mime_content_type') ? mime_content_type($absPath) : null;
             if (!$mimeType) { $mimeType = 'application/octet-stream'; }
             $ipfsCid = null;
-            $pinataResult = pinata_upload_file($absPath, basename($absPath), ['record' => 'legislative', 'folder_id' => (string)$folder_id]);
+            $pinataGroupId = null;
+            if (!empty($folder_id)) {
+                $folderName = null;
+                if ($fs = $conn->prepare("SELECT name FROM legislative_folders WHERE id = ?")) {
+                    $fs->bind_param("i", $folder_id);
+                    $fs->execute();
+                    $fr = $fs->get_result()->fetch_assoc();
+                    $fs->close();
+                    $folderName = $fr['name'] ?? null;
+                }
+                $groupInfo = pinata_ensure_folder_group($conn, 'legislative_folders', $folder_id, $folderName ?? '');
+                if ($groupInfo['success']) {
+                    $pinataGroupId = $groupInfo['id'];
+                } elseif (!empty($groupInfo['error'])) {
+                    error_log('Pinata group setup failed for folder #' . $folder_id . ': ' . $groupInfo['error']);
+                }
+            }
+            $pinataResult = pinata_upload_file($absPath, basename($absPath), ['record' => 'legislative', 'folder_id' => (string)$folder_id], $pinataGroupId);
             if ($pinataResult['success']) {
                 $ipfsCid = $pinataResult['cid'];
+                if (!empty($pinataResult['group']) && empty($pinataResult['group']['success'])) {
+                    error_log('Pinata group add failed for ' . basename($absPath) . ': ' . ($pinataResult['group']['error'] ?? 'unknown error'));
+                }
             } else {
                 error_log('Pinata pin failed for ' . basename($absPath) . ': ' . ($pinataResult['error'] ?? 'unknown error'));
             }
