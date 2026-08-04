@@ -129,7 +129,7 @@ include 'includes/header_scripts.php';
             </div>
 
             <!-- Connection Status -->
-            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 mb-6">
+            <div id="llrm-connection" class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 mb-6">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div class="flex items-center gap-3">
                         <div class="w-3 h-3 rounded-full <?php echo (isset($health['success']) && $health['success']) ? 'bg-green-500' : 'bg-red-500'; ?> animate-pulse"></div>
@@ -174,7 +174,7 @@ include 'includes/header_scripts.php';
 
             <!-- By Type & Status -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700">
+                <div id="llrm-by-type" class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700">
                     <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Documents by Type</h3>
                     <div class="space-y-2">
                         <?php foreach (($stats['stats']['by_type'] ?? []) as $type => $count): ?>
@@ -185,7 +185,7 @@ include 'includes/header_scripts.php';
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700">
+                <div id="llrm-by-status" class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700">
                     <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Documents by Status</h3>
                     <div class="space-y-2">
                         <?php foreach (($stats['stats']['by_status'] ?? []) as $status => $count): ?>
@@ -207,7 +207,7 @@ include 'includes/header_scripts.php';
             <?php endif; ?>
 
             <!-- Search & List -->
-            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 mb-6">
+            <div id="llrm-search" class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 mb-6">
                 <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Search LLRM Archive</h3>
                 <div class="flex gap-2 mb-4">
                     <input type="text" id="llrmSearchInput" class="flex-1 px-4 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="Search LLRM documents..." onkeydown="if(event.key==='Enter') llrmSearch()">
@@ -218,7 +218,7 @@ include 'includes/header_scripts.php';
 
             <!-- Document Types -->
             <?php if (isset($types['success']) && $types['success']): ?>
-            <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700">
+            <div id="llrm-types" class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700">
                 <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Available Document Types</h3>
                 <div class="flex flex-wrap gap-2">
                     <?php foreach (($types['document_types'] ?? []) as $t): ?>

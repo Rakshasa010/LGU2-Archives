@@ -77,19 +77,9 @@
                             $error = "Your account is not active.";
                         }
                     } else {
-                        // Temporary bypass: admins log in directly without OTP
-                        if (isset($user['role']) && strtolower($user['role']) === 'admin') {
-                            $_SESSION['user_id'] = (int)$user['id'];
-                            $_SESSION['last_activity'] = time();
-                            $_SESSION['dark_mode'] = (int)($user['dark_mode'] ?? 0);
-                            $conn->query("UPDATE users SET last_activity = NOW(), failed_attempts = 0, lockout_until = NULL WHERE id = " . $user['id']);
-                            header("Location: archives-landing.php");
-                            exit();
-                        }
-
                         $otp = random_int(100000, 999999);
                         $_SESSION['otp_code'] = $otp;
-                        $_SESSION['otp_expires'] = time() + 60;
+                        $_SESSION['otp_expires'] = time() + 600;
                         $_SESSION['otp_user_id'] = (int)$user['id'];
                         $_SESSION['otp_must_change'] = (int)($user['must_change_password'] ?? 0);
                         $_SESSION['otp_dark_mode'] = (int)($user['dark_mode'] ?? 0);
@@ -125,10 +115,10 @@
                                     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:24px;border:1px solid #e5e7eb;">
                                         <div style="font-size:16px;color:#111827;margin-bottom:8px;">Your One-Time Password (OTP)</div>
                                         <div style="font-size:28px;letter-spacing:8px;font-weight:700;color:#dc2626;background:#fff7ed;border:1px dashed #fca5a5;padding:14px 16px;text-align:center;border-radius:10px;margin:12px 0;">' . $otpHtml . '</div>
-                                        <div style="font-size:13px;color:#6b7280;">This code expires in <strong>1 minute</strong>. If you did not request this, you can ignore this email.</div>
+                                        <div style="font-size:13px;color:#6b7280;">This code expires in <strong>10 minutes</strong>. If you did not request this, you can ignore this email.</div>
                                     </div>
                                 </div>';
-                                $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 1 minute.';
+                                $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 10 minutes.';
                                 try { 
                                     $mailer->send(); 
                                     $sent = true; 

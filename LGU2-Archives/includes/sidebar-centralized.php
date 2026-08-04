@@ -72,6 +72,21 @@ html, body {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 }
+
+/* Hide scrollbar in WebKit (Chrome/Edge/Safari) while keeping scrollability */
+#sidebar::-webkit-scrollbar,
+#sidebar nav::-webkit-scrollbar,
+#mobile-sidebar nav::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+    background: transparent;
+}
+#sidebar nav,
+#mobile-sidebar nav {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
     
 /* ABSOLUTE POSITIONING SOLUTION FOR MAIN CONTENT - NO GAPS */
 @media (min-width: 768px) {
@@ -215,7 +230,7 @@ html, body {
                 </div>
                 <div class="text-xs text-red-100/80" id="mobile-storage-text">0 B of 50 GB</div>
                 <div class="mt-2 text-xs text-red-100/60" id="mobile-storage-files">0 files tracked</div>
-                <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
+                <div class="mt-2 text-[11px] text-red-100/75">Total disk usage across all upload folders.</div>
             </div>
         </div>
     </nav>
@@ -319,7 +334,7 @@ html, body {
                 </div>
                 <div class="text-xs text-red-100/80" id="desktop-storage-text">0 B of 50 GB</div>
                 <div class="mt-2 text-xs text-red-100/60" id="desktop-storage-files">0 files tracked</div>
-                <div class="mt-2 text-[11px] text-red-100/75">Combined view for legislative and archive files.</div>
+                <div class="mt-2 text-[11px] text-red-100/75">Total disk usage across all upload folders.</div>
             </div>
         </div>
     </nav>
@@ -352,9 +367,9 @@ html, body {
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adjustMainOffset); else adjustMainOffset();
 })();
 
-// Version Tracking dropdown functionality
+// Sidebar dropdown functionality (Version Tracking, External Documents, LLRM Integration)
 (function() {
-    function setupVersionTrackingDropdown(toggleId, submenuId, chevronId) {
+    function setupDropdown(toggleId, submenuId, chevronId) {
         var toggle = document.getElementById(toggleId);
         var submenu = document.getElementById(submenuId);
         var chevron = document.getElementById(chevronId);
@@ -399,15 +414,18 @@ html, body {
         });
     }
     
-    // Initialize dropdown for both mobile and desktop
+    var dropdowns = [
+        ['version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile'],
+        ['version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop']
+    ];
+    
+    // Initialize dropdowns for both mobile and desktop
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            setupVersionTrackingDropdown('version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile');
-            setupVersionTrackingDropdown('version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop');
+            dropdowns.forEach(function(d) { setupDropdown(d[0], d[1], d[2]); });
         });
     } else {
-        setupVersionTrackingDropdown('version-tracking-toggle-mobile', 'version-tracking-submenu-mobile', 'version-tracking-chevron-mobile');
-        setupVersionTrackingDropdown('version-tracking-toggle-desktop', 'version-tracking-submenu-desktop', 'version-tracking-chevron-desktop');
+        dropdowns.forEach(function(d) { setupDropdown(d[0], d[1], d[2]); });
     }
 })();
 </script>

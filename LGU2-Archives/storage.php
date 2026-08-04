@@ -607,10 +607,10 @@ if (isset($_SESSION['user_id'])) {
     }
 
     function calculateStorageMetrics($conn) {
-        if (!function_exists('storage_db_metrics')) {
+        if (!function_exists('storage_dir_metrics')) {
             require_once __DIR__ . '/includes/storage_shared.php';
         }
-        return storage_db_metrics($conn);
+        return storage_dir_metrics(__DIR__ . '/uploads');
     }
 
     // support AJAX data fetch
