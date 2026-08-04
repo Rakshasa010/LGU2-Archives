@@ -26,62 +26,13 @@ function fmt_bytes($bytes) {
 }
 
 function calculateStorageMetrics($conn, $uploadsMetrics = null) {
-    $capacityBytes = 50 * 1024 * 1024 * 1024; // 50 GB
-    $totalBytes = 0;
-    $fileCount = 0;
-    $storageTop = [];
-
-    $legResult = $conn->query("SELECT file_path FROM legislative_records WHERE file_path IS NOT NULL AND file_path <> ''");
-    if ($legResult) {
-        while ($row = $legResult->fetch_assoc()) {
-            if (@file_exists($row['file_path'])) {
-                $size = @filesize($row['file_path']);
-                $totalBytes += $size;
-                $fileCount++;
-                $storageTop[] = ['name' => basename($row['file_path']), 'path' => $row['file_path'], 'src' => 'Legislative', 'size' => $size];
-            }
-        }
-    }
-
-    $archResult = $conn->query("SELECT name, file_path FROM archive_files WHERE file_path IS NOT NULL AND file_path <> ''");
-    if ($archResult) {
-        while ($row = $archResult->fetch_assoc()) {
-            if (@file_exists($row['file_path'])) {
-                $size = @filesize($row['file_path']);
-                $totalBytes += $size;
-                $fileCount++;
-                $storageTop[] = ['name' => $row['name'], 'path' => $row['file_path'], 'src' => 'Archive', 'size' => $size];
-            }
-        }
-    }
-
-    usort($storageTop, function($a, $b) { return $b['size'] - $a['size']; });
-    $storageTop = array_slice($storageTop, 0, 15);
-
-    if (is_array($uploadsMetrics)) {
-        if (isset($uploadsMetrics['capacityBytes'])) $capacityBytes = (int)$uploadsMetrics['capacityBytes'];
-        if (isset($uploadsMetrics['bytes'])) $totalBytes = (int)$uploadsMetrics['bytes'];
-        if (isset($uploadsMetrics['fileCount'])) $fileCount = (int)$uploadsMetrics['fileCount'];
-    }
-
-    $pct = ($capacityBytes > 0) ? min(100, round(($totalBytes / $capacityBytes) * 100, 1)) : 0;
-
-    return [
-        'pct' => $pct,
-        'totalBytes' => $totalBytes,
-        'capacityBytes' => $capacityBytes,
-        'fileCount' => $fileCount,
-        'storageTop' => $storageTop,
-        'usedText' => fmt_bytes($totalBytes),
-        'totalText' => fmt_bytes($capacityBytes)
-    ];
+    return storage_db_metrics($conn);
 }
 
 $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
-$uploads_metrics = storage_dir_metrics($uploads_path);
 
 if (isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
-    $storage = calculateStorageMetrics($conn, $uploads_metrics);
+    $storage = calculateStorageMetrics($conn);
     header('Content-Type: application/json');
     echo json_encode([
         'success' => true,
@@ -97,7 +48,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
 }
 
 // Calculate storage for initial page load
-$storage = calculateStorageMetrics($conn, $uploads_metrics);
+$storage = calculateStorageMetrics($conn);
 $pct = $storage['pct'];
 $totalBytes = $storage['totalBytes'];
 $capacityBytes = $storage['capacityBytes'];

@@ -607,45 +607,10 @@ if (isset($_SESSION['user_id'])) {
     }
 
     function calculateStorageMetrics($conn) {
-        $capacityBytes = 50 * 1024 * 1024 * 1024; // 50 GB
-        $totalBytes = 0;
-        $fileCount = 0;
-        $storageTop = [];
-
-        $legResult = $conn->query("SELECT file_path FROM legislative_records WHERE file_path IS NOT NULL AND file_path <> ''");
-        if ($legResult) {
-            while ($row = $legResult->fetch_assoc()) {
-                if (@file_exists($row['file_path'])) {
-                    $size = @filesize($row['file_path']);
-                    $totalBytes += $size;
-                    $fileCount++;
-                    $storageTop[] = ['name' => basename($row['file_path']), 'path' => $row['file_path'], 'src' => 'Legislative', 'size' => $size];
-                }
-            }
+        if (!function_exists('storage_db_metrics')) {
+            require_once __DIR__ . '/includes/storage_shared.php';
         }
-        $archResult = $conn->query("SELECT name, file_path FROM archive_files WHERE file_path IS NOT NULL AND file_path <> ''");
-        if ($archResult) {
-            while ($row = $archResult->fetch_assoc()) {
-                if (@file_exists($row['file_path'])) {
-                    $size = @filesize($row['file_path']);
-                    $totalBytes += $size;
-                    $fileCount++;
-                    $storageTop[] = ['name' => $row['name'], 'path' => $row['file_path'], 'src' => 'Archive', 'size' => $size];
-                }
-            }
-        }
-        usort($storageTop, function($a, $b) { return $b['size'] - $a['size']; });
-        $storageTop = array_slice($storageTop, 0, 15);
-        $pct = min(100, round(($totalBytes / $capacityBytes) * 100, 1));
-        return [
-            'pct' => $pct,
-            'totalBytes' => $totalBytes,
-            'capacityBytes' => $capacityBytes,
-            'fileCount' => $fileCount,
-            'storageTop' => $storageTop,
-            'usedText' => fmt_bytes($totalBytes),
-            'totalText' => fmt_bytes($capacityBytes)
-        ];
+        return storage_db_metrics($conn);
     }
 
     // support AJAX data fetch
@@ -998,13 +963,14 @@ if (isset($_SESSION['user_id'])) {
         // Enhanced Storage Donut Chart Initialization
         // storageData lives at script scope so it can be updated by AJAX
         let storageData = {
-            used: <?php echo round($totalBytes / (1024*1024*1024),1); ?>,
-            total: <?php echo round($capacityBytes / (1024*1024*1024),1); ?>
+            used: <?php echo ($capacityBytes > 0) ? $totalBytes / (1024*1024*1024) : 0; ?>,
+            total: <?php echo round($capacityBytes / (1024*1024*1024), 3); ?>
         };
         function initStorageDonut() {
             // note: storageData may be modified externally
 
-            const percentage = Math.round((storageData.used / storageData.total) * 100);
+            const percentageRaw = (storageData.total > 0) ? (storageData.used / storageData.total) * 100 : 0;
+            const percentage = Math.round(percentageRaw * 100) / 100;
             const available = storageData.total - storageData.used;
 
             // Update main display
