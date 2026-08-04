@@ -75,7 +75,7 @@ function pinata_upload_file($filePath, $name = null, array $keyvalues = []) {
         'network' => 'public',
     ];
     if (!empty($keyvalues)) {
-        $post['keyvalues'] = json_encode(['keyvalues' => $keyvalues]);
+        $post['keyvalues'] = json_encode($keyvalues);
     }
 
     $ch = curl_init('https://uploads.pinata.cloud/v3/files');
