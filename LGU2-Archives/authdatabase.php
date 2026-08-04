@@ -351,6 +351,18 @@ if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
 }
 
+// Create contact_messages table (landing page contact form)
+$contact_sql = "CREATE TABLE IF NOT EXISTS contact_messages (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    sender_name VARCHAR(150) NOT NULL,
+    sender_email VARCHAR(200) NOT NULL,
+    department VARCHAR(200) NULL,
+    message TEXT NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+$conn->query($contact_sql);
+
 // Create user_hidden_folders table for user-specific secure file storage
 $hidden_folder_sql = "CREATE TABLE IF NOT EXISTS user_hidden_folders (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
