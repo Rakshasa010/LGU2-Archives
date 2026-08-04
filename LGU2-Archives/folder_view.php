@@ -1192,6 +1192,7 @@ function formatFileSize($fileSize) {
                 var t = '';
                 if (['mp4','webm','ogg','avi','mov'].indexOf(ext) >= 0) t = 'video';
                 else if (ext === 'pdf') t = 'pdf';
+                else if (ext === 'docx') t = 'docx';
                 else if (['jpg','jpeg','png','gif','webp'].indexOf(ext) >= 0) t = 'image';
                 
                 document.getElementById('previewTitle').textContent = name;
@@ -1203,6 +1204,39 @@ function formatFileSize($fileSize) {
                     previewContent.innerHTML = `<video controls class="max-h-[70vh] max-w-full rounded-lg shadow-lg" src="${url}"></video>`;
                 } else if (t === 'pdf') {
                     previewContent.innerHTML = `<iframe src="${url}" class="w-full h-[70vh] rounded-lg shadow-lg" title="PDF Preview"></iframe>`;
+                } else if (t === 'docx') {
+                    previewContent.innerHTML = `<div class="text-center py-10 w-full" id="docx-loading">
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto mb-3"></div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Extracting document text…</p>
+                    </div>`;
+                    fetch('preview_docx_text.php?path=' + encodeURIComponent(url))
+                        .then(function(res) { return res.json(); })
+                        .then(function(d) {
+                            if (d && d.success) {
+                                var pre = document.createElement('pre');
+                                pre.className = 'w-full max-h-[70vh] overflow-auto rounded-lg bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-100 p-5 text-sm leading-relaxed whitespace-pre-wrap font-sans text-left';
+                                pre.textContent = d.text;
+                                previewContent.innerHTML = '';
+                                previewContent.appendChild(pre);
+                            } else {
+                                previewContent.innerHTML = `<div class="text-center">
+                                    <i class="bi bi-file-earmark-word text-6xl text-gray-500 mb-4"></i>
+                                    <p class="text-gray-600 dark:text-gray-400">${d && d.error ? d.error : 'Preview not available for this file type.'}</p>
+                                    <a href="${url}" download class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                                        <i class="bi bi-download"></i> Download File
+                                    </a>
+                                </div>`;
+                            }
+                        })
+                        .catch(function() {
+                            previewContent.innerHTML = `<div class="text-center">
+                                <i class="bi bi-file-earmark-word text-6xl text-gray-500 mb-4"></i>
+                                <p class="text-gray-600 dark:text-gray-400">Preview not available for this file type.</p>
+                                <a href="${url}" download class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                                    <i class="bi bi-download"></i> Download File
+                                </a>
+                            </div>`;
+                        });
                 } else {
                     previewContent.innerHTML = `<div class="text-center">
                         <i class="bi bi-file-earmark text-6xl text-gray-500 mb-4"></i>

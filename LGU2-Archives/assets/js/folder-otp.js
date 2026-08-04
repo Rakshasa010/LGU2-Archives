@@ -1,15 +1,18 @@
 /**
  * Folder Access OTP Verification (shared)
  * Injects an OTP modal (design matches verify-otp.php) and exposes:
- *   window.folderOTP.guard(url)
+ *   window.folderOTP.guard(url[, callback])
  * which requires the current user to enter a 6-digit code (emailed via
  * api/send-folder-otp.php, validated by api/verify-folder-otp.php) before
- * the browser is redirected to the target folder URL.
+ * the browser is redirected to the target folder URL — or, when a callback
+ * is supplied instead of a URL, the callback is invoked after verification
+ * (used to gate downloads without navigating away).
  */
 (function () {
     if (window.folderOTP) return;
 
     var pendingUrl = null;
+    var pendingCallback = null;
     var verifying = false;
     var otpEnd = 0;
     var timerInt = null;
@@ -129,6 +132,7 @@
         document.body.style.overflow = '';
         stopTimer();
         clearStatus();
+        pendingCallback = null;
     }
 
     function verify() {
@@ -153,8 +157,11 @@
                 if (data && data.success) {
                     stopTimer();
                     var url = pendingUrl;
+                    var cb = pendingCallback;
+                    pendingCallback = null;
                     closeModal();
-                    if (url) window.location.href = url;
+                    if (cb) cb();
+                    else if (url) window.location.href = url;
                 } else {
                     setStatus((data && data.error) ? data.error : 'Invalid code. Please try again.', 'error');
                     shake();
@@ -289,8 +296,9 @@
     }
 
     window.folderOTP = {
-        guard: function (url) {
+        guard: function (url, callback) {
             pendingUrl = url;
+            pendingCallback = callback;
             openModal();
         }
     };

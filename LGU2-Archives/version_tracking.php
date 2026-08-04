@@ -1184,7 +1184,35 @@ $conn->close();
                 body.innerHTML = '<img src="' + fp + '" alt="' + escapeHtml(title) + '" class="max-w-full max-h-full mx-auto object-contain rounded shadow-lg" style="max-height:65vh">';
             } else if (ext === 'pdf') {
                 body.innerHTML = '<iframe src="' + fp + '" class="w-full h-full rounded border-0" style="height:65vh" title="' + escapeHtml(title) + '"></iframe>';
-            } else if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) {
+            } else if (ext === 'docx') {
+                var pathOnly = String(fp).split('?')[0];
+                body.innerHTML = '<div class="text-center py-10" id="vt-docx-loading"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto mb-3"></div><p class="text-sm text-gray-500 dark:text-gray-400">Extracting document text…</p></div>';
+                fetch('preview_docx_text.php?path=' + encodeURIComponent(pathOnly))
+                    .then(function(res) { return res.json(); })
+                    .then(function(d) {
+                        if (d && d.success) {
+                            var pre = document.createElement('pre');
+                            pre.className = 'w-full h-full rounded border-0 bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-100 p-4 text-sm leading-relaxed whitespace-pre-wrap font-sans overflow-auto';
+                            pre.style.height = '65vh';
+                            pre.textContent = d.text;
+                            body.innerHTML = '';
+                            body.appendChild(pre);
+                        } else {
+                            body.innerHTML = '<div class="text-center py-12 px-4">' +
+                                '<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center"><i class="bi bi-file-earmark-word text-2xl text-gray-400"></i></div>' +
+                                '<p class="text-gray-500 dark:text-gray-400 mb-4">' + (d && d.error ? escapeHtml(d.error) : 'No readable text could be extracted from this document.') + '</p>' +
+                                '<a href="' + fp + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                            '</div>';
+                        }
+                    })
+                    .catch(function() {
+                        body.innerHTML = '<div class="text-center py-12 px-4">' +
+                            '<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center"><i class="bi bi-file-earmark-word text-2xl text-gray-400"></i></div>' +
+                            '<p class="text-gray-500 dark:text-gray-400 mb-4">Preview not available for this file type.</p>' +
+                            '<a href="' + fp + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                        '</div>';
+                    });
+            } else if (['doc','xls','xlsx','ppt','pptx'].includes(ext)) {
                 body.innerHTML = '<iframe src="https://docs.google.com/gview?embedded=true&url=' + encodeURIComponent(window.location.origin + '/' + fp) + '" class="w-full h-full rounded border-0" style="height:65vh" title="' + escapeHtml(title) + '"></iframe>';
             } else if (['mp4','webm','ogg','mp3','wav'].includes(ext)) {
                 var tag = ['mp3','wav'].includes(ext) ? 'audio' : 'video';
@@ -1301,8 +1329,8 @@ $conn->close();
                 return '<div class="' + color + ' text-white text-center text-xs font-bold px-3 py-2 rounded-t-lg truncate">' +
                     'v' + v.version + ' · ' + (v.author || 'System') + '</div>';
             }).join('');
-            if (VT_TEXT_EXTS.indexOf(ext) >= 0) {
-                vtLoadTextCompare(versions, body);
+            if (VT_TEXT_EXTS.indexOf(ext) >= 0 || ext === 'docx') {
+                vtLoadTextCompare(versions, body, ext === 'docx');
             } else if (VT_IMAGE_EXTS.indexOf(ext) >= 0) {
                 var imgs = versions.map(function(v) {
                     return '<div class="flex-1 min-w-0"><img src="' + v.file_path + '" class="w-full h-auto object-contain rounded-lg" style="max-height:70vh"></div>';
@@ -1334,12 +1362,38 @@ $conn->close();
             }
         }
 
-        function vtLoadTextCompare(versions, body) {
+        function vtFetchText(v, isDocx) {
+            if (isDocx) {
+                var pathOnly = String(v.file_path || '').split('?')[0];
+                return fetch('preview_docx_text.php?path=' + encodeURIComponent(pathOnly))
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) { return (d && d.success) ? d.text : ''; })
+                    .catch(function() { return ''; });
+            }
+            return fetch(v.file_path).then(function(r) { return r.ok ? r.text() : ''; }).catch(function() { return ''; });
+        }
+
+        function vtLoadTextCompare(versions, body, isDocx) {
             var colors = ['bg-red-600', 'bg-blue-600', 'bg-green-600'];
             var fetchPromises = versions.map(function(v) {
-                return fetch(v.file_path).then(function(r) { return r.ok ? r.text() : ''; }).catch(function() { return ''; });
+                return vtFetchText(v, isDocx === true);
             });
             Promise.all(fetchPromises).then(function(texts) {
+                var anyText = texts.some(function(t) { return String(t || '').trim() !== ''; });
+                if (!anyText) {
+                    var cards = versions.map(function(v) {
+                        return '<div class="flex-1 min-w-0 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg text-center">' +
+                            '<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">No readable text could be extracted for comparison.</p>' +
+                            '<a href="' + v.file_path + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                        '</div>';
+                    }).join('');
+                    var hdr = versions.map(function(v, i) {
+                        return '<div class="' + colors[i % 3] + ' text-white text-center text-xs font-bold px-3 py-2 rounded-t-lg truncate">' +
+                            'v' + v.version + ' · ' + (v.author || 'System') + '</div>';
+                    }).join('');
+                    body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + hdr + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + cards + '</div>';
+                    return;
+                }
                 var baseLines = vtSplitLines(texts[0]);
                 var colsHtml = '';
                 versions.forEach(function(v, idx) {
@@ -1364,7 +1418,10 @@ $conn->close();
                         header + '<div class="max-h-[70vh] overflow-y-auto font-mono text-xs text-gray-800 dark:text-gray-200">' + rowsHtml + '</div>' +
                     '</div>';
                 });
-                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + colsHtml + '</div>';
+                var banner = (isDocx === true)
+                    ? '<div class="text-xs text-gray-500 dark:text-gray-400 mb-3">Comparing the extracted text content of the Word documents (formatting and images are not compared).</div>'
+                    : '';
+                body.innerHTML = banner + '<div class="flex flex-col md:flex-row gap-3">' + colsHtml + '</div>';
             });
         }
 

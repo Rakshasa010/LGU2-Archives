@@ -127,10 +127,10 @@ $has_archive = $conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0;
 $has_leg = $conn->query("SHOW TABLES LIKE 'legislative_records'")->num_rows > 0;
 $all_files_union = [];
 if ($has_archive) {
-    $all_files_union[] = "SELECT f.id, f.name COLLATE utf8mb4_unicode_ci AS name, f.folder_id, f.created_at, fo.name COLLATE utf8mb4_unicode_ci AS folder_name, 'archive' COLLATE utf8mb4_unicode_ci AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
+    $all_files_union[] = "SELECT f.id, CONVERT(f.name USING utf8mb4) AS name, f.folder_id, f.created_at, CONVERT(fo.name USING utf8mb4) AS folder_name, 'archive' AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
 }
 if ($has_leg) {
-    $all_files_union[] = "SELECT lr.id, lr.title COLLATE utf8mb4_unicode_ci AS name, lr.folder_id, lr.created_at, lf.name COLLATE utf8mb4_unicode_ci AS folder_name, 'legislative' COLLATE utf8mb4_unicode_ci AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
+    $all_files_union[] = "SELECT lr.id, CONVERT(lr.title USING utf8mb4) AS name, lr.folder_id, lr.created_at, CONVERT(lf.name USING utf8mb4) AS folder_name, 'legislative' AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
 }
 
 if (!empty($all_files_union)) {
