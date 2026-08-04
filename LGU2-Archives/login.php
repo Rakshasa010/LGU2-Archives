@@ -182,8 +182,8 @@
         $password = $_POST['password'];
 
         // Check for lockout
-        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, failed_attempts, lockout_until, email, full_name, dark_mode FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
+        $stmt = $conn->prepare("SELECT id, password, must_change_password, status, role, failed_attempts, lockout_until, email, full_name, dark_mode FROM users WHERE username = ? OR email = ?");
+        $stmt->bind_param("ss", $username, $username);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -207,6 +207,16 @@
                             $error = "Your account is not active.";
                         }
                     } else {
+                        // Temporary bypass: admins log in directly without OTP
+                        if (isset($user['role']) && strtolower($user['role']) === 'admin') {
+                            $_SESSION['user_id'] = (int)$user['id'];
+                            $_SESSION['last_activity'] = time();
+                            $_SESSION['dark_mode'] = (int)($user['dark_mode'] ?? 0);
+                            $conn->query("UPDATE users SET last_activity = NOW(), failed_attempts = 0, lockout_until = NULL WHERE id = " . $user['id']);
+                            header("Location: archives-landing.php");
+                            exit();
+                        }
+
                         $otp = random_int(100000, 999999);
                         $_SESSION['otp_code'] = $otp;
                         $_SESSION['otp_expires'] = time() + 60;
