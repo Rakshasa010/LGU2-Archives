@@ -325,7 +325,7 @@ switch ($action) {
     case 'get_files':
         $type = $_GET['type'] ?? '';
         $folder_id = isset($_GET['folder_id']) ? (int)$_GET['folder_id'] : 0;
-        $allowed_types = ['Ordinance', 'Resolution', 'Billing', 'Public Hearing', 'Meeting'];
+        $allowed_types = ['Ordinance', 'Resolution', 'Public Hearing', 'Meeting'];
         $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
         $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
         
@@ -343,7 +343,7 @@ switch ($action) {
             $params[] = $type;
             $types .= "s";
         } elseif ($type === 'All') {
-             $where_sql .= " AND lr.type IN ('Ordinance', 'Resolution', 'Billing', 'Public Hearing', 'Meeting')";
+             $where_sql .= " AND lr.type IN ('Ordinance', 'Resolution', 'Public Hearing', 'Meeting')";
         }
         
         $cnt_sql = "SELECT COUNT(*) AS cnt FROM legislative_records lr WHERE $where_sql";

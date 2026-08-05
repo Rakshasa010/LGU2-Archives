@@ -5,6 +5,17 @@ header('Content-Type: application/json');
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success'=>false,'message'=>'Unauthorized']); exit; }
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+function folder_color_class($name) {
+    $palette = ['red','orange','amber','emerald','teal','blue','indigo','purple','pink','cyan'];
+    $hash = 2166136261;
+    $s = strtolower((string)$name);
+    for ($i = 0; $i < strlen($s); $i++) {
+        $hash ^= ord($s[$i]);
+        $hash = ($hash * 16777619) & 0xFFFFFFFF;
+    }
+    $c = $palette[$hash % count($palette)];
+    return "bg-{$c}-100 dark:bg-{$c}-900/40 text-{$c}-600 dark:text-{$c}-400";
+}
 if ($action === 'list_folders') {
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
@@ -15,14 +26,14 @@ if ($action === 'list_folders') {
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $rows = [];
-    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders ORDER BY created_at DESC LIMIT ?, ?");
+    $stmt = $conn->prepare("SELECT id, name, slug, created_at FROM archive_folders ORDER BY created_at DESC LIMIT ?, ?");
     if ($stmt) {
         $stmt->bind_param("ii", $offset, $page_size);
         $stmt->execute();
         $res = $stmt->get_result();
         if ($res) {
             while ($r = $res->fetch_assoc()) {
-                $rows[] = ['id'=>(int)$r['id'],'name'=>$r['name'],'created_at'=>$r['created_at']];
+                $rows[] = ['id'=>(int)$r['id'],'name'=>$r['name'],'slug'=>$r['slug'] ?? '', 'color'=>folder_color_class($r['name']), 'created_at'=>$r['created_at']];
             }
         }
         $stmt->close();

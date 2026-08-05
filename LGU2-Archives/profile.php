@@ -151,14 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
                 </div>
             </div>
 
-            <div id="pwdModal" class="fixed inset-0 z-50 <?php echo ($user['must_change_password'] === 1 || (isset($_GET['force']) && $_GET['force'] == '1')) ? '' : 'hidden'; ?>">
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-                <div class="relative max-w-md mx-auto mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6">
+            <div id="pwdModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm <?php echo ($user['must_change_password'] === 1 || (isset($_GET['force']) && $_GET['force'] == '1')) ? 'flex items-center justify-center' : 'hidden'; ?>">
+                <div class="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 m-4">
                     <button type="button" onclick="window.location.href='logout.php'" class="absolute top-3 right-3 p-2 rounded-lg text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
                         <i class="bi bi-x-lg"></i>
                     </button>
                     <div class="flex items-center mb-4">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-red-600 to-orange-500 flex items-center justify-center text-white mr-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-red-600 to-orange-500 flex items-center justify-center text-white mr-3 shadow-md shadow-red-600/30">
                             <i class="bi bi-shield-lock"></i>
                         </div>
                         <div>
@@ -227,8 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
                         </div>
                         <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-red-700 hover:to-orange-600 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
                             Update Password
-                        </button>
-                    </form>
+                        </button>                    </form>
                 </div>
             </div>
 

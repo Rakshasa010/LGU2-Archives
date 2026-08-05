@@ -56,6 +56,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="theme-color" content="#b91c1c">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Account Settings - LAS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="assets/js/archives-landing-head.js"></script>
@@ -167,10 +168,13 @@ if ($folders_result && $folders_result->num_rows > 0) {
             </nav>
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-red-500 shadow-lg shadow-red-600/30 flex items-center justify-center text-white">
+                    <i class="bi bi-person-gear"></i>
+                </span>
                 Account Settings
             </h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your profile, personal info, and security</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 ml-[52px]">Manage your profile, personal info, and security</p>
         </div>
 
                 <?php
@@ -348,8 +352,10 @@ if ($folders_result && $folders_result->num_rows > 0) {
                     
                     <!-- SECTION 1: PROFILE PICTURE -->
                     <div class="bg-white dark:bg-[#111520] rounded-2xl border border-gray-200 dark:border-slate-700/60 p-6 sm:p-8 shadow-sm transition-colors">
-                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <i class="bi bi-person-bounding-box text-gray-400"></i> Profile Picture
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-widest mb-6 flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center text-white shadow-md shadow-red-600/20">
+                                <i class="bi bi-person-bounding-box"></i>
+                            </span> Profile Picture
                         </h3>
                         
                         <div class="flex items-center gap-6">
@@ -380,8 +386,10 @@ if ($folders_result && $folders_result->num_rows > 0) {
 
                     <!-- SECTION 2: PERSONAL INFORMATION -->
                     <div class="bg-white dark:bg-[#111520] rounded-2xl border border-gray-200 dark:border-slate-700/60 p-6 sm:p-8 shadow-sm transition-colors">
-                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <i class="bi bi-person-lines-fill text-gray-400"></i> Personal Information
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-widest mb-6 flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center text-white shadow-md shadow-red-600/20">
+                                <i class="bi bi-person-lines-fill"></i>
+                            </span> Personal Information
                         </h3>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -425,8 +433,10 @@ if ($folders_result && $folders_result->num_rows > 0) {
 
                     <!-- SECTION 3: SECURITY -->
                     <div class="bg-white dark:bg-[#111520] rounded-2xl border border-gray-200 dark:border-slate-700/60 p-6 sm:p-8 shadow-sm transition-colors">
-                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <i class="bi bi-shield-lock text-gray-400"></i> Security
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 uppercase tracking-widest mb-6 flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center text-white shadow-md shadow-red-600/20">
+                                <i class="bi bi-shield-lock"></i>
+                            </span> Security
                         </h3>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -443,6 +453,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                 <button type="button" onclick="openPasswordModal()" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">Change &rsaquo;</button>
                             </div>
 
+                            <?php if ($is_admin): ?>
                             <div class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-slate-700/60 bg-gray-50 dark:bg-[#1a1d24]">
                                 <div class="flex items-center gap-4">
                                     <div class="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500">
@@ -458,12 +469,26 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                 </div>
                                 <button type="button" onclick="openTwoFactorModal()" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">Manage &rsaquo;</button>
                             </div>
+                            <?php else: ?>
+                            <div class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-slate-700/40 bg-gray-50 dark:bg-[#1a1d24] opacity-60 cursor-not-allowed select-none" title="Only administrators can manage security settings.">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-200 dark:bg-slate-700/50 flex items-center justify-center text-gray-400 dark:text-gray-500">
+                                        <i class="bi bi-lock-fill text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-400 dark:text-gray-500">Two-Factor Auth</div>
+                                        <div class="text-[11px] text-gray-400 dark:text-gray-500">Only administrators can manage security</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-400 dark:text-gray-500"><i class="bi bi-lock"></i> Locked</span>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <!-- ACTIONS -->
                     <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                        <button type="submit" class="flex-1 px-6 py-4 bg-gray-900 dark:bg-[#0f1117] hover:bg-black dark:hover:bg-black text-white rounded-xl font-medium transition-colors border border-gray-800 dark:border-slate-700/60 shadow-sm flex items-center justify-center gap-2">
+                        <button type="submit" class="flex-1 px-6 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-xl font-bold transition-all duration-200 border border-red-700/40 shadow-lg shadow-red-600/25 hover:shadow-red-600/40 flex items-center justify-center gap-2">
                             <i class="bi bi-floppy"></i> Save Changes
                         </button>
                         <a href="archives-landing.php" class="flex-1 px-6 py-4 bg-white dark:bg-[#0f1117] hover:bg-gray-50 dark:hover:bg-slate-900 text-gray-800 dark:text-gray-100 rounded-xl font-medium transition-colors border border-gray-200 dark:border-slate-700/60 shadow-sm flex items-center justify-center gap-2">
@@ -528,7 +553,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
     </script>
 
     <!-- Change Password Modal -->
-    <div id="passwordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0" aria-hidden="true">
+    <div id="passwordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0 flex" aria-hidden="true">
         <div class="bg-white dark:bg-[#111520] rounded-2xl w-full max-w-md p-6 border border-gray-200 dark:border-slate-700 shadow-2xl transform scale-95 transition-transform duration-300" id="passwordModalInner">
             <div class="flex justify-between items-center mb-5">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -554,14 +579,14 @@ if ($folders_result && $folders_result->num_rows > 0) {
                 </div>
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" onclick="closePasswordModal()" class="px-5 py-2.5 rounded-lg bg-gray-200 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">Cancel</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors shadow-lg shadow-emerald-600/20">Update Password</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-semibold transition-all duration-200 shadow-lg shadow-red-600/30">Update Password</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Two-Factor Authentication Modal -->
-    <div id="twofaModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0" aria-hidden="true">
+    <div id="twofaModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0 flex" aria-hidden="true">
         <div class="bg-white dark:bg-[#111520] rounded-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-slate-700 shadow-2xl transform scale-95 transition-transform duration-300" id="twofaModalInner">
             <div class="flex justify-between items-center mb-5">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -594,7 +619,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
                 </div>
 
                 <div class="pt-3">
-                    <button type="submit" class="w-full px-5 py-3 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#252321] dark:hover:bg-slate-700 text-white font-medium transition-colors border border-gray-700">Save Configuration</button>
+                    <button type="submit" class="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-semibold transition-all duration-200 border border-red-700/40 shadow-lg shadow-red-600/30">Save Configuration</button>
                 </div>
             </form>
         </div>

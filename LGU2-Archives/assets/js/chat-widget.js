@@ -8,12 +8,12 @@ const ChatWidget = {
         const widgetHTML = `
             <div id="chat-widget-container" class="fixed bottom-6 right-6 z-50">
                 <!-- Toggle Button -->
-                <button id="chat-toggle-btn" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110">
+                <button id="chat-toggle-btn" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 drop-shadow-lg shadow-red-900/30">
                     <i class="bi bi-chat-dots-fill text-2xl"></i>
                 </button>
                 
                 <!-- Chat Window -->
-                <div id="chat-window" class="hidden absolute bottom-16 right-0 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col" style="height: 500px;">
+                <div id="chat-window" class="hidden absolute bottom-16 right-0 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-[0_25px_70px_-15px_rgba(0,0,0,0.45)] border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col" style="height: 500px;">
                     <!-- Chat Header -->
                     <div class="bg-red-600 text-white p-4 flex items-center justify-between">
                         <div class="flex items-center gap-3">

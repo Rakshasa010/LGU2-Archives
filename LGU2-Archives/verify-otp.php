@@ -103,12 +103,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
             <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
             <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
             <style>
-                @keyframes skeleton-pulse{0%,100%{opacity:.5}50%{opacity:1}}
                 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
                 @keyframes fade-in{from{opacity:0}to{opacity:1}}
+                @keyframes logo-bounce-in{0%{opacity:0;transform:scale(.3)}55%{opacity:1;transform:scale(1.08)}75%{transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
+                @keyframes halo-pulse{0%{opacity:.55;transform:scale(.55)}70%{opacity:.2}100%{opacity:0;transform:scale(1.35)}}
+                @keyframes fade-in-up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+                @keyframes progress-ring{0%{stroke-dashoffset:var(--ring-circ)}100%{stroke-dashoffset:0}}
+                @keyframes bar-fill{0%{width:0%}100%{width:100%}}
                 .animate-fade-in{animation:fade-in .5s ease-out forwards}
-                .skeleton-pulse{animation:skeleton-pulse 1.4s ease-in-out infinite}
-                .spinner{border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;width:28px;height:28px;animation:spin .8s linear infinite}
+                .spinner{border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;width:26px;height:26px;animation:spin .8s linear infinite}
+                .animate-logo-in{animation:logo-bounce-in .85s cubic-bezier(.68,-.55,.265,1.55) .1s both}
+                .halo{position:absolute;inset:0;border-radius:9999px;background:radial-gradient(circle,rgba(220,38,38,.55) 0%,rgba(220,38,38,.22) 45%,transparent 70%);animation:halo-pulse 1.8s ease-out .15s both}
+                .animate-fade-in-up{animation:fade-in-up .6s ease-out both}
+                .stagger-2{animation-delay:.55s}
+                .stagger-3{animation-delay:.8s}
+                .stagger-4{animation-delay:1.05s}
+                .ring-svg{transform:rotate(-90deg)}
+                .ring-track{stroke:rgba(220,38,38,.15)}
+                .ring-progress{stroke:#dc2626;stroke-dasharray:var(--ring-circ);stroke-dashoffset:var(--ring-circ);animation:progress-ring 1.6s ease-out .45s both}
+                .bar-fill{animation:bar-fill 2.2s ease-out .6s both}
+                @media (prefers-reduced-motion:reduce){
+                    .animate-logo-in{animation:fade-in .6s ease-out both}
+                    .halo{display:none}
+                    .ring-progress{animation:none;stroke-dashoffset:0}
+                    .animate-fade-in-up{animation:fade-in .6s ease-out both}
+                    .bar-fill{animation:none;width:100%}
+                }
             </style>
         </head>
         <body class="min-h-screen flex items-center justify-center p-4">
@@ -120,34 +140,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
                 <div class="blob b2"></div>
             </div>
 
-            <div class="w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 relative animate-fade-in">
-                <div class="text-center mb-8">
-                    <div class="mx-auto w-20 h-20 rounded-full shadow-lg bg-white flex items-center justify-center -mt-12 mb-4 ring-4 ring-white dark:ring-slate-900">
-                        <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-14 h-14 object-contain">
+            <div class="relative flex flex-col items-center text-center animate-fade-in">
+                <div class="relative w-32 h-32 md:w-40 md:h-40 mb-8">
+                    <div class="halo"></div>
+                    <svg class="ring-svg absolute inset-0 w-full h-full" viewBox="0 0 160 160" fill="none" aria-hidden="true">
+                        <circle class="ring-track" cx="80" cy="80" r="72" stroke-width="8"></circle>
+                        <circle class="ring-progress" cx="80" cy="80" r="72" stroke-width="8" stroke-linecap="round" style="--ring-circ:452"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white shadow-xl ring-4 ring-white dark:ring-slate-900 flex items-center justify-center animate-logo-in overflow-hidden">
+                            <img src="Images/Val-logo/valenzuela logo.webp" alt="Sangguniang Panlungsod ng Valenzuela" class="w-20 h-20 md:w-24 md:h-24 object-contain">
+                        </div>
                     </div>
-                    <div class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">LAS</div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300">Legislative Archive System</div>
                 </div>
 
-                <div class="mb-6">
-                    <div class="flex items-center justify-center gap-3 mb-4">
-                        <div class="spinner"></div>
-                        <div class="text-xl font-bold text-gray-900 dark:text-white">Signing you in…</div>
-                    </div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">Verifying your session and loading your archive</div>
+                <div class="animate-fade-in-up stagger-2">
+                    <div class="text-lg md:text-xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">Sangguniang Panlungsod ng Valenzuela</div>
+                    <div class="text-sm text-red-600 dark:text-red-400 font-semibold mt-1">City Government of Valenzuela</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Metropolitan Manila</div>
+                </div>
 
-                    <div class="space-y-4">
-                        <div class="space-y-2">
-                            <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3"></div>
-                            <div class="skeleton-pulse h-14 bg-gray-200 dark:bg-slate-700 rounded-xl w-full"></div>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4"></div>
-                            <div class="skeleton-pulse h-14 bg-gray-200 dark:bg-slate-700 rounded-xl w-full"></div>
-                        </div>
-                        <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-2/3"></div>
-                        <div class="skeleton-pulse h-4 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/2"></div>
+                <div class="animate-fade-in-up stagger-3 mt-6 flex items-center gap-3">
+                    <div class="spinner"></div>
+                    <div class="text-xl font-bold text-gray-900 dark:text-white">Signing you in…</div>
+                </div>
+
+                <div class="animate-fade-in-up stagger-4 mt-4 w-64">
+                    <div class="h-1.5 w-full bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div class="bar-fill h-full bg-red-600 rounded-full"></div>
                     </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 text-center mt-3">Verifying your session and loading your archive</div>
                 </div>
             </div>
 
@@ -156,7 +178,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
                     var target = <?php echo json_encode($target); ?>;
                     var themeScript = <?php echo json_encode($themeScript); ?>;
                     try { eval(themeScript); } catch (e) {}
-                    var t = 2500;
+                    var t = 2800;
                     var el = document.createElement('div');
                     el.className = 'fixed inset-0 z-50 bg-white dark:bg-slate-900 transition-opacity duration-300';
                     el.style.opacity = '0';

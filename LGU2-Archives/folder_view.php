@@ -825,7 +825,7 @@ function formatFileSize($fileSize) {
                                     $fileSize = $record['file_size'] ?? (file_exists($fileUrl) ? filesize($fileUrl) : 0);
                                     $uniqueId = !empty($record['unique_number']) ? htmlspecialchars($record['unique_number']) : sprintf("DOC-%06d", $record['id']);
                                 ?>
-                                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="record-<?php echo $record['id']; ?>">
+                                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col" id="record-<?php echo $record['id']; ?>">
                                     <!-- Thumbnail Preview Area -->
                                     <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('<?php echo htmlspecialchars($record['title']); ?>', <?php echo $record['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $record['created_at']; ?>')">
                                         <?php if (in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($fileUrl)): ?>
@@ -944,7 +944,7 @@ function formatFileSize($fileSize) {
                                     elseif (in_array($fileExt, ['doc','docx'])) $iconClass = 'bi-file-earmark-word text-blue-700';
                                     $uniqueId = !empty($file['unique_number']) ? htmlspecialchars($file['unique_number']) : sprintf("DOC-%06d", $file['id']);
                                 ?>
-                                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="file-<?php echo $file['id']; ?>">
+                                <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col" id="file-<?php echo $file['id']; ?>">
                                     <!-- Thumbnail Preview Area -->
                                     <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>')">
                                         <?php if (in_array($fileExt, ['jpg','jpeg','png','gif','webp']) && file_exists($fileUrl)): ?>
@@ -1217,22 +1217,40 @@ function formatFileSize($fileSize) {
 
         function previewFile(name, id, url, size, created_at) {
             try {
-                var ext = (name || '').split('.').pop().toLowerCase();
+                var urlPath = String(url || '').split('?')[0];
+                var ext = (urlPath.split('.').pop() || '').toLowerCase();
+                if (!ext || ext === urlPath) ext = (name || '').split('.').pop().toLowerCase();
                 var t = '';
                 if (['mp4','webm','ogg','avi','mov'].indexOf(ext) >= 0) t = 'video';
                 else if (ext === 'pdf') t = 'pdf';
                 else if (ext === 'docx') t = 'docx';
-                else if (['jpg','jpeg','png','gif','webp'].indexOf(ext) >= 0) t = 'image';
-                
+                else if (['doc','xls','xlsx','ppt','pptx'].indexOf(ext) >= 0) t = 'office';
+                else if (['jpg','jpeg','png','gif','webp','bmp','svg'].indexOf(ext) >= 0) t = 'image';
+
                 document.getElementById('previewTitle').textContent = name;
                 const previewContent = document.getElementById('previewContent');
-                
+
+                function previewAbsUrl(p) {
+                    if (!p) return p;
+                    if (/^https?:\/\//i.test(p)) return p;
+                    try { return new URL(p, window.location.href).href; } catch (e) { return p; }
+                }
+
+                function showGoogleViewer(p) {
+                    var gview = 'https://docs.google.com/gview?embedded=true&url=' + encodeURIComponent(previewAbsUrl(p));
+                    previewContent.innerHTML = `<iframe src="${gview}" class="w-full h-[70vh] rounded-lg shadow-lg border bg-white" title="Document Preview"></iframe>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">If the preview fails, use Open to view the file directly.</div>
+                        <div class="flex justify-center mt-2"><a href="${p}" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">Open in new tab</a></div>`;
+                }
+
                 if (t === 'image') {
                     previewContent.innerHTML = `<img src="${url}" class="max-h-[70vh] max-w-full rounded-lg shadow-lg" alt="Preview">`;
                 } else if (t === 'video') {
                     previewContent.innerHTML = `<video controls class="max-h-[70vh] max-w-full rounded-lg shadow-lg" src="${url}"></video>`;
                 } else if (t === 'pdf') {
                     previewContent.innerHTML = `<iframe src="${url}" class="w-full h-[70vh] rounded-lg shadow-lg" title="PDF Preview"></iframe>`;
+                } else if (t === 'office') {
+                    showGoogleViewer(url);
                 } else if (t === 'docx') {
                     previewContent.innerHTML = `<div class="text-center py-10 w-full" id="docx-loading">
                         <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto mb-3"></div>
@@ -1248,23 +1266,11 @@ function formatFileSize($fileSize) {
                                 previewContent.innerHTML = '';
                                 previewContent.appendChild(pre);
                             } else {
-                                previewContent.innerHTML = `<div class="text-center">
-                                    <i class="bi bi-file-earmark-word text-6xl text-gray-500 mb-4"></i>
-                                    <p class="text-gray-600 dark:text-gray-400">${d && d.error ? d.error : 'Preview not available for this file type.'}</p>
-                                    <a href="${url}" download class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                                        <i class="bi bi-download"></i> Download File
-                                    </a>
-                                </div>`;
+                                showGoogleViewer(url);
                             }
                         })
                         .catch(function() {
-                            previewContent.innerHTML = `<div class="text-center">
-                                <i class="bi bi-file-earmark-word text-6xl text-gray-500 mb-4"></i>
-                                <p class="text-gray-600 dark:text-gray-400">Preview not available for this file type.</p>
-                                <a href="${url}" download class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                                    <i class="bi bi-download"></i> Download File
-                                </a>
-                            </div>`;
+                            showGoogleViewer(url);
                         });
                 } else {
                     previewContent.innerHTML = `<div class="text-center">
@@ -1651,7 +1657,7 @@ function formatFileSize($fileSize) {
                     previewHtml = `<div class="flex flex-col items-center"><i class="bi ${iconClass} text-5xl opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all duration-300"></i><span class="text-xs text-gray-500 dark:text-gray-400 mt-2 font-semibold">${fileExt.toUpperCase()}</span></div>`;
                 }
 
-                return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="record-${record.id}">
+                return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col" id="record-${record.id}">
                     <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('${record.title}', ${record.id}, '${fileUrl}', ${fileSize}, '${record.created_at}')">${previewHtml}</div>
                     <div class="p-4 flex flex-col flex-1">
                         <div class="flex items-start justify-between gap-2 mb-3">
@@ -1727,7 +1733,7 @@ function formatFileSize($fileSize) {
                     previewHtml = `<div class="flex flex-col items-center"><i class="bi ${iconClass} text-5xl opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all duration-300"></i><span class="text-xs text-gray-500 dark:text-gray-400 mt-2 font-semibold">${fileExt.toUpperCase()}</span></div>`;
                 }
 
-                return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="file-${file.id}">
+                return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col" id="file-${file.id}">
                     <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('${file.name}', ${file.id}, '${fileUrl}', ${fileSize}, '${file.created_at}')">${previewHtml}</div>
                     <div class="p-4 flex flex-col flex-1">
                         <div class="flex items-start justify-between gap-2 mb-3">

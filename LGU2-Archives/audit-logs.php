@@ -2,10 +2,6 @@
 // audit-logs.php
 // Lists recent notifications with time, date, content, and about; supports ?id= to highlight.
 ?>
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
     <?php
     // audit-logs.php
     // Lists recent notifications with time, date, content, and about; supports ?id= to highlight.
@@ -383,12 +379,11 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                </div>
                             </div>
                         </div>
                     </div>
-                </main>
                 <?php include 'includes/footer.php'; ?>
+                </main>
             </div>
         </div>
 
