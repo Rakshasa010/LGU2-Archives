@@ -286,3 +286,306 @@ function gemini_stream_to_sse($system, array $messages, array $opts = []) {
     }
     gemini_sse_write(['done' => true]);
 }
+
+/* ============================================================================
+ * Document version comparison
+ * ----------------------------------------------------------------------------
+ * Resolves raw file references (DB record, local path, or Pinata CID), builds a
+ * multimodal Gemini payload (base64 inline PDFs or extracted DOCX/text), and
+ * asks the model for a structured diff (Summary / Additions / Removals /
+ * Modifications).
+ * ========================================================================== */
+
+/**
+ * Resolve a DB record reference to its stored file metadata.
+ *
+ * @param mysqli $conn
+ * @param string $source 'archive'|'legislative'|'external'
+ * @param int    $id     Record id.
+ * @return array|null {path, cid, label, original_name} or null when not found.
+ */
+function gemini_lookup_record($conn, $source, $id) {
+    if ($source === 'legislative') {
+        $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, mime_type FROM legislative_records WHERE id = ?");
+        $labelCol = 'title';
+    } elseif ($source === 'external') {
+        $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, file_name, mime_type FROM external_documents WHERE id = ?");
+        $labelCol = 'file_name';
+    } else {
+        $stmt = $conn->prepare("SELECT file_path, ipfs_cid, name, mime_type FROM archive_files WHERE id = ?");
+        $labelCol = 'name';
+    }
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$row) {
+        return null;
+    }
+    $label = '';
+    if ($labelCol === 'file_name') {
+        $label = !empty($row['file_name']) ? $row['file_name'] : ($row['title'] ?? ('#'.$id));
+    } else {
+        $label = $row[$labelCol] ?? '#' . $id;
+    }
+    return [
+        'path'          => (string)($row['file_path'] ?? ''),
+        'cid'           => (string)($row['ipfs_cid'] ?? ''),
+        'label'         => trim((string)$label) !== '' ? (string)$label : '#'.$id,
+        'mime'          => (string)($row['mime_type'] ?? ''),
+    ];
+}
+
+/**
+ * Resolve a local (project-relative) path to a safe absolute file path.
+ */
+function gemini_resolve_local_path($rel) {
+    $rel = rawurldecode(trim((string)$rel));
+    if ($rel === '' || strpos($rel, "\0") !== false || strpos($rel, '..') !== false) {
+        return null;
+    }
+    $rel = str_replace('\\', '/', $rel);
+    if ($rel[0] === '/') {
+        return null;
+    }
+    $baseRoot = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..');
+    $abs  = realpath($baseRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel));
+    if ($abs === false || !is_file($abs)) {
+        return null;
+    }
+    if (stripos($abs . DIRECTORY_SEPARATOR, $baseRoot . DIRECTORY_SEPARATOR) !== 0) {
+        return null;
+    }
+    return $abs;
+}
+
+/**
+ * Download a Pinata CID's content to a temp file and return its path.
+ */
+function gemini_fetch_cid_to_temp($cid) {
+    if (!function_exists('pinata_gateway_url')) {
+        require_once __DIR__ . '/pinata.php';
+    }
+    if (!function_exists('curl_init')) {
+        return null;
+    }
+    $url = pinata_gateway_url($cid);
+    $tmp = @tempnam(sys_get_temp_dir(), 'gemv');
+    if ($tmp === false) {
+        return null;
+    }
+    $fp   = @fopen($tmp, 'wb');
+    $curl = curl_init($url);
+    curl_setopt_array($curl, [
+        CURLOPT_FILE           => $fp,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_TIMEOUT        => 120,
+        CURLOPT_CONNECTTIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_USERAGENT      => 'LAS-Gemini-Comparator/1.0',
+    ]);
+    curl_exec($curl);
+    $http = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    $err  = curl_error($curl);
+    curl_close($curl);
+    @fclose($fp);
+    if ($err !== '' || ($http >= 400)) {
+        @unlink($tmp);
+        return null;
+    }
+    return $tmp;
+}
+
+/**
+ * Resolve any supported file reference (record array, path string, or CID)
+ * into an on-disk file description.
+ */
+function gemini_resolve_file($ref, $conn) {
+    if (is_array($ref)) {
+        $source = isset($ref['source']) ? (string)$ref['source'] : 'archive';
+        $id     = (int)($ref['id'] ?? 0);
+        if ($id <= 0) {
+            return null;
+        }
+        $rec = gemini_lookup_record($conn, $source, $id);
+        if (!$rec) {
+            return null;
+        }
+        if ($rec['path'] !== '') {
+            $local = gemini_resolve_local_path($rec['path']);
+            if ($local) {
+                return ['path' => $local, 'label' => $rec['label'], 'cid' => $rec['cid']];
+            }
+        }
+        if ($rec['cid'] !== '') {
+            $tmp = gemini_fetch_cid_to_temp($rec['cid']);
+            if ($tmp) {
+                return ['path' => $tmp, 'label' => $rec['label'], 'cid' => $rec['cid'], 'temp' => true];
+            }
+        }
+        return null;
+    }
+
+    $s = trim((string)$ref);
+    if ($s === '') {
+        return null;
+    }
+    // CID detection: no path separators/spaces and long base-alphabet string.
+    if (strpos($s, '/') === false && strpos($s, '\\') === false
+        && preg_match('/^[A-Za-z0-9]{40,}$/', $s) === 1) {
+        $tmp = gemini_fetch_cid_to_temp($s);
+        if ($tmp) {
+            return ['path' => $tmp, 'label' => 'CID ' . substr($s, 0, 12) . '…', 'cid' => $s, 'temp' => true];
+        }
+        return null;
+    }
+    $local = gemini_resolve_local_path($s);
+    if ($local) {
+        return ['path' => $local, 'label' => basename($local), 'cid' => ''];
+    }
+    return null;
+}
+
+/**
+ * Build a Gemini content part from an on-disk file.
+ * PDFs become base64 inline_data; DOCX and text files become raw text parts.
+ *
+ * @return array|null ['part' => array] on success, ['error' => string] on failure.
+ */
+function gemini_file_content_part($absPath, $label = '') {
+    if (!is_file($absPath) || !is_readable($absPath)) {
+        return ['error' => 'File is not readable on the server.'];
+    }
+    $ext = strtolower(pathinfo($absPath, PATHINFO_EXTENSION));
+
+    // PDF → inline application/pdf part.
+    if ($ext === 'pdf') {
+        $size = (int)@filesize($absPath);
+        if ($size <= 0) {
+            return ['error' => 'The PDF file is empty or unreadable.'];
+        }
+        if ($size > 30 * 1024 * 1024) {
+            return ['error' => 'The PDF is too large to compare (max 30MB).'];
+        }
+        $data = (string)@file_get_contents($absPath);
+        if ($data === '') {
+            return ['error' => 'Could not read the PDF file.'];
+        }
+        return [
+            'part'  => [
+                'inline_data' => [
+                    'mime_type' => 'application/pdf',
+                    'data'      => base64_encode($data),
+                ],
+            ],
+            'label' => $label !== '' ? $label : basename($absPath),
+        ];
+    }
+
+    // DOCX = extract text server-side (no ZipArchive needed).
+    if ($ext === 'docx') {
+        if (!function_exists('docx_extract_text')) {
+            require_once __DIR__ . '/docx_preview.php';
+        }
+        $text = docx_extract_text($absPath);
+        if ($text === null || trim($text) === '') {
+            return ['error' => 'No readable text could be extracted from the DOCX file.'];
+        }
+        if (mb_strlen($text) > 600000) {
+            $text = mb_substr($text, 0, 600000);
+        }
+        return [
+            'part'  => ['text' => '<DOCUMENT_BODY>' . $text . '</DOCUMENT_BODY>'],
+            'label' => $label !== '' ? $label : basename($absPath),
+        ];
+    }
+
+    // Plain text / markdown / CSV etc. = read directly.
+    $textables = ['txt', 'md', 'markdown', 'csv', 'text', 'log', 'ini', 'rtf'];
+    if (in_array($ext, $textables, true)) {
+        $text = (string)@file_get_contents($absPath);
+        if ($text === '') {
+            return ['error' => 'Could not read the text file.'];
+        }
+        if (mb_strlen($text) > 600000) {
+            $text = mb_substr($text, 0, 600000);
+        }
+        return [
+            'part'  => ['text' => '<DOCUMENT_CONTENT>' . $text . '</DOCUMENT_CONTENT>'],
+            'label' => $label !== '' ? $label : basename($absPath),
+        ];
+    }
+
+    return ['error' => 'Unsupported file type (.'.$ext.'). Supported: PDF, DOCX, TXT.'];
+}
+
+/**
+ * Compare two document versions via the Gemini API.
+ *
+ * @param mixed $v1   Reference to version 1 (record array, path, or CID).
+ * @param mixed $v2   Reference to version 2.
+ * @param mysqli $conn
+ * @param array $opts generation options.
+ * @return array gemini_generate() result (+ file_v1_name / file_v2_name).
+ */
+function gemini_compare_versions($v1, $v2, $conn, array $opts = []) {
+    $r1 = gemini_resolve_file($v1, $conn);
+    if (!$r1) {
+        return ['success' => false, 'error' => 'Could not resolve the Version 1 file.'];
+    }
+    $r2 = gemini_resolve_file($v2, $conn);
+    if (!$r2) {
+        if (isset($r1['temp']) && $r1['temp']) {
+            @unlink($r1['path']);
+        }
+        return ['success' => false, 'error' => 'Could not resolve the Version 2 file.'];
+    }
+
+    $p1 = gemini_file_content_part($r1['path'], $r1['label']);
+    $p2 = gemini_file_content_part($r2['path'], $r2['label']);
+
+    if (isset($r1['temp']) && $r1['temp']) {
+        @unlink($r1['path']);
+    }
+    if (isset($r2['temp']) && $r2['temp']) {
+        @unlink($r2['path']);
+    }
+
+    if (!isset($p1['part'])) {
+        return ['success' => false, 'error' => 'Version 1: ' . $p1['error']];
+    }
+    if (!isset($p2['part'])) {
+        return ['success' => false, 'error' => 'Version 2: ' . $p2['error']];
+    }
+
+    $system = 'You are a meticulous legal and administrative document version-comparison assistant. '
+        . 'Compare the two versions of the document provided by the user (Version 1 = first, Version 2 = second) '
+        . 'and produce a structured comparison in Markdown with exactly these sections, in this order, each with its own ## heading:\n\n'
+        . '## Summary of Changes\nA high-level overview of what changed between the versions.\n'
+        . '## Additions\nSpecific text, clauses, or sections that were ADDED in Version 2. Quote them precisely and cite section/clause references where visible.\n'
+        . '## Removals\nSpecific text that was DELETED from Version 1 and is absent in Version 2. Quote the removed wording.\n'
+        . '## Modifications\nReworded sentences, and updated numbers, dates, amounts, or values. Describe the from → to change precisely.\n\n'
+        . 'Rules:\n'
+        . '- The two versions are appended in the SAME message: the first document block is Version 1, the second is Version 2.\n'
+        . '- Be specific: quote exact wording and references; do not invent content that is not present.\n'
+        . '- If there are no changes in a category, state: Edit: None: no changes detected.\n'
+        . '- Keep each section concise but complete. End with a one-line note on which version is the newer/more authoritative only if it is evident from the documents.';
+
+    $parts = [
+        ['text' => 'Compare these two versions of the same document. '
+                 . 'Version 1 file: ' . $p1['label'] . '. Version 2 file: ' . $p2['label'] . '. '
+                 . 'The first document block is VERSION 1; the second document block is VERSION 2.'],
+        $p1['part'],
+        $p2['part'],
+    ];
+    $messages = [['role' => 'user', 'parts' => $parts]];
+
+    $result = gemini_generate($system, $messages, $opts);
+    $result['file_v1_name'] = $r1['label'];
+    $result['file_v2_name'] = $r2['label'];
+    return $result;
+}

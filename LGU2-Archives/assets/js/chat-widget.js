@@ -25,7 +25,7 @@ const ArchiveAssistant = {
             parts.pop();
             base = window.location.origin + parts.join('/');
         }
-        this.apiUrl = base.replace(/\/+$/, '') + '/api/ai-assistant.php';
+        this.apiUrl = base.replace(/\/+$/, '') + '/api/gemini.php';
         return this.apiUrl;
     },
 
@@ -302,6 +302,51 @@ const ArchiveAssistant = {
                     this.showError('The assistant returned an empty response.');
                 }
             }
+        } catch (error) {
+            this.removeTyping();
+            this.showError('Network error: ' + (error && error.message ? error.message : 'Unable to reach the assistant.'));
+        } finally {
+            this.streaming = false;
+            this.input.focus();
+        }
+    },
+
+    /**
+     * Compare two document versions via the Gemini API.
+     * @param {*} fileV1 Ref: {source:'archive'|'legislative'|'external', id} | path string | CID.
+     * @param {*} fileV2 Same reference shape as fileV1.
+     */
+    async compareVersions(fileV1, fileV2) {
+        if (this.streaming) return;
+        this.streaming = true;
+        this.addMessage('Comparing document versions...', false, false);
+        this.showTyping();
+        try {
+            await this.ensureLibs();
+            const res = await fetch(this.resolveApiUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_v1: fileV1, file_v2: fileV2 })
+            });
+            let data = null;
+            try {
+                data = await res.json();
+            } catch { data = null; }
+            this.removeTyping();
+            if (!res.ok || !data || !data.success) {
+                const msg = (data && data.error) ? data.error : ('Request failed (HTTP ' + res.status + ')');
+                this.showError(msg);
+                return;
+            }
+            const label = (data.file_v1_name || 'V1') + ' vs ' + (data.file_v2_name || 'V2');
+            const el = this.addMessage('', false);
+            const head = document.createElement('div');
+            head.className = 'text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1';
+            head.textContent = label;
+            el.insertBefore(head, el.firstChild);
+            this.renderMarkdown(el, data.response || 'No comparison returned.');
+            this.history.push({ role: 'user', parts: [{ text: '[Version comparison requested: ' + label + ']' }] });
+            this.history.push({ role: 'model', parts: [{ text: data.response || '' }] });
         } catch (error) {
             this.removeTyping();
             this.showError('Network error: ' + (error && error.message ? error.message : 'Unable to reach the assistant.'));
