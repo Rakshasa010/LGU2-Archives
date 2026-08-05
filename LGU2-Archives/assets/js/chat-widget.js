@@ -1,6 +1,6 @@
 /* Archive Assistant — Gemini-powered chat widget for the LAS system.
- * Streams responses from api/ai-assistant.php over SSE, renders Markdown,
- * keeps multi-turn history, and shows a loading indicator while waiting. */
+ * Streams responses from api/gemini.php over SSE, renders Markdown, supports
+ * text chat and document version comparison, and shows a loading indicator. */
 const ArchiveAssistant = {
     history: [],
     streaming: false,
