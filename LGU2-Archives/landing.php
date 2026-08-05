@@ -32,22 +32,6 @@ $IMG_ABOUT = $IMG_HERO_SLIDES[count($IMG_HERO_SLIDES) - 1];
 $IMG_CTA   = $IMG_HERO_SLIDES[count($IMG_HERO_SLIDES) - 1];
 $hero_images_json = htmlspecialchars(json_encode($IMG_HERO_SLIDES), ENT_QUOTES);
 $carousel_images_json = htmlspecialchars(json_encode(array_reverse($IMG_HERO_SLIDES)), ENT_QUOTES);
-
-// Rotating captions for the hero carousel (cycles regardless of photo filename)
-$IMG_CAPTION_POOL = [
-    ['Legislative Archive System', 'Official digital repository of Valenzuela City'],
-    ['Ordinances & Resolutions', 'Every law that shapes the city, preserved'],
-    ['Records You Can Trust', 'Secure, organized, and always accessible'],
-    ['Version Tracking', 'Every revision of every document, tracked'],
-    ['Smart Search', 'Find any record instantly by title, author, or folder'],
-    ['Reports & Analytics', 'Insights on records, activity, and storage usage'],
-    ['Serving Valenzueños', "Preserving the city's legislative legacy"]
-];
-$IMG_CAPTIONS = [];
-foreach ($IMG_HERO_SLIDES as $k => $_src) {
-    $IMG_CAPTIONS[] = $IMG_CAPTION_POOL[$k % count($IMG_CAPTION_POOL)];
-}
-$hero_captions_json = htmlspecialchars(json_encode($IMG_CAPTIONS), ENT_QUOTES);
 $stat_records = 0;
 $stat_folders = 0;
 $stat_users = 0;
@@ -56,9 +40,9 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
     try {
         require __DIR__ . '/authdatabase.php';
         if (isset($conn) && $conn instanceof mysqli) {
-            $r = $conn->query("SELECT (SELECT COUNT(*) FROM archive_files) + (SELECT COUNT(*) FROM legislative_records WHERE parent_version_id IS NULL) AS c");
+            $r = $conn->query("SELECT (SELECT COUNT(*) FROM archive_files) + (SELECT COUNT(*) FROM legislative_records) AS c");
             if ($r && $row = $r->fetch_assoc()) $stat_records = (int)$row['c'];
-            $r = $conn->query("SELECT (SELECT COUNT(*) FROM archive_folders) + (SELECT COUNT(DISTINCT CASE type WHEN 'Ordinance' THEN 'Ordinances & Resolutions' WHEN 'Resolution' THEN 'Ordinances & Resolutions' WHEN 'Public Hearing' THEN 'Public Hearings' WHEN 'Meeting' THEN 'Meeting Records' END) FROM legislative_folders WHERE parent_id IS NULL) AS c");
+            $r = $conn->query("SELECT (SELECT COUNT(*) FROM archive_folders) + (SELECT COUNT(*) FROM legislative_folders) AS c");
             if ($r && $row = $r->fetch_assoc()) $stat_folders = (int)$row['c'];
             $r = $conn->query("SELECT COUNT(*) AS c FROM users");
             if ($r && $row = $r->fetch_assoc()) $stat_users = (int)$row['c'];
@@ -162,16 +146,8 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
     </header>
 
     <section id="home" class="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div id="hero-carousel" class="absolute inset-0" data-hero-images='<?php echo $hero_images_json; ?>' data-hero-captions='<?php echo $hero_captions_json; ?>'></div>
+        <div id="hero-carousel" class="absolute inset-0" data-hero-images='<?php echo $hero_images_json; ?>'></div>
         <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80"></div>
-        <div id="hero-caption" class="hero-caption">
-            <p class="hero-caption-title"></p>
-            <p class="hero-caption-sub"></p>
-        </div>
-        <div id="hero-dots" class="hero-dots" role="group" aria-label="Photo slides"></div>
-        <div id="hero-progress" class="hero-progress"><div id="hero-progress-bar" class="hero-progress-bar"></div></div>
-        <button type="button" id="hero-prev" class="hero-nav-btn hero-nav-prev" aria-label="Previous photo"><i class="bi bi-chevron-left"></i></button>
-        <button type="button" id="hero-next" class="hero-nav-btn hero-nav-next" aria-label="Next photo"><i class="bi bi-chevron-right"></i></button>
         <div class="relative z-10 max-w-4xl mx-auto text-center px-6 pt-32 pb-24">
             <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/25 bg-white/10 backdrop-blur text-white text-xs font-bold uppercase tracking-widest">
                 <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
@@ -204,13 +180,13 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
 
     <section id="features" class="py-20 sm:py-28 bg-gray-50 dark:bg-slate-900">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center max-w-2xl mx-auto reveal reveal-left">
+            <div class="text-center max-w-2xl mx-auto reveal">
                 <span class="section-eyebrow" data-i18n="feat_eyebrow">Features &amp; Capabilities</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="feat_title">Everything a modern legislative office needs</h2>
                 <p class="mt-4 text-gray-600 dark:text-gray-400" data-i18n="feat_sub">Powerful tools to organize, preserve, and retrieve the records that shape Valenzuela City.</p>
             </div>
-            <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-grid">
-                <div class="feature-card reveal reveal-left">
+            <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="feature-card reveal">
                     <div class="feature-icon"><i class="bi bi-archive"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat1_t">Digital Records Archive</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat1_d">Ordinances, resolutions, and official documents stored in one secure, organized system.</p>
@@ -220,25 +196,25 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                     <h3 class="text-lg font-bold" data-i18n="feat2_t">Smart Search</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat2_d">Find any record instantly by title, keyword, author, or folder.</p>
                 </div>
-                <div class="feature-card reveal reveal-right">
+                <div class="feature-card reveal">
                     <div class="feature-icon"><i class="bi bi-clock-history"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat3_t">Version Tracking</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat3_d">View the full history of a document — every revision tracked and preserved.</p>
                 </div>
-                <div class="feature-card reveal reveal-left">
+                <div class="feature-card reveal">
                     <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat4_t">Secure Downloads</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat4_d">Request downloads protected by one-time password verification for peace of mind.</p>
                 </div>
                 <div class="feature-card reveal">
-                    <div class="feature-icon"><i class="bi bi-google"></i></div>
-                    <h3 class="text-lg font-bold" data-i18n="feat5_t">Google Auth</h3>
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat5_d">One-click sign in and registration with your Google account via secure OAuth 2.0.</p>
+                    <div class="feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h3 class="text-lg font-bold" data-i18n="feat5_t">Reports &amp; Analytics</h3>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat5_d">Dashboard insights on archived records, activity, and storage usage.</p>
                 </div>
-                <div class="feature-card reveal reveal-right">
-                    <div class="feature-icon"><i class="bi bi-hdd-network"></i></div>
-                    <h3 class="text-lg font-bold" data-i18n="feat6_t">IPFS Pinata</h3>
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat6_d">Documents pinned to IPFS via Pinata for tamper-proof, decentralized storage.</p>
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="bi bi-people"></i></div>
+                    <h3 class="text-lg font-bold" data-i18n="feat6_t">User &amp; Role Management</h3>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat6_d">Admins control access with roles, approvals, and complete audit trails.</p>
                 </div>
             </div>
         </div>
@@ -246,7 +222,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
 
     <section id="about" class="py-20 sm:py-28 bg-white dark:bg-slate-950">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div class="reveal reveal-left">
+            <div class="reveal">
                 <span class="section-eyebrow" data-i18n="about_eyebrow">About the System</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="about_title">Bringing Valenzuela's legislative records into the digital age</h2>
                 <p class="mt-5 text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="about_text">
@@ -254,20 +230,20 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                     It safeguards the city's legislative history, making it easier for offices, researchers, and citizens
                     to find and use the documents that guide the city forward.
                 </p>
-                <div class="mt-8 grid sm:grid-cols-2 gap-4 stagger-grid">
-                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 reveal reveal-left">
+                <div class="mt-8 grid sm:grid-cols-2 gap-4">
+                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
                         <div class="text-red-600 dark:text-orange-400 text-2xl"><i class="bi bi-bullseye"></i></div>
                         <h4 class="mt-2 font-bold" data-i18n="about_mission_t">Our Mission</h4>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400" data-i18n="about_mission_d">To preserve, organize, and make accessible every legislative record of the city with accuracy and care.</p>
                     </div>
-                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 reveal reveal-right">
+                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
                         <div class="text-red-600 dark:text-orange-400 text-2xl"><i class="bi bi-eye"></i></div>
                         <h4 class="mt-2 font-bold" data-i18n="about_vision_t">Our Vision</h4>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400" data-i18n="about_vision_d">A transparent, efficient, and future-ready legislative office that serves every Valenzueño.</p>
                     </div>
                 </div>
             </div>
-            <div class="reveal reveal-right relative">
+            <div class="reveal relative">
                 <div id="about-carousel" class="carousel relative rounded-3xl overflow-hidden shadow-2xl shadow-red-900/20 ring-1 ring-gray-200 dark:ring-slate-700" data-images='<?php echo $carousel_images_json; ?>'>
                     <div class="carousel-track"></div>
                     <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
@@ -282,20 +258,19 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         </div>
                     </div>
                 </div>
-                <div id="about-carousel-thumbs" class="carousel-thumbs" aria-label="Photo thumbnails"></div>
             </div>
         </div>
     </section>
 
     <section id="security" class="py-20 sm:py-28 bg-slate-900 dark:bg-slate-950">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center max-w-2xl mx-auto reveal reveal-right">
+            <div class="text-center max-w-2xl mx-auto reveal">
                 <span class="section-eyebrow section-eyebrow-dark" data-i18n="sec_eyebrow">Trust &amp; Security</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-white" data-i18n="sec_title">Your records, protected at every step</h2>
                 <p class="mt-4 text-gray-400" data-i18n="sec_sub">We treat every document as the public trust it is — secured by design.</p>
             </div>
-            <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-grid">
-                <div class="security-card reveal reveal-left">
+            <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="security-card reveal">
                     <div class="security-icon"><i class="bi bi-envelope-check"></i></div>
                     <h3 class="text-base font-bold text-white" data-i18n="sec1_t">OTP Verification</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec1_d">Downloads are protected by a one-time password sent to your email.</p>
@@ -310,7 +285,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                     <h3 class="text-base font-bold text-white" data-i18n="sec3_t">Session Security</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec3_d">Automatic timeouts and lockouts stop unauthorized use.</p>
                 </div>
-                <div class="security-card reveal reveal-right">
+                <div class="security-card reveal">
                     <div class="security-icon"><i class="bi bi-journal-text"></i></div>
                     <h3 class="text-base font-bold text-white" data-i18n="sec4_t">Audit Logs</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec4_d">Every action is logged for transparency and accountability.</p>
@@ -321,12 +296,12 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
 
     <section id="how-it-works" class="py-20 sm:py-28 bg-white dark:bg-slate-900">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center max-w-2xl mx-auto reveal reveal-left">
+            <div class="text-center max-w-2xl mx-auto reveal">
                 <span class="section-eyebrow" data-i18n="num_eyebrow">Our Numbers</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="num_title">A growing archive, built for the city</h2>
             </div>
-            <div class="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6 stagger-grid">
-                <div class="stat-card reveal reveal-left">
+            <div class="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="stat-card reveal">
                     <div class="stat-value" data-count="<?php echo $stat_records; ?>">0</div>
                     <div class="stat-label" data-i18n="stat1">Records Archived</div>
                 </div>
@@ -338,18 +313,18 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                     <div class="stat-value" data-count="<?php echo $stat_users; ?>">0</div>
                     <div class="stat-label" data-i18n="stat3">Registered Users</div>
                 </div>
-                <div class="stat-card reveal reveal-right">
+                <div class="stat-card reveal">
                     <div class="stat-value" data-count="<?php echo $stat_downloads; ?>">0</div>
                     <div class="stat-label" data-i18n="stat4">Downloads Tracked</div>
                 </div>
             </div>
 
-            <div class="mt-24 text-center max-w-2xl mx-auto reveal reveal-right">
+            <div class="mt-24 text-center max-w-2xl mx-auto reveal">
                 <span class="section-eyebrow" data-i18n="how_eyebrow">How It Works</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="how_title">Getting started takes three simple steps</h2>
             </div>
-            <div class="mt-12 grid lg:grid-cols-3 gap-6 stagger-grid">
-                <div class="step-card reveal reveal-left">
+            <div class="mt-12 grid lg:grid-cols-3 gap-6">
+                <div class="step-card reveal">
                     <div class="step-number">1</div>
                     <div class="step-icon"><i class="bi bi-person-plus"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="step1_t">Create your account</h3>
@@ -357,11 +332,11 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 </div>
                 <div class="step-card reveal">
                     <div class="step-number">2</div>
-                    <div class="step-icon"><i class="bi bi-folder2-open"></i></div>
+                    <div class="step-icon"><i class="bi bi-folder-search"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="step2_t">Search &amp; browse</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="step2_d">Find the record you need by folder, title, or keyword.</p>
                 </div>
-                <div class="step-card reveal reveal-right">
+                <div class="step-card reveal">
                     <div class="step-number">3</div>
                     <div class="step-icon"><i class="bi bi-download"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="step3_t">Download securely</h3>
@@ -373,7 +348,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
 
     <section id="faq" class="py-20 sm:py-28 bg-gray-50 dark:bg-slate-950">
         <div class="max-w-3xl mx-auto px-4 sm:px-6">
-            <div class="text-center reveal reveal-left">
+            <div class="text-center reveal">
                 <span class="section-eyebrow" data-i18n="faq_eyebrow">Frequently Asked Questions</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="faq_title">Questions? We've got answers</h2>
             </div>
@@ -456,13 +431,13 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
 
     <section id="contact" class="py-20 sm:py-28 bg-white dark:bg-slate-900">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center max-w-2xl mx-auto reveal reveal-right">
+            <div class="text-center max-w-2xl mx-auto reveal">
                 <span class="section-eyebrow" data-i18n="contact_eyebrow">Contact Us</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="contact_title">Reach the Legislative Office</h2>
                 <p class="mt-4 text-gray-600 dark:text-gray-400" data-i18n="contact_sub">Questions, requests, or feedback? Send us a message.</p>
             </div>
             <div class="mt-14 grid lg:grid-cols-2 gap-10 items-start">
-                <div class="space-y-4 reveal reveal-left">
+                <div class="space-y-4 reveal">
                     <div class="contact-card">
                         <div class="contact-icon"><i class="bi bi-geo-alt"></i></div>
                         <div>
@@ -492,7 +467,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         </div>
                     </div>
                 </div>
-                <div class="reveal reveal-right">
+                <div class="reveal">
                     <form id="contact-form" class="contact-form" method="POST" action="api/contact-submit.php" novalidate>
                         <input type="text" name="website" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
                         <div class="space-y-4">

@@ -15,6 +15,7 @@ if ($sidebar_active_page === '') {
         'archives-landing.php' => 'dashboard',
         'storage.php' => 'storage',
         'folder_view.php' => 'storage',
+        'billing.php' => 'storage',
         'meeting-records.php' => 'storage',
         'ordinances-resolution.php' => 'storage',
         'public-hearings.php' => 'storage',
@@ -174,6 +175,12 @@ html, body {
                     </div>
                     <span>Ordinances & Resolutions</span>
                 </a>
+                <a href="version_tracking.php?folder=billing" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                    <div class="w-8 h-8 rounded-lg bg-green-100/20 flex items-center justify-center mr-3">
+                        <i class="bi bi-receipt text-green-400"></i>
+                    </div>
+                    <span>Billing</span>
+                </a>
                 <a href="version_tracking.php?folder=public-hearings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
                     <div class="w-8 h-8 rounded-lg bg-blue-100/20 flex items-center justify-center mr-3">
                         <i class="bi bi-megaphone text-blue-400"></i>
@@ -270,6 +277,12 @@ html, body {
                             <i class="bi bi-file-earmark-text text-orange-400"></i>
                         </div>
                         <span class="sidebar-text">Ordinances & Resolutions</span>
+                    </a>
+                    <a href="version_tracking.php?folder=billing" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
+                        <div class="w-8 h-8 rounded-lg bg-green-100/20 flex items-center justify-center mr-3">
+                            <i class="bi bi-receipt text-green-400"></i>
+                        </div>
+                        <span class="sidebar-text">Billing</span>
                     </a>
                     <a href="version_tracking.php?folder=public-hearings" class="vt-folder-link group flex w-full items-center px-4 py-2 text-white/80 hover:text-white rounded-xl transition-all duration-300 hover:bg-white/10">
                         <div class="w-8 h-8 rounded-lg bg-blue-100/20 flex items-center justify-center mr-3">
@@ -414,49 +427,5 @@ html, body {
     } else {
         dropdowns.forEach(function(d) { setupDropdown(d[0], d[1], d[2]); });
     }
-})();
-</script>
-<script>
-// Centralized Storage Overview: populates the sidebar storage card on every page.
-(function () {
-    function fmtBytes(bytes) {
-        if (bytes <= 0) return '0 B';
-        var units = ['B','KB','MB','GB','TB'];
-        var e = Math.floor(Math.log(bytes) / Math.log(1024));
-        e = Math.max(0, Math.min(e, units.length - 1));
-        var v = bytes / Math.pow(1024, e);
-        return (e >= 3 ? v.toFixed(1) : Math.round(v)) + ' ' + units[e];
-    }
-
-    function apply(data) {
-        var pct = String(data.percent || 0) + '%';
-        var text = (data.used_human || '0 B') + ' of ' + (data.total_human || '50 GB');
-        var files = String(data.file_count || 0) + ' files tracked';
-        ['mobile', 'desktop'].forEach(function (k) {
-            var bar = document.getElementById(k + '-storage-bar');
-            var pctEl = document.getElementById(k + '-storage-pct');
-            var textEl = document.getElementById(k + '-storage-text');
-            var filesEl = document.getElementById(k + '-storage-files');
-            if (bar) bar.style.width = pct;
-            if (pctEl) pctEl.textContent = pct;
-            if (textEl) textEl.textContent = text;
-            if (filesEl) filesEl.textContent = files;
-        });
-    }
-
-    function load() {
-        fetch('storage_status.php', { credentials: 'same-origin', cache: 'no-store' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) { if (d && d.success) apply(d); })
-            .catch(function () {});
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', load);
-    } else {
-        load();
-    }
-    window.addEventListener('focus', load);
-    setInterval(load, 60000);
 })();
 </script>

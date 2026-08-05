@@ -12,7 +12,7 @@
  * {
  *   "api_key": "your-api-key",
  *   "title": "Ordinance No. 1234",
- *   "type": "Ordinance",           // Ordinance, Resolution, Meeting, Public Hearing, or custom
+ *   "type": "Ordinance",           // Ordinance, Resolution, Meeting, Public Hearing, Billing, or custom
  *   "author": "Juan Dela Cruz",
  *   "month": "January",
  *   "year": "2026",
@@ -20,6 +20,7 @@
  *   "source_record_id": 123,       // ID in the LLRM system (for reference)
  *   "file_content": "base64...",   // Base64-encoded file content (optional)
  *   "file_name": "ordinance_1234.pdf",
+ *   "folder_name": "Ordinances",   // Target folder name (created if not exists)
  *   "metadata": {                  // Optional extra metadata
  *     "session_date": "2026-01-15",
  *     "committee": "Appropriations"
@@ -42,7 +43,6 @@ if (empty($raw_input) && isset($GLOBALS['HTTP_RAW_POST_DATA'])) {
 
 require_once '../authdatabase.php';
 require_once __DIR__ . '/../includes/pinata.php';
-require_once __DIR__ . '/../includes/llrm-service.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -128,12 +128,28 @@ $source_record_id = isset($data['source_record_id']) ? (int)$data['source_record
 $folder_name = $data['folder_name'] ?? $type;
 $metadata    = $data['metadata'] ?? [];
 
-// --- Route to the correct main-storage folder by canonical type ---
-$router = new LLRMService();
-$routing = $router->mapToMainStorageType($type);
-$type = $routing['type'];
-$folder_name = $routing['folder_name'];
-$folder_id = $router->ensureLegislativeFolder($conn, $type, $folder_name);
+// --- Find or create legislative folder ---
+$folder_id = null;
+
+// Try to find existing folder by name and type
+$findFolder = $conn->prepare("SELECT id FROM legislative_folders WHERE name = ? AND type = ? LIMIT 1");
+$findFolder->bind_param("ss", $folder_name, $type);
+$findFolder->execute();
+$folderRes = $findFolder->get_result();
+if ($folderRow = $folderRes->fetch_assoc()) {
+    $folder_id = (int)$folderRow['id'];
+}
+$findFolder->close();
+
+// Create folder if not found
+if (!$folder_id) {
+    $createFolder = $conn->prepare("INSERT INTO legislative_folders (name, type, created_by) VALUES (?, ?, NULL)");
+    $createFolder->bind_param("ss", $folder_name, $type);
+    if ($createFolder->execute()) {
+        $folder_id = (int)$conn->insert_id;
+    }
+    $createFolder->close();
+}
 
 // --- Handle file content (if provided) ---
 $file_path = null;
@@ -149,8 +165,9 @@ if (!empty($data['file_content']) && !empty($data['file_name'])) {
         exit;
     }
 
-    // Create upload directory: uploads/legislative/{folder_id}/{Year}/
-    $target_dir = __DIR__ . '/../uploads/legislative/' . $folder_id . '/' . $year . '/';
+    // Create upload directory: uploads/legislative/{Type}/{Year}/
+    $clean_type = preg_replace('/[^a-zA-Z0-9]/', '', $type);
+    $target_dir = __DIR__ . '/../uploads/legislative/' . $clean_type . '/' . $year . '/';
     if (!is_dir($target_dir)) {
         mkdir($target_dir, 0777, true);
     }
@@ -171,7 +188,7 @@ if (!empty($data['file_content']) && !empty($data['file_name'])) {
     // Write file to disk
     if (file_put_contents($target_path, $file_data) !== false) {
         // Store relative path
-        $file_path = 'uploads/legislative/' . $folder_id . '/' . $year . '/' . $filename;
+        $file_path = 'uploads/legislative/' . $clean_type . '/' . $year . '/' . $filename;
     } else {
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => 'Failed to save file to disk']);
@@ -179,7 +196,8 @@ if (!empty($data['file_content']) && !empty($data['file_name'])) {
     }
 } elseif (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     // Handle multipart file upload
-    $target_dir = __DIR__ . '/../uploads/legislative/' . $folder_id . '/' . $year . '/';
+    $clean_type = preg_replace('/[^a-zA-Z0-9]/', '', $type);
+    $target_dir = __DIR__ . '/../uploads/legislative/' . $clean_type . '/' . $year . '/';
     if (!is_dir($target_dir)) {
         mkdir($target_dir, 0777, true);
     }
@@ -196,7 +214,7 @@ if (!empty($data['file_content']) && !empty($data['file_name'])) {
     }
 
     if (move_uploaded_file($_FILES['file']['tmp_name'], $target_path)) {
-        $file_path = 'uploads/legislative/' . $folder_id . '/' . $year . '/' . $filename;
+        $file_path = 'uploads/legislative/' . $clean_type . '/' . $year . '/' . $filename;
     }
 }
 
