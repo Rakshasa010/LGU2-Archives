@@ -36,8 +36,6 @@ $pageTitle = 'LLRM Integration';
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 <?php
 include 'includes/header_scripts.php';
-echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">';
-echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
 ?>
 <style>
     .stat-card { transition: all 0.3s; }
@@ -68,7 +66,7 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
                     </div>
                     <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                         <div class="ml-2 md:ml-4 min-w-0">
-                            <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">LLRM Integration</h2>
+                            <h2 class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">LLRM Integration</h2>
                         </div>
                     </div>
                     <div class="flex items-center space-x-1 md:space-x-4">
@@ -151,15 +149,12 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
                             </p>
                         </div>
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <button onclick="llrmAction('health')" class="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-center">
+                    <div class="flex gap-2">
+                        <button onclick="llrmAction('health')" class="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
                             <i class="bi bi-arrow-clockwise mr-1"></i> Test Connection
                         </button>
-                        <button onclick="llrmAction('batch_push', {batch_size: 10})" class="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-center">
+                        <button onclick="llrmAction('batch_push', {batch_size: 10})" class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
                             <i class="bi bi-cloud-upload mr-1"></i> Push 10 Records
-                        </button>
-                        <button onclick="llrmSync()" class="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition text-center">
-                            <i class="bi bi-cloud-download mr-1"></i> Sync from LLRM
                         </button>
                     </div>
                 </div>
@@ -268,31 +263,6 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
             .catch(err => alert('Request failed: ' + err));
         }
 
-        function llrmSync() {
-            const btn = event.currentTarget;
-            const original = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="bi bi-hourglass-split mr-1"></i> Syncing...';
-            fetch('api/llrm-integration.php?action=pull&save=1&per_page=50')
-                .then(r => r.json())
-                .then(data => {
-                    btn.disabled = false;
-                    btn.innerHTML = original;
-                    if (data.success) {
-                        const s = data.save_summary || {};
-                        alert('Synced: ' + (s.saved_count || 0) + ' new, ' + (s.skipped_count || 0) + ' already present, ' + (s.error_count || 0) + ' errors.');
-                        if ((s.saved_count || 0) > 0) location.reload();
-                    } else {
-                        alert('Sync error: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(err => {
-                    btn.disabled = false;
-                    btn.innerHTML = original;
-                    alert('Request failed: ' + err);
-                });
-        }
-
         function llrmSearch() {
             const q = document.getElementById('llrmSearchInput').value.trim();
             if (!q) return;
@@ -341,6 +311,7 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
         </main>
         </div>
     </div>
+<<<<<<< HEAD
     <script>
         (function(){
             var profileBtn = document.getElementById('profile-btn');
@@ -481,6 +452,8 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
             });
         })();
     </script>
+=======
+>>>>>>> fcd9ebb272242a65cf580ec0eabecb0e9e660141
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

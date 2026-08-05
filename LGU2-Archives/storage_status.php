@@ -6,25 +6,20 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-function dir_size($path, &$file_count = null) {
+function dir_size($path) {
     $size = 0;
-    $count = 0;
-    if (!is_dir($path)) { if ($file_count !== null) $file_count = $count; return $size; }
+    if (!is_dir($path)) return 0;
     try {
         $it = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
             RecursiveIteratorIterator::SELF_FIRST
         );
         foreach ($it as $file) {
-            if ($file->isFile()) {
-                $size += $file->getSize();
-                $count++;
-            }
+            if ($file->isFile()) $size += $file->getSize();
         }
     } catch (Exception $e) {
         // Ignore unreadable directories/files
     }
-    if ($file_count !== null) $file_count = $count;
     return $size;
 }
 
@@ -34,8 +29,7 @@ $total_bytes = 50 * 1024 * 1024 * 1024;
 
 // Calculate used bytes from uploads directory
 $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
-$file_count = 0;
-$used_bytes = dir_size($uploads_path, $file_count);
+$used_bytes = dir_size($uploads_path);
 if ($used_bytes < 0) $used_bytes = 0;
 if ($used_bytes > $total_bytes) $used_bytes = $total_bytes;
 
@@ -56,6 +50,5 @@ echo json_encode([
     'percent' => $percent,
     'used_human' => format_bytes($used_bytes),
     'total_human' => format_bytes($total_bytes),
-    'file_count' => $file_count,
 ]);
 ?>

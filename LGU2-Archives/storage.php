@@ -1,31 +1,4 @@
 <?php
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
-    require 'authdatabase.php';
-    if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
-    if (!isset($_SESSION['user_id'])) {
-        http_response_code(401);
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        $conn->close();
-        exit();
-    }
-    if (!function_exists('storage_dir_metrics')) {
-        require_once __DIR__ . '/includes/storage_shared.php';
-    }
-    $storage = storage_dir_metrics(__DIR__ . '/uploads');
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => true,
-        'percentage' => $storage['pct'],
-        'usedText' => $storage['usedText'],
-        'totalText' => $storage['totalText'],
-        'fileCount' => $storage['fileCount'],
-        'bytes' => $storage['totalBytes']
-    ]);
-    $conn->close();
-    exit();
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require 'authdatabase.php';
     if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
@@ -204,39 +177,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->close();
         exit();
     }
-    if ($action === 'year_overview') {
-        header('Content-Type: application/json');
-        $current = (int)date('Y');
-        $result = [];
-        for ($y = $current; $y >= $current - 4; $y--) {
-            $result[(string)$y] = ['files' => 0, 'categories' => 0, 'size' => 0];
-        }
-        $leg = $conn->query("SELECT YEAR(created_at) AS yr, COUNT(*) AS cnt, COUNT(DISTINCT type) AS cats, COALESCE(SUM(file_size),0) AS sz FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) BETWEEN ".($current - 4)." AND ".$current." GROUP BY YEAR(created_at)");
-        if ($leg) {
-            while ($row = $leg->fetch_assoc()) {
-                $yr = (string)$row['yr'];
-                if (isset($result[$yr])) {
-                    $result[$yr]['files'] += (int)$row['cnt'];
-                    $result[$yr]['categories'] += (int)$row['cats'];
-                    $result[$yr]['size'] += (int)$row['sz'];
-                }
-            }
-        }
-        $arc = $conn->query("SELECT YEAR(af.created_at) AS yr, COUNT(*) AS cnt, COUNT(DISTINCT af.folder_id) AS cats, COALESCE(SUM(af.file_size),0) AS sz FROM archive_files af WHERE af.created_at IS NOT NULL AND YEAR(af.created_at) BETWEEN ".($current - 4)." AND ".$current." GROUP BY YEAR(af.created_at)");
-        if ($arc) {
-            while ($row = $arc->fetch_assoc()) {
-                $yr = (string)$row['yr'];
-                if (isset($result[$yr])) {
-                    $result[$yr]['files'] += (int)$row['cnt'];
-                    $result[$yr]['categories'] += (int)$row['cats'];
-                    $result[$yr]['size'] += (int)$row['sz'];
-                }
-            }
-        }
-        echo json_encode(['success' => true, 'years' => $result]);
-        $conn->close();
-        exit();
-    }
     header('Content-Type: application/json');
     if ($action === 'create_folder') {
         $name = isset($payload['name']) ? trim((string)$payload['name']) : '';
@@ -252,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->close();
             exit();
         }
-        $reserved = ['ordinances-resolution', 'public-hearings', 'meeting-records', 'other-documents'];
+        $reserved = ['ordinances-resolution', 'public-hearings', 'meeting-records'];
         if (in_array($slug, $reserved, true)) {
             echo json_encode(['success' => false, 'message' => 'Folder already exists']);
             $conn->close();
@@ -281,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $ins->bind_param("ssis", $name, $slug, $uid, $prefix);
         if ($ins->execute()) {
-            echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug, 'color' => folder_color_class($name)]]);
+            echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug]]);
             $ins->close();
             $conn->close();
             exit();
@@ -619,8 +559,7 @@ if (isset($_SESSION['user_id'])) {
         'Ordinance' => 'Ordinances & Resolutions',
         'Resolution' => 'Ordinances & Resolutions',
         'Public Hearing' => 'Public Hearings',
-        'Meeting' => 'Meeting Records',
-        'Other' => 'Other / External Documents'
+        'Meeting' => 'Meeting Records'
     ];
 
     // Define custom prefixes for specific folders as per user request
@@ -667,35 +606,27 @@ if (isset($_SESSION['user_id'])) {
         return round($bytes, 1) . ' ' . $units[$pow];
     }
 
-    // Deterministic folder icon color from the folder name (FNV-1a over a 10-color palette).
-    function folder_color_class($name) {
-        $palette = [
-            'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400',
-            'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400',
-            'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400',
-            'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400',
-            'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400',
-            'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400',
-            'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400',
-            'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400',
-            'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400',
-            'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400',
-        ];
-        $hash = 2166136261;
-        $s = strtolower((string)$name);
-        $len = strlen($s);
-        for ($i = 0; $i < $len; $i++) {
-            $hash ^= ord($s[$i]);
-            $hash = ($hash * 16777619) & 0xFFFFFFFF;
-        }
-        return $palette[$hash % count($palette)];
-    }
-
     function calculateStorageMetrics($conn) {
         if (!function_exists('storage_dir_metrics')) {
             require_once __DIR__ . '/includes/storage_shared.php';
         }
         return storage_dir_metrics(__DIR__ . '/uploads');
+    }
+
+    // support AJAX data fetch
+    if (isset($_GET['action']) && $_GET['action'] === 'get_storage_data') {
+        $storage = calculateStorageMetrics($conn);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'percentage' => $storage['pct'],
+            'usedText' => $storage['usedText'],
+            'totalText' => $storage['totalText'],
+            'fileCount' => $storage['fileCount'],
+            'bytes' => $storage['totalBytes']
+        ]);
+        $conn->close();
+        exit();
     }
 
     // compute metrics for initial page render
@@ -933,24 +864,10 @@ if (isset($_SESSION['user_id'])) {
                         <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="meeting-records">Calculating...</div>
                     </div>
                 </a>
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Other']; ?>&legislative=true" data-archive="other-documents" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-amber-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Other / External Docs</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="other-documents">Calculating...</div>
-                    </div>
-                </a>
                 <?php foreach ($archive_folders as $folder): ?>
                 <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40">
                     <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 <?php echo folder_color_class($folder['name'] ?? ''); ?> rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
+                        <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
                             <i class="bi bi-folder-fill"></i>
                             <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10">
                                 <i class="bi bi-person-fill"></i>
@@ -1110,7 +1027,6 @@ if (isset($_SESSION['user_id'])) {
                 const mb = bytes / (1024 * 1024);
                 return mb.toFixed(0) + ' MB';
             }
-            window.formatBytes = formatBytes;
 
             function updateStorageStatus(percent) {
                 const statusElem = document.getElementById('storageStatus');
@@ -1391,43 +1307,20 @@ if (isset($_SESSION['user_id'])) {
                 if (!confirmCreate?.disabled) confirmCreate?.click();
             }
         });
-            window.folderColorFallback = (name) => {
-            const palette = [
-                'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400',
-                'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400',
-                'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400',
-                'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400',
-                'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400',
-                'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400',
-                'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400',
-                'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400',
-                'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400',
-                'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400'
-            ];
-            let hash = 2166136261;
-            const s = String(name || '').toLowerCase();
-            for (let i = 0; i < s.length; i++) {
-                hash ^= s.charCodeAt(i);
-                hash = (hash * 16777619) >>> 0;
-            }
-            return palette[hash % palette.length];
-        };
-        const createFolderCard = (name, slug, id, color) => {
+        const createFolderCard = (name, slug, id) => {
             const safeName = escapeHtml(name);
             const safeSlug = escapeHtml(slug);
-            const iconColor = color || folderColorFallback(name);
             const card = document.createElement('a');
             card.href = 'folder_view.php?id=' + id;
             card.setAttribute('data-archive', slug);
             card.className = 'block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group';
             card.innerHTML = `
-                <div class="w-12 h-12 ${iconColor} rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
-                    <i class="bi bi-folder-fill"></i>
-                    <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10">
-                        <i class="bi bi-person-fill"></i>
-                    </div>
+                <div class="mb-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
                 </div>
-                <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1 mt-3">${safeName}</div>
+                <div class="font-semibold text-gray-800 dark:text-gray-200 mb-1">${safeName}</div>
                 <div class="text-sm text-gray-600 dark:text-gray-400 archive-meta" data-archive-meta="${safeSlug}">Last opened: Not yet opened</div>
             `;
             return card;
@@ -1466,7 +1359,7 @@ if (isset($_SESSION['user_id'])) {
                 }
                 const folder = data.folder || { name: validation.name, slug: validation.slug, id: data.folder.id };
                 existingSlugs.add((folder.slug || '').toLowerCase());
-                const card = createFolderCard(folder.name, folder.slug, folder.id, folder.color);
+                const card = createFolderCard(folder.name, folder.slug, folder.id);
                 foldersGrid?.appendChild(card);
                 showToast('Folder created.', 'success');
                 closeCreateModal();
@@ -1712,18 +1605,6 @@ if (isset($_SESSION['user_id'])) {
         })();
         (function(){
             function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
-            var yearStats = {};
-            function loadYearStats(cb){
-                fetch('storage.php', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ action:'year_overview' })
-                }).then(function(r){ return r.json(); })
-                .then(function(d){
-                    if (d && d.success && d.years) yearStats = d.years;
-                    if (typeof cb === 'function') cb();
-                }).catch(function(){ if (typeof cb === 'function') cb(); });
-            }
             function yearCard(year){
                 var now = new Date().getFullYear();
                 var isActive = (year === now);
@@ -1733,23 +1614,13 @@ if (isset($_SESSION['user_id'])) {
                 var headerColor = isActive ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200';
                 var bgClass = isActive ? 'bg-red-50 dark:bg-red-900/10' : 'bg-gray-50 dark:bg-slate-700/50';
                 
-                el.className = 'flex flex-col justify-between p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-md transition-all relative overflow-hidden group min-h-40';
+                el.className = 'flex flex-col justify-between p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-md transition-all relative overflow-hidden group h-40';
                 
                 var activeBadge = isActive ? '<span class="absolute top-4 right-4 flex items-center gap-1.5 text-[10px] uppercase font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full ring-1 ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Active</span>' : '';
                 
-                var st = yearStats[year] || {};
-                var files = st.files || 0;
-                var cats = st.categories || 0;
-                var sizeLabel = st.size ? (typeof window.formatBytes === 'function' ? window.formatBytes(st.size) : (Math.round(st.size/1048576) + ' MB')) : '0 B';
-                
                 el.innerHTML = activeBadge
                     + '<div class="text-2xl font-bold ' + headerColor + ' mb-1">' + year + '</div>'
-                    + '<div class="text-xs text-gray-500 dark:text-gray-400 mb-3">Files tracked & archived</div>'
-                    + '<div class="grid grid-cols-3 gap-2 mb-4">'
-                    + '<div class="rounded-lg bg-white/70 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-600 px-2 py-1.5 text-center"><div class="text-sm font-bold text-gray-800 dark:text-gray-200">'+files+'</div><div class="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Files</div></div>'
-                    + '<div class="rounded-lg bg-white/70 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-600 px-2 py-1.5 text-center"><div class="text-sm font-bold text-gray-800 dark:text-gray-200">'+cats+'</div><div class="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Cat.</div></div>'
-                    + '<div class="rounded-lg bg-white/70 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-600 px-2 py-1.5 text-center"><div class="text-sm font-bold text-gray-800 dark:text-gray-200">'+sizeLabel+'</div><div class="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Size</div></div>'
-                    + '</div>'
+                    + '<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Files tracked & archived</div>'
                     + '<div class="flex gap-2 mt-auto">'
                     + '<button data-year="'+year+'" class="view-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm transition-colors group-hover:border-gray-300 dark:group-hover:border-slate-500 relative overflow-hidden">View</button>'
                     + '<button data-year="'+year+'" class="export-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)] transition-colors">Export ZIP</button>'
@@ -1759,17 +1630,12 @@ if (isset($_SESSION['user_id'])) {
             function renderYearCards(){
                 var grid = document.getElementById('yearly-archives-grid');
                 if (!grid) return;
-                loadYearStats(function(){
-                    var now = new Date();
-                    var current = now.getFullYear();
-                    grid.innerHTML = '';
-                    for (var y = current; y >= current - 4; y--){
-                        grid.appendChild(yearCard(y));
-                    }
-                    bindYearCardEvents(grid);
-                });
-            }
-            function bindYearCardEvents(grid){
+                var now = new Date();
+                var current = now.getFullYear();
+                grid.innerHTML = '';
+                for (var y = current; y >= current - 4; y--){
+                    grid.appendChild(yearCard(y));
+                }
                 grid.querySelectorAll('.view-year-btn').forEach(function(btn){
                     btn.addEventListener('click', function(){
                         var year = parseInt(btn.getAttribute('data-year'), 10);
@@ -2039,8 +1905,7 @@ if (isset($_SESSION['user_id'])) {
                             card.setAttribute('data-archive', folder.slug || '');
                             card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40';
                             var createdDate = new Date(folder.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                            var iconColor = folder.color || (typeof window.folderColorFallback === 'function' ? window.folderColorFallback(folder.name) : 'bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400');
-                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 ' + iconColor + ' rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
+                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
                             foldersGrid.appendChild(card);
                         });
                     })
@@ -2064,9 +1929,6 @@ if (isset($_SESSION['user_id'])) {
     })();
     </script>
         </div>
-    </main>
-    <?php include 'includes/footer.php'; ?>
-    </div>
     </div>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>

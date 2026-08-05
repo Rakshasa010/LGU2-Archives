@@ -366,6 +366,7 @@ class LLRMService {
             'Resolution'     => 'resolution',
             'Meeting'        => 'session',
             'Public Hearing' => 'hearing',
+            'Billing'        => 'ordinance',
         ];
         $docType = $typeMap[$record['type']] ?? 'archive';
 
@@ -428,76 +429,7 @@ class LLRMService {
     // ─── Sync helpers ─────────────────────────────────────────────────
 
     /**
-     * Map an LLRM document type to a canonical LAS legislative type + main-storage folder.
-     * Unknown types fall back to an "Other / External Documents" folder so intake/pull
-     * always route to a valid main-storage folder.
-     *
-     * @return array ['type' => string, 'folder_name' => string]
-     */
-    public function mapToMainStorageType($llrmType) {
-        $map = [
-            'ordinance'              => ['type' => 'Ordinance',      'folder_name' => 'Ordinances & Resolutions'],
-            'resolution'             => ['type' => 'Resolution',     'folder_name' => 'Ordinances & Resolutions'],
-            'motion'                 => ['type' => 'Resolution',     'folder_name' => 'Ordinances & Resolutions'],
-            'hearing'                => ['type' => 'Public Hearing', 'folder_name' => 'Public Hearings'],
-            'public hearing'         => ['type' => 'Public Hearing', 'folder_name' => 'Public Hearings'],
-            'session'                => ['type' => 'Meeting',        'folder_name' => 'Meeting Records'],
-            'meeting'                => ['type' => 'Meeting',        'folder_name' => 'Meeting Records'],
-            'minutes'                => ['type' => 'Meeting',        'folder_name' => 'Meeting Records'],
-            'minutes of the meeting' => ['type' => 'Meeting',        'folder_name' => 'Meeting Records'],
-        ];
-
-        $key = strtolower(trim((string)$llrmType));
-        $key = str_replace('_', ' ', $key);
-        $key = preg_replace('/\s+/', ' ', $key);
-
-        if (isset($map[$key])) {
-            return $map[$key];
-        }
-
-        return ['type' => 'Other', 'folder_name' => 'Other / External Documents'];
-    }
-
-    /**
-     * Find or create a top-level legislative folder by canonical type.
-     *
-     * @param mysqli $conn Database connection
-     * @param string $type Canonical legislative folder type
-     * @param string $name Folder display name
-     * @return int folder id
-     */
-    public function ensureLegislativeFolder($conn, $type, $name) {
-        $stmt = $conn->prepare("SELECT id FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
-        $stmt->bind_param("s", $type);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = $res->fetch_assoc();
-        $stmt->close();
-
-        if ($row) {
-            return (int)$row['id'];
-        }
-
-        $prefix = null;
-        if (function_exists('generate_document_prefix')) {
-            $customPrefixes = [
-                'Ordinances & Resolutions' => 'Ordinance-Resolution',
-                'Meeting Records'          => 'Meeting-Records',
-            ];
-            $prefix = isset($customPrefixes[$name]) ? $customPrefixes[$name] : generate_document_prefix($name);
-        }
-
-        $insert = $conn->prepare("INSERT INTO legislative_folders (name, type, parent_id, document_prefix) VALUES (?, ?, NULL, ?)");
-        $insert->bind_param("sss", $name, $type, $prefix);
-        $insert->execute();
-        $id = (int)$conn->insert_id;
-        $insert->close();
-
-        return $id;
-    }
-
-    /**
-     * Pull documents from LLRM and optionally save to LAS main storage.
+     * Pull documents from LLRM and optionally save to LAS database
      * 
      * @param array $params List parameters (type, status, page, per_page, etc.)
      * @param bool $saveToDb If true, insert pulled documents into legislative_records
@@ -511,117 +443,41 @@ class LLRMService {
         }
 
         if ($saveToDb && $conn) {
-            $summary = ['saved_count' => 0, 'skipped_count' => 0, 'error_count' => 0, 'errors' => []];
             foreach ($result['documents'] ?? [] as $doc) {
-                $out = $this->savePulledDocument($conn, $doc);
-                if ($out['status'] === 'saved') {
-                    $summary['saved_count']++;
-                } elseif ($out['status'] === 'skipped') {
-                    $summary['skipped_count']++;
-                } else {
-                    $summary['error_count']++;
-                    $summary['errors'][] = ['title' => $doc['title'] ?? '', 'error' => $out['error'] ?? 'Unknown error'];
-                }
+                $this->savePulledDocument($conn, $doc);
             }
-            $result['save_summary'] = $summary;
         }
 
         return $result;
     }
 
     /**
-     * Save a pulled LLRM document into LAS main storage (legislative_records).
-     * Routes to the correct main-storage folder by document type, downloads the
-     * actual file locally, and skips records that already exist by title + type.
-     *
-     * @return array ['status' => 'saved'|'skipped'|'error', 'id' => int|null, 'error' => string|null]
+     * Save a pulled LLRM document into LAS legislative_records
      */
     private function savePulledDocument($conn, $doc) {
-        $routing = $this->mapToMainStorageType($doc['document_type'] ?? '');
-        $type = $routing['type'];
-        $folderName = $routing['folder_name'];
-
-        $folderId = $this->ensureLegislativeFolder($conn, $type, $folderName);
-
-        $title = trim((string)($doc['title'] ?? ''));
-        if ($title === '') {
-            return ['status' => 'error', 'error' => 'Document has no title'];
-        }
-
-        // Skip duplicates by title + canonical type
+        // Check if already exists by title + type
         $check = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND type = ? LIMIT 1");
+        $title = $doc['title'] ?? '';
+        $type = $doc['document_type'] ?? 'archive';
         $check->bind_param("ss", $title, $type);
         $check->execute();
         $res = $check->get_result();
         if ($res->fetch_assoc()) {
             $check->close();
-            return ['status' => 'skipped'];
+            return; // Already exists, skip
         }
         $check->close();
 
-        // Build date fields
-        $dateRaw = $doc['document_date'] ?? null;
-        $month = $dateRaw ? date('F', strtotime($dateRaw)) : date('F');
-        $year = $dateRaw ? date('Y', strtotime($dateRaw)) : date('Y');
+        // Insert into legislative_records
+        $month = date('F', strtotime($doc['document_date'] ?? 'now'));
+        $year = date('Y', strtotime($doc['document_date'] ?? 'now'));
         $author = $doc['uploaded_by_name'] ?? 'LLRM Import';
+        $fileUrl = $this->config['archive_api_url'] . '?action=download&id=' . ($doc['id'] ?? 0);
 
-        // Download the file from LLRM and store it locally under the folder
-        $filePath = null;
-        $fileSize = null;
-        $mimeType = null;
-        $llrmId = (int)($doc['id'] ?? 0);
-        if ($llrmId > 0) {
-            $dl = $this->downloadDocument($llrmId);
-            if ($dl['success'] && !empty($dl['data'])) {
-                $ext = strtolower(pathinfo((string)($doc['file_name'] ?? ''), PATHINFO_EXTENSION));
-                if (!preg_match('/^[a-z0-9]{1,10}$/', $ext)) {
-                    $ext = 'bin';
-                }
-
-                $targetDir = __DIR__ . '/../uploads/legislative/' . $folderId . '/' . $year . '/';
-                if (!is_dir($targetDir)) {
-                    @mkdir($targetDir, 0777, true);
-                }
-
-                $safeName = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', (string)($doc['file_name'] ?? ('llrm_' . $llrmId . '.' . $ext)));
-                if ($safeName === '' || $safeName === null) {
-                    $safeName = 'llrm_' . $llrmId . '.' . $ext;
-                }
-                $filename = 'v1_' . $safeName;
-                if (preg_match('/\.' . preg_quote($ext, '/') . '$/i', $filename)) {
-                    $filename = 'v1_' . $safeName;
-                } else {
-                    $filename = 'v1_' . $safeName . '.' . $ext;
-                }
-                $targetPath = $targetDir . $filename;
-                $counter = 1;
-                while (file_exists($targetPath)) {
-                    $filename = 'v1_' . $counter . '_' . $safeName;
-                    $targetPath = $targetDir . $filename;
-                    $counter++;
-                }
-
-                if (file_put_contents($targetPath, $dl['data']) !== false) {
-                    $filePath = 'uploads/legislative/' . $folderId . '/' . $year . '/' . $filename;
-                    $fileSize = filesize($targetPath);
-                    $mimeType = function_exists('mime_content_type') ? mime_content_type($targetPath) : null;
-                    if (!$mimeType) {
-                        $mimeType = 'application/octet-stream';
-                    }
-                }
-            }
-        }
-
-        $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, file_size, mime_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-        $stmt->bind_param("ssssssiss", $title, $type, $month, $year, $author, $filePath, $folderId, $fileSize, $mimeType);
+        $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->bind_param("ssssss", $title, $type, $month, $year, $author, $fileUrl);
         $stmt->execute();
-        if ($stmt->affected_rows > 0) {
-            $newId = (int)$conn->insert_id;
-            $stmt->close();
-            return ['status' => 'saved', 'id' => $newId];
-        }
         $stmt->close();
-        return ['status' => 'error', 'error' => 'Database insert failed: ' . $conn->error];
     }
 
     /**

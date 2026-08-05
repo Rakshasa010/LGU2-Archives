@@ -121,8 +121,6 @@ $pageTitle = 'External Documents';
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 <?php
 include 'includes/header_scripts.php';
-echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">';
-echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
 
 function formatFileSize($bytes) {
     if ($bytes <= 0) return '0 B';
@@ -161,7 +159,7 @@ function formatFileSize($bytes) {
                     </div>
                     <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                         <div class="ml-2 md:ml-4 min-w-0">
-                            <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">External Documents</h2>
+                            <h2 class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">External Documents</h2>
                         </div>
                     </div>
                     <div class="flex items-center space-x-1 md:space-x-4">
@@ -254,31 +252,31 @@ function formatFileSize($bytes) {
 
             <!-- Filters -->
             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700 mb-6">
-                <form method="GET" class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-end">
-                    <div class="flex-1 w-full sm:w-auto sm:min-w-[200px]">
+                <form method="GET" class="flex flex-wrap gap-3 items-end">
+                    <div class="flex-1 min-w-[200px]">
                         <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Search</label>
                         <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm" placeholder="Search title, description, reference...">
                     </div>
-                    <div class="w-full sm:w-auto">
+                    <div>
                         <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Type</label>
-                        <select name="type" class="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm">
+                        <select name="type" class="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm">
                             <option value="">All Types</option>
                             <?php foreach ($docTypes as $t): ?>
                                 <option value="<?php echo htmlspecialchars($t); ?>" <?php echo $filterType === $t ? 'selected' : ''; ?>><?php echo htmlspecialchars(ucfirst($t)); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="w-full sm:w-auto">
+                    <div>
                         <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Source</label>
-                        <select name="source" class="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm">
+                        <select name="source" class="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm">
                             <option value="">All Sources</option>
                             <?php foreach ($sources as $s): ?>
                                 <option value="<?php echo htmlspecialchars($s); ?>" <?php echo $filterSource === $s ? 'selected' : ''; ?>><?php echo htmlspecialchars(strtoupper($s)); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition">Filter</button>
-                    <a href="external-documents.php" class="w-full sm:w-auto text-center px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition">Clear</a>
+                    <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition">Filter</button>
+                    <a href="external-documents.php" class="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition">Clear</a>
                 </form>
             </div>
 
@@ -381,6 +379,7 @@ function formatFileSize($bytes) {
         </main>
         </div>
     </div>
+<<<<<<< HEAD
     <script>
         (function(){
             var profileBtn = document.getElementById('profile-btn');
@@ -521,6 +520,8 @@ function formatFileSize($bytes) {
             });
         })();
     </script>
+=======
+>>>>>>> fcd9ebb272242a65cf580ec0eabecb0e9e660141
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

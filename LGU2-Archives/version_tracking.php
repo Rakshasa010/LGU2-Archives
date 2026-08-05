@@ -95,6 +95,7 @@ if ($conn->query("SHOW TABLES LIKE 'legislative_folders'")->num_rows > 0) {
             $icon = 'bi-folder-fill';
             $icon_color = 'slate';
             if ($type === 'ordinance' || $type === 'resolution') { $icon = 'bi-file-earmark-text'; $icon_color = 'orange'; }
+            elseif ($type === 'billing') { $icon = 'bi-receipt'; $icon_color = 'green'; }
             elseif ($type === 'public hearing') { $icon = 'bi-megaphone'; $icon_color = 'blue'; }
             elseif ($type === 'meeting') { $icon = 'bi-journal-text'; $icon_color = 'purple'; }
             $all_folders[] = [
@@ -122,6 +123,10 @@ if ($selected_folder) {
         case 'ordinances':
             $page_title = "Version Tracking - Ordinances & Resolutions";
             $page_subtitle = "Track versions for ordinances and resolutions";
+            break;
+        case 'billing':
+            $page_title = "Version Tracking - Billing";
+            $page_subtitle = "Track versions for billing records";
             break;
         case 'public-hearings':
             $page_title = "Version Tracking - Public Hearings";
@@ -160,7 +165,6 @@ $conn->close();
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="theme-color" content="#dc2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <title>Version Tracking</title>
@@ -390,8 +394,8 @@ $conn->close();
                         </div>
                     </div>
                 </div>
-                <?php include 'includes/footer.php'; ?>
             </main>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
 
@@ -589,6 +593,7 @@ $conn->close();
                 var typeLower = (folder.name || '').toLowerCase();
                 var configKey = null;
                 if (typeLower.indexOf('ordinance') >= 0 || typeLower.indexOf('resolution') >= 0) configKey = 'ordRes';
+                else if (typeLower.indexOf('billing') >= 0) configKey = 'billing';
                 else if (typeLower.indexOf('public hearing') >= 0) configKey = 'publicHearing';
                 else if (typeLower.indexOf('meeting') >= 0) configKey = 'meeting';
 
@@ -657,6 +662,7 @@ $conn->close();
         // Folder config
         const vtFolderConfig = {
             ordRes: { label: 'Ordinances & Resos', types: ['Ordinance', 'Resolution'], iconColor: 'orange' },
+            billing: { label: 'Billing', types: ['Billing'], iconColor: 'green' },
             publicHearing: { label: 'Public Hearings', types: ['Public Hearing'], iconColor: 'blue' },
             meeting: { label: 'Meeting/Sessions', types: ['Meeting'], iconColor: 'purple' },
             phpFiles: { label: 'PHP Files', types: [], iconColor: 'teal' } // Using mock data for now
@@ -698,6 +704,7 @@ $conn->close();
                     // Map legislative folder params to their display configuration
                     var folderMapping = {
                         'ordinances': { key: 'ordRes', label: 'Ordinances & Resolutions' },
+                        'billing': { key: 'billing', label: 'Billing' },
                         'public-hearings': { key: 'publicHearing', label: 'Public Hearings' },
                         'meetings': { key: 'meeting', label: 'Meeting Records' }
                     };
@@ -969,7 +976,9 @@ $conn->close();
             var theme = {
                 bg: 'bg-red-500/10', border: 'border-red-500/20', iconColor: 'text-red-400', icon: 'bi-file-earmark-text', pill: 'bg-red-500/20 text-red-300 border-red-500/30'
             };
-            if (type === 'Public Hearing') {
+            if (type === 'Billing') {
+                theme = { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', iconColor: 'text-emerald-400', icon: 'bi-receipt', pill: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+            } else if (type === 'Public Hearing') {
                 theme = { bg: 'bg-blue-500/10', border: 'border-blue-500/20', iconColor: 'text-blue-400', icon: 'bi-megaphone', pill: 'bg-blue-500/20 text-blue-300 border-blue-500/30' };
             } else if (type === 'Meeting') {
                 theme = { bg: 'bg-purple-500/10', border: 'border-purple-500/20', iconColor: 'text-purple-400', icon: 'bi-journal-text', pill: 'bg-purple-500/20 text-purple-300 border-purple-500/30' };

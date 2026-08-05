@@ -246,13 +246,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-    <div class="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-gray-100 dark:border-slate-700">        
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8">        
         <div class="text-center mb-8">
-            <div class="mx-auto w-24 h-24 rounded-2xl shadow-xl bg-white dark:bg-slate-100 flex items-center justify-center -mt-16 mb-6 ring-4 ring-red-500/30 shadow-red-500/30 transform hover:scale-110 transition-transform duration-300">
+            <div class="mx-auto w-24 h-24 rounded-2xl shadow-xl bg-white dark:bg-slate-100 flex items-center justify-center -mt-16 mb-6 ring-4 ring-white dark:ring-slate-900 transform hover:scale-110 transition-transform duration-300">
                 <img src="Images/Val-logo/valenzuela logo.webp" alt="City Government of Valenzuela" class="w-16 h-16 object-contain">
             </div>
-            <div class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">LAS</div>
+            <div class="text-4xl font-extrabold tracking-tight text-red-600 mb-2">LAS</div>
             <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Join Our Archive System</div>
             <div class="text-sm text-red-600 dark:text-red-400">City Government of Valenzuela</div>
         </div>
@@ -324,9 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Personal Info Section -->
             <div class="pt-6 border-t border-gray-200 dark:border-slate-700">
                 <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center text-white">
-                        <i class="bi bi-person-badge text-sm"></i>
-                    </span>
+                    <i class="bi bi-person-badge text-red-600"></i>
                     Personal Information
                 </h3>
 
@@ -371,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 After registration, a temporary password will be sent to your email. Use <strong>Forgot Password</strong> to set a new one.
             </p>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg shadow-red-600/30 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-2 group">
+            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center justify-center gap-2 group">
                 <span>Create Account</span>
                 <i class="bi bi-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </button>
