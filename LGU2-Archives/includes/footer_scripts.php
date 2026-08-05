@@ -1,3 +1,3 @@
 <script src="assets/js/theme-toggle.js"></script>
 <!-- Chat Widget -->
-<script src="assets/js/chat-widget.js?v=3"></script>
+<script src="assets/js/chat-widget.js?v=4"></script>

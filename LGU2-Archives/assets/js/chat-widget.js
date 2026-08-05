@@ -50,7 +50,7 @@ const ArchiveAssistant = {
                             </div>
                             <div>
                                 <h3 class="font-semibold">Archive Assistant</h3>
-                                <p class="text-xs opacity-80">Gemini 2.5 Flash</p>
+                                <p class="text-xs opacity-80">Gemini 3.5 Flash</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-3">

@@ -49,7 +49,7 @@ function gemini_is_configured() {
 }
 
 function gemini_model() {
-    return 'gemini-2.5-flash';
+    return 'gemini-3.5-flash';
 }
 
 function gemini_endpoint($stream = false) {
