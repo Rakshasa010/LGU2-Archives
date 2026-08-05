@@ -546,8 +546,8 @@ if ($folders_result && $folders_result->num_rows > 0) {
                     <span class="mr-2">←</span> Back to Archives
                 </a>
             </div>
-        <?php include 'includes/footer.php'; ?>
         </div>
+        <?php include 'includes/footer.php'; ?>
     </div>
 </div>
 

@@ -186,6 +186,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="theme-color" content="#dc2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <title>Archives - Document Management | City of Valenzuela</title>
@@ -318,17 +319,34 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                   and replaced with 'w-full' plus expanded responsive padding to maximize screen usage while keeping content breathing room.
                 -->
                 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-                    <!-- Enhanced Header Section -->
+                    <!-- Welcome Banner -->
                     <div class="mb-8">
-                        <div class="space-y-6">
-                            <div class="text-center lg:text-left">
-                                <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($dashboard_date); ?></p>
-                                <h1 class="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
-                                    <?php echo htmlspecialchars($welcome_greeting); ?>, <?php echo htmlspecialchars($display_name); ?>!
-                                </h1>
-                                <p class="max-w-2xl text-lg text-gray-600 dark:text-gray-300 mx-auto lg:mx-0 mt-3">
-                                    Welcome to your dashboard. Here's an overview of your account and recent activity.
-                                </p>
+                        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#6b0f0f] via-[#bf1e2e] to-[#8f1414] text-white shadow-2xl shadow-red-900/30 ring-1 ring-white/10">
+                            <div class="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                            <div class="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-orange-400/10 blur-2xl pointer-events-none"></div>
+                            <div class="relative p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center gap-6">
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-red-200"><?php echo htmlspecialchars($dashboard_date); ?></p>
+                                    <h1 class="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+                                        <?php echo htmlspecialchars($welcome_greeting); ?>, <?php echo htmlspecialchars($display_name); ?>!
+                                    </h1>
+                                    <p class="mt-3 max-w-2xl text-red-100/85 text-sm sm:text-base">
+                                        Welcome to your dashboard. Here's an overview of your account and recent activity.
+                                    </p>
+                                </div>
+                                <div class="lg:w-64 flex-shrink-0">
+                                    <div class="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-red-100 font-medium">Storage Used</span>
+                                            <span class="text-xs font-bold px-2 py-0.5 rounded-full <?php echo $pct >= 80 ? 'bg-red-500/90' : ($pct >= 50 ? 'bg-amber-500/90' : 'bg-emerald-500/90'); ?>"><?php echo $pct; ?>%</span>
+                                        </div>
+                                        <div class="mt-2 text-xl font-bold"><?php echo fmt_bytes($totalBytes); ?></div>
+                                        <div class="text-xs text-red-100/75">of <?php echo fmt_bytes($capacityBytes); ?> &middot; <?php echo (int)$fileCount; ?> files</div>
+                                        <div class="mt-3 w-full h-2 bg-black/25 rounded-full overflow-hidden">
+                                            <div class="h-full rounded-full transition-all duration-500 <?php echo $pct >= 80 ? 'bg-red-400' : ($pct >= 50 ? 'bg-amber-400' : 'bg-emerald-400'); ?>" style="width: <?php echo $pct; ?>%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -595,9 +613,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6 items-start">
+                    <div class="grid grid-cols-1 xl:grid-cols-[7fr_3fr] gap-4 mb-6 items-start">
                         <!-- Main Search Section -->
-                        <div class="w-full xl:order-2">
+                        <div class="w-full xl:order-1">
                         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
                             <!-- Search Header -->
                             <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
@@ -720,7 +738,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-1">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-2">
                         <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">

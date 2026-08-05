@@ -98,8 +98,7 @@ try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classL
         'Ordinance':        'text-orange-600 dark:text-orange-400',
         'Resolution':       'text-blue-600   dark:text-blue-400',
         'Public Hearing':   'text-green-600  dark:text-green-400',
-        'Meeting':          'text-purple-600 dark:text-purple-400',
-        'Billing':          'text-red-600    dark:text-red-400'
+        'Meeting':          'text-purple-600 dark:text-purple-400'
     };
 
     function buildRow(file) {
