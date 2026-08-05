@@ -38,7 +38,8 @@ function gemini_config() {
             $env[trim($key)] = trim($value, " \t\n\r\0\"'");
         }
     }
-    $config = ['key' => $env['GEMINI_API_KEY'] ?? (getenv('GEMINI_API_KEY') ?: '')];
+    $key = $env['GEMINI_API_KEY'] ?? $_ENV['GEMINI_API_KEY'] ?? (getenv('GEMINI_API_KEY') ?: '');
+    $config = ['key' => trim((string)$key)];
     return $config;
 }
 
