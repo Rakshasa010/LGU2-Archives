@@ -206,6 +206,10 @@ function gemini_stream_to_sse($system, array $messages, array $opts = []) {
 
     $handler = function ($ch, $chunk) use (&$buffer, &$sawText, &$errorBody) {
         $buffer .= $chunk;
+        // Normalize CRLF -> LF. Gemini may deliver SSE blocks with \r\n\r\n
+        // separators; splitting only on \n\n would leave the buffer never split
+        // and yield an empty response despite a successful 200 stream.
+        $buffer = str_replace("\r", '', $buffer);
         // Non-SSE bodies (e.g. plain JSON error responses) are captured for messaging.
         if (strpos($chunk, 'data:') === false && strpos($buffer, 'data:') === false) {
             $errorBody .= substr($chunk, 0, 4096);
@@ -272,6 +276,12 @@ function gemini_stream_to_sse($system, array $messages, array $opts = []) {
     }
     if ($status >= 400 && !$sawText) {
         gemini_sse_write(['error' => gemini_http_error_message($status, $errorBody)]);
+        return;
+    }
+    if (!$sawText) {
+        $detail = trim($errorBody) !== '' ? ' Body: ' . substr(trim($errorBody), 0, 300) : '';
+        error_log('[gemini] Empty stream from Gemini (HTTP ' . $status . ')' . $detail);
+        gemini_sse_write(['error' => 'Gemini returned an empty response (HTTP ' . $status . ').']);
         return;
     }
     gemini_sse_write(['done' => true]);
