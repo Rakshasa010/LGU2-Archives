@@ -26,7 +26,7 @@ function fmt_bytes($bytes) {
 }
 
 function calculateStorageMetrics($conn, $uploadsMetrics = null) {
-    return storage_db_metrics($conn);
+    return storage_dir_metrics(__DIR__ . DIRECTORY_SEPARATOR . 'uploads');
 }
 
 $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
@@ -522,7 +522,21 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }
                         $qa_series_labels = array_keys($days);
                         $qa_series_downloads = array_values($series_downloads);
-                        $qa_series_uploads = array_values($series_folders);
+                        // Uploads series mirrors the Total Uploads card: analytics_events upload events
+                        $series_upload_events = $days;
+                        $has_analytics_events = false;
+                        if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
+                            $has_analytics_events = true;
+                            $ue_where = "event_type='upload'";
+                            if ($f_from) $ue_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                            if ($f_to) $ue_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                            if ($fa_type) $ue_where .= " AND record_type = '".$conn->real_escape_string($fa_type)."'";
+                            $q_ue = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM analytics_events WHERE $ue_where $dl_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            if ($r = $conn->query($q_ue)) {
+                                while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_upload_events[$k])) $series_upload_events[$k] = (int)$row['c']; }
+                            }
+                        }
+                        $qa_series_uploads = $has_analytics_events ? array_values($series_upload_events) : array_values($series_folders);
                         $qa_series_records = array_values($series_records);
                         $qa_series_records_merged = array_values($series_records_merged);
                         $qa_series_files_with_versions = array_values($series_files_with_versions);
@@ -1230,21 +1244,29 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         // Mini sparkline: Downloads
         const qaDownloadsMiniCtx = document.getElementById('qaDownloadsMini')?.getContext('2d');
         if (qaDownloadsMiniCtx) {
-            new Chart(qaDownloadsMiniCtx, {
-                type: 'line',
-                data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.2)', fill: true, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            try {
+                new Chart(qaDownloadsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                console.error('qaDownloadsMini failed:', err);
+            }
         }
 
         // Mini sparkline: Uploads
         const qaUploadsMiniCtx = document.getElementById('qaUploadsMini')?.getContext('2d');
         if (qaUploadsMiniCtx) {
-            new Chart(qaUploadsMiniCtx, {
-                type: 'line',
-                data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            try {
+                new Chart(qaUploadsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                console.error('qaUploadsMini failed:', err);
+            }
         }
 
         // Records Trend Line
