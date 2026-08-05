@@ -101,7 +101,9 @@ $leg_cols_needed = [
     'file_size' => "BIGINT NULL",
     'version_notes' => "TEXT NULL",
     'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
-    'mime_type' => "VARCHAR(100) DEFAULT NULL"
+    'mime_type' => "VARCHAR(100) DEFAULT NULL",
+    'pinata_file_id' => "VARCHAR(64) DEFAULT NULL",
+    'pinata_grouped' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
 foreach ($leg_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
@@ -296,7 +298,9 @@ $archive_cols_needed = [
     'file_size' => "BIGINT NULL",
     'version_notes' => "TEXT NULL",
     'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
-    'mime_type' => "VARCHAR(100) DEFAULT NULL"
+    'mime_type' => "VARCHAR(100) DEFAULT NULL",
+    'pinata_file_id' => "VARCHAR(64) DEFAULT NULL",
+    'pinata_grouped' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
 foreach ($archive_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
@@ -478,7 +482,9 @@ $conn->query($external_docs_sql);
 // Add Pinata IPFS columns to external_documents if missing
 $external_docs_cols = [
     'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
-    'mime_type' => "VARCHAR(100) DEFAULT NULL"
+    'mime_type' => "VARCHAR(100) DEFAULT NULL",
+    'pinata_file_id' => "VARCHAR(64) DEFAULT NULL",
+    'pinata_grouped' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
 foreach ($external_docs_cols as $col => $def) {
     $chk = $conn->query("SHOW COLUMNS FROM external_documents LIKE '$col'");

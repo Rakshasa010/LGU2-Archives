@@ -1,3 +1,4 @@
+
 # Deploy SSH keys
 lgu2_deploy_key
 lgu2_deploy_key.pub
@@ -15,3 +16,5 @@ Thumbs.db
 .idea/
 *.swp
 *~
+
+.env
