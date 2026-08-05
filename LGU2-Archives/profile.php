@@ -238,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
     </div>
     </div>
 
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <script>
         <?php if ($reset_success): ?>

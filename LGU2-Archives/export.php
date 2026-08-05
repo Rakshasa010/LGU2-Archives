@@ -160,6 +160,8 @@ foreach ($mock_notifications as $req) {
 	<script src="assets/js/theme-head.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="assets/css/archives-landing.css">
+	<link rel="stylesheet" href="assets/css/mobile-responsive.css">
+	<script src="assets/js/mobile-responsive.js"></script>
 	<link rel="stylesheet" href="assets/css/audit-logs.css">
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
@@ -709,7 +711,7 @@ foreach ($mock_notifications as $req) {
             </div>
         </div>
 
-	<script src="assets/js/archives-landing.js"></script>
+	<script src="assets/js/archives-landing.js?v=2"></script>
 	<script src="assets/js/theme-toggle.js"></script>
 	<script src="assets/js/export-fulfillment.js?v=<?php echo uniqid() . '_' . rand(1000, 9999); ?>"></script>
 	<script>

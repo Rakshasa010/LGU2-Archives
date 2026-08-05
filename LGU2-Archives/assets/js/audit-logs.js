@@ -275,7 +275,13 @@
         document.querySelectorAll('#notesBody tr').forEach(function (r) { if ((r.getAttribute('data-status') || '').toLowerCase() === 'unread') unread++; });
         if (unreadCountEl) unreadCountEl.textContent = unread + ' unread';
         var bellBadge = document.getElementById('notif-count');
-        if (bellBadge) bellBadge.textContent = unread || '';
+        if (bellBadge) {
+            fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function (r) { return r.json(); }).then(function (d) {
+                var total = (d && d.success) ? (d.total || 0) : 0;
+                bellBadge.textContent = String(total);
+                bellBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+            }).catch(function () { });
+        }
     }
 
     function updateUrlParams() {
@@ -402,7 +408,6 @@
             return st === 'unread' && !hidden;
         });
         var ids = rows.map(function (r) { return r.getAttribute('data-id'); }).filter(Boolean);
-        if (ids.length === 0) return;
 
         // Apply visual transition
         rows.forEach(function (r) {
@@ -415,12 +420,13 @@
         updateUnreadCount();
         try { logEvent('alert_dismissed', ids); } catch (e) { }
 
-        // Single batch fetch
+        // Mark every unread notification server-side (not just the visible page),
+        // then refresh the badge so it reflects the true total.
         fetch('notifications_update.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'ids=' + encodeURIComponent(ids.join(',')) + '&status=read'
-        }).then(function () { }).catch(function () { });
+            body: 'all=1&status=read'
+        }).then(function () { updateUnreadCount(); }).catch(function () { updateUnreadCount(); });
     });
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { fetchNotifications(); });

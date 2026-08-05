@@ -127,10 +127,15 @@ if ($ae_count && ($row = $ae_count->fetch_assoc())) {
     $col = $conn->query("SHOW COLUMNS FROM analytics_events LIKE 'user_id'");
     if ($col && $col->num_rows > 0) {
         $stats['has_user_attr'] = true;
+        $act_where_join = str_replace(
+            ['created_at', 'event_type', 'record_type', 'download_format'],
+            ['ae.created_at', 'ae.event_type', 'ae.record_type', 'ae.download_format'],
+            $act_where
+        );
         $ae_recent = $conn->query("SELECT ae.id, ae.event_type, ae.record_id, ae.record_title, ae.record_type, ae.download_format, ae.bytes, ae.created_at, ae.user_id, u.full_name AS user_name
                                    FROM analytics_events ae
                                    LEFT JOIN users u ON u.id = ae.user_id
-                                   WHERE $act_where
+                                   WHERE $act_where_join
                                    ORDER BY ae.created_at DESC
                                    LIMIT 15");
         if ($ae_recent) while ($r = $ae_recent->fetch_assoc()) $stats['recent_activity'][] = $r;
@@ -559,6 +564,8 @@ $funnel_types = array_values($funnel_types);
     <script src="assets/js/ui-enhancements.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/archives-landing.css">
+    <link rel="stylesheet" href="assets/css/mobile-responsive.css">
+    <script src="assets/js/mobile-responsive.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .card { border-radius: 0.75rem; }
@@ -1196,7 +1203,26 @@ $funnel_types = array_values($funnel_types);
                            '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
                            '</div></a>';
                 }).join('');
+                html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
                 container.innerHTML = html;
+                var btnAll = container.querySelector('#mark-all-read');
+                if (btnAll) {
+                    btnAll.addEventListener('click', function(){
+                        container.querySelectorAll('a[data-id]').forEach(function(a){
+                            a.classList.remove('ring-2','ring-red-200');
+                            var p = a.querySelector('p.text-sm');
+                            if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                        });
+                        try {
+                            fetch('notifications_update.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'all=1&status=read'
+                            }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                        } catch(e){ refresh(); }
+                        notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+                    });
+                }
             }
             function escapeHtml(s){
                 if (typeof s !== 'string') return '';

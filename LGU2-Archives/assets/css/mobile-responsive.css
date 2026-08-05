@@ -349,6 +349,44 @@
         padding: 0.75rem;
     }
 
+    /* Fetched notifications table - fit viewport so cards read crosswise */
+    #auditTable {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    #auditTable thead {
+        display: none;
+    }
+
+    /* ---- LLRM INTEGRATION (llrm-integration.php) ---- */
+    #llrm-search .flex.gap-2 {
+        flex-direction: column;
+    }
+
+    #llrm-search .flex.gap-2 input {
+        width: 100%;
+    }
+
+    #llrm-search .flex.gap-2 button {
+        width: 100%;
+    }
+
+    #llrmSearchResults .flex.items-center.justify-between {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    #llrmSearchResults .flex.items-center.justify-between > .flex.gap-2 {
+        justify-content: flex-end;
+    }
+
+    /* ---- EXTERNAL DOCUMENTS (external-documents.php) ---- */
+    .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+        gap: 0.75rem;
+    }
+
     /* ---- VERSION TRACKING (version_tracking.php) ---- */
     /* Folder grid */
     #vt-folder-grid.grid {
@@ -424,6 +462,19 @@
         right: 0;
         left: auto;
         transform: none;
+    }
+
+    /* Fetched notifications: show full message, wrap freely */
+    #notif-list a p.truncate {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        line-height: 1.4;
+    }
+
+    #notif-list {
+        max-height: 60vh;
+        overflow-y: auto;
     }
 
     /* ---- PROFILE DROPDOWN ON MOBILE ---- */

@@ -1200,7 +1200,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
 
     <script src="assets/js/recent-views.js"></script>
     <script src="assets/js/archives.js"></script>
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
     <script>

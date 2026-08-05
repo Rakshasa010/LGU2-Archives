@@ -1661,7 +1661,26 @@ if (isset($_SESSION['user_id'])) {
                            '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
                            '</div></a>';
                 }).join('');
+                html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
                 container.innerHTML = html;
+                var btnAll = container.querySelector('#mark-all-read');
+                if (btnAll) {
+                    btnAll.addEventListener('click', function(){
+                        container.querySelectorAll('a[data-id]').forEach(function(a){
+                            a.classList.remove('ring-2','ring-red-200');
+                            var p = a.querySelector('p.text-sm');
+                            if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                        });
+                        try {
+                            fetch('notifications_update.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'all=1&status=read'
+                            }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                        } catch(e){ refresh(); }
+                        notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+                    });
+                }
             }
             function escapeHtml(s){
                 if (typeof s !== 'string') return '';

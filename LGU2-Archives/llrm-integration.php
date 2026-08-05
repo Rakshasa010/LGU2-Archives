@@ -26,6 +26,15 @@ $types = $llrm->getTypes();
 $health = $llrm->healthCheck();
 
 $pageTitle = 'LLRM Integration';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?php echo htmlspecialchars($pageTitle); ?> - Archives</title>
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+<?php
 include 'includes/header_scripts.php';
 echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">';
 echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
@@ -35,7 +44,7 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
     .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
     .llrm-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
 </style>
-
+</head>
 <body class="bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_38%),linear-gradient(135deg,_#fef2f2_0%,_#f8fafc_50%,_#fef2f2_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.14),_transparent_35%),linear-gradient(135deg,_#0f172a_0%,_#111827_55%,_#0f172a_100%)] font-sans antialiased transition-colors duration-200 min-h-screen">
     <div>
     <?php
@@ -125,7 +134,7 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">LLRM Integration</h1>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Legislative Records Management System — Two-way sync</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400"><i class="bi bi-arrow-repeat text-blue-600 dark:text-blue-400 mr-1"></i>Legislative Records Management System — Two-way sync</p>
                     </div>
                 </div>
             </div>
@@ -391,7 +400,26 @@ echo '<link rel="stylesheet" href="assets/css/archives-landing.css">';
                            '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
                            '</div></a>';
                 }).join('');
+                html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
                 container.innerHTML = html;
+                var btnAll = container.querySelector('#mark-all-read');
+                if (btnAll) {
+                    btnAll.addEventListener('click', function(){
+                        container.querySelectorAll('a[data-id]').forEach(function(a){
+                            a.classList.remove('ring-2','ring-red-200');
+                            var p = a.querySelector('p.text-sm');
+                            if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                        });
+                        try {
+                            fetch('notifications_update.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'all=1&status=read'
+                            }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                        } catch(e){ refresh(); }
+                        notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+                    });
+                }
             }
             function escapeHtml(s){
                 if (typeof s !== 'string') return '';
