@@ -4,6 +4,30 @@
 const ArchiveAssistant = {
     history: [],
     streaming: false,
+    apiUrl: null,
+
+    resolveApiUrl() {
+        // Resolve the app base URL from the chat-widget.js script's own src so
+        // the API endpoint works on every page, regardless of URL depth.
+        if (this.apiUrl) return this.apiUrl;
+        let base = '';
+        if (document.currentScript) {
+            base = document.currentScript.src || '';
+        } else {
+            const el = document.querySelector('script[src*="chat-widget.js"]');
+            if (el) base = el.src || '';
+        }
+        // e.g. http://host/app/assets/js/chat-widget.js -> http://host/app
+        base = base.replace(/\/assets\/js\/chat-widget\.js.*$/i, '');
+        // Fallback: assume the API lives one level up from this page's directory.
+        if (!base) {
+            const parts = window.location.pathname.split('/');
+            parts.pop();
+            base = window.location.origin + parts.join('/');
+        }
+        this.apiUrl = base.replace(/\/+$/, '') + '/api/ai-assistant.php';
+        return this.apiUrl;
+    },
 
     init() {
         if (document.getElementById('chat-widget-container')) return;
@@ -177,11 +201,28 @@ const ArchiveAssistant = {
         try {
             await this.ensureLibs();
 
-            const res = await fetch('api/ai-assistant.php', {
+            const res = await fetch(this.resolveApiUrl(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message, history: this.history.slice(-20), stream: true })
             });
+
+            // Non-2xx response (404, 500, etc.) — never attempt JSON.parse blindly,
+            // the body may be an HTML error page.
+            if (!res.ok) {
+                let message = 'Request failed (HTTP ' + res.status + ' ' + (res.statusText || '') + ')';
+                try {
+                    const contentType = res.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await res.json();
+                        if (data && data.error) message = data.error;
+                    }
+                } catch { /* keep the generic HTTP message */ }
+                this.removeTyping();
+                this.showError(message);
+                this.streaming = false;
+                return;
+            }
 
             const contentType = res.headers.get('content-type') || '';
 
