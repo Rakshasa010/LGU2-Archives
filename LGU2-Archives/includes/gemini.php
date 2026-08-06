@@ -5,7 +5,8 @@
  * Google does not publish an official PHP SDK for the Gemini API, so this
  * helper talks to the official Gemini REST API directly via cURL, following
  * the same pattern as the Pinata integration (includes/pinata.php).
- * Configured via GEMINI_API_KEY in the project .env file.
+ * Configured via GEMINI_API_KEY and GEMINI_MODEL in the project .env file.
+ * Auth is sent with the x-goog-api-key header (works with both AIza and AQ. keys).
  *
  * Endpoints used (official Gen AI Developer API, v1beta):
  *   POST /models/{model}:generateContent
@@ -38,8 +39,12 @@ function gemini_config() {
             $env[trim($key)] = trim($value, " \t\n\r\0\"'");
         }
     }
-    $key = $env['GEMINI_API_KEY'] ?? $_ENV['GEMINI_API_KEY'] ?? (getenv('GEMINI_API_KEY') ?: '');
-    $config = ['key' => trim((string)$key)];
+    $key   = $env['GEMINI_API_KEY'] ?? $_ENV['GEMINI_API_KEY'] ?? (getenv('GEMINI_API_KEY') ?: '');
+    $model = $env['GEMINI_MODEL'] ?? $_ENV['GEMINI_MODEL'] ?? (getenv('GEMINI_MODEL') ?: '');
+    $config = [
+        'key'   => trim((string)$key),
+        'model' => trim((string)$model),
+    ];
     return $config;
 }
 
@@ -49,7 +54,8 @@ function gemini_is_configured() {
 }
 
 function gemini_model() {
-    return 'gemini-3.5-flash';
+    $cfg = gemini_config();
+    return $cfg['model'] !== '' ? $cfg['model'] : 'gemini-3.5-flash';
 }
 
 function gemini_endpoint($stream = false) {
@@ -122,12 +128,12 @@ function gemini_generate($system, array $messages, array $opts = []) {
         return ['success' => false, 'error' => 'The PHP cURL extension is not enabled'];
     }
 
-    $ch = curl_init(gemini_endpoint(false) . '?key=' . rawurlencode($cfg['key']));
+    $ch = curl_init(gemini_endpoint(false));
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => json_encode(gemini_request_payload($system, $messages, $opts)),
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'x-goog-api-key: ' . $cfg['key']],
         CURLOPT_TIMEOUT        => 120,
         CURLOPT_CONNECTTIMEOUT => 15,
         CURLOPT_SSL_VERIFYPEER => true,
@@ -197,7 +203,7 @@ function gemini_stream_to_sse($system, array $messages, array $opts = []) {
         return;
     }
 
-    $url = gemini_endpoint(true) . '&key=' . rawurlencode($cfg['key']);
+    $url = gemini_endpoint(true);
     $payload = gemini_request_payload($system, $messages, $opts);
 
     $buffer = '';
@@ -259,7 +265,7 @@ function gemini_stream_to_sse($system, array $messages, array $opts = []) {
         CURLOPT_POSTFIELDS     => json_encode($payload),
         CURLOPT_RETURNTRANSFER => false,
         CURLOPT_WRITEFUNCTION  => $handler,
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'x-goog-api-key: ' . $cfg['key']],
         CURLOPT_TIMEOUT        => 180,
         CURLOPT_CONNECTTIMEOUT => 15,
         CURLOPT_SSL_VERIFYPEER => true,
@@ -356,15 +362,23 @@ function gemini_resolve_local_path($rel) {
     if ($rel[0] === '/') {
         return null;
     }
-    $baseRoot = realpath(__DIR__ . DIRECTORY_SEPARATOR . '..');
-    $abs  = realpath($baseRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel));
-    if ($abs === false || !is_file($abs)) {
-        return null;
+    $rel = str_replace('/', DIRECTORY_SEPARATOR, $rel);
+    // Try every plausible app root so refs like "uploads/<file>" resolve
+    // regardless of how the app is deployed (project dir, document root, CWD).
+    $roots = [];
+    foreach ([__DIR__ . DIRECTORY_SEPARATOR . '..', $_SERVER['DOCUMENT_ROOT'] ?? '', getcwd() ?: ''] as $root) {
+        $rp = realpath($root);
+        if ($rp !== false && is_dir($rp)) {
+            $roots[$rp] = true;
+        }
     }
-    if (stripos($abs . DIRECTORY_SEPARATOR, $baseRoot . DIRECTORY_SEPARATOR) !== 0) {
-        return null;
+    foreach (array_keys($roots) as $root) {
+        $abs = realpath($root . DIRECTORY_SEPARATOR . $rel);
+        if ($abs !== false && is_file($abs) && stripos($abs . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR) === 0) {
+            return $abs;
+        }
     }
-    return $abs;
+    return null;
 }
 
 /**
