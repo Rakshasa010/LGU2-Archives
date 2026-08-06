@@ -1322,23 +1322,93 @@ $conn->close();
             vtBuildCompareViewer(arr, body);
         }
 
-        function vtRunAiCompare() {
-            if (typeof ArchiveAssistant === 'undefined' || !ArchiveAssistant.compareVersions) {
-                alert('The Archive Assistant is not available on this page.');
-                return;
+        function vtApiUrl() {
+            if (typeof ArchiveAssistant !== 'undefined' && ArchiveAssistant.resolveApiUrl) {
+                try { return ArchiveAssistant.resolveApiUrl(); } catch (e) {}
             }
+            var parts = window.location.pathname.split('/');
+            parts.pop();
+            return window.location.origin + parts.join('/') + '/api/gemini.php';
+        }
+
+        function vtEnsureMdLibs() {
+            if (window.marked && window.DOMPurify) return Promise.resolve();
+            var load = function (src) {
+                return new Promise(function (resolve) {
+                    var s = document.createElement('script');
+                    s.src = src;
+                    s.onload = resolve;
+                    s.onerror = resolve;
+                    document.head.appendChild(s);
+                });
+            };
+            return Promise.resolve()
+                .then(function () { return window.DOMPurify ? Promise.resolve() : load('https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js'); })
+                .then(function () { return window.marked ? Promise.resolve() : load('https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js'); });
+        }
+
+        function vtRenderMd(el, text) {
+            if (window.marked && window.DOMPurify) {
+                el.innerHTML = window.DOMPurify.sanitize(window.marked.parse(text || ''));
+            } else {
+                el.classList.add('whitespace-pre-wrap');
+                el.textContent = text;
+            }
+        }
+
+        function vtRunAiCompare() {
             var baseIdx = parseInt(document.getElementById('cmp-sel-base').value);
             var aIdx = parseInt(document.getElementById('cmp-sel-a').value);
             var base = vtCompareVersions[baseIdx];
             var a = vtCompareVersions[aIdx];
             closeComparePicker();
             if (!base || !a) return;
+
             var isArchive = vtCompareRecord && vtCompareRecord.type === 'Archive';
             var source = isArchive ? 'archive' : 'legislative';
-            ArchiveAssistant.compareVersions(
-                { source: source, id: base.id },
-                { source: source, id: a.id }
-            );
+
+            var title = (vtCompareRecord && vtCompareRecord.title) ? vtCompareRecord.title : 'File';
+            document.getElementById('cmp-viewer-title').textContent = 'Compare — ' + title;
+            document.getElementById('compareViewerModal').classList.remove('hidden');
+
+            var body = document.getElementById('cmp-viewer-body');
+            body.innerHTML =
+                '<div class="mb-5">' +
+                    '<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"><i class="bi bi-stars text-purple-600 mr-1"></i>AI Summary — actual file contents (Gemini)</h3>' +
+                    '<div id="cmp-ai-summary" class="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-sm text-gray-800 dark:text-gray-200">' +
+                        '<div class="text-center py-8 text-gray-500"><div class="animate-spin inline-block w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full mb-2"></div>Reading both files and comparing contents...</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="cmp-sbs"></div>';
+
+            vtBuildCompareViewer([base, a], document.getElementById('cmp-sbs'));
+
+            vtEnsureMdLibs().then(function () {
+                return fetch(vtApiUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_v1: { source: source, id: base.id }, file_v2: { source: source, id: a.id } })
+                });
+            }).then(function (res) {
+                return res.json().catch(function () { return null; });
+            }).then(function (d) {
+                var el = document.getElementById('cmp-ai-summary');
+                if (!el) return;
+                if (d && d.success) {
+                    var head = document.createElement('div');
+                    head.className = 'text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1';
+                    head.textContent = 'Read actual contents of: ' + (d.file_v1_name || 'V1') + ' vs ' + (d.file_v2_name || 'V2');
+                    el.innerHTML = '';
+                    el.appendChild(head);
+                    vtRenderMd(el, d.response || 'No comparison returned.');
+                } else {
+                    var msg = (d && d.error) ? d.error : 'AI comparison failed.';
+                    el.innerHTML = '<div class="text-red-600">' + vtEsc(msg) + '</div>';
+                }
+            }).catch(function () {
+                var el = document.getElementById('cmp-ai-summary');
+                if (el) el.innerHTML = '<div class="text-red-600">Network error while running the AI comparison.</div>';
+            });
         }
 
         function vtFileExt(fp) {

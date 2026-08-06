@@ -122,7 +122,7 @@ function gemini_generate($system, array $messages, array $opts = []) {
         return ['success' => false, 'error' => 'The PHP cURL extension is not enabled'];
     }
 
-    $ch = curl_init(gemini_endpoint(false) . '&key=' . rawurlencode($cfg['key']));
+    $ch = curl_init(gemini_endpoint(false) . '?key=' . rawurlencode($cfg['key']));
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
@@ -411,6 +411,18 @@ function gemini_fetch_cid_to_temp($cid) {
 }
 
 /**
+ * Detect whether a bare string looks like an IPFS CID.
+ *   CIDv0: "Qm" + 44 base58btc chars (excludes 0/O/I/l).
+ *   CIDv1: "b" + base32 (lowercase a-z + 2-7) or base58btc payload.
+ */
+function gemini_text_is_cid($s) {
+    return strpos($s, '/') === false && strpos($s, '\\') === false
+        && (preg_match('/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/', $s) === 1
+            || preg_match('/^b[a-z2-7]{56,60}$/', $s) === 1
+            || preg_match('/^b[1-9A-HJ-NP-Za-km-z]{48,}$/', $s) === 1);
+}
+
+/**
  * Resolve any supported file reference (record array, path string, or CID)
  * into an on-disk file description.
  */
@@ -445,13 +457,7 @@ function gemini_resolve_file($ref, $conn) {
         return null;
     }
     // CID detection: no path separators and a real IPFS CID shape.
-    //   CIDv0: "Qm" + 44 base58btc chars (excludes 0/O/I/l).
-    //   CIDv1: "b" + base32 (lowercase a-z + 2-7) or base58btc payload.
-    $isCid = strpos($s, '/') === false && strpos($s, '\\') === false
-        && (preg_match('/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/', $s) === 1
-            || preg_match('/^b[a-z2-7]{56,60}$/', $s) === 1
-            || preg_match('/^b[1-9A-HJ-NP-Za-km-z]{48,}$/', $s) === 1);
-    if ($isCid) {
+    if (gemini_text_is_cid($s)) {
         $tmp = gemini_fetch_cid_to_temp($s);
         if ($tmp) {
             return ['path' => $tmp, 'label' => 'CID ' . substr($s, 0, 12) . '…', 'cid' => $s, 'temp' => true];
@@ -463,6 +469,274 @@ function gemini_resolve_file($ref, $conn) {
         return ['path' => $local, 'label' => basename($local), 'cid' => ''];
     }
     return null;
+}
+
+/**
+ * Find a record by its exact unique_number across supported tables.
+ *
+ * @return array|null {source, id, label}
+ */
+function gemini_lookup_record_by_unique_number($conn, $unq) {
+    $unq = trim((string)$unq);
+    if ($unq === '' || !($conn instanceof mysqli)) {
+        return null;
+    }
+    $tables = [
+        ['legislative', "SELECT id, title AS label FROM legislative_records WHERE unique_number = ? LIMIT 1"],
+        ['archive',     "SELECT id, name   AS label FROM archive_files      WHERE unique_number = ? LIMIT 1"],
+    ];
+    foreach ($tables as [$src, $sql]) {
+        $st = $conn->prepare($sql);
+        if (!$st) {
+            continue;
+        }
+        $st->bind_param('s', $unq);
+        $st->execute();
+        $row = $st->get_result()->fetch_assoc();
+        $st->close();
+        if ($row) {
+            return [
+                'source' => $src,
+                'id'     => (int)$row['id'],
+                'label'  => !empty($row['label']) ? $row['label'] : ('#' . $row['id']),
+            ];
+        }
+    }
+    return null;
+}
+
+/**
+ * Fuzzy-search records by title/name.
+ *
+ * @return array[] list of {source, id, label}
+ */
+function gemini_search_record_by_title($conn, $term) {
+    $term = trim((string)$term);
+    if ($term === '' || !($conn instanceof mysqli)) {
+        return [];
+    }
+    $like = '%' . $term . '%';
+    $out  = [];
+    $tables = [
+        ['legislative', "SELECT id, title AS label FROM legislative_records WHERE title LIKE ? LIMIT 5"],
+        ['archive',     "SELECT id, name   AS label FROM archive_files      WHERE name   LIKE ? LIMIT 5"],
+    ];
+    foreach ($tables as [$src, $sql]) {
+        $st = $conn->prepare($sql);
+        if (!$st) {
+            continue;
+        }
+        $st->bind_param('s', $like);
+        $st->execute();
+        $res = $st->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $out[] = [
+                'source' => $src,
+                'id'     => (int)$row['id'],
+                'label'  => !empty($row['label']) ? $row['label'] : ('#' . $row['id']),
+            ];
+        }
+        $st->close();
+    }
+    return $out;
+}
+
+/**
+ * Resolve a free-text token (typed by a user) to a file reference.
+ *
+ * Accepts: CID, "source:id" (leg/legislative, arc/archive, ext/external),
+ * "id:N", an exact unique_number, a project-relative path, or a fuzzy
+ * title/name match.
+ *
+ * @return array{ref: mixed|null, label: string, ambiguous: bool, not_found: bool, candidates?: array}
+ */
+function gemini_resolve_text_ref($text, $conn) {
+    $s = trim((string)$text);
+    if ($s === '') {
+        return ['ref' => null, 'label' => '', 'ambiguous' => false, 'not_found' => true];
+    }
+
+    // CID.
+    if (gemini_text_is_cid($s)) {
+        return ['ref' => $s, 'label' => 'CID ' . substr($s, 0, 12) . '…', 'ambiguous' => false, 'not_found' => false];
+    }
+
+    // source:id
+    if (preg_match('/^(legislative|leg|archive|arc|external|ext):([0-9]+)$/i', $s, $m)) {
+        $map = [
+            'legislative' => 'legislative', 'leg' => 'legislative',
+            'archive'     => 'archive',     'arc' => 'archive',
+            'external'    => 'external',    'ext' => 'external',
+        ];
+        $src = $map[strtolower($m[1])];
+        $id  = (int)$m[2];
+        $rec = gemini_lookup_record($conn, $src, $id);
+        if ($rec) {
+            return ['ref' => ['source' => $src, 'id' => $id], 'label' => $rec['label'], 'ambiguous' => false, 'not_found' => false];
+        }
+        return ['ref' => null, 'label' => '', 'ambiguous' => false, 'not_found' => true];
+    }
+
+    // id:N
+    if (preg_match('/^id[:#]?([0-9]+)$/i', $s, $m)) {
+        $id = (int)$m[1];
+        foreach (['legislative', 'archive', 'external'] as $src) {
+            $rec = gemini_lookup_record($conn, $src, $id);
+            if ($rec) {
+                return ['ref' => ['source' => $src, 'id' => $id], 'label' => $rec['label'], 'ambiguous' => false, 'not_found' => false];
+            }
+        }
+        return ['ref' => null, 'label' => '', 'ambiguous' => false, 'not_found' => true];
+    }
+
+    // Project-relative path.
+    if (strpos($s, '/') !== false || strpos($s, '\\') !== false || strpos($s, '.') !== false) {
+        $local = gemini_resolve_local_path($s);
+        if ($local) {
+            return ['ref' => $s, 'label' => basename($local), 'ambiguous' => false, 'not_found' => false];
+        }
+    }
+
+    // Exact unique_number.
+    $byUnq = gemini_lookup_record_by_unique_number($conn, $s);
+    if ($byUnq) {
+        return ['ref' => ['source' => $byUnq['source'], 'id' => $byUnq['id']], 'label' => $byUnq['label'], 'ambiguous' => false, 'not_found' => false];
+    }
+
+    // Fuzzy title/name match.
+    $matches = gemini_search_record_by_title($conn, $s);
+    if (count($matches) === 1) {
+        $m0 = $matches[0];
+        return ['ref' => ['source' => $m0['source'], 'id' => $m0['id']], 'label' => $m0['label'], 'ambiguous' => false, 'not_found' => false];
+    }
+    if (count($matches) > 1) {
+        return ['ref' => null, 'label' => '', 'ambiguous' => true, 'not_found' => false, 'candidates' => $matches];
+    }
+
+    return ['ref' => null, 'label' => '', 'ambiguous' => false, 'not_found' => true];
+}
+
+/**
+ * Parse a chat message for file references.
+ *
+ * Supported syntax:
+ *   - "compare <refA> vs <refB>" / "diff <a> versus <b>"
+ *   - "@file <ref>", "@ref <ref>", "read file <ref>", "open file <ref>"
+ *   - a bare CID anywhere in the message
+ *
+ * @return array{compare_refs: array|null, file_refs: array, notes: string[]}
+ */
+function gemini_parse_message_refs($message, $conn) {
+    $msg = trim((string)$message);
+    $result = ['compare_refs' => null, 'file_refs' => [], 'notes' => []];
+
+    if ($msg === '') {
+        return $result;
+    }
+
+    // compare <a> vs <b>
+    if (preg_match('/\b(?:compare|diff|difference between)\s+(\S+)\s+(?:vs\.?|versus)\s+(\S+)/i', $msg, $m)) {
+        $tokA = rtrim(trim($m[1]), ".,;:!?");
+        $tokB = rtrim(trim($m[2]), ".,;:!?");
+        $a = gemini_resolve_text_ref($tokA, $conn);
+        $b = gemini_resolve_text_ref($tokB, $conn);
+        if ($a['ref'] && $b['ref']) {
+            $result['compare_refs'] = [
+                'v1' => $a['ref'], 'v2' => $b['ref'],
+                'v1_label' => $a['label'], 'v2_label' => $b['label'],
+            ];
+        } else {
+            if ($a['ambiguous']) {
+                $result['notes'][] = 'The Version 1 reference matched multiple documents; use "id:N" or "source:id" to disambiguate.';
+            }
+            if ($a['not_found']) {
+                $result['notes'][] = 'Could not find a document matching the Version 1 reference.';
+            }
+            if ($b['ambiguous']) {
+                $result['notes'][] = 'The Version 2 reference matched multiple documents; use "id:N" or "source:id" to disambiguate.';
+            }
+            if ($b['not_found']) {
+                $result['notes'][] = 'Could not find a document matching the Version 2 reference.';
+            }
+        }
+    }
+
+    // @file / @ref / read file / open file / attach
+    if (preg_match_all('/(?:@file|@ref|@doc|read\s+file|open\s+file|attach\s+file)\s+([^\s,;]+)/i', $msg, $ms)) {
+        foreach ($ms[1] as $tok) {
+            $r = gemini_resolve_text_ref($tok, $conn);
+            if ($r['ref']) {
+                $result['file_refs'][] = $r['ref'];
+            } elseif ($r['ambiguous']) {
+                $result['notes'][] = 'The reference "' . $tok . '" matched multiple documents; use "id:N" or "source:id".';
+            }
+        }
+    }
+
+    // Bare CID anywhere in the message.
+    if (preg_match_all('/\b(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{56,60}|b[1-9A-HJ-NP-Za-km-z]{48,})\b/i', $msg, $mcid)) {
+        foreach ($mcid[1] as $cid) {
+            $result['file_refs'][] = $cid;
+        }
+    }
+
+    // De-duplicate file refs (arrays vs strings).
+    $seen = [];
+    $out  = [];
+    foreach ($result['file_refs'] as $r) {
+        $k = is_array($r) ? ($r['source'] . ':' . $r['id']) : (string)$r;
+        if (isset($seen[$k])) {
+            continue;
+        }
+        $seen[$k] = true;
+        $out[] = $r;
+    }
+    $result['file_refs'] = $out;
+
+    return $result;
+}
+
+/**
+ * Resolve a list of refs and build Gemini content parts for each.
+ * PDFs become base64 inline_data; DOCX/TXT become text parts. Each document
+ * is introduced by a labelled text part.
+ *
+ * @param array $refs List of refs (arrays, paths, or CIDs).
+ * @param mysqli $conn
+ * @return array{parts: array, labels: string[], errors: string[], ok: int}
+ */
+function gemini_attach_content_parts(array $refs, $conn) {
+    $parts  = [];
+    $labels = [];
+    $errors = [];
+    $ok     = 0;
+    $maxDocs = 3;
+
+    foreach ($refs as $i => $ref) {
+        if ($ok >= $maxDocs) {
+            $errors[] = 'Maximum of ' . $maxDocs . ' attached documents; additional references were ignored.';
+            break;
+        }
+        $r = gemini_resolve_file($ref, $conn);
+        if (!$r) {
+            $errors[] = 'Could not resolve document reference #' . ($i + 1) . '.';
+            continue;
+        }
+        $p = gemini_file_content_part($r['path'], $r['label']);
+        if (isset($r['temp']) && $r['temp']) {
+            @unlink($r['path']);
+        }
+        if (!isset($p['part'])) {
+            $errors[] = 'Document reference #' . ($i + 1) . ' (' . $r['label'] . '): ' . $p['error'];
+            continue;
+        }
+        $parts[] = ['text' => 'DOCUMENT "' . $p['label'] . '":'];
+        $parts[] = $p['part'];
+        $labels[] = $p['label'];
+        $ok++;
+    }
+
+    return ['parts' => $parts, 'labels' => $labels, 'errors' => $errors, 'ok' => $ok];
 }
 
 /**
@@ -552,34 +826,18 @@ function gemini_compare_versions($v1, $v2, $conn, array $opts = []) {
         'temperature'     => 0.2,
         'maxOutputTokens' => 8192,
     ];
-    $r1 = gemini_resolve_file($v1, $conn);
-    if (!$r1) {
-        return ['success' => false, 'error' => 'Could not resolve the Version 1 file.'];
+
+    $att = gemini_attach_content_parts([$v1, $v2], $conn);
+    if ($att['ok'] === 0) {
+        return ['success' => false, 'error' => !empty($att['errors']) ? $att['errors'][0] : 'Could not read the document files.'];
     }
-    $r2 = gemini_resolve_file($v2, $conn);
-    if (!$r2) {
-        if (isset($r1['temp']) && $r1['temp']) {
-            @unlink($r1['path']);
-        }
-        return ['success' => false, 'error' => 'Could not resolve the Version 2 file.'];
+    if ($att['ok'] === 1) {
+        $err = !empty($att['errors']) ? end($att['errors']) : 'file could not be read.';
+        return ['success' => false, 'error' => 'Version 2: ' . $err];
     }
 
-    $p1 = gemini_file_content_part($r1['path'], $r1['label']);
-    $p2 = gemini_file_content_part($r2['path'], $r2['label']);
-
-    if (isset($r1['temp']) && $r1['temp']) {
-        @unlink($r1['path']);
-    }
-    if (isset($r2['temp']) && $r2['temp']) {
-        @unlink($r2['path']);
-    }
-
-    if (!isset($p1['part'])) {
-        return ['success' => false, 'error' => 'Version 1: ' . $p1['error']];
-    }
-    if (!isset($p2['part'])) {
-        return ['success' => false, 'error' => 'Version 2: ' . $p2['error']];
-    }
+    $l1 = $att['labels'][0];
+    $l2 = $att['labels'][1];
 
     $system = 'You are a meticulous legal and administrative document version-comparison assistant. '
         . 'Compare the two versions of the document provided by the user (Version 1 = first, Version 2 = second) '
@@ -596,15 +854,16 @@ function gemini_compare_versions($v1, $v2, $conn, array $opts = []) {
 
     $parts = [
         ['text' => 'Compare these two versions of the same document. '
-                 . 'Version 1 file: ' . $p1['label'] . '. Version 2 file: ' . $p2['label'] . '. '
+                 . 'Version 1 file: ' . $l1 . '. Version 2 file: ' . $l2 . '. '
                  . 'The first document block is VERSION 1; the second document block is VERSION 2.'],
-        $p1['part'],
-        $p2['part'],
     ];
+    foreach ($att['parts'] as $part) {
+        $parts[] = $part;
+    }
     $messages = [['role' => 'user', 'parts' => $parts]];
 
     $result = gemini_generate($system, $messages, $opts);
-    $result['file_v1_name'] = $r1['label'];
-    $result['file_v2_name'] = $r2['label'];
+    $result['file_v1_name'] = $l1;
+    $result['file_v2_name'] = $l2;
     return $result;
 }

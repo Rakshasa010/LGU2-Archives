@@ -67,18 +67,60 @@ if ($fileV1 !== null || $fileV2 !== null) {
         exit;
     }
     $result = gemini_compare_versions($fileV1, $fileV2, $conn);
+    gemini_respond_compare($result);
+    exit;
+}
+
+// ---- In-chat version comparison / file references -----------------------------
+$compareRefs = null;
+$notes       = [];
+$fileRefs    = [];
+
+$cr = $input['compare_refs'] ?? null;
+if (is_array($cr)) {
+    $compareRefs = ['v1' => $cr['v1'] ?? ($cr[0] ?? null), 'v2' => $cr['v2'] ?? ($cr[1] ?? null)];
+}
+if (isset($input['file_refs']) && is_array($input['file_refs'])) {
+    foreach ($input['file_refs'] as $fr) {
+        if (is_string($fr) || (is_array($fr) && !empty($fr['id']))) {
+            $fileRefs[] = $fr;
+        }
+    }
+}
+
+if (!$compareRefs || $compareRefs['v1'] === null || $compareRefs['v2'] === null) {
+    $parsed = gemini_parse_message_refs($message, $conn);
+    if ($parsed['compare_refs'] && $parsed['compare_refs']['v1'] !== null && $parsed['compare_refs']['v2'] !== null) {
+        $compareRefs = $parsed['compare_refs'];
+    }
+    foreach ($parsed['notes'] as $n) {
+        $notes[] = $n;
+    }
+    if (empty($fileRefs)) {
+        $fileRefs = $parsed['file_refs'];
+    }
+}
+
+if ($compareRefs && $compareRefs['v1'] !== null && $compareRefs['v2'] !== null) {
+    if (!gemini_is_configured()) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'GEMINI_API_KEY is not configured on the server.']);
+        exit;
+    }
+    $result = gemini_compare_versions($compareRefs['v1'], $compareRefs['v2'], $conn);
     if ($result['success']) {
         echo json_encode([
-            'success'     => true,
-            'mode'        => 'compare',
-            'response'    => $result['text'],
-            'file_v1_name'=> $result['file_v1_name'],
-            'file_v2_name'=> $result['file_v2_name'],
+            'success'      => true,
+            'mode'         => 'compare',
+            'response'     => $result['text'],
+            'file_v1_name' => $result['file_v1_name'],
+            'file_v2_name' => $result['file_v2_name'],
             'finish_reason'=> $result['finish_reason'] ?? null,
+            'notes'        => $notes,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } else {
         http_response_code($result['status'] >= 400 && $result['status'] < 600 ? $result['status'] : 500);
-        echo json_encode(['success' => false, 'mode' => 'compare', 'error' => $result['error']]);
+        echo json_encode(['success' => false, 'mode' => 'compare', 'error' => $result['error'], 'notes' => $notes]);
     }
     exit;
 }
@@ -130,6 +172,32 @@ foreach (array_slice($history, -20) as $turn) {
 }
 $messages[] = ['role' => 'user', 'parts' => [['text' => $message]]];
 
+// ---- Attach actual file contents when referenced ------------------------------
+$attached = [];
+if (!empty($fileRefs)) {
+    $att = gemini_attach_content_parts($fileRefs, $conn);
+    foreach ($att['errors'] as $e) {
+        $notes[] = $e;
+    }
+    if ($att['ok'] > 0) {
+        $attached = $att['labels'];
+        $lastIdx = count($messages) - 1;
+        $messages[$lastIdx] = [
+            'role'  => 'user',
+            'parts' => array_merge([['text' => $message]], $att['parts']),
+        ];
+    } else {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'mode'    => 'chat',
+            'error'   => 'Could not read the referenced document(s): ' . implode(' ', $notes),
+            'notes'   => $notes,
+        ]);
+        exit;
+    }
+}
+
 $system = gemini_chat_system_prompt($conn);
 
 // ---- Streaming (SSE) ---------------------------------------------------------
@@ -140,6 +208,9 @@ if ($stream) {
     header('Connection: keep-alive');
     while (ob_get_level() > 0) {
         ob_end_flush();
+    }
+    if ($attached || $notes) {
+        gemini_sse_write(['meta' => ['attached' => $attached, 'notes' => $notes]]);
     }
     gemini_stream_to_sse($system, $messages);
     exit;
@@ -153,12 +224,34 @@ if ($result['success']) {
         'mode'    => 'chat',
         'response' => $result['text'],
         'finish_reason' => $result['finish_reason'] ?? null,
+        'attached' => $attached,
+        'notes'    => $notes,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } else {
     http_response_code($result['status'] >= 400 && $result['status'] < 600 ? $result['status'] : 500);
-    echo json_encode(['success' => false, 'mode' => 'chat', 'error' => $result['error']]);
+    echo json_encode(['success' => false, 'mode' => 'chat', 'error' => $result['error'], 'notes' => $notes]);
 }
 exit;
+
+/**
+ * Emit a version-comparison response (shared by the dedicated compare endpoint
+ * and in-chat compare requests).
+ */
+function gemini_respond_compare($result) {
+    if ($result['success']) {
+        echo json_encode([
+            'success'      => true,
+            'mode'         => 'compare',
+            'response'     => $result['text'],
+            'file_v1_name' => $result['file_v1_name'],
+            'file_v2_name' => $result['file_v2_name'],
+            'finish_reason'=> $result['finish_reason'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    } else {
+        http_response_code($result['status'] >= 400 && $result['status'] < 600 ? $result['status'] : 500);
+        echo json_encode(['success' => false, 'mode' => 'compare', 'error' => $result['error']]);
+    }
+}
 
 // ---- Chat system prompt --------------------------------------------------------
 /**
@@ -224,8 +317,13 @@ function gemini_chat_system_prompt($conn) {
         . json_encode($ctx, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
         . "\n\nRules:\n"
         . "- Refer to documents by their exact titles and mention version numbers.\n"
-        . "- When a user asks where to find a file, point them to storage.php, "
-        . "folder_view.php?id=<id>, or download.php as appropriate.\n"
+        . "- The metadata above is a directory index only — it does NOT contain the documents' contents.\n"
+        . "- When actual file contents are attached to the user's message (blocks labelled DOCUMENT "
+        . "\"name\" containing PDF data or extracted DOCX/text), read and analyze those contents directly; "
+        . "they are the authoritative source for answers about the document's text.\n"
+        . "- When the user wants a comparison or a document's contents but none are attached, tell them to "
+        . "use the 'AI Compare with Archive Assistant' button in Version Tracking, or type e.g. "
+        . "'compare <file1> vs <file2>' (accepting record id:N, leg:N/arc:N, a unique number, a path, or a Pinata CID).\n"
         . "- If you do not know an answer, say so instead of inventing data.\n"
         . "- Keep responses concise, friendly, and professional.";
 }

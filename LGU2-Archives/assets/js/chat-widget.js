@@ -81,7 +81,7 @@ const ArchiveAssistant = {
 
                     <div class="p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
                         <div class="flex gap-2">
-                            <input id="chat-input" type="text" placeholder="Ask about documents..." autocomplete="off"
+                            <input id="chat-input" type="text" placeholder="Ask, or compare file vs file..." autocomplete="off"
                                 class="flex-1 px-4 py-2 rounded-full border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500">
                             <button id="chat-send-btn" class="w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-colors" title="Send">
                                 <i class="bi bi-send"></i>
@@ -146,12 +146,31 @@ const ArchiveAssistant = {
     },
 
     renderMarkdown(el, text) {
+        const chip = el.querySelector('[data-ai-meta]');
         if (window.marked && window.DOMPurify) {
             el.innerHTML = window.DOMPurify.sanitize(window.marked.parse(text || ''));
         } else {
             el.classList.add('whitespace-pre-wrap');
             el.textContent = text;
         }
+        if (chip) el.insertBefore(chip, el.firstChild);
+    },
+
+    buildMetaChip(attached, notes) {
+        const parts = [];
+        if (Array.isArray(attached) && attached.length) parts.push('Read: ' + attached.join(' · '));
+        if (Array.isArray(notes) && notes.length) parts.push(...notes);
+        if (!parts.length) return null;
+        const chip = document.createElement('div');
+        chip.setAttribute('data-ai-meta', '1');
+        chip.className = 'text-[10px] text-gray-500 dark:text-gray-400 mb-1 flex flex-col gap-0.5';
+        parts.forEach(p => {
+            const line = document.createElement('div');
+            line.className = 'inline-block px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-700/60';
+            line.textContent = p;
+            chip.appendChild(line);
+        });
+        return chip;
     },
 
     showTyping() {
@@ -242,7 +261,10 @@ const ArchiveAssistant = {
                 try { data = await res.json(); } catch { data = null; }
                 this.removeTyping();
                 if (data && data.success) {
-                    this.renderMarkdown(this.addMessage(data.response || '', false), data.response || '');
+                    const el = this.addMessage('', false);
+                    const chip = this.buildMetaChip(data.attached, data.notes);
+                    if (chip) el.appendChild(chip);
+                    this.renderMarkdown(el, data.response || '');
                     this.history.push({ role: 'model', parts: [{ text: data.response || '' }] });
                 } else {
                     this.showError(data && data.error ? data.error : ('Request failed (HTTP ' + res.status + ')'));
@@ -265,6 +287,7 @@ const ArchiveAssistant = {
             let assistantEl = null;
             let full = '';
             let errored = false;
+            let metaChip = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -289,10 +312,15 @@ const ArchiveAssistant = {
                             errored = true;
                             continue;
                         }
+                        if (evt.meta) {
+                            metaChip = this.buildMetaChip(evt.meta.attached, evt.meta.notes);
+                            continue;
+                        }
                         if (evt.delta) {
                             if (!assistantEl) {
                                 this.removeTyping();
                                 assistantEl = this.addMessage('', false);
+                                if (metaChip) assistantEl.appendChild(metaChip);
                             }
                             full += evt.delta;
                             this.renderMarkdown(assistantEl, full);
