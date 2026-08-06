@@ -163,7 +163,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
                     document.body.appendChild(el);
                     setTimeout(function(){
                         el.style.opacity = '1';
-                    }, 50);
+                    }, t - 300);
                     setTimeout(function(){
                         window.location.href = target;
                     }, t);

@@ -452,32 +452,54 @@ class LLRMService {
     }
 
     /**
-     * Save a pulled LLRM document into LAS legislative_records
+     * Save a pulled LLRM document into the LAS archive (Main Storage) with
+     * automatic routing to the correct folder based on document type.
      */
     private function savePulledDocument($conn, $doc) {
-        // Check if already exists by title + type
-        $check = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND type = ? LIMIT 1");
-        $title = $doc['title'] ?? '';
-        $type = $doc['document_type'] ?? 'archive';
-        $check->bind_param("ss", $title, $type);
-        $check->execute();
-        $res = $check->get_result();
-        if ($res->fetch_assoc()) {
-            $check->close();
-            return; // Already exists, skip
+        $title = trim($doc['title'] ?? '');
+        if ($title === '') return;
+
+        require_once __DIR__ . '/llrm-intake.php';
+
+        // Try to download the actual file so the routed record has a local copy.
+        $fileSpec = null;
+        $docId = (int)($doc['id'] ?? 0);
+        if ($docId > 0) {
+            $dl = $this->downloadDocument($docId);
+            if (!empty($dl['success']) && !empty($dl['data'])) {
+                $tmp = @tempnam(sys_get_temp_dir(), 'llrm_');
+                if ($tmp !== false) {
+                    $bytes = @file_put_contents($tmp, $dl['data']);
+                    if ($bytes !== false && $bytes > 0) {
+                        $origName = $doc['file_name'] ?? ($title . '.pdf');
+                        $fileSpec = ['tmp_path' => $tmp, 'orig_name' => $origName, 'copy' => false];
+                    } else {
+                        @unlink($tmp);
+                    }
+                }
+            }
         }
-        $check->close();
 
-        // Insert into legislative_records
-        $month = date('F', strtotime($doc['document_date'] ?? 'now'));
-        $year = date('Y', strtotime($doc['document_date'] ?? 'now'));
-        $author = $doc['uploaded_by_name'] ?? 'LLRM Import';
-        $fileUrl = $this->config['archive_api_url'] . '?action=download&id=' . ($doc['id'] ?? 0);
+        $routeDoc = [
+            'title'            => $title,
+            'type'             => $doc['document_type'] ?? 'archive',
+            'author'           => $doc['uploaded_by_name'] ?? 'LLRM Import',
+            'document_date'    => $doc['document_date'] ?? null,
+            'source_system'    => 'LLRM',
+            'source_record_id' => $docId ?: null,
+        ];
 
-        $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-        $stmt->bind_param("ssssss", $title, $type, $month, $year, $author, $fileUrl);
-        $stmt->execute();
-        $stmt->close();
+        $result = llrm_intake_route($conn, $routeDoc, $fileSpec, ['notification_prefix' => 'LLRM Pull']);
+
+        // Clean up the temp download if the router left a copy behind.
+        if ($fileSpec && !empty($fileSpec['tmp_path']) && is_file($fileSpec['tmp_path'])) {
+            @unlink($fileSpec['tmp_path']);
+        }
+
+        // Duplicates are expected when re-running a pull; fail silently for those.
+        if (!empty($result['error']) && empty($result['duplicate'])) {
+            error_log('LLRM pull save failed for "' . $title . '": ' . $result['error']);
+        }
     }
 
     /**

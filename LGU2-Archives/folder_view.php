@@ -859,25 +859,9 @@ function formatFileSize($fileSize) {
                                                 <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="<?php echo htmlspecialchars($record['title']); ?>"><?php echo htmlspecialchars($record['title']); ?></div>
                                             </div>
                                             <div class="relative flex-shrink-0">
-                                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#leg-menu-<?php echo $record['id']; ?>') && !e.target.closest('button')){ document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                                <button type="button" title="More options" data-id="<?php echo $record['id']; ?>" data-kind="legislative" data-title="<?php echo htmlspecialchars($record['title'], ENT_QUOTES, 'UTF-8'); ?>" data-url="<?php echo htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8'); ?>" data-size="<?php echo (int)$fileSize; ?>" data-created="<?php echo htmlspecialchars($record['created_at'], ENT_QUOTES, 'UTF-8'); ?>" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                                 </button>
-                                                <!-- Dropdown Menu -->
-                                                <div id="leg-menu-<?php echo $record['id']; ?>" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                                    <button onclick="previewFile('<?php echo htmlspecialchars($record['title']); ?>', <?php echo $record['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $record['created_at']; ?>'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye"></i> <span>View</span>
-                                                    </button>
-                                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($record['title']); ?>" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" title="Download file" onclick="document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');">
-                                                        <i class="bi bi-download"></i> <span>Download</span>
-                                                    </a>
-                                                    <button onclick="openLegislativeVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-clock-history"></i> <span>History</span>
-                                                    </button>
-                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="pushToLLRM(<?php echo $record['id']; ?>, 'legislative'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-cloud-upload"></i> <span>Push to LLRM</span>
-                                                    </button>
-                                                </div>
                                             </div>
                                         </div>
                                         <!-- Metadata -->
@@ -978,29 +962,9 @@ function formatFileSize($fileSize) {
                                                 <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="<?php echo htmlspecialchars($file['name']); ?>"><?php echo htmlspecialchars($file['name']); ?></div>
                                             </div>
                                             <div class="relative flex-shrink-0">
-                                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#file-menu-<?php echo $file['id']; ?>') && !e.target.closest('button')){ document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                                <button type="button" title="More options" data-id="<?php echo $file['id']; ?>" data-kind="archive" data-title="<?php echo htmlspecialchars($file['name'], ENT_QUOTES, 'UTF-8'); ?>" data-url="<?php echo htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8'); ?>" data-size="<?php echo (int)$fileSize; ?>" data-created="<?php echo htmlspecialchars($file['created_at'], ENT_QUOTES, 'UTF-8'); ?>" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                                 </button>
-                                                <!-- Dropdown Menu -->
-                                                <div id="file-menu-<?php echo $file['id']; ?>" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                                    <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye"></i> <span>View</span>
-                                                    </button>
-                                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" title="Download file" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');">
-                                                        <i class="bi bi-download"></i> <span>Download</span>
-                                                    </a>
-                                                    <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-clock-history"></i> <span>History</span>
-                                                    </button>
-                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="moveToHiddenFolder(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye-slash-fill"></i> <span>Move to Hidden Folder</span>
-                                                    </button>
-                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="pushArchiveFileToLLRM(<?php echo $file['id']; ?>); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-cloud-upload"></i> <span>Push to LLRM</span>
-                                                    </button>
-                                                </div>
                                             </div>
                                         </div>
                                         <!-- Metadata -->
@@ -1657,16 +1621,9 @@ function formatFileSize($fileSize) {
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${record.title}">${record.title}</div></div>
                             <div class="relative flex-shrink-0">
-                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('leg-menu-${record.id}').classList.toggle('hidden');">
+                                <button type="button" title="More options" data-id="${record.id}" data-kind="legislative" data-title="${escAttr(record.title)}" data-url="${escAttr(fileUrl)}" data-size="${fileSize}" data-created="${escAttr(record.created_at)}" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                 </button>
-                                <div id="leg-menu-${record.id}" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                    <button onclick="previewFile('${record.title}', ${record.id}, '${fileUrl}', ${fileSize}, '${record.created_at}'); document.getElementById('leg-menu-${record.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-eye"></i><span>View</span></button>
-                                    <a href="${fileUrl}" download="${record.title}" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" onclick="document.getElementById('leg-menu-${record.id}').classList.add('hidden');"><i class="bi bi-download"></i><span>Download</span></a>
-                                    <button onclick="openLegislativeVersionHistory(${record.id}, '${record.title}'); document.getElementById('leg-menu-${record.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-clock-history"></i><span>History</span></button>
-                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="openRequestersModal(${record.id}, 'legislative', '${record.title.replace(/'/g, "\\'")}'); document.getElementById('leg-menu-${record.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-people"></i><span>View Requesters</span></button>
-                                </div>
                             </div>
                         </div>
                         <div class="space-y-2 text-xs">
@@ -1733,18 +1690,9 @@ function formatFileSize($fileSize) {
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${file.name}">${file.name}</div></div>
                             <div class="relative flex-shrink-0">
-                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('file-menu-${file.id}').classList.toggle('hidden');">
+                                <button type="button" title="More options" data-id="${file.id}" data-kind="archive" data-title="${escAttr(file.name)}" data-url="${escAttr(fileUrl)}" data-size="${fileSize}" data-created="${escAttr(file.created_at)}" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                 </button>
-                                <div id="file-menu-${file.id}" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                    <button onclick="previewFile('${file.name}', ${file.id}, '${fileUrl}', ${fileSize}, '${file.created_at}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-eye"></i><span>View</span></button>
-                                    <a href="${fileUrl}" download="${file.name}" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" onclick="document.getElementById('file-menu-${file.id}').classList.add('hidden');"><i class="bi bi-download"></i><span>Download</span></a>
-                                    <button onclick="openArchiveVersionHistory(${file.id}, '${file.name}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-clock-history"></i><span>History</span></button>
-                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="openRequestersModal(${file.id}, 'archive', '${file.name.replace(/'/g, "\\'")}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-people"></i><span>View Requesters</span></button>
-                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="moveToHiddenFolder(${file.id}, '${file.name}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"><i class="bi bi-eye-slash-fill"></i><span>Move to Hidden Folder</span></button>
-                                </div>
                             </div>
                         </div>
                         <div class="space-y-2 text-xs">
@@ -1768,6 +1716,99 @@ function formatFileSize($fileSize) {
             return fileSize >= 1073741824 ? (fileSize / 1073741824).toFixed(2) + ' GB' :
                   (fileSize >= 1048576 ? (fileSize / 1048576).toFixed(2) + ' MB' :
                   (fileSize >= 1024 ? (fileSize / 1024).toFixed(2) + ' KB' : fileSize + ' B'));
+        }
+
+        function escAttr(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function closeCardMenus() {
+            var m = document.getElementById('card-context-menu');
+            if (m) m.remove();
+        }
+
+        function openCardMenu(event) {
+            event.stopPropagation();
+            closeCardMenus();
+
+            var btn = event.currentTarget;
+            var id = btn.getAttribute('data-id');
+            var kind = btn.getAttribute('data-kind');
+            var title = btn.getAttribute('data-title');
+            var url = btn.getAttribute('data-url');
+            var size = parseInt(btn.getAttribute('data-size') || '0', 10);
+            var created = btn.getAttribute('data-created');
+
+            var menu = document.createElement('div');
+            menu.id = 'card-context-menu';
+            menu.className = 'fixed bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-[9999] py-2 min-w-[220px]';
+            menu.style.pointerEvents = 'auto';
+
+            var items = [
+                { icon: 'bi-eye', label: 'View', action: function(){ previewFile(title, id, url, size, created); } },
+                { icon: 'bi-download', label: 'Download', href: url, download: title },
+                { icon: 'bi-clock-history', label: 'History', action: function(){ if (kind === 'legislative') { openLegislativeVersionHistory(id, title); } else { openArchiveVersionHistory(id, title); } } },
+                { icon: 'bi-people', label: 'View Requesters', action: function(){ openRequestersModal(id, kind, title); } }
+            ];
+            if (kind === 'archive') {
+                items.push({ icon: 'bi-eye-slash-fill', label: 'Move to Hidden Folder', danger: true, action: function(){ moveToHiddenFolder(id, title); } });
+            }
+            items.push({ divider: true });
+            items.push({ icon: 'bi-cloud-upload', label: 'Push to LLRM', purple: true, action: function(){ if (kind === 'legislative') { pushToLLRM(id, 'legislative'); } else { pushArchiveFileToLLRM(id); } } });
+
+            items.forEach(function(item){
+                if (item.divider) {
+                    var hr = document.createElement('hr');
+                    hr.className = 'my-1 border-gray-200 dark:border-slate-600';
+                    menu.appendChild(hr);
+                    return;
+                }
+                var el;
+                if (item.href) {
+                    el = document.createElement('a');
+                    el.href = item.href;
+                    el.setAttribute('download', item.download || '');
+                } else {
+                    el = document.createElement('button');
+                    el.type = 'button';
+                }
+                var textColor = 'text-gray-700 dark:text-gray-200';
+                if (item.danger) textColor = 'text-red-600 dark:text-red-400';
+                if (item.purple) textColor = 'text-purple-600 dark:text-purple-400';
+                el.className = 'block w-full text-left px-4 py-2.5 text-sm ' + textColor + ' hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors cursor-pointer';
+                el.innerHTML = '<i class="bi ' + item.icon + '"></i><span>' + item.label + '</span>';
+                el.addEventListener('click', function(e){
+                    e.preventDefault();
+                    closeCardMenus();
+                    if (item.action) item.action();
+                });
+                menu.appendChild(el);
+            });
+
+            document.body.appendChild(menu);
+
+            var rect = btn.getBoundingClientRect();
+            var menuW = menu.offsetWidth;
+            var menuH = menu.offsetHeight;
+            var left = rect.right - menuW;
+            var top = rect.bottom + 4;
+            if (left < 8) left = 8;
+            if (top + menuH > window.innerHeight - 8) {
+                top = rect.top - menuH - 4;
+                if (top < 8) top = 8;
+            }
+            menu.style.top = top + 'px';
+            menu.style.left = left + 'px';
+
+            setTimeout(function(){
+                document.addEventListener('click', function _h(e){
+                    if (!e.target.closest || !e.target.closest('#card-context-menu')) {
+                        closeCardMenus();
+                        document.removeEventListener('click', _h);
+                    }
+                });
+            }, 0);
+            window.addEventListener('scroll', closeCardMenus, { once: true });
         }
 
         // Handle highlight on page load

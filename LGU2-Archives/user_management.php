@@ -156,6 +156,8 @@ if ($folders_result && $folders_result->num_rows > 0) {
     <script src="assets/js/archives-landing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="assets/css/archives-landing.css">
+    <link rel="stylesheet" href="assets/css/mobile-responsive.css">
+    <script src="assets/js/mobile-responsive.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="icon" href="Images/Val-logo/valenzuela logo.webp">
         
@@ -191,7 +193,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
                         <!-- Right Side Actions -->
                         <div class="flex items-center space-x-1 md:space-x-4">
                             <!-- Dark Mode Toggle (Centralized) -->
-                            <button data-theme-toggle class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle dark mode">
+                            <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" title="Toggle dark mode">
                                 <svg id="moonIcon" class="w-5 h-5 text-gray-700 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                                 </svg>
@@ -277,13 +279,10 @@ if ($folders_result && $folders_result->num_rows > 0) {
                 </div>
                 <div>
                     <h3 class="font-bold text-lg">System Database Management</h3>
-                    <p class="text-red-100 text-sm">Download or restore a complete .sql snapshot of the system structure and data.</p>
+                    <p class="text-red-100 text-sm">Restore the system from a .sql, .zip, or .gz snapshot of the database.</p>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
-                <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="w-full sm:w-auto px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shadow-md">
-                    <i class="bi bi-download mr-2"></i> Download Backup
-                </a>
                 <button onclick="openRestoreModal()" class="w-full sm:w-auto px-5 py-2.5 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center shadow-md border border-white/20">
                     <i class="bi bi-upload mr-2"></i> Restore Database
                 </button>
@@ -507,17 +506,6 @@ if ($folders_result && $folders_result->num_rows > 0) {
             }
         }
 
-        // automatically click the backup button at most once per hour
-        document.addEventListener('DOMContentLoaded', function() {
-            const btn = document.getElementById('downloadBackupBtn');
-            if (!btn) return;
-            const last = localStorage.getItem('lastBackupClick') || 0;
-            const now = Date.now();
-            if (now - last > 3600 * 1000) { // 1 hour
-                btn.click();
-                localStorage.setItem('lastBackupClick', now);
-            }
-        });
         </script>
 
     <script>
@@ -638,7 +626,8 @@ if ($folders_result && $folders_result->num_rows > 0) {
         </div>
     </div>
 <script src="assets/js/archives.js"></script>
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
+    <script src="assets/js/theme-toggle.js"></script>
 
     <script>
     let selectedFile = null;

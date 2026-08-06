@@ -595,9 +595,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6 items-start">
+                    <div class="grid grid-cols-1 xl:grid-cols-10 gap-4 mb-6 items-start">
                         <!-- Main Search Section -->
-                        <div class="w-full xl:order-2">
+                        <div class="w-full xl:order-1 xl:col-span-7">
                         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
                             <!-- Search Header -->
                             <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
@@ -720,7 +720,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-1">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-2 xl:col-span-3">
                         <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -796,16 +796,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                     </div>
 
                                     <div class="pt-4 border-t border-gray-100 dark:border-slate-700">
-                                        <div class="grid grid-cols-2 gap-3">
-                                            <a href="storage.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium">
-                                                <i class="bi bi-folder"></i>
-                                                Browse
-                                            </a>
-                                            <a href="export.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium">
-                                                <i class="bi bi-download"></i>
-                                                Export
-                                            </a>
-                                        </div>
+                                        <a href="storage.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium">
+                                            <i class="bi bi-folder"></i>
+                                            Browse
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -1182,7 +1176,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
 
     <script src="assets/js/recent-views.js"></script>
     <script src="assets/js/archives.js"></script>
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
     <script>
@@ -1542,7 +1536,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             const detailsBtn = document.getElementById('storage-details-btn');
             const refreshBtn = document.getElementById('storage-refresh-btn');
             const cleanupBtn = document.getElementById('storage-cleanup-btn');
-            const exportBtn = document.getElementById('storage-export-btn');
             
             // Details Button - Show storage breakdown toast
             if (detailsBtn) {
@@ -1616,56 +1609,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         
                         setTimeout(() => cleanupToast.remove(), 4000);
                     }, 1500);
-                });
-            }
-            
-            // Export Button - Generate and download report
-            if (exportBtn) {
-                exportBtn.addEventListener('click', function() {
-                    const btn = this;
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<i class="bi bi-cloud-download mr-2 animate-bounce"></i>Generating...';
-                    btn.disabled = true;
-                    
-                    const pct = document.getElementById('storagePercentage')?.textContent || '0%';
-                    const used = document.getElementById('storageUsed')?.textContent || '0 B';
-                    const timestamp = new Date().toLocaleString();
-                    
-                    // Generate CSV report
-                    const reportContent = `Storage Analysis Report
-Generated: ${timestamp}
-
-SUMMARY
-Storage Percentage: ${pct}
-Storage Used: ${used}
-Total Capacity: 50 GB
-Status: ${document.getElementById('storageStatus')?.textContent}
-
-This is an automatically generated storage analysis report.
-For detailed information, visit the Storage Overview dashboard.`;
-                    
-                    // Create download
-                    setTimeout(() => {
-                        const blob = new Blob([reportContent], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `storage-report-${new Date().toISOString().split('T')[0]}.txt`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        URL.revokeObjectURL(url);
-                        
-                        const exportToast = document.createElement('div');
-                        exportToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
-                        exportToast.innerHTML = '✓ Report downloaded successfully';
-                        document.body.appendChild(exportToast);
-                        
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
-                        
-                        setTimeout(() => exportToast.remove(), 3000);
-                    }, 1200);
                 });
             }
         })();

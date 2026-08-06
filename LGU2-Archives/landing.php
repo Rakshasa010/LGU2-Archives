@@ -146,7 +146,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
     </header>
 
     <section id="home" class="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div id="hero-carousel" class="absolute inset-0" data-hero-images='<?php echo $hero_images_json; ?>'></div>
+        <div id="hero-carousel" class="absolute inset-0" data-parallax="0.35" data-hero-images='<?php echo $hero_images_json; ?>'></div>
         <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80"></div>
         <div class="relative z-10 max-w-4xl mx-auto text-center px-6 pt-32 pb-24">
             <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/25 bg-white/10 backdrop-blur text-white text-xs font-bold uppercase tracking-widest">
@@ -162,13 +162,18 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 resolutions, and official records. Explore, request, and access important documents anytime, anywhere.
             </p>
             <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="login.php" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white font-bold text-lg shadow-xl shadow-red-900/40 hover:-translate-y-0.5 transition-all">
+                <a href="login.php" class="magnetic w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white font-bold text-lg shadow-xl shadow-red-900/40 hover:-translate-y-0.5 transition-all">
                     <span data-i18n="hero_login">Login to Get Started</span> <i class="bi bi-arrow-right ml-1"></i>
                 </a>
-                <a href="#features" class="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white/40 text-white font-bold text-lg hover:bg-white/10 backdrop-blur transition-all" data-i18n="hero_explore">
+                <a href="#features" class="magnetic w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white/40 text-white font-bold text-lg hover:bg-white/10 backdrop-blur transition-all" data-i18n="hero_explore">
                     Explore Features
                 </a>
             </div>
+        </div>
+        <div id="hero-controls" class="hero-controls absolute bottom-24 right-4 sm:right-6 z-20">
+            <button id="hero-prev" type="button" class="hero-control-btn" aria-label="Previous photo"><i class="bi bi-chevron-left"></i></button>
+            <div id="hero-dots" class="hero-dots"></div>
+            <button id="hero-next" type="button" class="hero-control-btn" aria-label="Next photo"><i class="bi bi-chevron-right"></i></button>
         </div>
         <a href="#features" class="absolute bottom-7 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/80 hover:text-white transition-colors" aria-label="Scroll to features">
             <span class="text-[11px] font-semibold uppercase tracking-widest" data-i18n="hero_scroll">Scroll</span>
@@ -178,43 +183,45 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
         </a>
     </section>
 
-    <section id="features" class="py-20 sm:py-28 bg-gray-50 dark:bg-slate-900">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <section id="features" class="relative overflow-hidden py-20 sm:py-28 bg-gray-50 dark:bg-slate-900">
+        <div class="blob blob-one" aria-hidden="true"></div>
+        <div class="blob blob-two" aria-hidden="true"></div>
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6">
             <div class="text-center max-w-2xl mx-auto reveal">
                 <span class="section-eyebrow" data-i18n="feat_eyebrow">Features &amp; Capabilities</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="feat_title">Everything a modern legislative office needs</h2>
                 <p class="mt-4 text-gray-600 dark:text-gray-400" data-i18n="feat_sub">Powerful tools to organize, preserve, and retrieve the records that shape Valenzuela City.</p>
             </div>
             <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="feature-card reveal">
+                <div class="feature-card reveal reveal-scale">
                     <div class="feature-icon"><i class="bi bi-archive"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat1_t">Digital Records Archive</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat1_d">Ordinances, resolutions, and official documents stored in one secure, organized system.</p>
                 </div>
-                <div class="feature-card reveal">
+                <div class="feature-card reveal reveal-scale">
                     <div class="feature-icon"><i class="bi bi-search"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat2_t">Smart Search</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat2_d">Find any record instantly by title, keyword, author, or folder.</p>
                 </div>
-                <div class="feature-card reveal">
+                <div class="feature-card reveal reveal-scale">
                     <div class="feature-icon"><i class="bi bi-clock-history"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat3_t">Version Tracking</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat3_d">View the full history of a document — every revision tracked and preserved.</p>
                 </div>
-                <div class="feature-card reveal">
+                <div class="feature-card reveal reveal-scale">
                     <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="feat4_t">Secure Downloads</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat4_d">Request downloads protected by one-time password verification for peace of mind.</p>
                 </div>
-                <div class="feature-card reveal">
-                    <div class="feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
-                    <h3 class="text-lg font-bold" data-i18n="feat5_t">Reports &amp; Analytics</h3>
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat5_d">Dashboard insights on archived records, activity, and storage usage.</p>
+                <div class="feature-card reveal reveal-scale">
+                    <div class="feature-icon"><i class="bi bi-google"></i></div>
+                    <h3 class="text-lg font-bold" data-i18n="feat5_t">Google Sign-In (OAuth 2.0)</h3>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat5_d">Log in securely with your Google account using OAuth 2.0 identity verification.</p>
                 </div>
-                <div class="feature-card reveal">
-                    <div class="feature-icon"><i class="bi bi-people"></i></div>
-                    <h3 class="text-lg font-bold" data-i18n="feat6_t">User &amp; Role Management</h3>
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat6_d">Admins control access with roles, approvals, and complete audit trails.</p>
+                <div class="feature-card reveal reveal-scale">
+                    <div class="feature-icon"><i class="bi bi-hdd-network"></i></div>
+                    <h3 class="text-lg font-bold" data-i18n="feat6_t">IPFS Storage (Pinata)</h3>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="feat6_d">Records are pinned to the IPFS network via Pinata for permanent, decentralized backup.</p>
                 </div>
             </div>
         </div>
@@ -222,7 +229,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
 
     <section id="about" class="py-20 sm:py-28 bg-white dark:bg-slate-950">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div class="reveal">
+            <div class="reveal reveal-left">
                 <span class="section-eyebrow" data-i18n="about_eyebrow">About the System</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="about_title">Bringing Valenzuela's legislative records into the digital age</h2>
                 <p class="mt-5 text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="about_text">
@@ -243,20 +250,23 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                     </div>
                 </div>
             </div>
-            <div class="reveal relative">
+            <div class="reveal reveal-right relative">
                 <div id="about-carousel" class="carousel relative rounded-3xl overflow-hidden shadow-2xl shadow-red-900/20 ring-1 ring-gray-200 dark:ring-slate-700" data-images='<?php echo $carousel_images_json; ?>'>
-                    <div class="carousel-track"></div>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
-                    <button class="carousel-btn carousel-prev" type="button" aria-label="Previous photo"><i class="bi bi-chevron-left"></i></button>
-                    <button class="carousel-btn carousel-next" type="button" aria-label="Next photo"><i class="bi bi-chevron-right"></i></button>
-                    <div class="carousel-dots"></div>
-                    <div class="absolute bottom-5 left-5 right-5 flex items-center gap-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur px-5 py-4 shadow-lg pointer-events-none">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-red-600 to-orange-500 flex items-center justify-center text-white text-xl flex-shrink-0"><i class="bi bi-buildings"></i></div>
-                        <div>
-                            <p class="font-bold text-sm">City Government of Valenzuela</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400" data-i18n="about_caption_d">Serving the people of Valenzuela</p>
+                    <div class="carousel-stage">
+                        <div class="carousel-track"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+                        <button class="carousel-btn carousel-prev" type="button" aria-label="Previous photo"><i class="bi bi-chevron-left"></i></button>
+                        <button class="carousel-btn carousel-next" type="button" aria-label="Next photo"><i class="bi bi-chevron-right"></i></button>
+                        <div class="carousel-dots"></div>
+                        <div class="absolute bottom-5 left-5 right-5 flex items-center gap-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur px-5 py-4 shadow-lg pointer-events-none">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-red-600 to-orange-500 flex items-center justify-center text-white text-xl flex-shrink-0"><i class="bi bi-buildings"></i></div>
+                            <div>
+                                <p class="font-bold text-sm">City Government of Valenzuela</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400" data-i18n="about_caption_d">Serving the people of Valenzuela</p>
+                            </div>
                         </div>
                     </div>
+                    <div class="carousel-thumbs"></div>
                 </div>
             </div>
         </div>
@@ -270,22 +280,22 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 <p class="mt-4 text-gray-400" data-i18n="sec_sub">We treat every document as the public trust it is — secured by design.</p>
             </div>
             <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="security-card reveal">
+                <div class="security-card reveal reveal-pop">
                     <div class="security-icon"><i class="bi bi-envelope-check"></i></div>
                     <h3 class="text-base font-bold text-white" data-i18n="sec1_t">OTP Verification</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec1_d">Downloads are protected by a one-time password sent to your email.</p>
                 </div>
-                <div class="security-card reveal">
+                <div class="security-card reveal reveal-pop">
                     <div class="security-icon"><i class="bi bi-shield-lock"></i></div>
                     <h3 class="text-base font-bold text-white" data-i18n="sec2_t">Role-Based Access</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec2_d">Admins, staff, and users only see what their role permits.</p>
                 </div>
-                <div class="security-card reveal">
+                <div class="security-card reveal reveal-pop">
                     <div class="security-icon"><i class="bi bi-stopwatch"></i></div>
                     <h3 class="text-base font-bold text-white" data-i18n="sec3_t">Session Security</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec3_d">Automatic timeouts and lockouts stop unauthorized use.</p>
                 </div>
-                <div class="security-card reveal">
+                <div class="security-card reveal reveal-pop">
                     <div class="security-icon"><i class="bi bi-journal-text"></i></div>
                     <h3 class="text-base font-bold text-white" data-i18n="sec4_t">Audit Logs</h3>
                     <p class="mt-2 text-sm text-gray-400 leading-relaxed" data-i18n="sec4_d">Every action is logged for transparency and accountability.</p>
@@ -301,19 +311,19 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="num_title">A growing archive, built for the city</h2>
             </div>
             <div class="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="stat-card reveal">
+                <div class="stat-card reveal reveal-scale">
                     <div class="stat-value" data-count="<?php echo $stat_records; ?>">0</div>
                     <div class="stat-label" data-i18n="stat1">Records Archived</div>
                 </div>
-                <div class="stat-card reveal">
+                <div class="stat-card reveal reveal-scale">
                     <div class="stat-value" data-count="<?php echo $stat_folders; ?>">0</div>
                     <div class="stat-label" data-i18n="stat2">Document Folders</div>
                 </div>
-                <div class="stat-card reveal">
+                <div class="stat-card reveal reveal-scale">
                     <div class="stat-value" data-count="<?php echo $stat_users; ?>">0</div>
                     <div class="stat-label" data-i18n="stat3">Registered Users</div>
                 </div>
-                <div class="stat-card reveal">
+                <div class="stat-card reveal reveal-scale">
                     <div class="stat-value" data-count="<?php echo $stat_downloads; ?>">0</div>
                     <div class="stat-label" data-i18n="stat4">Downloads Tracked</div>
                 </div>
@@ -324,19 +334,19 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="how_title">Getting started takes three simple steps</h2>
             </div>
             <div class="mt-12 grid lg:grid-cols-3 gap-6">
-                <div class="step-card reveal">
+                <div class="step-card reveal reveal-left">
                     <div class="step-number">1</div>
                     <div class="step-icon"><i class="bi bi-person-plus"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="step1_t">Create your account</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="step1_d">Register and get approved by an administrator.</p>
                 </div>
-                <div class="step-card reveal">
+                <div class="step-card reveal reveal-pop">
                     <div class="step-number">2</div>
-                    <div class="step-icon"><i class="bi bi-folder-search"></i></div>
+                    <div class="step-icon"><i class="bi bi-binoculars"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="step2_t">Search &amp; browse</h3>
                     <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="step2_d">Find the record you need by folder, title, or keyword.</p>
                 </div>
-                <div class="step-card reveal">
+                <div class="step-card reveal reveal-right">
                     <div class="step-number">3</div>
                     <div class="step-icon"><i class="bi bi-download"></i></div>
                     <h3 class="text-lg font-bold" data-i18n="step3_t">Download securely</h3>
@@ -353,7 +363,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="faq_title">Questions? We've got answers</h2>
             </div>
             <div class="mt-12 space-y-3">
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-left">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq1q">What is the Legislative Archive System?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -362,7 +372,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq1a">It is the official digital archive of the Valenzuela City Legislative Office. It stores, organizes, and protects the city's ordinances, resolutions, and official records in one secure system &mdash; replacing paper-based filing with a fast, searchable digital repository.</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-right">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq2q">Who can access the system?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -371,7 +381,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq2a">City employees and authorized users of the Legislative Office. New accounts are created through registration and must be approved by an administrator before first sign-in. Each account's access depends on the assigned role (admin, staff, or user).</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-left">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq3q">How do I request or download a document?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -380,7 +390,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq3a">Sign in, search or browse for the record you need, and open it. Click the download button and the system sends a one-time password (OTP) to your registered email &mdash; enter it to confirm and the document downloads securely. Downloads are limited to supported formats (PDF and Word documents).</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-right">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq4q">Is my data secure?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -389,7 +399,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq4a">Yes. The system protects records through OTP-verified downloads, role-based access control, automatic session timeouts, and complete audit logging. Every access and download is recorded for transparency and accountability.</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-left">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq5q">Can I see the history of a document?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -398,7 +408,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq5a">Yes. Version tracking records every revision of a document. You can view past versions, see when they were added, and compare different versions side by side to follow changes over time.</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-right">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq6q">I forgot my password. What do I do?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -407,7 +417,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq6a">Click the "Forgot password" link on the login page and enter your registered email. A secure password reset link will be sent to you. If you don't receive it, contact the system administrator for assistance.</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-left">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq7q">How do I create an account?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -416,7 +426,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         <p class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed" data-i18n="faq7a">Click "Create Account" on the login page and fill out the registration form. Your account will be reviewed and approved by an administrator. You'll then be able to sign in using the login page.</p>
                     </div>
                 </div>
-                <div class="faq-item reveal">
+                <div class="faq-item reveal reveal-right">
                     <button type="button" class="faq-question">
                         <span data-i18n="faq8q">What file formats are supported?</span>
                         <i class="bi bi-plus-lg faq-icon text-red-600 dark:text-orange-400"></i>
@@ -437,7 +447,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                 <p class="mt-4 text-gray-600 dark:text-gray-400" data-i18n="contact_sub">Questions, requests, or feedback? Send us a message.</p>
             </div>
             <div class="mt-14 grid lg:grid-cols-2 gap-10 items-start">
-                <div class="space-y-4 reveal">
+                <div class="space-y-4 reveal reveal-left">
                     <div class="contact-card">
                         <div class="contact-icon"><i class="bi bi-geo-alt"></i></div>
                         <div>
@@ -467,7 +477,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
                         </div>
                     </div>
                 </div>
-                <div class="reveal">
+                <div class="reveal reveal-right">
                     <form id="contact-form" class="contact-form" method="POST" action="api/contact-submit.php" novalidate>
                         <input type="text" name="website" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
                         <div class="space-y-4">
@@ -499,19 +509,20 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
     </section>
 
     <section id="cta" class="relative py-24 sm:py-32 overflow-hidden">
-        <div class="absolute inset-0 bg-cover bg-center" style="background-image:url('<?php echo $IMG_CTA; ?>')"></div>
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image:url('<?php echo $IMG_CTA; ?>')" data-parallax="0.25"></div>
         <div class="absolute inset-0 bg-black/70"></div>
-        <div class="relative z-10 max-w-3xl mx-auto text-center px-6 reveal">
+        <div class="blob blob-three" aria-hidden="true"></div>
+        <div class="relative z-10 max-w-3xl mx-auto text-center px-6 reveal reveal-pop">
             <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/25 bg-white/10 backdrop-blur text-white text-xs font-bold uppercase tracking-widest">
                 <i class="bi bi-stars"></i> Tayo na, Valenzuela
             </span>
             <h2 class="mt-6 text-3xl sm:text-5xl font-extrabold tracking-tight text-white" data-i18n="cta_title">Ready to explore Valenzuela's legislative records?</h2>
             <p class="mt-4 text-gray-300" data-i18n="cta_sub">Sign in to browse the archive, track documents, and download the records you need.</p>
             <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="login.php" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white font-bold text-lg shadow-xl shadow-red-900/40 hover:-translate-y-0.5 transition-all">
+                <a href="login.php" class="magnetic w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white font-bold text-lg shadow-xl shadow-red-900/40 hover:-translate-y-0.5 transition-all">
                     <span data-i18n="cta_login">Login to Get Started</span> <i class="bi bi-arrow-right ml-1"></i>
                 </a>
-                <a href="registering.php" class="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white/40 text-white font-bold text-lg hover:bg-white/10 backdrop-blur transition-all" data-i18n="cta_register">
+                <a href="registering.php" class="magnetic w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white/40 text-white font-bold text-lg hover:bg-white/10 backdrop-blur transition-all" data-i18n="cta_register">
                     Create an Account
                 </a>
             </div>

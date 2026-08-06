@@ -864,10 +864,26 @@ if (isset($_SESSION['user_id'])) {
                         <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="meeting-records">Calculating...</div>
                     </div>
                 </a>
-                <?php foreach ($archive_folders as $folder): ?>
-                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40">
+                <?php
+                $folder_palette = [
+                    ['bg' => 'bg-red-100 dark:bg-red-900/40', 'text' => 'text-red-600 dark:text-red-400', 'hover' => 'hover:border-red-500/50'],
+                    ['bg' => 'bg-orange-100 dark:bg-orange-900/40', 'text' => 'text-orange-600 dark:text-orange-400', 'hover' => 'hover:border-orange-500/50'],
+                    ['bg' => 'bg-amber-100 dark:bg-amber-900/40', 'text' => 'text-amber-600 dark:text-amber-400', 'hover' => 'hover:border-amber-500/50'],
+                    ['bg' => 'bg-green-100 dark:bg-green-900/40', 'text' => 'text-green-600 dark:text-green-400', 'hover' => 'hover:border-green-500/50'],
+                    ['bg' => 'bg-teal-100 dark:bg-teal-900/40', 'text' => 'text-teal-600 dark:text-teal-400', 'hover' => 'hover:border-teal-500/50'],
+                    ['bg' => 'bg-cyan-100 dark:bg-cyan-900/40', 'text' => 'text-cyan-600 dark:text-cyan-400', 'hover' => 'hover:border-cyan-500/50'],
+                    ['bg' => 'bg-blue-100 dark:bg-blue-900/40', 'text' => 'text-blue-600 dark:text-blue-400', 'hover' => 'hover:border-blue-500/50'],
+                    ['bg' => 'bg-indigo-100 dark:bg-indigo-900/40', 'text' => 'text-indigo-600 dark:text-indigo-400', 'hover' => 'hover:border-indigo-500/50'],
+                    ['bg' => 'bg-purple-100 dark:bg-purple-900/40', 'text' => 'text-purple-600 dark:text-purple-400', 'hover' => 'hover:border-purple-500/50'],
+                    ['bg' => 'bg-pink-100 dark:bg-pink-900/40', 'text' => 'text-pink-600 dark:text-pink-400', 'hover' => 'hover:border-pink-500/50'],
+                ];
+                $folder_palette_count = count($folder_palette);
+                foreach ($archive_folders as $folder):
+                    $fc = $folder_palette[(int)$folder['id'] % $folder_palette_count];
+                ?>
+                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg <?php echo $fc['hover']; ?> transition-all group h-40">
                     <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
+                        <div class="w-12 h-12 <?php echo $fc['bg']; ?> rounded-xl flex items-center justify-center <?php echo $fc['text']; ?> text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
                             <i class="bi bi-folder-fill"></i>
                             <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10">
                                 <i class="bi bi-person-fill"></i>
@@ -1307,16 +1323,29 @@ if (isset($_SESSION['user_id'])) {
                 if (!confirmCreate?.disabled) confirmCreate?.click();
             }
         });
+        const FOLDER_COLORS = [
+            { tile: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400', text: 'text-red-600 dark:text-red-400', hover: 'hover:border-red-500/50' },
+            { tile: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400', text: 'text-orange-600 dark:text-orange-400', hover: 'hover:border-orange-500/50' },
+            { tile: 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400', text: 'text-amber-600 dark:text-amber-400', hover: 'hover:border-amber-500/50' },
+            { tile: 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400', text: 'text-green-600 dark:text-green-400', hover: 'hover:border-green-500/50' },
+            { tile: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400', text: 'text-teal-600 dark:text-teal-400', hover: 'hover:border-teal-500/50' },
+            { tile: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400', text: 'text-cyan-600 dark:text-cyan-400', hover: 'hover:border-cyan-500/50' },
+            { tile: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400', text: 'text-blue-600 dark:text-blue-400', hover: 'hover:border-blue-500/50' },
+            { tile: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400', text: 'text-indigo-600 dark:text-indigo-400', hover: 'hover:border-indigo-500/50' },
+            { tile: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400', text: 'text-purple-600 dark:text-purple-400', hover: 'hover:border-purple-500/50' },
+            { tile: 'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400', text: 'text-pink-600 dark:text-pink-400', hover: 'hover:border-pink-500/50' }
+        ];
         const createFolderCard = (name, slug, id) => {
             const safeName = escapeHtml(name);
             const safeSlug = escapeHtml(slug);
+            const fc = FOLDER_COLORS[(parseInt(id, 10) || 0) % FOLDER_COLORS.length];
             const card = document.createElement('a');
             card.href = 'folder_view.php?id=' + id;
             card.setAttribute('data-archive', slug);
             card.className = 'block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group';
             card.innerHTML = `
                 <div class="mb-3 group-hover:scale-110 transition-transform">
-                    <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-12 h-12 ${fc.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                 </div>
@@ -1554,7 +1583,26 @@ if (isset($_SESSION['user_id'])) {
                            '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
                            '</div></a>';
                 }).join('');
+                html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
                 container.innerHTML = html;
+                var btnAll = container.querySelector('#mark-all-read');
+                if (btnAll) {
+                    btnAll.addEventListener('click', function(){
+                        container.querySelectorAll('a[data-id]').forEach(function(a){
+                            a.classList.remove('ring-2','ring-red-200');
+                            var p = a.querySelector('p.text-sm');
+                            if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                        });
+                        try {
+                            fetch('notifications_update.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'all=1&status=read'
+                            }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                        } catch(e){ refresh(); }
+                        notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+                    });
+                }
             }
             function escapeHtml(s){
                 if (typeof s !== 'string') return '';
@@ -1880,13 +1928,14 @@ if (isset($_SESSION['user_id'])) {
                         });
                         // Add new cards
                         (data.folders || []).forEach(function(folder){
+                            var fc = FOLDER_COLORS[(parseInt(folder.id, 10) || 0) % FOLDER_COLORS.length];
                             var card = document.createElement('a');
                             card.id = 'folder-card-' + folder.id;
                             card.href = 'folder_view.php?id=' + folder.id;
                             card.setAttribute('data-archive', folder.slug || '');
-                            card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40';
+                            card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg ' + fc.hover + ' transition-all group h-40';
                             var createdDate = new Date(folder.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
+                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 ' + fc.tile + ' rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
                             foldersGrid.appendChild(card);
                         });
                     })

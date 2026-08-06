@@ -1515,7 +1515,7 @@ $conn->close();
             }
         }
     </script>
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>

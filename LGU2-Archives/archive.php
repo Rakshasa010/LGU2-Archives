@@ -273,6 +273,38 @@ switch ($action) {
             $notifStmt->execute();
             $notifStmt->close();
 
+            // Auto-register LLRM-sourced documents into the archive (Main Storage) with routing
+            $autoRouted = null;
+            if (stripos($sourceSystem, 'llrm') !== false && !empty($filePath)) {
+                require_once __DIR__ . '/includes/llrm-intake.php';
+                $routeDoc = [
+                    'title'            => $title,
+                    'type'             => $documentType,
+                    'author'           => trim($_POST['uploaded_by_name'] ?? $_POST['author'] ?? 'LLRM Import'),
+                    'document_date'    => $documentDate,
+                    'source_system'    => $sourceSystem,
+                    'source_record_id' => ($externalId !== '' && ctype_digit($externalId)) ? (int)$externalId : null,
+                ];
+                $routeFileSpec = [
+                    'tmp_path'  => $targetPath,
+                    'orig_name' => $fileName ?: ($title . '.pdf'),
+                    'copy'      => true,
+                ];
+                $routeResult = llrm_intake_route($conn, $routeDoc, $routeFileSpec, ['notification_prefix' => $sourceSystem]);
+                if (!empty($routeResult['success'])) {
+                    $autoRouted = [
+                        'id'            => $routeResult['record_id'],
+                        'kind'          => $routeResult['kind'],
+                        'folder_id'     => $routeResult['folder_id'],
+                        'folder_name'   => $routeResult['folder_name'],
+                        'unique_number' => $routeResult['unique_number'],
+                        'file_path'     => $routeResult['file_path'],
+                    ];
+                } else {
+                    error_log('LLRM auto-route failed for "' . $title . '": ' . ($routeResult['error'] ?? 'unknown error'));
+                }
+            }
+
             http_response_code(201);
             echo json_encode([
                 'success'  => true,
@@ -289,6 +321,7 @@ switch ($action) {
                     'ipfs_url'        => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
                     'created_at'      => date('Y-m-d H:i:s'),
                 ],
+                'auto_routed' => $autoRouted,
                 'message'  => 'Document received and saved successfully.',
             ]);
         } else {

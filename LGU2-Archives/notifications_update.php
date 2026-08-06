@@ -9,9 +9,18 @@ require 'authdatabase.php';
 $idsStr = isset($_POST['ids']) ? $_POST['ids'] : '';
 $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 $status = isset($_POST['status']) ? $_POST['status'] : '';
+$all = isset($_POST['all']) ? intval($_POST['all']) : 0;
 
 if (!in_array($status, ['read', 'unread'], true)) {
     echo json_encode(['success' => false]);
+    exit();
+}
+
+if ($all && $status === 'read') {
+    $stmt = $conn->prepare("UPDATE notifications SET status = 'read' WHERE status = 'unread'");
+    $ok = $stmt->execute();
+    echo json_encode(['success' => $ok]);
+    $stmt->close();
     exit();
 }
 
