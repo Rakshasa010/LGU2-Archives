@@ -191,6 +191,13 @@ const ArchiveAssistant = {
         if (!window.marked) await load('https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js');
     },
 
+    open() {
+        if (!this.window) return;
+        this.window.classList.remove('hidden');
+        this.toggleBtn.classList.add('hidden');
+        if (this.input) this.input.focus();
+    },
+
     async sendMessage() {
         const message = this.input.value.trim();
         if (!message || this.streaming) return;
@@ -321,7 +328,12 @@ const ArchiveAssistant = {
      */
     async compareVersions(fileV1, fileV2) {
         if (this.streaming) return;
+        if (!fileV1 || !fileV2) {
+            this.showError('Please provide both versions to compare.');
+            return;
+        }
         this.streaming = true;
+        this.open();
         this.addMessage('Comparing document versions...', false, false);
         this.showTyping();
         try {
@@ -337,7 +349,8 @@ const ArchiveAssistant = {
             } catch { data = null; }
             this.removeTyping();
             if (!res.ok || !data || !data.success) {
-                const msg = (data && data.error) ? data.error : ('Request failed (HTTP ' + res.status + ')');
+                let msg = 'Request failed (HTTP ' + res.status + ')';
+                if (data && data.error) msg = data.error;
                 this.showError(msg);
                 return;
             }
@@ -348,7 +361,7 @@ const ArchiveAssistant = {
             head.textContent = label;
             el.insertBefore(head, el.firstChild);
             this.renderMarkdown(el, data.response || 'No comparison returned.');
-            this.history.push({ role: 'user', parts: [{ text: '[Version comparison requested: ' + label + ']' }] });
+            this.history.push({ role: 'user', parts: [{ text: '[Version comparison: ' + label + ']' }] });
             this.history.push({ role: 'model', parts: [{ text: data.response || '' }] });
         } catch (error) {
             this.removeTyping();

@@ -1272,6 +1272,11 @@ $conn->close();
                 '<div class="flex justify-end space-x-3 pt-2">' +
                     '<button onclick="closeComparePicker()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>' +
                     '<button onclick="vtRunCompare()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">Compare</button>' +
+                '</div>' +
+                '<div class="border-t border-gray-200 dark:border-slate-600 pt-3 mt-1">' +
+                    '<button onclick="vtRunAiCompare()" class="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-red-600 hover:from-purple-700 hover:to-red-700 text-white rounded-lg font-medium transition-colors" title="Use the Archive Assistant (Gemini) to produce a structured AI diff (Summary / Additions / Removals / Modifications)">' +
+                        '<i class="bi bi-stars mr-1"></i>AI Compare with Archive Assistant' +
+                    '</button>' +
                 '</div>';
             document.getElementById('cmp-sel-base').value = String(0);
             document.getElementById('cmp-sel-a').value = String(latest);
@@ -1315,6 +1320,25 @@ $conn->close();
             var body = document.getElementById('cmp-viewer-body');
             body.innerHTML = '<div class="text-center py-12 text-gray-500"><div class="animate-spin inline-block w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full mb-3"></div><div>Loading comparison...</div></div>';
             vtBuildCompareViewer(arr, body);
+        }
+
+        function vtRunAiCompare() {
+            if (typeof ArchiveAssistant === 'undefined' || !ArchiveAssistant.compareVersions) {
+                alert('The Archive Assistant is not available on this page.');
+                return;
+            }
+            var baseIdx = parseInt(document.getElementById('cmp-sel-base').value);
+            var aIdx = parseInt(document.getElementById('cmp-sel-a').value);
+            var base = vtCompareVersions[baseIdx];
+            var a = vtCompareVersions[aIdx];
+            closeComparePicker();
+            if (!base || !a) return;
+            var isArchive = vtCompareRecord && vtCompareRecord.type === 'Archive';
+            var source = isArchive ? 'archive' : 'legislative';
+            ArchiveAssistant.compareVersions(
+                { source: source, id: base.id },
+                { source: source, id: a.id }
+            );
         }
 
         function vtFileExt(fp) {

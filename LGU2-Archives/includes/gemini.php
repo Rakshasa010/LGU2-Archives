@@ -344,7 +344,12 @@ function gemini_lookup_record($conn, $source, $id) {
  */
 function gemini_resolve_local_path($rel) {
     $rel = rawurldecode(trim((string)$rel));
-    if ($rel === '' || strpos($rel, "\0") !== false || strpos($rel, '..') !== false) {
+    if ($rel === '' || strpos($rel, "\0") !== false) {
+        return null;
+    }
+    // Reject traversal only when '..' is a whole path segment (allow it inside
+    // filenames, e.g. "report..v2.pdf"), never an escape out of the project.
+    if (preg_match('#(^|[\\\\/])\.\.([\\\\/]|$)#', $rel) === 1) {
         return null;
     }
     $rel = str_replace('\\', '/', $rel);
@@ -377,7 +382,11 @@ function gemini_fetch_cid_to_temp($cid) {
     if ($tmp === false) {
         return null;
     }
-    $fp   = @fopen($tmp, 'wb');
+    $fp = @fopen($tmp, 'wb');
+    if ($fp === false) {
+        @unlink($tmp);
+        return null;
+    }
     $curl = curl_init($url);
     curl_setopt_array($curl, [
         CURLOPT_FILE           => $fp,
@@ -393,7 +402,8 @@ function gemini_fetch_cid_to_temp($cid) {
     $err  = curl_error($curl);
     curl_close($curl);
     @fclose($fp);
-    if ($err !== '' || ($http >= 400)) {
+    $bytes = (int)@filesize($tmp);
+    if ($err !== '' || $http >= 400 || $bytes <= 0) {
         @unlink($tmp);
         return null;
     }
@@ -434,9 +444,14 @@ function gemini_resolve_file($ref, $conn) {
     if ($s === '') {
         return null;
     }
-    // CID detection: no path separators/spaces and long base-alphabet string.
-    if (strpos($s, '/') === false && strpos($s, '\\') === false
-        && preg_match('/^[A-Za-z0-9]{40,}$/', $s) === 1) {
+    // CID detection: no path separators and a real IPFS CID shape.
+    //   CIDv0: "Qm" + 44 base58btc chars (excludes 0/O/I/l).
+    //   CIDv1: "b" + base32 (lowercase a-z + 2-7) or base58btc payload.
+    $isCid = strpos($s, '/') === false && strpos($s, '\\') === false
+        && (preg_match('/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/', $s) === 1
+            || preg_match('/^b[a-z2-7]{56,60}$/', $s) === 1
+            || preg_match('/^b[1-9A-HJ-NP-Za-km-z]{48,}$/', $s) === 1);
+    if ($isCid) {
         $tmp = gemini_fetch_cid_to_temp($s);
         if ($tmp) {
             return ['path' => $tmp, 'label' => 'CID ' . substr($s, 0, 12) . '…', 'cid' => $s, 'temp' => true];
@@ -533,6 +548,10 @@ function gemini_file_content_part($absPath, $label = '') {
  * @return array gemini_generate() result (+ file_v1_name / file_v2_name).
  */
 function gemini_compare_versions($v1, $v2, $conn, array $opts = []) {
+    $opts += [
+        'temperature'     => 0.2,
+        'maxOutputTokens' => 8192,
+    ];
     $r1 = gemini_resolve_file($v1, $conn);
     if (!$r1) {
         return ['success' => false, 'error' => 'Could not resolve the Version 1 file.'];
