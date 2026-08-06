@@ -5,7 +5,7 @@
  * - Requires an authenticated user session (reuses authdatabase.php).
  * - Validates and length-limits the incoming prompt.
  * - Builds a system prompt with live archive document context from the DB.
- * - Calls the official Gemini REST API (gemini-2.5-flash) via includes/gemini.php.
+ * - Calls the official Gemini REST API (gemini-3.5-flash) via includes/gemini.php.
  * - Supports streaming responses (SSE) and plain JSON mode.
  * - Returns clear JSON/SSE errors instead of uncaught exceptions.
  *
