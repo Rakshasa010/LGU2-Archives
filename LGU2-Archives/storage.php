@@ -656,7 +656,8 @@ if (isset($_SESSION['user_id'])) {
     }
     $stat_stmt = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
     if ($stat_stmt) {
-        $stat_stmt->bind_param("ii", $currentYear - 4, $currentYear);
+        $yearStart = $currentYear - 4;
+        $stat_stmt->bind_param("ii", $yearStart, $currentYear);
         $stat_stmt->execute();
         $stat_res = $stat_stmt->get_result();
         while ($row = $stat_res->fetch_assoc()) {
@@ -667,7 +668,7 @@ if (isset($_SESSION['user_id'])) {
     }
     $stat_stmt2 = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM archive_files WHERE YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
     if ($stat_stmt2) {
-        $stat_stmt2->bind_param("ii", $currentYear - 4, $currentYear);
+        $stat_stmt2->bind_param("ii", $yearStart, $currentYear);
         $stat_stmt2->execute();
         $stat_res2 = $stat_stmt2->get_result();
         while ($row = $stat_res2->fetch_assoc()) {
