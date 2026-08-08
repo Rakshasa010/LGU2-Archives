@@ -375,11 +375,10 @@ function formatFileSize($bytes) {
     </div>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
         </main>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
-<<<<<<< HEAD
     <script>
         (function(){
             var profileBtn = document.getElementById('profile-btn');
@@ -520,8 +519,6 @@ function formatFileSize($bytes) {
             });
         })();
     </script>
-=======
->>>>>>> fcd9ebb272242a65cf580ec0eabecb0e9e660141
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

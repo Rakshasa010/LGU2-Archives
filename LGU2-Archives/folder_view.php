@@ -1416,35 +1416,6 @@ function formatFileSize($fileSize) {
             return div.innerHTML;
         }
 
-        function moveToHiddenFolder(id, name) {
-            // Check if user has hidden folder setup and unlocked
-            fetch('confidential_vault.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'move_to_hidden_folder', file_id: id, source_type: '<?php echo $is_legislative ? "legislative" : "archive"; ?>' })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('Success', `File "${name}" moved to hidden folder`, 'success');
-                    // Remove the file from current view
-                    const fileElement = document.getElementById('<?php echo $is_legislative ? "record" : "file"; ?>-' + id);
-                    if (fileElement) {
-                        fileElement.style.opacity = '0.5';
-                        fileElement.style.transform = 'scale(0.95)';
-                        setTimeout(() => {
-                            fileElement.remove();
-                        }, 300);
-                    }
-                } else {
-                    showNotification('Error', data.message || 'Failed to move file', 'error');
-                }
-            })
-            .catch(e => {
-                showNotification('Error', 'Connection error', 'error');
-            });
-        }
-
         function pushToLLRM(recordId, type) {
             if (!confirm('Push this document to LLRM system?')) return;
             showNotification('Info', 'Pushing to LLRM...', 'info');
@@ -1751,7 +1722,6 @@ function formatFileSize($fileSize) {
                 { icon: 'bi-people', label: 'View Requesters', action: function(){ openRequestersModal(id, kind, title); } }
             ];
             if (kind === 'archive') {
-                items.push({ icon: 'bi-eye-slash-fill', label: 'Move to Hidden Folder', danger: true, action: function(){ moveToHiddenFolder(id, title); } });
             }
             items.push({ divider: true });
             items.push({ icon: 'bi-cloud-upload', label: 'Push to LLRM', purple: true, action: function(){ if (kind === 'legislative') { pushToLLRM(id, 'legislative'); } else { pushArchiveFileToLLRM(id); } } });

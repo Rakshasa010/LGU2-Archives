@@ -647,6 +647,35 @@ if (isset($_SESSION['user_id'])) {
     $archive_folders_total = count($archive_folders);
     $page_size_folders = 20;
     $archive_folders = array_slice($archive_folders, 0, $page_size_folders);
+
+    // Per-year file counts for the Yearly Archives cards (last 5 years, current first)
+    $yearly_stats = [];
+    $currentYear = (int)date('Y');
+    for ($y = $currentYear; $y >= $currentYear - 4; $y--) {
+        $yearly_stats[$y] = 0;
+    }
+    $stat_stmt = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
+    if ($stat_stmt) {
+        $stat_stmt->bind_param("ii", $currentYear - 4, $currentYear);
+        $stat_stmt->execute();
+        $stat_res = $stat_stmt->get_result();
+        while ($row = $stat_res->fetch_assoc()) {
+            $y = (int)$row['y'];
+            if (isset($yearly_stats[$y])) $yearly_stats[$y] += (int)$row['cnt'];
+        }
+        $stat_stmt->close();
+    }
+    $stat_stmt2 = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM archive_files WHERE YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
+    if ($stat_stmt2) {
+        $stat_stmt2->bind_param("ii", $currentYear - 4, $currentYear);
+        $stat_stmt2->execute();
+        $stat_res2 = $stat_stmt2->get_result();
+        while ($row = $stat_res2->fetch_assoc()) {
+            $y = (int)$row['y'];
+            if (isset($yearly_stats[$y])) $yearly_stats[$y] += (int)$row['cnt'];
+        }
+        $stat_stmt2->close();
+    }
     $conn->close();
     
     $display_name = $user_data['full_name'] ?? 'User';
@@ -761,8 +790,16 @@ if (isset($_SESSION['user_id'])) {
                
                     <!-- Recent Archives Section -->
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 mb-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Yearly Archives</h2>
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-red-600 to-orange-500 rounded-xl flex items-center justify-center text-white text-lg shadow-md">
+                                    <i class="bi bi-calendar-range"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 leading-tight">Yearly Archives</h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Last 5 years of archived files</p>
+                                </div>
+                            </div>
                             <form id="year-export-form" method="POST" action="storage.php" target="_blank" class="hidden">
                                 <input type="hidden" name="action" value="export_year_zip">
                                 <input type="hidden" name="year" id="year-export-input" value="">
@@ -771,7 +808,7 @@ if (isset($_SESSION['user_id'])) {
                                 <input type="hidden" name="zip_password_confirm" id="year-export-zip-pass-confirm" value="">
                             </form>
                         </div>
-                        <div id="yearly-archives-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                        <div id="yearly-archives-grid" class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
                     </div>
                     <div id="year-export-modal" class="hidden fixed inset-0 z-50">
                         <div class="flex items-center justify-center min-h-screen px-4">
@@ -1634,25 +1671,40 @@ if (isset($_SESSION['user_id'])) {
         })();
         (function(){
             function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+            var yearlyStats = <?php echo json_encode($yearly_stats); ?>;
             function yearCard(year){
                 var now = new Date().getFullYear();
                 var isActive = (year === now);
                 var el = document.createElement('div');
                 
+                var count = (yearlyStats && yearlyStats[year] != null) ? yearlyStats[year] : 0;
+                var accent = isActive
+                    ? 'from-red-500 to-orange-500'
+                    : (function(){
+                        var idx = (now - year) % 4;
+                        var gradients = ['from-slate-500 to-slate-700', 'from-blue-500 to-indigo-600', 'from-emerald-500 to-teal-600', 'from-purple-500 to-fuchsia-600'];
+                        return gradients[idx];
+                    })();
                 var topBorder = isActive ? 'border-red-500' : 'border-gray-300 dark:border-slate-600';
-                var headerColor = isActive ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200';
                 var bgClass = isActive ? 'bg-red-50 dark:bg-red-900/10' : 'bg-gray-50 dark:bg-slate-700/50';
                 
-                el.className = 'flex flex-col justify-between p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-md transition-all relative overflow-hidden group h-40';
+                el.className = 'flex flex-col p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all relative overflow-hidden group';
                 
                 var activeBadge = isActive ? '<span class="absolute top-4 right-4 flex items-center gap-1.5 text-[10px] uppercase font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full ring-1 ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Active</span>' : '';
                 
                 el.innerHTML = activeBadge
-                    + '<div class="text-2xl font-bold ' + headerColor + ' mb-1">' + year + '</div>'
-                    + '<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Files tracked & archived</div>'
-                    + '<div class="flex gap-2 mt-auto">'
-                    + '<button data-year="'+year+'" class="view-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm transition-colors group-hover:border-gray-300 dark:group-hover:border-slate-500 relative overflow-hidden">View</button>'
-                    + '<button data-year="'+year+'" class="export-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)] transition-colors">Export ZIP</button>'
+                    + '<div class="flex items-start justify-between gap-3">'
+                    + '<div class="flex items-center gap-3">'
+                    + '<div class="w-12 h-12 bg-gradient-to-br ' + accent + ' rounded-xl flex items-center justify-center text-white text-xl shadow-md group-hover:scale-110 transition-transform shrink-0"><i class="bi bi-calendar2-check"></i></div>'
+                    + '<div class="min-w-0">'
+                    + '<div class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">' + year + '</div>'
+                    + '<div class="text-[11px] font-semibold uppercase tracking-wider ' + (isActive ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400') + ' mt-1">' + count + ' ' + (count === 1 ? 'file' : 'files') + ' archived</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '<div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600/60 flex gap-2">'
+                    + '<button data-year="'+year+'" class="view-year-btn flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm transition-colors group-hover:border-gray-300 dark:group-hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"><i class="bi bi-eye text-[13px]"></i>View</button>'
+                    + '<button data-year="'+year+'" class="export-year-btn flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)] transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/40"><i class="bi bi-download text-[13px]"></i>Export ZIP</button>'
                     + '</div>';
                 return el;
             }
@@ -1960,6 +2012,8 @@ if (isset($_SESSION['user_id'])) {
     </script>
         </div>
     </div>
+    </main>
+        <?php include 'includes/footer.php'; ?>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>
