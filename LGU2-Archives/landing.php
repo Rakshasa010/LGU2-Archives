@@ -228,7 +228,7 @@ if (file_exists(__DIR__ . '/authdatabase.php')) {
     </section>
 
     <section id="about" class="py-20 sm:py-28 bg-white dark:bg-slate-950">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div class="reveal reveal-left">
                 <span class="section-eyebrow" data-i18n="about_eyebrow">About the System</span>
                 <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="about_title">Bringing Valenzuela's legislative records into the digital age</h2>

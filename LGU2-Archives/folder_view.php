@@ -1748,9 +1748,13 @@ function formatFileSize($fileSize) {
                 el.className = 'block w-full text-left px-4 py-2.5 text-sm ' + textColor + ' hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors cursor-pointer';
                 el.innerHTML = '<i class="bi ' + item.icon + '"></i><span>' + item.label + '</span>';
                 el.addEventListener('click', function(e){
-                    e.preventDefault();
-                    closeCardMenus();
-                    if (item.action) item.action();
+                    if (!item.href) {
+                        e.preventDefault();
+                        closeCardMenus();
+                        if (item.action) item.action();
+                    } else {
+                        setTimeout(closeCardMenus, 0);
+                    }
                 });
                 menu.appendChild(el);
             });
