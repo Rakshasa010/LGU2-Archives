@@ -56,15 +56,23 @@ class MongoDBAtlas {
 
 	private function loadConfig() {
 		$env = [];
-		$envFile = __DIR__ . '/../../.env';
-		if (file_exists($envFile)) {
-			foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-				$line = trim($line);
-				if ($line === '' || strpos($line, '#') === 0 || strpos($line, '=') === false) {
-					continue;
+		// Try multiple .env locations for compatibility
+		$envPaths = [
+			__DIR__ . '/../../.env',                              // From includes/ directory (original)
+			__DIR__ . '/../.env',                                // From test at root level
+			__DIR__ . '/../../../.env',                          // From deeper subdirectories
+		];
+		foreach ($envPaths as $envFile) {
+			if (file_exists($envFile)) {
+				foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+					$line = trim($line);
+					if ($line === '' || strpos($line, '#') === 0 || strpos($line, '=') === false) {
+						continue;
+					}
+					[$key, $value] = explode('=', $line, 2);
+					$env[trim($key)] = trim($value, " \t\n\r\0\"'");
 				}
-				[$key, $value] = explode('=', $line, 2);
-				$env[trim($key)] = trim($value, " \t\n\r\0\"'");
+				break; // Use first found .env
 			}
 		}
 
