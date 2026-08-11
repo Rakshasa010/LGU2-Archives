@@ -186,7 +186,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
                         <!-- Page Title & Breadcrumb -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
-                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">User Management</h2>
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100"><i class="bi bi-people text-red-600 dark:text-red-400 mr-1"></i>User Management</h2>
                             </div>
                         </div>
                         

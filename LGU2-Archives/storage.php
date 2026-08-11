@@ -153,16 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         $data = ['success' => true, 'year' => $year, 'categories' => []];
-        $leg = $conn->prepare("SELECT type, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ? GROUP BY type");
-        if ($leg) {
-            $leg->bind_param("i", $year);
-            $leg->execute();
-            $res = $leg->get_result();
-            while ($row = $res->fetch_assoc()) {
-                $data['categories'][] = ['name' => $row['type'], 'count' => (int)$row['cnt'], 'group' => 'Legislative'];
-            }
-            $leg->close();
-        }
         $arc = $conn->prepare("SELECT fo.id, fo.name AS folder_name, COUNT(af.id) AS cnt FROM archive_folders fo LEFT JOIN archive_files af ON af.folder_id = fo.id AND YEAR(af.created_at) = ? GROUP BY fo.id, fo.name ORDER BY fo.name");
         if ($arc) {
             $arc->bind_param("i", $year);
@@ -189,12 +179,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $slug = trim($slug, '-');
         if ($slug === '') {
             echo json_encode(['success' => false, 'message' => 'Folder name is invalid']);
-            $conn->close();
-            exit();
-        }
-        $reserved = ['ordinances-resolution', 'public-hearings', 'meeting-records'];
-        if (in_array($slug, $reserved, true)) {
-            echo json_encode(['success' => false, 'message' => 'Folder already exists']);
             $conn->close();
             exit();
         }
@@ -596,6 +580,64 @@ if (isset($_SESSION['user_id'])) {
         $checkStmt->close();
     }
 
+    // Ensure archive folders exist (Ordinances & Resolutions + Pending Bills with subfolders)
+    $uid = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+    $seed_folders = [
+        ['name' => 'Ordinances & Resolutions', 'slug' => 'ordinances-resolutions', 'parent_id' => null],
+        ['name' => 'Pending Bills', 'slug' => 'pending-bills', 'parent_id' => null],
+        ['name' => '1st Reading', 'slug' => '1st-reading', 'parent_id' => 'pending-bills'],
+        ['name' => '2nd Reading', 'slug' => '2nd-reading', 'parent_id' => 'pending-bills'],
+        ['name' => '3rd Reading', 'slug' => '3rd-reading', 'parent_id' => 'pending-bills'],
+    ];
+    $seed_slug_to_id = [];
+    foreach ($seed_folders as $sf) {
+        $parent_id = null;
+        if (!empty($sf['parent_id'])) {
+            $parent_id = isset($seed_slug_to_id[$sf['parent_id']]) ? $seed_slug_to_id[$sf['parent_id']] : null;
+        }
+        if ($parent_id === null) {
+            $checkSeed = $conn->prepare("SELECT id FROM archive_folders WHERE slug = ? AND parent_id IS NULL LIMIT 1");
+            if ($checkSeed) {
+                $checkSeed->bind_param("s", $sf['slug']);
+                $checkSeed->execute();
+                $seedRes = $checkSeed->get_result();
+                if ($rowSeed = $seedRes->fetch_assoc()) {
+                    $seed_slug_to_id[$sf['slug']] = (int)$rowSeed['id'];
+                } else {
+                    $prefix = generate_document_prefix($sf['name']);
+                    $insertSeed = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by, document_prefix) VALUES (?, ?, NULL, ?, ?)");
+                    if ($insertSeed) {
+                        $insertSeed->bind_param("ssis", $sf['name'], $sf['slug'], $uid, $prefix);
+                        $insertSeed->execute();
+                        $seed_slug_to_id[$sf['slug']] = $conn->insert_id;
+                        $insertSeed->close();
+                    }
+                }
+                $checkSeed->close();
+            }
+        } else {
+            $checkSeed = $conn->prepare("SELECT id FROM archive_folders WHERE slug = ? AND parent_id = ? LIMIT 1");
+            if ($checkSeed) {
+                $checkSeed->bind_param("si", $sf['slug'], $parent_id);
+                $checkSeed->execute();
+                $seedRes = $checkSeed->get_result();
+                if ($rowSeed = $seedRes->fetch_assoc()) {
+                    $seed_slug_to_id[$sf['slug']] = (int)$rowSeed['id'];
+                } else {
+                    $prefix = generate_document_prefix($sf['name']);
+                    $insertSeed = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by, document_prefix) VALUES (?, ?, ?, ?, ?)");
+                    if ($insertSeed) {
+                        $insertSeed->bind_param("ssiis", $sf['name'], $sf['slug'], $parent_id, $uid, $prefix);
+                        $insertSeed->execute();
+                        $seed_slug_to_id[$sf['slug']] = $conn->insert_id;
+                        $insertSeed->close();
+                    }
+                }
+                $checkSeed->close();
+            }
+        }
+    }
+
     // helper methods and shared storage logic (copied from archives-landing.php)
     function fmt_bytes($bytes) {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -637,7 +679,7 @@ if (isset($_SESSION['user_id'])) {
     $fileCount = $storage['fileCount'];
 
     $archive_folders = [];
-    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders WHERE parent_id IS NULL ORDER BY created_at DESC");
     if ($folders_result && $folders_result->num_rows > 0) {
         while ($row = $folders_result->fetch_assoc()) {
             $archive_folders[] = $row;
@@ -654,7 +696,7 @@ if (isset($_SESSION['user_id'])) {
     for ($y = $currentYear; $y >= $currentYear - 4; $y--) {
         $yearly_stats[$y] = 0;
     }
-    $stat_stmt = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
+    $stat_stmt = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM archive_files WHERE YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
     if ($stat_stmt) {
         $yearStart = $currentYear - 4;
         $stat_stmt->bind_param("ii", $yearStart, $currentYear);
@@ -665,17 +707,6 @@ if (isset($_SESSION['user_id'])) {
             if (isset($yearly_stats[$y])) $yearly_stats[$y] += (int)$row['cnt'];
         }
         $stat_stmt->close();
-    }
-    $stat_stmt2 = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM archive_files WHERE YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
-    if ($stat_stmt2) {
-        $stat_stmt2->bind_param("ii", $yearStart, $currentYear);
-        $stat_stmt2->execute();
-        $stat_res2 = $stat_stmt2->get_result();
-        while ($row = $stat_res2->fetch_assoc()) {
-            $y = (int)$row['y'];
-            if (isset($yearly_stats[$y])) $yearly_stats[$y] += (int)$row['cnt'];
-        }
-        $stat_stmt2->close();
     }
     $conn->close();
     
@@ -860,48 +891,6 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
             <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Ordinance']; ?>&legislative=true" data-archive="ordinances-resolution" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-orange-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Ordinances & Res...</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="ordinances-resolution">Calculating...</div>
-                    </div>
-                </a>
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Public Hearing']; ?>&legislative=true" data-archive="public-hearings" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-blue-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Public Hearings</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="public-hearings">Calculating...</div>
-                    </div>
-                </a>
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Meeting']; ?>&legislative=true" data-archive="meeting-records" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-indigo-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Meeting Records</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="meeting-records">Calculating...</div>
-                    </div>
-                </a>
                 <?php
                 $folder_palette = [
                     ['bg' => 'bg-red-100 dark:bg-red-900/40', 'text' => 'text-red-600 dark:text-red-400', 'hover' => 'hover:border-red-500/50'],
@@ -1958,8 +1947,6 @@ if (isset($_SESSION['user_id'])) {
         // Archive Folders Pagination
         (function(){
             const foldersGrid = document.getElementById('archive-folders-grid');
-            const legisHeaders = foldersGrid ? foldersGrid.querySelectorAll('a[href*="legislative=true"]') : [];
-            const legisCount = legisHeaders.length;
             const foldersPagination = new PaginationControls('foldersPagination', { onPageChange: loadFoldersPage });
             foldersPagination.update(<?php echo $archive_folders_total; ?>);
 
@@ -1972,12 +1959,10 @@ if (isset($_SESSION['user_id'])) {
                     .then(function(r){ return r.json(); })
                     .then(function(data){
                         if (!data || !data.success) return;
-                        // Remove user-created cards (keep legislative headers)
+                        // Remove all existing cards
                         var allCards = Array.from(foldersGrid.querySelectorAll('a[data-archive]'));
                         allCards.forEach(function(card){
-                            if (!card.getAttribute('href').includes('legislative=true')) {
-                                card.remove();
-                            }
+                            card.remove();
                         });
                         // Add new cards
                         (data.folders || []).forEach(function(folder){
