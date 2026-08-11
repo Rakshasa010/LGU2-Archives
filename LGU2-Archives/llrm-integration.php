@@ -81,7 +81,7 @@ include 'includes/header_scripts.php';
                     </div>
                     <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                         <div class="ml-2 md:ml-4 min-w-0">
-                            <h2 class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">LLRM Integration</h2>
+                            <h2 class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100"><i class="bi bi-cloud-arrow-up-down text-red-600 dark:text-red-400 mr-1"></i>LLRM Integration</h2>
                         </div>
                     </div>
                     <div class="flex items-center space-x-1 md:space-x-4">
@@ -150,7 +150,7 @@ include 'includes/header_scripts.php';
                         <i class="bi bi-cloud-arrow-up-down text-white text-2xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">LLRM Integration</h1>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white"><i class="bi bi-cloud-arrow-up-down text-red-600 dark:text-red-400 mr-1"></i>LLRM Integration</h1>
                         <p class="text-sm text-gray-600 dark:text-gray-400"><i class="bi bi-arrow-repeat text-blue-600 dark:text-blue-400 mr-1"></i>Legislative Records Management System — Two-way sync</p>
                     </div>
                 </div>

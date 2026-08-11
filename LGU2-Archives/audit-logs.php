@@ -151,7 +151,7 @@
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
-                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Audit Logs</h2>
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100"><i class="bi bi-shield-check text-red-600 dark:text-red-400 mr-1"></i>Audit Logs</h2>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">View and manage system audit logs</p>
                             </div>
                         </div>

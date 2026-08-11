@@ -9,13 +9,13 @@ if ($action === 'list_folders') {
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
     $total = 0;
-    $cnt = $conn->query("SELECT COUNT(*) AS cnt FROM archive_folders");
+    $cnt = $conn->query("SELECT COUNT(*) AS cnt FROM archive_folders WHERE parent_id IS NULL");
     if ($cnt && ($r = $cnt->fetch_assoc())) $total = (int)$r['cnt'];
     $total_pages = max(1, ceil($total / $page_size));
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $rows = [];
-    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders ORDER BY created_at DESC LIMIT ?, ?");
+    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE parent_id IS NULL ORDER BY created_at DESC LIMIT ?, ?");
     if ($stmt) {
         $stmt->bind_param("ii", $offset, $page_size);
         $stmt->execute();

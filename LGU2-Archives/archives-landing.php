@@ -85,9 +85,18 @@ $leg_res = $conn->query("SELECT COUNT(*) AS c FROM legislative_records");
 if ($leg_res && $row = $leg_res->fetch_assoc()) $leg_count = (int)$row['c'];
 $arch_res = $conn->query("SELECT COUNT(*) AS c FROM archive_files");
 if ($arch_res && $row = $arch_res->fetch_assoc()) $arch_count = (int)$row['c'];
+
+// Active ordinances (successfully passed) based on the Ordinances & Resolutions archive folder
+$approved_count = 0;
+$ord_folder = $conn->query("SELECT id FROM archive_folders WHERE slug = 'ordinances-resolutions' AND parent_id IS NULL LIMIT 1");
+if ($ord_folder && $row = $ord_folder->fetch_assoc()) {
+    $ord_id = (int)$row['id'];
+    $res = $conn->query("SELECT COUNT(*) AS c FROM archive_files WHERE folder_id = $ord_id");
+    if ($res && $r = $res->fetch_assoc()) $approved_count = (int)$r['c'];
+}
 $dashboard_chart_data['files_by_source'] = [
-    'labels' => ['Legislative', 'Archives'],
-    'data' => [$leg_count, $arch_count]
+    'labels' => ['Active Ordinances'],
+    'data' => [$approved_count]
 ];
 
 $dashboard_buckets = count($archive_folders);
@@ -324,6 +333,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             <div class="text-center lg:text-left">
                                 <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($dashboard_date); ?></p>
                                 <h1 class="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
+                                    <i class="bi bi-person-fill text-red-600 dark:text-red-400 align-middle mr-2"></i>
                                     <?php echo htmlspecialchars($welcome_greeting); ?>, <?php echo htmlspecialchars($display_name); ?>!
                                 </h1>
                                 <p class="max-w-2xl text-lg text-gray-600 dark:text-gray-300 mx-auto lg:mx-0 mt-3">
@@ -821,8 +831,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         </div>
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Files by Source</h3>
-                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo $leg_count + $arch_count; ?> total</span>
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Active Ordinances</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo $approved_count; ?> total</span>
                             </div>
                             <div class="relative w-full h-64 md:h-72 flex justify-center">
                                 <canvas id="filesBySourceChart"></canvas>
@@ -979,9 +989,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     data: {
                         labels: sourceLabels,
                         datasets: [{
-                            label: 'Files',
+                            label: 'Active Ordinances',
                             data: sourceValues,
-                            backgroundColor: ['#dc2626', '#3b82f6']
+                            backgroundColor: ['#22c55e']
                         }]
                     },
                     options: {
