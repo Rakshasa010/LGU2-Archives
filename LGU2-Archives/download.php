@@ -131,6 +131,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($idInt > 0) {
             $fileInfo = get_legislative_file_info($conn, $idInt);
         }
+        // --- MongoDB Atlas Step: Query supplementary metadata ---
+        $mongoMetadata = null;
+        if ($idInt > 0) {
+            $atlas = new MongoDBAtlas();
+            // Try querying by mysql_id first, then by mongo_id
+            $mongoResult = $atlas->findOne(['mysql_id' => $idInt]);
+            if ($mongoResult['success'] && $mongoResult['document']) {
+                $mongoMetadata = $mongoResult['document'];
+            } else {
+                $mongoResult2 = $atlas->findOne(['mongo_id' => (string)$idInt]);
+                if ($mongoResult2['success'] && $mongoResult2['document']) {
+                    $mongoMetadata = $mongoResult2['document'];
+                }
+            }
+        }
+        // Merge MongoDB metadata with file info (MongoDB values take precedence where available)
+        if ($fileInfo && $mongoMetadata) {
+            // Use MongoDB file_size and mime_type if available, otherwise fall back to MySQL
+            if (isset($mongoMetadata['file_size'])) $fileInfo['file_size'] = $mongoMetadata['file_size'];
+            if (isset($mongoMetadata['mime_type'])) $fileInfo['mime_type'] = $mongoMetadata['mime_type'];
+        }
+        // ---------------------------------------------------
         if ($fileInfo && isset($fileInfo['file_path'])) {
             $path = resolve_local_path($fileInfo['file_path']);
             $ipfsCid = $fileInfo['ipfs_cid'] ?? null;

@@ -1,6 +1,7 @@
 <?php
 require 'authdatabase.php';
 require_once __DIR__ . '/includes/pinata.php';
+require_once __DIR__ . '/includes/mongodb_atlas.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -281,6 +282,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         if ($stmt->execute()) {
                             $new_id = $conn->insert_id;
+                            // --- MongoDB Atlas Step: Insert heavy file metadata ---
+                            $atlas = new MongoDBAtlas();
+                            $mongoDoc = [
+                                'mysql_id'    => (int)$new_id,
+                                'ipfs_cid'    => $ipfsCid,
+                                'file_name'   => $final_name,
+                                'file_size'   => $fileSize,
+                                'mime_type'   => $mimeType,
+                                'created_at'  => date('c')
+                            ];
+                            $mongoResult = $atlas->insertOne($mongoDoc);
+                            if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
+                                // Update MySQL record's mongo_id column with the MongoDB _id string
+                                $conn->query("UPDATE archive_files SET mongo_id = '" . $conn->real_escape_string($mongoResult['new_id']) . "' WHERE id = $new_id");
+                            } else {
+                                // Best-effort: log the failure but don't block the upload
+                                $errMsg = $mongoResult['error'] ?? 'unknown error';
+                                error_log('MongoDB Atlas insert failed for record #'.$new_id.' : '.$errMsg);
+                            }
+                            // ---------------------------------------------------
                             if ($isBlankUnq) {
                                 // Generate folder-prefixed document ID
                                 $unq = $folderPrefix . " - " . str_pad($newSequence, 6, '0', STR_PAD_LEFT);
