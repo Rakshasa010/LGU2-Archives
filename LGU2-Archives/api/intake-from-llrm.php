@@ -128,7 +128,7 @@ $source_record_id = isset($data['source_record_id']) ? (int)$data['source_record
 $folder_name = $data['folder_name'] ?? $type;
 $metadata    = $data['metadata'] ?? [];
 
-// --- Auto-route the document into the archive (Main Storage) ---
+// --- Stage the document into the External Documents queue (no auto-routing) ---
 require_once __DIR__ . '/../includes/llrm-intake.php';
 
 $doc = [
@@ -137,6 +137,10 @@ $doc = [
     'author'            => $author,
     'source_system'     => $source_system,
     'source_record_id'  => $source_record_id,
+    'reference_number'  => $data['reference_number'] ?? null,
+    'external_id'       => $data['external_id'] ?? null,
+    'description'       => $data['description'] ?? null,
+    'tags'              => $data['tags'] ?? null,
 ];
 if (!empty($data['document_date'])) {
     $doc['document_date'] = $data['document_date'];
@@ -151,14 +155,14 @@ if (!empty($data['file_content']) && !empty($data['file_name'])) {
     $fileSpec = ['tmp_path' => $_FILES['file']['tmp_name'], 'orig_name' => $_FILES['file']['name'], 'copy' => false];
 }
 
-$result = llrm_intake_route($conn, $doc, $fileSpec, ['notification_prefix' => $source_system]);
+$result = llrm_intake_stage($conn, $doc, $fileSpec, ['notification_prefix' => $source_system]);
 
 if (!empty($result['duplicate'])) {
     http_response_code(409);
     echo json_encode([
         'success' => false,
         'error'   => 'Duplicate record already exists',
-        'message' => 'A record with the same title and type already exists in the archive.',
+        'message' => 'A record with the same title already exists in the External Documents queue.',
         'existing_id' => $result['existing_id'] ?? null,
     ]);
     $conn->close();
@@ -174,15 +178,11 @@ if (empty($result['success'])) {
 
 echo json_encode([
     'success'          => true,
-    'id'               => $result['record_id'],
-    'message'          => 'Record archived successfully',
-    'kind'             => $result['kind'],
-    'folder_id'        => $result['folder_id'],
-    'folder_name'      => $result['folder_name'],
+    'id'               => $result['id'],
+    'message'          => 'Document received and staged in External Documents. Awaiting manual routing.',
+    'status'           => 'pending',
     'file_path'        => $result['file_path'],
-    'unique_number'    => $result['unique_number'],
     'ipfs_cid'         => $result['ipfs_cid'],
-    'ipfs_url'         => $result['ipfs_url'],
     'source_system'    => $source_system,
     'source_record_id' => $source_record_id
 ]);

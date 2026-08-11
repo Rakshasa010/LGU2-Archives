@@ -68,10 +68,36 @@ if (!function_exists('llrm_intake_normalize_type')) {
     /**
      * Resolve (find or create) the target folder for an intake document.
      *
+     * When an explicit target is provided (manual routing), the folder is looked
+     * up by id and verified to exist - it is never created automatically.
+     *
+     * @param array $explicit Optional: ['kind'=>'archive'|'legislative', 'id'=>int]
      * @return array{id:int, kind:string, name:string, document_prefix:?string, last_sequence_number:int}|null
      */
-    function llrm_intake_resolve_folder($conn, $normalized) {
-        if (empty($normalized['kind'])) return null;
+    function llrm_intake_resolve_folder($conn, $normalized, $explicit = null) {
+        if (empty($normalized['kind']) && empty($explicit)) return null;
+
+        if (!empty($explicit) && !empty($explicit['kind']) && !empty($explicit['id'])) {
+            $table = $explicit['kind'] === 'legislative' ? 'legislative_folders' : 'archive_folders';
+            $typeCol = $explicit['kind'] === 'legislative' ? ', type' : '';
+            $st = $conn->prepare("SELECT id, name, document_prefix, last_sequence_number, parent_id $typeCol FROM $table WHERE id = ? LIMIT 1");
+            $st->bind_param("i", $explicit['id']);
+            $st->execute();
+            $row = $st->get_result()->fetch_assoc();
+            $st->close();
+
+            if (!$row) return null;
+
+            return [
+                'id'                   => (int)$row['id'],
+                'kind'                 => $explicit['kind'],
+                'name'                 => $row['name'],
+                'document_prefix'      => $row['document_prefix'],
+                'last_sequence_number' => (int)$row['last_sequence_number'],
+                'type'                 => $row['type'] ?? null,
+            ];
+        }
+
         $name = $normalized['folder_name'] ?: 'Imported';
 
         if ($normalized['kind'] === 'legislative') {
@@ -231,6 +257,8 @@ if (!function_exists('llrm_intake_normalize_type')) {
      * @param mysqli $conn   Database connection.
      * @param array  $doc    Document data: title, type/document_type, author/uploaded_by_name,
      *                       document_date/file_date, source_system, source_record_id.
+     *                       Manual routing: target_folder_kind ('archive'|'legislative')
+     *                       + target_folder_id (int).
      * @param array|null $fileSpec  File source spec (see llrm_intake_write_file). Null = no file.
      * @param array  $opts   Options: notification_prefix.
      * @return array Result array with success/error/record_id, folder info, unique_number, ipfs data.
@@ -247,13 +275,21 @@ if (!function_exists('llrm_intake_normalize_type')) {
             return ['success' => false, 'error' => 'Missing required field: title'];
         }
 
-        $normalized = llrm_intake_normalize_type($rawType);
-        $folder = llrm_intake_resolve_folder($conn, $normalized);
-        if (!$folder) {
-            return ['success' => false, 'error' => 'Failed to resolve target folder'];
+        $explicit = null;
+        if (!empty($doc['target_folder_kind']) && !empty($doc['target_folder_id'])) {
+            $explicit = [
+                'kind' => $doc['target_folder_kind'],
+                'id'   => (int)$doc['target_folder_id'],
+            ];
         }
 
-        $type = $folder['kind'] === 'legislative' ? $normalized['leg_type'] : $rawType;
+        $normalized = llrm_intake_normalize_type($rawType);
+        $folder = llrm_intake_resolve_folder($conn, $normalized, $explicit);
+        if (!$folder) {
+            return ['success' => false, 'error' => $explicit ? 'Target folder not found' : 'Failed to resolve target folder'];
+        }
+
+        $type = $folder['kind'] === 'legislative' ? ($normalized['leg_type'] ?? $folder['type'] ?? $rawType) : $rawType;
 
         // Duplicate guard
         if ($folder['kind'] === 'legislative') {
@@ -400,6 +436,189 @@ if (!function_exists('llrm_intake_normalize_type')) {
             'ipfs_url'         => ($ipfsCid && function_exists('pinata_gateway_url')) ? pinata_gateway_url($ipfsCid) : null,
             'source_system'    => $sourceSystem,
             'source_record_id' => $sourceRecordId,
+        ];
+    }
+
+    /**
+     * Stage an externally-received document into the intake queue
+     * (external_documents table, status "pending").
+     *
+     * The document is NOT auto-routed into main storage - an administrator
+     * manually routes it to a folder from the External Documents page.
+     *
+     * @param mysqli $conn   Database connection.
+     * @param array  $doc    Document data: title, type/document_type, author/uploaded_by_name,
+     *                       document_date/file_date, source_system, source_record_id,
+     *                       reference_number.
+     * @param array|null $fileSpec  File source spec (see llrm_intake_write_file). Null = no file.
+     * @param array  $opts   Options: notification_prefix.
+     * @return array Result with success/error/id (external_documents.id).
+     */
+    function llrm_intake_stage($conn, $doc, $fileSpec = null, $opts = []) {
+        $title = trim((string)($doc['title'] ?? ''));
+        $type = $doc['type'] ?? $doc['document_type'] ?? 'archive';
+        $author = $doc['author'] ?? $doc['uploaded_by_name'] ?? 'LLRM Import';
+        $sourceSystem = $doc['source_system'] ?? 'LLRM';
+        $sourceRecordId = $doc['source_record_id'] ?? null;
+        $externalId = $doc['external_id'] ?? (is_numeric($sourceRecordId) ? (string)$sourceRecordId : null);
+        $referenceNumber = $doc['reference_number'] ?? null;
+        $description = $doc['description'] ?? null;
+        $tags = is_array($doc['tags'] ?? null) ? implode(',', $doc['tags']) : ($doc['tags'] ?? null);
+        $fileDate = $doc['document_date'] ?? $doc['file_date'] ?? null;
+
+        if ($title === '') {
+            return ['success' => false, 'error' => 'Missing required field: title'];
+        }
+
+        $ts = $fileDate ? strtotime($fileDate) : time();
+        if ($ts === false || $ts <= 0) $ts = time();
+        $documentDate = date('Y-m-d', $ts);
+
+        // Ensure queue table exists
+        $conn->query("CREATE TABLE IF NOT EXISTS external_documents (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            document_type VARCHAR(50) NOT NULL DEFAULT 'archive',
+            document_date DATE NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            description TEXT NULL,
+            tags VARCHAR(500) NULL,
+            reference_number VARCHAR(100) NULL,
+            file_path VARCHAR(500) NULL,
+            file_name VARCHAR(255) NULL,
+            file_size BIGINT DEFAULT 0,
+            file_type VARCHAR(100) NULL,
+            ipfs_cid VARCHAR(255) NULL,
+            mime_type VARCHAR(100) NULL,
+            source_system VARCHAR(50) NOT NULL DEFAULT 'llrm',
+            external_id VARCHAR(100) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_ref (reference_number)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Duplicate guard against existing queue records with the same title reference
+        if (!empty($referenceNumber)) {
+            $chk = $conn->prepare("SELECT id FROM external_documents WHERE reference_number = ? LIMIT 1");
+            $chk->bind_param("s", $referenceNumber);
+            $chk->execute();
+            $dup = $chk->get_result()->fetch_assoc();
+            $chk->close();
+            if ($dup) {
+                return ['success' => false, 'duplicate' => true, 'error' => 'Duplicate record already exists', 'existing_id' => (int)$dup['id']];
+            }
+        } else {
+            $chk = $conn->prepare("SELECT id FROM external_documents WHERE title = ? AND source_system = ? LIMIT 1");
+            $chk->bind_param("ss", $title, $sourceSystem);
+            $chk->execute();
+            $dup = $chk->get_result()->fetch_assoc();
+            $chk->close();
+            if ($dup) {
+                return ['success' => false, 'duplicate' => true, 'error' => 'Duplicate record already exists', 'existing_id' => (int)$dup['id']];
+            }
+        }
+
+        // Write file into the staging area: uploads/external/{Y-m}/
+        $subDir = 'external/' . date('Y-m', $ts) . '/';
+        $targetDir = rtrim(dirname(__DIR__), '/\\') . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $subDir);
+        $origName = $fileSpec['orig_name'] ?? ($title . '.pdf');
+
+        $fileResult = ['file_path' => null, 'file_size' => 0, 'mime_type' => null, 'file_name' => null];
+        if ($fileSpec) {
+            $written = llrm_intake_write_file($targetDir, ['kind' => 'external'], ['base64' => $fileSpec['base64'] ?? null, 'tmp_path' => $fileSpec['tmp_path'] ?? null, 'orig_name' => $origName]);
+            if (isset($written['error'])) {
+                return ['success' => false, 'error' => $written['error']];
+            }
+            $fileResult = [
+                'file_path'  => 'uploads/' . $subDir . $written['final_name'],
+                'file_size'  => $written['file_size'],
+                'mime_type'  => $written['mime_type'],
+                'file_name'  => $written['final_name'],
+            ];
+        }
+
+        // Clean up temporary source if the file was moved
+        if (!empty($fileSpec['tmp_path']) && !empty($fileResult['file_path']) && is_file($fileSpec['tmp_path'])) {
+            @unlink($fileSpec['tmp_path']);
+        }
+
+        // Pin to Pinata (best-effort; local copy is always kept)
+        $ipfsCid = null;
+        if (!empty($fileResult['file_path'])) {
+            $absFile = rtrim(dirname(__DIR__), '/\\') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $fileResult['file_path']);
+            if (is_file($absFile) && function_exists('pinata_upload_file')) {
+                $pinataGroupId = null;
+                if (function_exists('pinata_ensure_group')) {
+                    $groupInfo = pinata_ensure_group('LAS/External Documents');
+                    if (!empty($groupInfo['success'])) $pinataGroupId = $groupInfo['id'];
+                }
+                $pinataResult = pinata_upload_file($absFile, $fileResult['file_name'], ['record' => 'external_document', 'source_system' => $sourceSystem], $pinataGroupId);
+                if (!empty($pinataResult['success'])) $ipfsCid = $pinataResult['cid'];
+            }
+        }
+
+        // Insert into external_documents (pending queue)
+        $stmt = $conn->prepare("INSERT INTO external_documents (title, document_type, document_date, status, description, tags, reference_number, file_path, file_name, file_size, file_type, ipfs_cid, mime_type, source_system, external_id, created_at) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
+        $i_file_path = $fileResult['file_path'];
+        $i_file_name = $fileResult['file_name'] ?: $origName;
+        $i_file_size = $fileResult['file_size'];
+        $i_mime_type = $fileResult['mime_type'];
+        $stmt->bind_param("ssssssssisssss",
+            $title,
+            $type,
+            $documentDate,
+            $description,
+            $tags,
+            $referenceNumber,
+            $i_file_path,
+            $i_file_name,
+            $i_file_size,
+            $i_mime_type,
+            $ipfsCid,
+            $i_mime_type,
+            $sourceSystem,
+            $externalId
+        );
+
+        if (!$stmt->execute()) {
+            $err = $conn->error;
+            $stmt->close();
+            return ['success' => false, 'error' => 'Database error: ' . $err];
+        }
+        $newId = (int)$conn->insert_id;
+        $stmt->close();
+
+        // Log the intake
+        $logSql = "INSERT INTO analytics_events (event_type, record_id, record_title, record_type, created_at) VALUES ('external_intake', ?, ?, ?, NOW())";
+        $logStmt = $conn->prepare($logSql);
+        $logStmt->bind_param("iss", $newId, $title, $type);
+        $logStmt->execute();
+        $logStmt->close();
+
+        // Create notification for admins
+        $notifPrefix = $opts['notification_prefix'] ?? $sourceSystem;
+        $notifContent = "New document received from {$notifPrefix}: {$title} (awaiting manual routing)";
+        $notifSql = "INSERT INTO notifications (time, date, content, about, status, created_at) VALUES (?, CURDATE(), ?, 'External Intake', 'unread', NOW())";
+        $notifStmt = $conn->prepare($notifSql);
+        $timeStr = date('h:i A');
+        $notifStmt->bind_param("ss", $timeStr, $notifContent);
+        $notifStmt->execute();
+        $notifStmt->close();
+
+        return [
+            'success'           => true,
+            'id'                => $newId,
+            'record_id'         => $newId,
+            'status'            => 'pending',
+            'file_path'         => $fileResult['file_path'],
+            'file_name'         => $fileResult['file_name'],
+            'file_size'         => $fileResult['file_size'],
+            'mime_type'         => $fileResult['mime_type'],
+            'ipfs_cid'          => $ipfsCid,
+            'source_system'     => $sourceSystem,
+            'source_record_id'  => $sourceRecordId,
+            'external_id'       => $externalId,
         ];
     }
 }

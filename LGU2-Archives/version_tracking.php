@@ -81,13 +81,13 @@ if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
 // Legislative folders with file counts
 if ($conn->query("SHOW TABLES LIKE 'legislative_folders'")->num_rows > 0) {
     $lf_result = $conn->query("
-        SELECT lf.id, lf.name, lf.type, lf.created_at,
+        SELECT MIN(lf.id) AS id, lf.name, MAX(lf.type) AS type, MIN(lf.created_at) AS created_at,
                COUNT(DISTINCT lr.id) AS file_count,
                MAX(lr.created_at) AS last_modified
         FROM legislative_folders lf
         LEFT JOIN legislative_records lr ON lr.folder_id = lf.id
-        GROUP BY lf.id, lf.name, lf.type, lf.created_at
-        ORDER BY lf.created_at DESC
+        GROUP BY lf.name
+        ORDER BY created_at DESC
     ");
     if ($lf_result) {
         while ($row = $lf_result->fetch_assoc()) {

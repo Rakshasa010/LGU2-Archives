@@ -9,11 +9,24 @@ require_once 'includes/llrm-service.php';
 
 // Verify admin
 $userId = (int)$_SESSION['user_id'];
-$roleStmt = $conn->prepare("SELECT role, full_name, dark_mode FROM users WHERE id = ?");
+$roleStmt = $conn->prepare("SELECT role, full_name, dark_mode, profile_picture FROM users WHERE id = ?");
 $roleStmt->bind_param("i", $userId);
 $roleStmt->execute();
 $user = $roleStmt->get_result()->fetch_assoc();
 $roleStmt->close();
+
+$profile_picture_url = null;
+if (is_string($user['profile_picture'] ?? null) && $user['profile_picture'] !== '') {
+    $candidatePath = $user['profile_picture'];
+    $candidateUrl = $user['profile_picture'];
+    if (strpos($user['profile_picture'], 'uploads/') !== 0) {
+        $candidatePath = 'uploads/profile_pictures/' . $user['profile_picture'];
+        $candidateUrl = 'uploads/profile_pictures/' . $user['profile_picture'];
+    }
+    if (file_exists($candidatePath)) {
+        $profile_picture_url = $candidateUrl;
+    }
+}
 
 if (!$user || strtolower($user['role'] ?? '') !== 'admin') {
     header('Location: archives-landing.php');
@@ -37,6 +50,8 @@ $pageTitle = 'LLRM Integration';
 <?php
 include 'includes/header_scripts.php';
 ?>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
 <style>
     .stat-card { transition: all 0.3s; }
     .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
@@ -94,9 +109,13 @@ include 'includes/header_scripts.php';
                         </div>
                         <div class="relative">
                             <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
-                                <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
-                                    <i class="bi bi-person-fill"></i>
-                                </div>
+                                <?php if ($profile_picture_url): ?>
+                                    <img src="<?php echo htmlspecialchars($profile_picture_url); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                <?php else: ?>
+                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                <?php endif; ?>
                                 <div class="hidden sm:block text-left">
                                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($user['full_name'] ?? 'Admin'); ?></p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>

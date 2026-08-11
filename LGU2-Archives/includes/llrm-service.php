@@ -452,8 +452,8 @@ class LLRMService {
     }
 
     /**
-     * Save a pulled LLRM document into the LAS archive (Main Storage) with
-     * automatic routing to the correct folder based on document type.
+     * Save a pulled LLRM document into the External Documents queue (pending).
+     * Documents are staged here and must be manually routed by a user.
      */
     private function savePulledDocument($conn, $doc) {
         $title = trim($doc['title'] ?? '');
@@ -487,9 +487,14 @@ class LLRMService {
             'document_date'    => $doc['document_date'] ?? null,
             'source_system'    => 'LLRM',
             'source_record_id' => $docId ?: null,
+            'reference_number' => $doc['reference_number'] ?? null,
+            'external_id'      => $docId ? 'LLRM-' . $docId : null,
+            'description'      => $doc['description'] ?? null,
+            'tags'             => $doc['tags'] ?? null,
         ];
 
-        $result = llrm_intake_route($conn, $routeDoc, $fileSpec, ['notification_prefix' => 'LLRM Pull']);
+        // Stage into the External Documents queue (manual routing is required).
+        $result = llrm_intake_stage($conn, $routeDoc, $fileSpec, ['notification_prefix' => 'LLRM Pull']);
 
         // Clean up the temp download if the router left a copy behind.
         if ($fileSpec && !empty($fileSpec['tmp_path']) && is_file($fileSpec['tmp_path'])) {

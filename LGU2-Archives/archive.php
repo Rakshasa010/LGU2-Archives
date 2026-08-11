@@ -66,7 +66,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS external_documents (
     title VARCHAR(255) NOT NULL,
     document_type VARCHAR(50) NOT NULL DEFAULT 'archive',
     document_date DATE NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'archived',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
     description TEXT NULL,
     tags VARCHAR(500) NULL,
     reference_number VARCHAR(100) NULL,
@@ -112,7 +112,7 @@ switch ($action) {
         $title = trim($_POST['title'] ?? '');
         $documentType = trim($_POST['document_type'] ?? 'archive');
         $documentDate = trim($_POST['document_date'] ?? '');
-        $status = trim($_POST['status'] ?? 'archived');
+        $status = trim($_POST['status'] ?? 'pending');
         $description = trim($_POST['description'] ?? '');
         $tags = trim($_POST['tags'] ?? '');
         $referenceNumber = trim($_POST['reference_number'] ?? '');
@@ -273,37 +273,8 @@ switch ($action) {
             $notifStmt->execute();
             $notifStmt->close();
 
-            // Auto-register LLRM-sourced documents into the archive (Main Storage) with routing
-            $autoRouted = null;
-            if (stripos($sourceSystem, 'llrm') !== false && !empty($filePath)) {
-                require_once __DIR__ . '/includes/llrm-intake.php';
-                $routeDoc = [
-                    'title'            => $title,
-                    'type'             => $documentType,
-                    'author'           => trim($_POST['uploaded_by_name'] ?? $_POST['author'] ?? 'LLRM Import'),
-                    'document_date'    => $documentDate,
-                    'source_system'    => $sourceSystem,
-                    'source_record_id' => ($externalId !== '' && ctype_digit($externalId)) ? (int)$externalId : null,
-                ];
-                $routeFileSpec = [
-                    'tmp_path'  => $targetPath,
-                    'orig_name' => $fileName ?: ($title . '.pdf'),
-                    'copy'      => true,
-                ];
-                $routeResult = llrm_intake_route($conn, $routeDoc, $routeFileSpec, ['notification_prefix' => $sourceSystem]);
-                if (!empty($routeResult['success'])) {
-                    $autoRouted = [
-                        'id'            => $routeResult['record_id'],
-                        'kind'          => $routeResult['kind'],
-                        'folder_id'     => $routeResult['folder_id'],
-                        'folder_name'   => $routeResult['folder_name'],
-                        'unique_number' => $routeResult['unique_number'],
-                        'file_path'     => $routeResult['file_path'],
-                    ];
-                } else {
-                    error_log('LLRM auto-route failed for "' . $title . '": ' . ($routeResult['error'] ?? 'unknown error'));
-                }
-            }
+            // Auto-routing is removed: LLRM-sourced documents are staged in the
+            // External Documents queue and must be manually routed by a user.
 
             http_response_code(201);
             echo json_encode([
@@ -321,7 +292,6 @@ switch ($action) {
                     'ipfs_url'        => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
                     'created_at'      => date('Y-m-d H:i:s'),
                 ],
-                'auto_routed' => $autoRouted,
                 'message'  => 'Document received and saved successfully.',
             ]);
         } else {

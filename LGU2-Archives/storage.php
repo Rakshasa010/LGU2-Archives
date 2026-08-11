@@ -569,9 +569,9 @@ if (isset($_SESSION['user_id'])) {
     ];
 
     foreach ($folder_types as $type => $name) {
-        // Check if folder exists
-        $checkStmt = $conn->prepare("SELECT id, document_prefix FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
-        $checkStmt->bind_param("s", $type);
+        // Check if folder exists (by name so Ordinance and Resolution reuse the same folder)
+        $checkStmt = $conn->prepare("SELECT id, document_prefix FROM legislative_folders WHERE name = ? AND parent_id IS NULL LIMIT 1");
+        $checkStmt->bind_param("s", $name);
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
         if ($folder = $checkResult->fetch_assoc()) {
