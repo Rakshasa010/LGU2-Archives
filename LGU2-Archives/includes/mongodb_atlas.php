@@ -1,6 +1,18 @@
 <?php
 /**
  * MongoDB Atlas Data API integration helper.
+ * PHP constants for SSL verification may not be defined in all environments.
+ * We define them here if missing to ensure cURL works correctly.
+ */
+if (!defined('CURLOPT_SSL_VERIFYPEER')) {
+    define('CURLOPT_SSL_VERIFYPEER', 1);
+}
+if (!defined('CURLOPT_SSL_VERIFYHOST')) {
+    define('CURLOPT_SSL_VERIFYHOST', 2);
+}
+
+/**
+ * MongoDB Atlas Data API integration helper.
  *
  * Connects to MongoDB Atlas via the REST Data API using cURL.
  * Configuration is read from the project .env file.
@@ -24,6 +36,22 @@ class MongoDBAtlas {
 
 	public function __construct() {
 		$this->loadConfig();
+	}
+
+	public function getDataApiKey() {
+		return $this->dataApiKey;
+	}
+
+	public function getBaseUrl() {
+		return $this->baseUrl;
+	}
+
+	public function getDbName() {
+		return $this->dbName;
+	}
+
+	public function getCollectionName() {
+		return $this->collectionName;
 	}
 
 	private function loadConfig() {
@@ -85,8 +113,8 @@ class MongoDBAtlas {
 			CURLOPT_CONNECTTIMEOUT => 10,
 			CURLOPT_HTTPHEADER     => $this->httpHeaders,
 			// Allow self-signed certs for dev environments
-			SSL_VERIFYPEER         => false,
-			SSL_VERIFYHOST         => false,
+			CURLOPT_SSL_VERIFYPEER => 1,
+			CURLOPT_SSL_VERIFYHOST => 2,
 		]);
 
 		if ($body !== null) {
