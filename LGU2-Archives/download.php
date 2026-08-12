@@ -40,7 +40,7 @@ function log_analytics_event(mysqli $conn, array $event): void {
 
 
 function get_legislative_file_info(mysqli $conn, int $id): ?array {
-    $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author, mongo_id FROM legislative_records WHERE id = ?");
+    $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author, mongo_id, folder_id FROM legislative_records WHERE id = ?");
     if (!$stmt) return null;
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -136,15 +136,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $mongoMetadata = null;
         if ($idInt > 0) {
             $atlas = new MongoDBAtlas();
-            // Try querying by mysql_id first
-            $mongoResult = $atlas->findOne(['mysql_id' => $idInt]);
+            // Resolve the per-folder database first (routed files live there)
+            $folderDbName = null;
+            if ($fileInfo && !empty($fileInfo['folder_id'])) {
+                $folderReg = $atlas->getFolderDatabase((int)$fileInfo['folder_id']);
+                if ($folderReg['success'] && !empty($folderReg['db_name'])) {
+                    $folderDbName = $folderReg['db_name'];
+                    $mongoResult = $atlas->findOneInDb($folderDbName, 'files', ['mysql_id' => $idInt]);
+                } else {
+                    $mongoResult = ['success' => false];
+                }
+            } else {
+                // Try querying by mysql_id first (legacy/default db)
+                $mongoResult = $atlas->findOne(['mysql_id' => $idInt]);
+            }
             if ($mongoResult['success'] && $mongoResult['document']) {
                 $mongoMetadata = $mongoResult['document'];
             } elseif ($fileInfo && !empty($fileInfo['mongo_id'])) {
                 // Fallback: query by MongoDB _id using the value stored in MySQL's mongo_id column
                 try {
                     $mongoId = new MongoDB\BSON\ObjectId($fileInfo['mongo_id']);
-                    $mongoResult2 = $atlas->findOne(['_id' => $mongoId]);
+                    if ($folderDbName) {
+                        $mongoResult2 = $atlas->findOneInDb($folderDbName, 'files', ['_id' => $mongoId]);
+                    } else {
+                        $mongoResult2 = $atlas->findOne(['_id' => $mongoId]);
+                    }
                     if ($mongoResult2['success'] && $mongoResult2['document']) {
                         $mongoMetadata = $mongoResult2['document'];
                     }

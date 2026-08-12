@@ -206,7 +206,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $ins->bind_param("ssis", $name, $slug, $uid, $prefix);
         if ($ins->execute()) {
-            echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug]]);
+            $newFolderId = (int)$conn->insert_id;
+            // Create the folder's MongoDB database (best-effort)
+            try {
+                $atlas = new MongoDBAtlas();
+                $mongoFolder = $atlas->ensureFolderDatabase($newFolderId, 'archive', $name);
+                if (!$mongoFolder['success']) {
+                    error_log('MongoDB folder db creation failed for folder #'.$newFolderId.' : ' . $mongoFolder['error']);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB folder db error for folder #'.$newFolderId.' : ' . $e->getMessage());
+            }
+            echo json_encode(['success' => true, 'folder' => ['id' => $newFolderId, 'name' => $name, 'slug' => $slug]]);
             $ins->close();
             $conn->close();
             exit();
@@ -279,16 +290,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             // Delete corresponding MongoDB Atlas metadata documents (best-effort)
             $mongoIds = array_map('intval', array_column($files, 'id'));
-            if ($mongoIds) {
-                try {
-                    $atlas = new MongoDBAtlas();
+            try {
+                $atlas = new MongoDBAtlas();
+                if ($mongoIds) {
                     $mr = $atlas->deleteMany(['mysql_id' => ['$in' => $mongoIds]]);
                     if (!$mr['success']) {
                         error_log('MongoDB Atlas delete failed for folder #'.$folder_id.': ' . $mr['error']);
                     }
-                } catch (Exception $e) {
-                    error_log('MongoDB Atlas delete error for folder #'.$folder_id.': ' . $e->getMessage());
                 }
+                // Drop the folder's own database + clear its registry entry
+                $folderReg = $atlas->getFolderDatabase($folder_id);
+                if ($folderReg['success'] && !empty($folderReg['db_name'])) {
+                    $atlas->dropDatabase($folderReg['db_name']);
+                    $atlas->deleteManyInDb($atlas->getDbName(), 'folder_registry', ['folder_id' => $folder_id]);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB Atlas delete error for folder #'.$folder_id.': ' . $e->getMessage());
             }
             if ($delFolder = $conn->prepare("DELETE FROM archive_folders WHERE id = ?")) {
                 $delFolder->bind_param("i", $folder_id);
@@ -590,6 +607,12 @@ if (isset($_SESSION['user_id'])) {
             $insertStmt->execute();
             $legislative_folders[$type] = $conn->insert_id;
             $insertStmt->close();
+            try {
+                $atlas = new MongoDBAtlas();
+                $atlas->ensureFolderDatabase((int)$legislative_folders[$type], 'legislative', $name);
+            } catch (Exception $e) {
+                error_log('MongoDB folder db seed error: ' . $e->getMessage());
+            }
         }
         $checkStmt->close();
     }
@@ -625,6 +648,12 @@ if (isset($_SESSION['user_id'])) {
                         $insertSeed->execute();
                         $seed_slug_to_id[$sf['slug']] = $conn->insert_id;
                         $insertSeed->close();
+                        try {
+                            $atlas = new MongoDBAtlas();
+                            $atlas->ensureFolderDatabase((int)$seed_slug_to_id[$sf['slug']], 'archive', $sf['name']);
+                        } catch (Exception $e) {
+                            error_log('MongoDB folder db seed error: ' . $e->getMessage());
+                        }
                     }
                 }
                 $checkSeed->close();
@@ -645,6 +674,12 @@ if (isset($_SESSION['user_id'])) {
                         $insertSeed->execute();
                         $seed_slug_to_id[$sf['slug']] = $conn->insert_id;
                         $insertSeed->close();
+                        try {
+                            $atlas = new MongoDBAtlas();
+                            $atlas->ensureFolderDatabase((int)$seed_slug_to_id[$sf['slug']], 'archive', $sf['name']);
+                        } catch (Exception $e) {
+                            error_log('MongoDB folder db seed error: ' . $e->getMessage());
+                        }
                     }
                 }
                 $checkSeed->close();
