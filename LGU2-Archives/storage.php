@@ -1,6 +1,7 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require 'authdatabase.php';
+    require_once __DIR__ . '/includes/mongodb_atlas.php';
     if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
@@ -275,6 +276,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $delFiles->bind_param("i", $folder_id);
                 $delFiles->execute();
                 $delFiles->close();
+            }
+            // Delete corresponding MongoDB Atlas metadata documents (best-effort)
+            $mongoIds = array_map('intval', array_column($files, 'id'));
+            if ($mongoIds) {
+                try {
+                    $atlas = new MongoDBAtlas();
+                    $mr = $atlas->deleteMany(['mysql_id' => ['$in' => $mongoIds]]);
+                    if (!$mr['success']) {
+                        error_log('MongoDB Atlas delete failed for folder #'.$folder_id.': ' . $mr['error']);
+                    }
+                } catch (Exception $e) {
+                    error_log('MongoDB Atlas delete error for folder #'.$folder_id.': ' . $e->getMessage());
+                }
             }
             if ($delFolder = $conn->prepare("DELETE FROM archive_folders WHERE id = ?")) {
                 $delFolder->bind_param("i", $folder_id);

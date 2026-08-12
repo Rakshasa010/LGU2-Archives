@@ -212,6 +212,7 @@ switch ($action) {
             $absPath = realpath($target_path) ?: (__DIR__ . '/' . $target_path);
             $mimeType = function_exists('mime_content_type') ? mime_content_type($absPath) : null;
             if (!$mimeType) { $mimeType = 'application/octet-stream'; }
+            $fileSize = @filesize($absPath) ?: 0;
             $ipfsCid = null;
             $pinataGroupId = null;
             if (!empty($folder_id)) {
@@ -482,6 +483,19 @@ switch ($action) {
             if ($path) {
                 $abs = (strpos($path, DIRECTORY_SEPARATOR) === 0) ? $path : (__DIR__ . DIRECTORY_SEPARATOR . $path);
                 if (file_exists($abs)) @unlink($abs);
+            }
+        }
+        // Delete corresponding MongoDB Atlas metadata documents (best-effort)
+        $mongoIds = array_map('intval', array_column($filesToDelete, 'id'));
+        if ($mongoIds) {
+            try {
+                $atlas = new MongoDBAtlas();
+                $mr = $atlas->deleteMany(['mysql_id' => ['$in' => $mongoIds]]);
+                if (!$mr['success']) {
+                    error_log('MongoDB Atlas delete failed for legislative records: ' . $mr['error']);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB Atlas delete error: ' . $e->getMessage());
             }
         }
         // Delete DB rows

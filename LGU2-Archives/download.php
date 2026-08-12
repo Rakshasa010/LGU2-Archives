@@ -1,6 +1,7 @@
 <?php
 // Include database connection
 include 'authdatabase.php';
+require_once __DIR__ . '/includes/mongodb_atlas.php';
 require_once __DIR__ . '/includes/pinata.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -39,7 +40,7 @@ function log_analytics_event(mysqli $conn, array $event): void {
 
 
 function get_legislative_file_info(mysqli $conn, int $id): ?array {
-    $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author FROM legislative_records WHERE id = ?");
+    $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author, mongo_id FROM legislative_records WHERE id = ?");
     if (!$stmt) return null;
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -135,14 +136,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $mongoMetadata = null;
         if ($idInt > 0) {
             $atlas = new MongoDBAtlas();
-            // Try querying by mysql_id first, then by mongo_id
+            // Try querying by mysql_id first
             $mongoResult = $atlas->findOne(['mysql_id' => $idInt]);
             if ($mongoResult['success'] && $mongoResult['document']) {
                 $mongoMetadata = $mongoResult['document'];
-            } else {
-                $mongoResult2 = $atlas->findOne(['mongo_id' => (string)$idInt]);
-                if ($mongoResult2['success'] && $mongoResult2['document']) {
-                    $mongoMetadata = $mongoResult2['document'];
+            } elseif ($fileInfo && !empty($fileInfo['mongo_id'])) {
+                // Fallback: query by MongoDB _id using the value stored in MySQL's mongo_id column
+                try {
+                    $mongoId = new MongoDB\BSON\ObjectId($fileInfo['mongo_id']);
+                    $mongoResult2 = $atlas->findOne(['_id' => $mongoId]);
+                    if ($mongoResult2['success'] && $mongoResult2['document']) {
+                        $mongoMetadata = $mongoResult2['document'];
+                    }
+                } catch (Exception $e) {
+                    error_log('MongoDB fallback lookup failed: ' . $e->getMessage());
                 }
             }
         }
