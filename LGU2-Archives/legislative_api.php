@@ -63,7 +63,18 @@ switch ($action) {
         $stmt->bind_param("sisi", $name, $parent_id, $type, $user_id);
         
         if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'id' => $conn->insert_id, 'name' => $name]);
+            $folderId = $conn->insert_id;
+            // Create the folder's MongoDB database (best-effort)
+            try {
+                $atlas = new MongoDBAtlas();
+                $mongoFolder = $atlas->ensureFolderDatabase($folderId, 'legislative', $name);
+                if (!$mongoFolder['success']) {
+                    error_log('MongoDB folder db creation failed for folder #'.$folderId.' : ' . $mongoFolder['error']);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB folder db error for folder #'.$folderId.' : ' . $e->getMessage());
+            }
+            echo json_encode(['success' => true, 'id' => $folderId, 'name' => $name]);
         } else {
             echo json_encode(['success' => false, 'message' => $conn->error]);
         }
@@ -212,6 +223,7 @@ switch ($action) {
             $absPath = realpath($target_path) ?: (__DIR__ . '/' . $target_path);
             $mimeType = function_exists('mime_content_type') ? mime_content_type($absPath) : null;
             if (!$mimeType) { $mimeType = 'application/octet-stream'; }
+            $fileSize = @filesize($absPath) ?: 0;
             $ipfsCid = null;
             $pinataGroupId = null;
             if (!empty($folder_id)) {
@@ -253,24 +265,34 @@ switch ($action) {
             
             if ($stmt->execute()) {
                 $new_id = $conn->insert_id;
-                // --- MongoDB Atlas Step: Insert heavy file metadata ---
-                $atlas = new MongoDBAtlas();
-                $mongoDoc = [
-                    'mysql_id'    => (int)$new_id,
-                    'ipfs_cid'    => $ipfsCid,
-                    'file_name'   => basename($target_path),
-                    'file_size'   => $fileSize,
-                    'mime_type'   => $mimeType,
-                    'created_at'  => date('c')
-                ];
-                $mongoResult = $atlas->insertOne($mongoDoc);
-                if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
-                    // Update MySQL record's mongo_id column with the MongoDB _id string
-                    $conn->query("UPDATE legislative_records SET mongo_id = '" . $conn->real_escape_string($mongoResult['new_id']) . "' WHERE id = $new_id");
-                } else {
-                    // Best-effort: log the failure but don't block the API response
-                    $errMsg = $mongoResult['error'] ?? 'unknown error';
-                                error_log('MongoDB Atlas insert failed for record #'.$new_id.' : '.$errMsg);
+                // --- MongoDB Atlas Step: Insert heavy file metadata into the folder's database ---
+                try {
+                    $atlas = new MongoDBAtlas();
+                    $mongoDoc = [
+                        'mysql_id'    => (int)$new_id,
+                        'ipfs_cid'    => $ipfsCid,
+                        'file_name'   => basename($target_path),
+                        'file_size'   => $fileSize,
+                        'mime_type'   => $mimeType,
+                        'created_at'  => date('c')
+                    ];
+                    // Ensure the folder's Mongo database exists and get its name
+                    $folderDb = $atlas->ensureFolderDatabase((int)$folder_id, 'legislative', $folderName ?? basename($target_path));
+                    if (!$folderDb['success'] || empty($folderDb['db_name'])) {
+                        $mongoResult = $atlas->insertOne($mongoDoc);
+                    } else {
+                        $mongoResult = $atlas->insertOneInDb($folderDb['db_name'], 'files', $mongoDoc);
+                    }
+                    if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
+                        // Update MySQL record's mongo_id column with the MongoDB _id string
+                        $conn->query("UPDATE legislative_records SET mongo_id = '" . $conn->real_escape_string($mongoResult['new_id']) . "' WHERE id = $new_id");
+                    } else {
+                        // Best-effort: log the failure but don't block the API response
+                        $errMsg = $mongoResult['error'] ?? 'unknown error';
+                                    error_log('MongoDB Atlas insert failed for record #'.$new_id.' : '.$errMsg);
+                    }
+                } catch (Exception $e) {
+                    error_log('MongoDB Atlas insert error for record #'.$new_id.' : ' . $e->getMessage());
                 }
                 // ---------------------------------------------------
                 echo json_encode(['success' => true, 'id' => $new_id, 'version' => $version, 'ipfs_cid' => $ipfsCid, 'ipfs_url' => $ipfsCid ? pinata_gateway_url($ipfsCid) : null]);
@@ -482,6 +504,19 @@ switch ($action) {
             if ($path) {
                 $abs = (strpos($path, DIRECTORY_SEPARATOR) === 0) ? $path : (__DIR__ . DIRECTORY_SEPARATOR . $path);
                 if (file_exists($abs)) @unlink($abs);
+            }
+        }
+        // Delete corresponding MongoDB Atlas metadata documents (best-effort)
+        $mongoIds = array_map('intval', array_column($filesToDelete, 'id'));
+        if ($mongoIds) {
+            try {
+                $atlas = new MongoDBAtlas();
+                $mr = $atlas->deleteMany(['mysql_id' => ['$in' => $mongoIds]]);
+                if (!$mr['success']) {
+                    error_log('MongoDB Atlas delete failed for legislative records: ' . $mr['error']);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB Atlas delete error: ' . $e->getMessage());
             }
         }
         // Delete DB rows

@@ -21,6 +21,7 @@
  */
 
 require_once __DIR__ . '/pinata.php';
+require_once __DIR__ . '/mongodb_atlas.php';
 
 if (!function_exists('generate_document_prefix')) {
     // Minimal fallback so this file is safe standalone; authdatabase.php defines the real one.
@@ -125,6 +126,8 @@ if (!function_exists('llrm_intake_normalize_type')) {
             $id = (int)$conn->insert_id;
             $st->close();
 
+            llrm_intake_ensure_folder_mongo($id, 'legislative', $name);
+
             return ['id' => $id, 'kind' => 'legislative', 'name' => $name, 'document_prefix' => $prefix, 'last_sequence_number' => 0];
         }
 
@@ -166,7 +169,25 @@ if (!function_exists('llrm_intake_normalize_type')) {
         $id = (int)$conn->insert_id;
         $st->close();
 
+        llrm_intake_ensure_folder_mongo($id, 'archive', $name);
+
         return ['id' => $id, 'kind' => 'archive', 'name' => $name, 'document_prefix' => $prefix, 'last_sequence_number' => 0];
+    }
+
+    /**
+     * Ensure a MongoDB database exists for a folder (created alongside the folder).
+     */
+    function llrm_intake_ensure_folder_mongo($folderId, $kind, $folderName) {
+        if (!class_exists('MongoDBAtlas')) return;
+        try {
+            $atlas = new MongoDBAtlas();
+            $res = $atlas->ensureFolderDatabase((int)$folderId, $kind, $folderName);
+            if (!$res['success']) {
+                error_log('MongoDB folder db creation failed for folder #'.$folderId.' : ' . $res['error']);
+            }
+        } catch (Exception $e) {
+            error_log('MongoDB folder db error for folder #'.$folderId.' : ' . $e->getMessage());
+        }
     }
 
     /**
@@ -404,6 +425,42 @@ if (!function_exists('llrm_intake_normalize_type')) {
         }
         $newId = (int)$conn->insert_id;
         $stmt->close();
+
+        // --- MongoDB Atlas Step: Insert heavy file metadata into the folder's database ---
+        try {
+            $atlas = new MongoDBAtlas();
+            $mongoDoc = [
+                'mysql_id'    => $newId,
+                'ipfs_cid'    => $ipfsCid,
+                'file_name'   => $fileResult['final_name'] ?? $title,
+                'file_size'   => $fileResult['file_size'] ?? 0,
+                'mime_type'   => $fileResult['mime_type'] ?? 'application/octet-stream',
+                'created_at'  => date('c'),
+            ];
+            // Ensure the folder's Mongo database exists and get its name
+            $folderDb = $atlas->ensureFolderDatabase((int)$folder['id'], $folder['kind'], $folder['name']);
+            if (!$folderDb['success'] || empty($folderDb['db_name'])) {
+                $mongoResult = $atlas->insertOne($mongoDoc);
+            } else {
+                $mongoResult = $atlas->insertOneInDb($folderDb['db_name'], 'files', $mongoDoc);
+            }
+            if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
+                // Update MySQL record's mongo_id column with the MongoDB _id string
+                $table = $folder['kind'] === 'legislative' ? 'legislative_records' : 'archive_files';
+                $upd = $conn->prepare("UPDATE {$table} SET mongo_id = ? WHERE id = ?");
+                if ($upd) {
+                    $mid = (string)$mongoResult['new_id'];
+                    $upd->bind_param("si", $mid, $newId);
+                    $upd->execute();
+                    $upd->close();
+                }
+            } else {
+                error_log('MongoDB Atlas insert failed for intake record #'.$newId.' : ' . ($mongoResult['error'] ?? 'unknown error'));
+            }
+        } catch (Exception $e) {
+            error_log('MongoDB Atlas intake error: ' . $e->getMessage());
+        }
+        // ---------------------------------------------------
 
         // Log the intake
         $logSql = "INSERT INTO analytics_events (event_type, record_id, record_title, record_type, created_at) VALUES ('external_intake', ?, ?, ?, NOW())";

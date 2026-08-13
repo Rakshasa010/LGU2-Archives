@@ -75,6 +75,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              $new_id = $conn->insert_id;
              $folder_path = "uploads/archives/" . $new_id . "/";
              if (!file_exists($folder_path)) { @mkdir($folder_path, 0777, true); }
+             // Create the folder's MongoDB database (best-effort)
+             try {
+                 $atlas = new MongoDBAtlas();
+                 $mongoFolder = $atlas->ensureFolderDatabase($new_id, 'archive', $name);
+                 if (!$mongoFolder['success']) {
+                     error_log('MongoDB folder db creation failed for folder #'.$new_id.' : ' . $mongoFolder['error']);
+                 }
+             } catch (Exception $e) {
+                 error_log('MongoDB folder db error for folder #'.$new_id.' : ' . $e->getMessage());
+             }
              $conn->query("CREATE TABLE IF NOT EXISTS notifications (
                  id INT AUTO_INCREMENT PRIMARY KEY,
                  time VARCHAR(20) NOT NULL,
@@ -282,24 +292,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         if ($stmt->execute()) {
                             $new_id = $conn->insert_id;
-                            // --- MongoDB Atlas Step: Insert heavy file metadata ---
-                            $atlas = new MongoDBAtlas();
-                            $mongoDoc = [
-                                'mysql_id'    => (int)$new_id,
-                                'ipfs_cid'    => $ipfsCid,
-                                'file_name'   => $final_name,
-                                'file_size'   => $fileSize,
-                                'mime_type'   => $mimeType,
-                                'created_at'  => date('c')
-                            ];
-                            $mongoResult = $atlas->insertOne($mongoDoc);
-                            if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
-                                // Update MySQL record's mongo_id column with the MongoDB _id string
-                                $conn->query("UPDATE archive_files SET mongo_id = '" . $conn->real_escape_string($mongoResult['new_id']) . "' WHERE id = $new_id");
-                            } else {
-                                // Best-effort: log the failure but don't block the upload
-                                $errMsg = $mongoResult['error'] ?? 'unknown error';
-                                error_log('MongoDB Atlas insert failed for record #'.$new_id.' : '.$errMsg);
+                            // --- MongoDB Atlas Step: Insert heavy file metadata into the folder's database ---
+                            try {
+                                $atlas = new MongoDBAtlas();
+                                $mongoDoc = [
+                                    'mysql_id'    => (int)$new_id,
+                                    'ipfs_cid'    => $ipfsCid,
+                                    'file_name'   => $final_name,
+                                    'file_size'   => $fileSize,
+                                    'mime_type'   => $mimeType,
+                                    'created_at'  => date('c')
+                                ];
+                                // Ensure the folder's Mongo database exists and get its name
+                                $folderDb = $atlas->ensureFolderDatabase($current_folder_id, $is_legislative ? 'legislative' : 'archive', $current_folder['name'] ?? $safe_name);
+                                if (!$folderDb['success'] || empty($folderDb['db_name'])) {
+                                    $mongoResult = $atlas->insertOne($mongoDoc);
+                                } else {
+                                    $mongoResult = $atlas->insertOneInDb($folderDb['db_name'], 'files', $mongoDoc);
+                                }
+                                if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
+                                    // Update MySQL record's mongo_id column with the MongoDB _id string
+                                    $targetTable = $is_legislative ? 'legislative_records' : 'archive_files';
+                                    $conn->query("UPDATE {$targetTable} SET mongo_id = '" . $conn->real_escape_string($mongoResult['new_id']) . "' WHERE id = $new_id");
+                                } else {
+                                    // Best-effort: log the failure but don't block the upload
+                                    $errMsg = $mongoResult['error'] ?? 'unknown error';
+                                    error_log('MongoDB Atlas insert failed for record #'.$new_id.' : '.$errMsg);
+                                }
+                            } catch (Exception $e) {
+                                error_log('MongoDB Atlas insert error for record #'.$new_id.' : ' . $e->getMessage());
                             }
                             // ---------------------------------------------------
                             if ($isBlankUnq) {

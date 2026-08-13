@@ -1,20 +1,7 @@
 <?php
 /**
- * MongoDB Atlas Data API integration helper.
- * PHP constants for SSL verification may not be defined in all environments.
- * We define them here if missing to ensure cURL works correctly.
- */
-if (!defined('CURLOPT_SSL_VERIFYPEER')) {
-    define('CURLOPT_SSL_VERIFYPEER', 1);
-}
-if (!defined('CURLOPT_SSL_VERIFYHOST')) {
-    define('CURLOPT_SSL_VERIFYHOST', 2);
-}
-
-/**
- * MongoDB Atlas Data API integration helper.
+ * MongoDB Atlas integration helper using the native MongoDB PHP driver.
  *
- * Connects to MongoDB Atlas via the REST Data API using cURL.
  * Configuration is read from the project .env file.
  *
  * Supported operations:
@@ -27,12 +14,11 @@ if (!defined('CURLOPT_SSL_VERIFYHOST')) {
  */
 class MongoDBAtlas {
 
-	private $baseUrl;
-	private $dataApiKey;
 	private $connectionString;
 	private $dbName;
 	private $collectionName;
-	private $httpHeaders = [];
+	private $dataApiKey;
+	private $manager;
 
 	public function __construct() {
 		$this->loadConfig();
@@ -43,7 +29,7 @@ class MongoDBAtlas {
 	}
 
 	public function getBaseUrl() {
-		return $this->baseUrl;
+		return $this->connectionString;
 	}
 
 	public function getDbName() {
@@ -73,89 +59,49 @@ class MongoDBAtlas {
 		$this->collectionName   = $env['MONGO_COLLECTION'] ?? 'document_metadata';
 		$this->dataApiKey       = $env['MONGO_DATA_API_KEY'] ?? '';
 
-		// Parse connection string for cluster host
-		// Format: mongodb+srv://username:password@cluster0.example.mongodb.net
-		if (!empty($this->connectionString)) {
-			preg_match('#mongodb\+srv://[^@]+@([^/]+)#', $this->connectionString, $matches);
-			if (!empty($matches[1])) {
-				$this->baseUrl = 'https://' . $matches[1];
+		if (!class_exists('MongoDB\Driver\Manager')) {
+			throw new RuntimeException('MongoDB PHP extension (ext-mongodb) is not installed or enabled.');
+		}
+	}
+
+	/**
+	 * Lazy-get the MongoDB driver Manager instance.
+	 */
+	private function getManager() {
+		if ($this->manager === null) {
+			$this->manager = new MongoDB\Driver\Manager($this->connectionString, [
+				'serverSelectionTimeoutMS' => 15000,
+			]);
+		}
+		return $this->manager;
+	}
+
+	/**
+	 * Convert a MongoDB document into a plain associative array.
+	 * Handles BSON ObjectId, UTCDateTime and nested values.
+	 */
+	private function bsonToArray($doc) {
+		if ($doc instanceof stdClass) {
+			$doc = get_object_vars($doc);
+		}
+		if (!is_array($doc)) {
+			return $doc;
+		}
+		$out = [];
+		foreach ($doc as $k => $v) {
+			if ($v instanceof MongoDB\BSON\ObjectId) {
+				$out[$k] = (string)$v;
+			} elseif ($v instanceof MongoDB\BSON\UTCDateTime) {
+				$out[$k] = $v->toDateTime()->format('c');
+			} elseif ($v instanceof stdClass) {
+				$out[$k] = $this->bsonToArray($v);
+			} elseif (is_array($v)) {
+				$out[$k] = $this->bsonToArray($v);
 			} else {
-				$this->baseUrl = 'https://data.mongodb-api.com/action';
+				$out[$k] = $v;
 			}
-		} else {
-			$this->baseUrl = 'https://data.mongodb-api.com/action';
 		}
-	}
-
-	/**
-	 * Set custom HTTP headers (e.g., Data API key).
-	 */
-	public function setHttpHeader($name, $value) {
-		$this->httpHeaders[$name] = $value;
-	}
-
-	/**
-	 * Perform a cURL request to MongoDB Atlas.
-	 *
-	 * @param string $method  HTTP method (GET, POST)
-	 * @param string $endpoint API endpoint path (relative to base URL)
-	 * @param mixed    $body   JSON body or null
-	 * @return array{success: bool, data: mixed, error?: string}
-	 */
-	private function curlRequest($method, $endpoint, $body = null) {
-		$url = $this->baseUrl . '/' . ltrim($endpoint, '/');
-
-		$ch = curl_init($url);
-		curl_setopt_array($ch, [
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_CUSTOMREQUEST  => $method,
-			CURLOPT_TIMEOUT        => 30,
-			CURLOPT_CONNECTTIMEOUT => 10,
-			CURLOPT_HTTPHEADER     => $this->httpHeaders,
-			// Allow self-signed certs for dev environments
-			CURLOPT_SSL_VERIFYPEER => 1,
-			CURLOPT_SSL_VERIFYHOST => 2,
-		]);
-
-		if ($body !== null) {
-			curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-			curl_setopt($ch, CURLOPT_HTTPHEADER, array_merge($this->httpHeaders, [
-				'Content-Type: application/json',
-			]));
-		}
-
-		$response = curl_exec($ch);
-		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		$curlError = curl_error($ch);
-		curl_close($ch);
-
-		if ($curlError) {
-			return [
-				'success' => false,
-				'error' => 'cURL error: ' . $curlError,
-			];
-		}
-
-		if ($httpCode >= 500) {
-			return [
-				'success' => false,
-				'error' => 'Atlas HTTP ' . $httpCode . ': ' . $response,
-			];
-		}
-
-		$data = json_decode($response, true);
-		if ($data === null && $response !== '') {
-			return [
-				'success' => false,
-				'error' => 'Invalid JSON response: ' . $response,
-			];
-		}
-
-		return [
-			'success' => $httpCode >= 200 && $httpCode < 300,
-			'data'    => $data ?? $response,
-			'httpCode' => $httpCode,
-		];
+		return $out;
 	}
 
 	/**
@@ -166,35 +112,22 @@ class MongoDBAtlas {
 	 * @return array{success: bool, new_id?: string, error?: string}
 	 */
 	public function insertOne(array $document) {
-		$endpoint = $this->dbName . '/' . $this->collectionName . '/insertOne';
+		try {
+			$bulk = new MongoDB\Driver\BulkWrite();
+			$insertedId = $bulk->insert($document);
+			$this->getManager()->executeBulkWrite($this->dbName . '.' . $this->collectionName, $bulk);
 
-		$result = $this->curlRequest('POST', $endpoint, $document);
-
-		if (!$result['success']) {
-			return $result;
+			return [
+				'success' => true,
+				'new_id'  => (string)$insertedId,
+				'error'   => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'error'   => $e->getMessage(),
+			];
 		}
-
-		$data = $result['data'] ?? [];
-
-		// Common response patterns from Atlas insertOne:
-		// { "insertedId": "..." }
-		// { "id": "..." }
-		// { "result": { "n": 1, "ok": 1 } }
-		$newId = null;
-		if (isset($data['insertedId'])) {
-			$newId = (string)$data['insertedId'];
-		} elseif (isset($data['id'])) {
-			$newId = (string)$data['id'];
-		} elseif (isset($data['_id'])) {
-			$newId = (string)$data['_id'];
-		}
-
-		return [
-			'success' => $result['success'],
-			'new_id'  => $newId,
-			'error'   => $result['error'] ?? null,
-			'raw'     => $data,
-		];
 	}
 
 	/**
@@ -206,24 +139,27 @@ class MongoDBAtlas {
 	 * @return array{success: bool, document?: array, error?: string}
 	 */
 	public function findOne(array $filter = []) {
-		$endpoint = $this->dbName . '/' . $this->collectionName . '/findOne';
+		try {
+			$query = new MongoDB\Driver\Query($filter, ['limit' => 1]);
+			$cursor = $this->getManager()->executeQuery($this->dbName . '.' . $this->collectionName, $query);
+			$doc = null;
+			foreach ($cursor as $d) {
+				$doc = $d;
+				break;
+			}
 
-		$result = $this->curlRequest('POST', $endpoint, $filter);
-
-		if (!$result['success']) {
-			return $result;
+			return [
+				'success'  => true,
+				'document' => $doc ? $this->bsonToArray($doc) : null,
+				'error'    => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'document' => null,
+				'error'   => $e->getMessage(),
+			];
 		}
-
-		$data = $result['data'] ?? [];
-
-		// Atlas findOne may return the document directly or nested
-		$doc = $data ?? null;
-
-		return [
-			'success' => $result['success'],
-			'document' => $doc,
-			'error'   => $result['error'] ?? null,
-		];
 	}
 
 	/**
@@ -233,23 +169,237 @@ class MongoDBAtlas {
 	 * @return array{success: bool, documents?: array, error?: string}
 	 */
 	public function find(array $filter = []) {
-		$endpoint = $this->dbName . '/' . $this->collectionName . '/find';
+		try {
+			$query = new MongoDB\Driver\Query($filter);
+			$cursor = $this->getManager()->executeQuery($this->dbName . '.' . $this->collectionName, $query);
 
-		$result = $this->curlRequest('POST', $endpoint, $filter);
+			$docs = [];
+			foreach ($cursor as $doc) {
+				$docs[] = $this->bsonToArray($doc);
+			}
 
-		if (!$result['success']) {
-			return $result;
+			return [
+				'success'  => true,
+				'documents' => $docs,
+				'error'    => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'documents' => [],
+				'error'   => $e->getMessage(),
+			];
 		}
+	}
 
-		$data = $result['data'] ?? [];
+	/**
+	 * Delete documents matching the filter.
+	 *
+	 * @param array $filter Filter criteria (e.g., ['mysql_id' => 101])
+	 * @return array{success: bool, deleted_count?: int, error?: string}
+	 */
+	public function deleteMany(array $filter = []) {
+		try {
+			$bulk = new MongoDB\Driver\BulkWrite();
+			$bulk->delete($filter);
+			$result = $this->getManager()->executeBulkWrite($this->dbName . '.' . $this->collectionName, $bulk);
 
-		// Atlas find may return { documents: [...] } or just [...]
-		$docs = $data['documents'] ?? ($data ?? []);
+			return [
+				'success'       => true,
+				'deleted_count' => $result->getDeletedCount(),
+				'error'         => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'deleted_count' => 0,
+				'error'   => $e->getMessage(),
+			];
+		}
+	}
 
-		return [
-			'success' => $result['success'],
-			'documents' => $docs,
-			'error'   => $result['error'] ?? null,
-		];
+	/**
+	 * Sanitize a folder name into a valid MongoDB database name.
+	 * MongoDB db names may not contain /\. "$*<>:|? and are capped at 64 bytes.
+	 */
+	public static function sanitizeDbName($folderName) {
+		$name = strtolower(trim((string)$folderName));
+		// Replace any character that is not a-z0-9 with a single dash
+		$name = preg_replace('/[^a-z0-9]+/', '-', $name);
+		$name = trim($name, '-');
+		// MongoDB db names must not start with a digit (avoid confusion) — prefix if needed
+		if ($name === '') {
+			$name = 'folder';
+		} elseif (preg_match('/^[0-9]/', $name)) {
+			$name = 'folder-' . $name;
+		}
+		return substr($name, 0, 60);
+	}
+
+	/**
+	 * Registry collection lives inside the default database and maps
+	 * MySQL folder_id -> MongoDB database name.
+	 */
+	private function registryNamespace() {
+		return $this->dbName . '.folder_registry';
+	}
+
+	/**
+	 * Ensure a MongoDB database exists for a system folder.
+	 * If one is already registered for this folder_id it is reused.
+	 * A marker document is inserted so the database physically appears in Atlas.
+	 *
+	 * @param int    $folderId   MySQL folder id (archive_folders / legislative_folders)
+	 * @param string $folderKind 'archive' or 'legislative'
+	 * @param string $folderName Folder display name
+	 * @return array{success: bool, db_name?: string, error?: string}
+	 */
+	public function ensureFolderDatabase($folderId, $folderKind, $folderName) {
+		try {
+			$folderId = (int)$folderId;
+			$folderKind = $folderKind === 'legislative' ? 'legislative' : 'archive';
+			$baseName = self::sanitizeDbName($folderName);
+
+			// Already registered for this folder?
+			$existing = $this->findOneInDb($this->dbName, 'folder_registry', ['folder_id' => $folderId]);
+			if ($existing['success'] && $existing['document']) {
+				return ['success' => true, 'db_name' => $existing['document']['db_name']];
+			}
+
+			// If the sanitized name is taken by a different folder, append the id for uniqueness
+			$candidate = $baseName;
+			$taken = $this->findOneInDb($this->dbName, 'folder_registry', ['db_name' => $candidate]);
+			if ($taken['success'] && $taken['document'] && (int)$taken['document']['folder_id'] !== $folderId) {
+				$candidate = $baseName . '-' . $folderId;
+				$candidate = substr($candidate, 0, 60);
+			}
+
+			// Register the mapping
+			$regDoc = [
+				'folder_id'    => $folderId,
+				'folder_kind'  => $folderKind,
+				'folder_name'  => (string)$folderName,
+				'db_name'      => $candidate,
+				'collection'   => 'files',
+				'created_at'   => date('c'),
+			];
+			$this->insertOneInDb($this->dbName, 'folder_registry', $regDoc);
+
+			// Insert a marker doc so the folder's database physically shows up in Atlas
+			$this->insertOneInDb($candidate, 'files', [
+				'_folder_marker' => true,
+				'folder_id'      => $folderId,
+				'folder_kind'    => $folderKind,
+				'folder_name'    => (string)$folderName,
+				'created_at'     => date('c'),
+			]);
+
+			return ['success' => true, 'db_name' => $candidate];
+		} catch (Exception $e) {
+			return ['success' => false, 'error' => $e->getMessage()];
+		}
+	}
+
+	/**
+	 * Look up the MongoDB database name registered for a folder, if any.
+	 *
+	 * @param int $folderId MySQL folder id
+	 * @return array{success: bool, db_name?: string, document?: array, error?: string}
+	 */
+	public function getFolderDatabase($folderId) {
+		try {
+			$existing = $this->findOneInDb($this->dbName, 'folder_registry', ['folder_id' => (int)$folderId]);
+			if ($existing['success'] && $existing['document']) {
+				return ['success' => true, 'db_name' => $existing['document']['db_name'], 'document' => $existing['document']];
+			}
+			return ['success' => true, 'db_name' => null, 'document' => null];
+		} catch (Exception $e) {
+			return ['success' => false, 'error' => $e->getMessage()];
+		}
+	}
+
+	/**
+	 * Drop a folder's database (used when a system folder is deleted).
+	 *
+	 * @param string $dbName MongoDB database name to drop
+	 * @return array{success: bool, error?: string}
+	 */
+	public function dropDatabase($dbName) {
+		try {
+			$cmd = new MongoDB\Driver\Command(['dropDatabase' => 1]);
+			$this->getManager()->executeCommand($dbName, $cmd);
+			return ['success' => true];
+		} catch (Exception $e) {
+			return ['success' => false, 'error' => $e->getMessage()];
+		}
+	}
+
+	/**
+	 * Insert a document into an arbitrary database/collection.
+	 */
+	public function insertOneInDb($dbName, $collection, array $document) {
+		try {
+			$bulk = new MongoDB\Driver\BulkWrite();
+			$insertedId = $bulk->insert($document);
+			$this->getManager()->executeBulkWrite($dbName . '.' . $collection, $bulk);
+			return [
+				'success' => true,
+				'new_id'  => (string)$insertedId,
+				'error'   => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'error'   => $e->getMessage(),
+			];
+		}
+	}
+
+	/**
+	 * Find a single document in an arbitrary database/collection.
+	 */
+	public function findOneInDb($dbName, $collection, array $filter = []) {
+		try {
+			$query = new MongoDB\Driver\Query($filter, ['limit' => 1]);
+			$cursor = $this->getManager()->executeQuery($dbName . '.' . $collection, $query);
+			$doc = null;
+			foreach ($cursor as $d) {
+				$doc = $d;
+				break;
+			}
+			return [
+				'success'  => true,
+				'document' => $doc ? $this->bsonToArray($doc) : null,
+				'error'    => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'document' => null,
+				'error'   => $e->getMessage(),
+			];
+		}
+	}
+
+	/**
+	 * Delete documents from an arbitrary database/collection.
+	 */
+	public function deleteManyInDb($dbName, $collection, array $filter = []) {
+		try {
+			$bulk = new MongoDB\Driver\BulkWrite();
+			$bulk->delete($filter);
+			$result = $this->getManager()->executeBulkWrite($dbName . '.' . $collection, $bulk);
+			return [
+				'success'       => true,
+				'deleted_count' => $result->getDeletedCount(),
+				'error'         => null,
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'deleted_count' => 0,
+				'error'   => $e->getMessage(),
+			];
+		}
 	}
 }
