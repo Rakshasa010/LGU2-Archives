@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Archives</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="assets/js/login-head.js"></script>
     <link rel="stylesheet" href="assets/css/login.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
@@ -224,7 +225,7 @@
                             <i class="bi bi-envelope text-lg"></i>
                         </span>
                         <input type="text" id="username" name="username" placeholder="your.email@lgu.gov.ph" required
-                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
+                            class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors">
                     </div>
                 </div>
                 <div>

@@ -326,7 +326,7 @@ switch ($action) {
         $docType = $_GET['type'] ?? '';
         $sourceSystem = $_GET['source_system'] ?? '';
 
-        $where = "WHERE 1=1";
+        $where = "WHERE (status IS NULL OR LOWER(status) <> 'routed')";
         $params = [];
         $types = "";
 

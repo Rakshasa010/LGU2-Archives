@@ -62,7 +62,7 @@ $search = $_GET['search'] ?? '';
 $filterType = $_GET['type'] ?? '';
 $filterSource = $_GET['source'] ?? '';
 
-$where = "WHERE 1=1";
+$where = "WHERE (status IS NULL OR LOWER(status) <> 'routed')";
 $params = [];
 $types = "";
 

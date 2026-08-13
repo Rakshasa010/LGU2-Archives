@@ -198,7 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Success stays on page to display message or temporary password smoothly
                 // No redirect so user can copy password if fallback is used.
-                $error = 'Registration failed.';
             }
             $ins->close();
         }
