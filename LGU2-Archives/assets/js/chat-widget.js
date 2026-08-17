@@ -133,7 +133,7 @@ const ArchiveAssistant = {
             <div class="w-8 h-8 rounded-full ${isUser ? 'bg-blue-600' : 'bg-red-600'} flex items-center justify-center text-white text-sm flex-shrink-0">
                 <i class="bi ${isUser ? 'bi-person' : 'bi-robot'}"></i>
             </div>
-            <div class="rounded-2xl ${isUser ? 'rounded-tr-sm bg-blue-600 text-white' : 'rounded-tl-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700'} p-3 shadow-sm max-w-[80%] ${renderMarkdown ? 'ai-md' : ''}"></div>`;
+            <div class="rounded-2xl ${isUser ? 'rounded-tr-sm bg-blue-600 text-white' : 'rounded-tl-sm bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700'} p-3 shadow-sm max-w-[80%] ${renderMarkdown ? 'ai-md' : ''}"></div>`;
         const contentEl = bubble.querySelector('div:last-child');
         if (isUser || !renderMarkdown) {
             contentEl.textContent = text;

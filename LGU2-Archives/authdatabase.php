@@ -1,4 +1,6 @@
 <?php
+// Force Asia/Manila (PHT) timezone for all PHP date() usage across the app
+date_default_timezone_set('Asia/Manila');
 // Load database configuration from .env (project root)
 function load_env($path) {
     $vars = [];
