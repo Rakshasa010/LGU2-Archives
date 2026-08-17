@@ -41,17 +41,13 @@ jobs:
             -e "ssh $SSH_OPTS" \
             --exclude='.git' \
             --exclude='.github' \
+            --exclude='.env' \
             --exclude='node_modules' \
             --exclude='uploads/' \
             --exclude='storage/' \
             --exclude='*.log' \
             --exclude='.tmp_*' \
             ./LGU2-Archives/ "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/LGU2-Archives/"
-
-          # Deploy .env to public_html/.env
-          rsync -avz \
-            -e "ssh $SSH_OPTS" \
-            ./.env "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/.env"
 
       - name: Notify on success
         if: success()
