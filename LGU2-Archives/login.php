@@ -157,13 +157,25 @@
                             status ENUM('unread','read') NOT NULL DEFAULT 'unread',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )");
-                        $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                        // Get user name for notification
+                        $userNameForNotif = null;
+                        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                            $userStmt->bind_param("i", $user['id']);
+                            $userStmt->execute();
+                            if ($userRes = $userStmt->get_result()) {
+                                if ($urow = $userRes->fetch_assoc()) {
+                                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                                }
+                            }
+                            $userStmt->close();
+                        }
+                        $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
                         $ntime = date('h:i A');
                         $ndate = date('Y-m-d');
                         $ncontent = "Security Alert: Multiple failed login attempts for user " . $username;
                         $nabout = "Security";
                         $nstatus = "unread";
-                        $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                        $nt->bind_param("ssssss", $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                         $nt->execute();
                     } else {
                         $stmt = $conn->prepare("UPDATE users SET failed_attempts = ? WHERE id = ?");

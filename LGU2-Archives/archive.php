@@ -265,8 +265,8 @@ switch ($action) {
 
             // Create notification for admins
             $notifContent = "New archived document from {$sourceSystem}: {$title}";
-            $notifSql = "INSERT INTO notifications (time, date, content, about, status, created_at)
-                         VALUES (?, CURDATE(), ?, 'External Intake', 'unread', NOW())";
+            $notifSql = "INSERT INTO notifications (time, date, content, about, user_name, status, created_at)
+                         VALUES (?, CURDATE(), ?, 'External Intake', NULL, 'unread', NOW())";
             $notifStmt = $conn->prepare($notifSql);
             $timeStr = date('h:i A');
             $notifStmt->bind_param("ss", $timeStr, $notifContent);

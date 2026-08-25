@@ -195,6 +195,12 @@ if ($check_column->num_rows == 0) {
     $conn->query("UPDATE users SET login_count = 1");
 }
 
+// Add is_monitored column for user monitoring feature
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'is_monitored'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN is_monitored TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+}
+
 // Create analytics_events table (used by report_analytics.php)
 $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -380,6 +386,12 @@ if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE notifications ADD COLUMN ip_address VARCHAR(45) NULL AFTER status");
     $conn->query("ALTER TABLE notifications ADD COLUMN user_agent VARCHAR(255) NULL AFTER ip_address");
     $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
+}
+
+// Add user_name column for monitoring feature
+$check_user_name = $conn->query("SHOW COLUMNS FROM notifications LIKE 'user_name'");
+if ($check_user_name && $check_user_name->num_rows == 0) {
+    $conn->query("ALTER TABLE notifications ADD COLUMN user_name VARCHAR(100) NULL AFTER about");
 }
 
 // Create contact_messages table (landing page contact form)

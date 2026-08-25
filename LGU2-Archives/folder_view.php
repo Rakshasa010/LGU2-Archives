@@ -42,6 +42,15 @@ if (!$current_folder) {
     exit();
 }
 
+// Log folder open for monitored users
+require_once __DIR__ . '/monitoring_helper.php';
+log_monitored_user_action(
+    $conn,
+    $_SESSION['user_id'] ?? 0,
+    'Folder Open',
+    'Opened folder "' . htmlspecialchars($current_folder['name']) . '"'
+);
+
 // Get parent folder
 $parent_folder = null;
 if (!$is_legislative && $current_folder['parent_id']) {
@@ -97,8 +106,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              $ntime = date('h:i A'); $ndate = date('Y-m-d');
              $ncontent = 'Folder created: ' . $name . ' (ID ' . $new_id . ')';
              $nabout = 'Storage'; $nstatus = 'unread';
-             if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                 $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+             // Get user name for notification
+             $userNameForNotif = null;
+             if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                 $userStmt->bind_param("i", $_SESSION['user_id']);
+                 $userStmt->execute();
+                 if ($userRes = $userStmt->get_result()) {
+                     if ($urow = $userRes->fetch_assoc()) {
+                         $userNameForNotif = trim($urow['full_name'] ?? '');
+                     }
+                 }
+                 $userStmt->close();
+             }
+             if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                 $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                  $ins->execute(); $ins->close();
              }
              echo json_encode(['success' => true, 'folder' => ['id' => $new_id, 'name' => $name, 'slug' => $slug]]);
@@ -396,8 +417,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ntime = date('h:i A'); $ndate = date('Y-m-d');
                 $ncontent = ($num > 1) ? "$num files uploaded in folder #$current_folder_id" : "New upload: {$uploadedFiles[0]['name']} in folder #$current_folder_id";
                 $nabout = 'Uploads'; $nstatus = 'unread';
-                if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                    $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                // Get user name for notification
+                $userNameForNotif = null;
+                if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                    $userStmt->bind_param("i", $_SESSION['user_id']);
+                    $userStmt->execute();
+                    if ($userRes = $userStmt->get_result()) {
+                        if ($urow = $userRes->fetch_assoc()) {
+                            $userNameForNotif = trim($urow['full_name'] ?? '');
+                        }
+                    }
+                    $userStmt->close();
+                }
+                if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                    $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                     $ins->execute(); $ins->close();
                 }
                 echo json_encode([

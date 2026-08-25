@@ -2,6 +2,7 @@
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require 'authdatabase.php';
     require_once __DIR__ . '/includes/mongodb_atlas.php';
+    require_once __DIR__ . '/monitoring_helper.php';
     if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
@@ -71,8 +72,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ntime = date('h:i A'); $ndate = date('Y-m-d');
         $ncontent = 'Yearly export requested: ' . $year . ' by user #' . $uid;
         $nabout = 'Export (Archives ZIP)'; $nstatus = 'unread';
-        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-            $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+        // Get user name for notification
+        $userNameForNotif = null;
+        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+            $userStmt->bind_param("i", $uid);
+            $userStmt->execute();
+            if ($userRes = $userStmt->get_result()) {
+                if ($urow = $userRes->fetch_assoc()) {
+                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                }
+            }
+            $userStmt->close();
+        }
+        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+            $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
             $ins->execute(); $ins->close();
         }
         if (!class_exists('ZipArchive')) {
@@ -371,11 +384,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nabout = 'Hidden Folder';
             $nstatus = 'unread';
             
-            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            // Get user name for notification
+            $userNameForNotif = null;
+            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                $userStmt->bind_param("i", $uid);
+                $userStmt->execute();
+                if ($userRes = $userStmt->get_result()) {
+                    if ($urow = $userRes->fetch_assoc()) {
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                    }
+                }
+                $userStmt->close();
+            }
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                $notif->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                 $notif->execute();
                 $notif->close();
             }
+            
+            // Log hidden folder setup for monitored users
+            log_monitored_user_action($conn, $uid, 'Hidden Folder Access', 'Set up hidden folder');
             
             echo json_encode(['success' => true, 'message' => 'Hidden folder set up successfully']);
         } else {
@@ -426,11 +455,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nabout = 'Hidden Folder';
             $nstatus = 'unread';
             
-            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            // Get user name for notification
+            $userNameForNotif = null;
+            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                $userStmt->bind_param("i", $uid);
+                $userStmt->execute();
+                if ($userRes = $userStmt->get_result()) {
+                    if ($urow = $userRes->fetch_assoc()) {
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                    }
+                }
+                $userStmt->close();
+            }
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                $notif->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                 $notif->execute();
                 $notif->close();
             }
+            
+            // Log hidden folder unlock for monitored users
+            log_monitored_user_action($conn, $uid, 'Hidden Folder Access', 'Unlocked hidden folder');
             
             echo json_encode(['success' => true, 'message' => 'Hidden folder unlocked']);
         } else {
@@ -449,11 +494,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nabout = 'Hidden Folder';
         $nstatus = 'unread';
         
-        if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-            $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+        // Get user name for notification
+        $userNameForNotif = null;
+        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+            $userStmt->bind_param("i", $uid);
+            $userStmt->execute();
+            if ($userRes = $userStmt->get_result()) {
+                if ($urow = $userRes->fetch_assoc()) {
+                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                }
+            }
+            $userStmt->close();
+        }
+        
+        if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+            $notif->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
             $notif->execute();
             $notif->close();
         }
+        
+        // Log hidden folder lock for monitored users
+        log_monitored_user_action($conn, $uid, 'Hidden Folder Access', 'Locked hidden folder');
         
         unset($_SESSION['hidden_folder_unlocked']);
         echo json_encode(['success' => true, 'message' => 'Hidden folder locked']);

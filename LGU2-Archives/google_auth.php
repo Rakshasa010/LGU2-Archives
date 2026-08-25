@@ -167,14 +167,15 @@ for ($attempt = 0; $attempt < 3 && !$inserted; $attempt++) {
                 status ENUM('unread','read') NOT NULL DEFAULT 'unread',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )");
-            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
             if ($nt) {
                 $ntime    = date('h:i A');
                 $ndate    = date('Y-m-d');
                 $ncontent = 'New Google user pending approval: ' . $fullName . ' (' . $email . ')';
                 $nabout   = 'User Management';
                 $nstatus  = 'unread';
-                $nt->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                $userNameForNotif = trim($fullName ?? '');
+                $nt->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                 $nt->execute();
                 $nt->close();
             }

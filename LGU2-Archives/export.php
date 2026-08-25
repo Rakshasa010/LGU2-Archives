@@ -72,7 +72,8 @@ $notif_cols = [
     'file_version' => "VARCHAR(60) DEFAULT NULL",
     'needed_date' => "DATE DEFAULT NULL",
     'request_note' => "TEXT",
-    'purpose' => "VARCHAR(255) DEFAULT NULL"
+    'purpose' => "VARCHAR(255) DEFAULT NULL",
+    'user_name' => "VARCHAR(100) DEFAULT NULL"
 ];
 foreach ($notif_cols as $col => $def) {
     $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
@@ -103,8 +104,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_request'])) {
         $request_note = $request_note !== '' ? $request_note : null;
         $purpose = $purpose !== '' ? $purpose : null;
 
-        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link) VALUES (?,?,?,?,?,?,?,?,?,?,?)")) {
-            $ins->bind_param("sssssssssss", $ntime, $ndate, $file_name, $about, $status, $file_name, $file_version, $needed_date, $request_note, $purpose, $link);
+        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, file_name, file_version, needed_date, request_note, purpose, link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")) {
+            // Get user name for notification
+            $userNameForNotif = null;
+            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                $userStmt->bind_param("i", $_SESSION['user_id']);
+                $userStmt->execute();
+                if ($userRes = $userStmt->get_result()) {
+                    if ($urow = $userRes->fetch_assoc()) {
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                    }
+                }
+                $userStmt->close();
+            }
+            $ins->bind_param("ssssssssssss", $ntime, $ndate, $file_name, $about, $userNameForNotif, $status, $file_name, $file_version, $needed_date, $request_note, $purpose, $link);
             if ($ins->execute()) {
                 $export_notice = "Request Copy created for " . $file_name . ".";
             } else {

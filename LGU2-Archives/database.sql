@@ -84,20 +84,20 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- Seed mock notifications (if table is empty)
-INSERT INTO notifications (time, date, content, about, status)
+INSERT INTO notifications (time, date, content, about, user_name, status)
 SELECT * FROM (
-    SELECT '10:00 AM' AS time, '2026-01-19' AS date, 'New document uploaded: Ordinance No. 123' AS content, 'Document Upload' AS about, 'unread' AS status UNION ALL
-    SELECT '11:00 AM', '2026-01-19', 'System update completed', 'System Maintenance', 'read' UNION ALL
-    SELECT '11:30 AM', '2026-01-19', 'New user registered: Juan Dela Cruz', 'User Registration', 'unread' UNION ALL
-    SELECT '12:15 PM', '2026-01-19', 'Document approved: Resolution No. 456', 'Approval', 'read' UNION ALL
-    SELECT '01:02 PM', '2026-01-19', 'Profile picture updated for Maria', 'Profile Update', 'unread' UNION ALL
-    SELECT '02:20 PM', '2026-01-18', 'User permissions changed for user #34', 'Permissions', 'read' UNION ALL
-    SELECT '03:45 PM', '2026-01-17', 'New comment on Ordinance No. 78', 'Comment', 'read' UNION ALL
-    SELECT '04:10 PM', '2026-01-16', 'Scheduled backup completed', 'Backup', 'read' UNION ALL
-    SELECT '08:00 AM', '2026-01-15', 'Batch import finished (25 records)', 'Import', 'unread' UNION ALL
-    SELECT '09:30 AM', '2026-01-14', 'Access revoked for user #12', 'Security', 'read' UNION ALL
-    SELECT '10:15 AM', '2026-01-13', 'Tagging updated for 3 documents', 'Metadata', 'read' UNION ALL
-    SELECT '11:50 AM', '2026-01-12', 'New message from admin', 'Message', 'unread'
+    SELECT '10:00 AM' AS time, '2026-01-19' AS date, 'New document uploaded: Ordinance No. 123' AS content, 'Document Upload' AS about, NULL AS user_name, 'unread' AS status UNION ALL
+    SELECT '11:00 AM', '2026-01-19', 'System update completed', 'System Maintenance', NULL, 'read' UNION ALL
+    SELECT '11:30 AM', '2026-01-19', 'New user registered: Juan Dela Cruz', 'User Registration', NULL, 'unread' UNION ALL
+    SELECT '12:15 PM', '2026-01-19', 'Document approved: Resolution No. 456', 'Approval', NULL, 'read' UNION ALL
+    SELECT '01:02 PM', '2026-01-19', 'Profile picture updated for Maria', 'Profile Update', NULL, 'unread' UNION ALL
+    SELECT '02:20 PM', '2026-01-18', 'User permissions changed for user #34', 'Permissions', NULL, 'read' UNION ALL
+    SELECT '03:45 PM', '2026-01-17', 'New comment on Ordinance No. 78', 'Comment', NULL, 'read' UNION ALL
+    SELECT '04:10 PM', '2026-01-16', 'Scheduled backup completed', 'Backup', NULL, 'read' UNION ALL
+    SELECT '08:00 AM', '2026-01-15', 'Batch import finished (25 records)', 'Import', NULL, 'unread' UNION ALL
+    SELECT '09:30 AM', '2026-01-14', 'Access revoked for user #12', 'Security', NULL, 'read' UNION ALL
+    SELECT '10:15 AM', '2026-01-13', 'Tagging updated for 3 documents', 'Metadata', NULL, 'read' UNION ALL
+    SELECT '11:50 AM', '2026-01-12', 'New message from admin', 'Message', NULL, 'unread'
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM notifications LIMIT 1);
 

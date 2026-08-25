@@ -472,7 +472,7 @@ if (!function_exists('llrm_intake_normalize_type')) {
         // Create notification for admins
         $notifPrefix = $opts['notification_prefix'] ?? $sourceSystem;
         $notifContent = "New archived record from {$notifPrefix}: {$title}";
-        $notifSql = "INSERT INTO notifications (time, date, content, about, status, created_at) VALUES (?, CURDATE(), ?, 'External Intake', 'unread', NOW())";
+        $notifSql = "INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, CURDATE(), ?, 'External Intake', NULL, 'unread', NOW())";
         $notifStmt = $conn->prepare($notifSql);
         $timeStr = date('h:i A');
         $notifStmt->bind_param("ss", $timeStr, $notifContent);
@@ -656,7 +656,7 @@ if (!function_exists('llrm_intake_normalize_type')) {
         // Create notification for admins
         $notifPrefix = $opts['notification_prefix'] ?? $sourceSystem;
         $notifContent = "New document received from {$notifPrefix}: {$title} (awaiting manual routing)";
-        $notifSql = "INSERT INTO notifications (time, date, content, about, status, created_at) VALUES (?, CURDATE(), ?, 'External Intake', 'unread', NOW())";
+        $notifSql = "INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, CURDATE(), ?, 'External Intake', NULL, 'unread', NOW())";
         $notifStmt = $conn->prepare($notifSql);
         $timeStr = date('h:i A');
         $notifStmt->bind_param("ss", $timeStr, $notifContent);

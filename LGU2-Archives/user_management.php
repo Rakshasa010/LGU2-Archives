@@ -24,6 +24,53 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $target = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+    
+    // Handle toggle_monitor action
+    if ($target > 0 && $action === 'toggle_monitor') {
+        $conn->query("UPDATE users SET is_monitored = NOT is_monitored WHERE id = $target");
+        // Get current monitoring status
+        $statusRes = $conn->query("SELECT is_monitored, full_name FROM users WHERE id = $target");
+        if ($statusRow = $statusRes->fetch_assoc()) {
+            $monitored = $statusRow['is_monitored'];
+            $userName = $statusRow['full_name'];
+            $message = $monitored ? "Started monitoring '$userName'." : "Stopped monitoring '$userName'.";
+            
+            // Add notification
+            $conn->query("CREATE TABLE IF NOT EXISTS notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                time VARCHAR(20) NOT NULL,
+                date DATE NOT NULL,
+                content VARCHAR(255) NOT NULL,
+                about VARCHAR(100) NOT NULL,
+                status ENUM('unread','read') NOT NULL DEFAULT 'unread',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
+            if ($nt) {
+                $ntime = date('h:i A');
+                $ndate = date('Y-m-d');
+                $ncontent = $monitored ? "Started monitoring user: $userName" : "Stopped monitoring user: $userName";
+                $nabout = "Security";
+                $nstatus = "unread";
+                // Get admin's full name
+                $adminName = null;
+                if ($adminStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                    $adminStmt->bind_param("i", $user_id);
+                    $adminStmt->execute();
+                    if ($adminRes = $adminStmt->get_result()) {
+                        if ($adminRow = $adminRes->fetch_assoc()) {
+                            $adminName = trim($adminRow['full_name'] ?? '');
+                        }
+                    }
+                    $adminStmt->close();
+                }
+                $nt->bind_param("ssssss", $ntime, $ndate, $ncontent, $nabout, $adminName, $nstatus);
+                $nt->execute();
+                $nt->close();
+            }
+        }
+    }
+    
     if ($target > 0 && in_array($action, ['approve','reject','delete'], true)) {
         if ($action === 'delete') {
             // Delete user
@@ -55,14 +102,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )");
             // Add notification entry
-            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
             if ($nt) {
                 $ntime = date('h:i A');
                 $ndate = date('Y-m-d');
                 $ncontent = ($action === 'approve' ? 'User approved: ' : 'User rejected: ') . ($info['full_name'] ?? 'User') . ' (' . ($info['username'] ?? '') . ')';
                 $nabout = 'User Management';
                 $nstatus = 'unread';
-                $nt->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                // Get admin's full name
+                $adminName = null;
+                if ($adminStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                    $adminStmt->bind_param("i", $user_id);
+                    $adminStmt->execute();
+                    if ($adminRes = $adminStmt->get_result()) {
+                        if ($adminRow = $adminRes->fetch_assoc()) {
+                            $adminName = trim($adminRow['full_name'] ?? '');
+                        }
+                    }
+                    $adminStmt->close();
+                }
+                $nt->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $adminName, $nstatus);
                 $nt->execute();
                 $nt->close();
             }
@@ -126,7 +185,7 @@ if ($q = $conn->query("SELECT id, username, email, full_name, created_at FROM us
 }
 
 $all_users = [];
-$qStr = "SELECT id, username, email, full_name, status, last_activity, role";
+$qStr = "SELECT id, username, email, full_name, status, last_activity, role, is_monitored";
 // Add extra columns if they exist
 $colCheck = $conn->query("SHOW COLUMNS FROM users LIKE 'nickname'");
 if ($colCheck && $colCheck->num_rows > 0) {
@@ -383,7 +442,12 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                             <?php echo htmlspecialchars($initials); ?>
                                         </div>
                                         <div class="min-w-0">
-                                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate"><?php echo htmlspecialchars($u['full_name']); ?></div>
+                                            <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                                                <?php echo htmlspecialchars($u['full_name']); ?>
+                                                <?php if (!empty($u['is_monitored'])): ?>
+                                                    <span class="ml-1 text-orange-500 dark:text-orange-400" title="Monitored"><i class="bi bi-eye-fill text-xs"></i></span>
+                                                <?php endif; ?>
+                                            </div>
                                             <div class="text-xs text-gray-500 dark:text-gray-400 truncate"><?php echo htmlspecialchars($u['role'] ?? 'user'); ?></div>
                                         </div>
                                     </div>
@@ -422,8 +486,18 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                     ?>
                                 </td>
                                 <td class="px-4 sm:px-6 py-3 sm:py-4">
-                                    <?php if ((int)$u['id'] !== $user_id): // Prevent deleting self ?>
-                                    <form method="post" class="inline-block" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to delete this user?');">
+                                    <?php if ((int)$u['id'] !== $user_id): // Prevent actions on self ?>
+                                    <!-- Monitor Toggle Button -->
+                                    <form method="post" class="inline-block" onsubmit="event.stopPropagation();">
+                                        <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
+                                        <input type="hidden" name="action" value="toggle_monitor">
+                                        <button type="submit" class="<?php echo !empty($u['is_monitored']) ? 'text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'; ?> transition-colors" title="<?php echo !empty($u['is_monitored']) ? 'Stop Monitoring' : 'Start Monitoring'; ?>">
+                                            <i class="bi <?php echo !empty($u['is_monitored']) ? 'bi-eye-fill' : 'bi-eye'; ?>"></i>
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- Delete Button -->
+                                    <form method="post" class="inline-block ml-2" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to delete this user?');">
                                         <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
                                         <input type="hidden" name="action" value="delete">
                                         <button type="submit" class="text-red-600 hover:text-red-800 dark:hover:text-red-400" title="Delete User">

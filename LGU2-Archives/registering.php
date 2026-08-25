@@ -129,14 +129,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )");
                 // Add notification for admins
-                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
                 if ($nt) {
                     $ntime = date('h:i A');
                     $ndate = date('Y-m-d');
                     $ncontent = 'New registration: ' . $full_name . ' (' . $username . ') — awaiting approval';
                     $nabout = 'User Registration';
                     $nstatus = 'unread';
-                    $nt->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                    $userNameForNotif = trim($full_name ?? '');
+                    $nt->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                     $nt->execute();
                     $nt->close();
                 }

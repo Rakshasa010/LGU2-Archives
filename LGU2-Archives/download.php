@@ -3,6 +3,7 @@
 include 'authdatabase.php';
 require_once __DIR__ . '/includes/mongodb_atlas.php';
 require_once __DIR__ . '/includes/pinata.php';
+require_once __DIR__ . '/monitoring_helper.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -97,6 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'download_format' => 'html',
             'bytes' => null
         ]);
+
+        // Log file preview for monitored users
+        log_monitored_user_action(
+            $conn,
+            $_SESSION['user_id'] ?? 0,
+            'File Preview',
+            'Previewed file "' . htmlspecialchars($record['title']) . '" in folder "' . htmlspecialchars($record['type']) . '"'
+        );
 
         $filename = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $record['title']) . '_' . $record['id'];
         generatePDF($record, $filename, 'inline');
@@ -488,6 +497,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'download_format' => $format,
         'bytes' => null
     ]);
+
+    // Log file download for monitored users
+    log_monitored_user_action(
+        $conn,
+        $_SESSION['user_id'] ?? 0,
+        'File Download',
+        'Downloaded "' . htmlspecialchars($record['title']) . '" as ' . strtoupper($format) . ' from folder "' . htmlspecialchars($record['type']) . '"'
+    );
     
 
     // Generate filename

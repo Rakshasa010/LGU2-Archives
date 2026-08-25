@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/monitoring_helper.php';
 
 // Check if OTP session is valid
 if (!isset($_SESSION['otp_pending']) || $_SESSION['otp_pending'] !== true || 
@@ -46,13 +47,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
         
-        $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+        $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
         if ($nt) {
             $ntime = date('h:i A');
             $ndate = date('Y-m-d');
             $label = "User ID #" . $uid;
+            $userNameForNotif = null;
             
-            if ($userStmt = $conn->prepare("SELECT full_name, username FROM users WHERE id = ?")) {
+            if ($userStmt = $conn->prepare("SELECT full_name, username, role FROM users WHERE id = ?")) {
                 $userStmt->bind_param("i", $uid);
                 $userStmt->execute();
                 if ($userRes = $userStmt->get_result()) {
@@ -61,6 +63,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
                         if (!empty($urow['full_name'])) $parts[] = $urow['full_name'];
                         if (!empty($urow['username'])) $parts[] = '@' . $urow['username'];
                         if (!empty($parts)) $label = implode(' ', $parts);
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
                     }
                 }
                 $userStmt->close();
@@ -69,9 +72,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['verify_otp'])) {
             $ncontent = "User login verified via OTP: " . $label;
             $nabout = "Login";
             $nstatus = "unread";
-            $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            $nt->bind_param("ssssss", $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
             $nt->execute();
             $nt->close();
+            
+            // Log login for monitored users
+            log_monitored_user_action($conn, $uid, 'Login', 'Logged in successfully');
         }
         
         $_SESSION['otp_pending'] = false;

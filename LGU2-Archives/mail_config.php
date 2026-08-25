@@ -13,7 +13,7 @@ return [
     'host'       => 'smtp.gmail.com',
     'port'       => 587,
     'username'   => 'johnpauldeluna06@gmail.com',
-    'password'   => 'brztabzekgoefrix',
+    'password'   => 'mftrjnhqmpmorozb',
     'from_email' => 'johnpauldeluna06@gmail.com',
     'from_name'  => 'Archives',
     'encryption' => 'tls',

@@ -231,8 +231,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
         $ncontent = 'Export requested: '.strtoupper($action).' by user #'.$uid;
         $nabout = 'Export (Reports & Analytics)';
         $nstatus = 'unread';
-        $ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)");
-        if ($ins) { $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus); $ins->execute(); $ins->close(); }
+        // Get user name for notification
+        $userNameForNotif = null;
+        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+            $userStmt->bind_param("i", $uid);
+            $userStmt->execute();
+            if ($userRes = $userStmt->get_result()) {
+                if ($urow = $userRes->fetch_assoc()) {
+                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                }
+            }
+            $userStmt->close();
+        }
+        $ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)");
+        if ($ins) { $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus); $ins->execute(); $ins->close(); }
         if ($action === 'txt') {
             $filename = 'report_analytics_' . date('Ymd_His') . '.txt';
             header('Content-Type: text/plain; charset=UTF-8');
