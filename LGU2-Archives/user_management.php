@@ -269,7 +269,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
             </div>
         <?php endif; ?>
 
-        <!-- Database Backup & Restore Panel -->
+        <!-- Database Backup & Restore Panel
         <div class="bg-gradient-to-r from-red-800 to-red-900 rounded-xl shadow-lg border border-red-700 p-6 mb-8 flex flex-col md:flex-row items-center justify-between text-white">
             <div class="flex items-center space-x-4 mb-4 md:mb-0">
                 <div class="bg-white/20 p-3 rounded-full">
@@ -283,12 +283,12 @@ if ($folders_result && $folders_result->num_rows > 0) {
             <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
                 <a id="downloadBackupBtn" href="backup_database.php" target="_blank" class="w-full sm:w-auto px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shadow-md">
                     <i class="bi bi-download mr-2"></i> Download Backup
-                </a>
+                /*</a>
                 <button onclick="openRestoreModal()" class="w-full sm:w-auto px-5 py-2.5 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center shadow-md border border-white/20">
                     <i class="bi bi-upload mr-2"></i> Restore Database
-                </button>
+                </button>*/
             </div>
-        </div>
+        </div> -->
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div class="font-semibold">Pending Approvals</div>
