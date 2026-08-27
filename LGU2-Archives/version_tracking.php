@@ -499,7 +499,13 @@ $conn->close();
                     '</div>';
 
                 card.addEventListener('click', function() {
-                    vtSelectFolderFromGrid(folder);
+                    if (window.folderOTP) {
+                        window.folderOTP.guard(null, function() {
+                            vtSelectFolderFromGrid(folder);
+                        });
+                    } else {
+                        vtSelectFolderFromGrid(folder);
+                    }
                 });
                 grid.appendChild(card);
             });
@@ -1297,6 +1303,20 @@ $conn->close();
                 chevron.className = 'bi bi-chevron-down text-sm';
             }
         }
+    </script>
+    <script src="assets/js/folder-otp.js"></script>
+    <script>
+    (function () {
+        if (!window.folderOTP) return;
+        document.addEventListener('click', function (e) {
+            var link = e.target.closest('a.vt-folder-link');
+            if (!link) return;
+            e.preventDefault();
+            window.folderOTP.guard(null, function () {
+                window.location.href = link.href;
+            });
+        });
+    })();
     </script>
     <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/theme-toggle.js"></script>
