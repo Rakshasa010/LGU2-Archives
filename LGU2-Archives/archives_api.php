@@ -1,5 +1,6 @@
 <?php
 require 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 header('Content-Type: application/json');
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success'=>false,'message'=>'Unauthorized']); exit; }
@@ -8,13 +9,13 @@ if ($action === 'list_folders') {
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     $page_size = isset($_GET['page_size']) ? max(1, min(100, intval($_GET['page_size']))) : 20;
     $total = 0;
-    $cnt = $conn->query("SELECT COUNT(*) AS cnt FROM archive_folders");
+    $cnt = $conn->query("SELECT COUNT(*) AS cnt FROM archive_folders WHERE parent_id IS NULL");
     if ($cnt && ($r = $cnt->fetch_assoc())) $total = (int)$r['cnt'];
     $total_pages = max(1, ceil($total / $page_size));
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $rows = [];
-    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders ORDER BY created_at DESC LIMIT ?, ?");
+    $stmt = $conn->prepare("SELECT id, name, created_at FROM archive_folders WHERE parent_id IS NULL ORDER BY created_at DESC LIMIT ?, ?");
     if ($stmt) {
         $stmt->bind_param("ii", $offset, $page_size);
         $stmt->execute();
@@ -45,6 +46,8 @@ if ($action === 'get_files') {
         parent_version_id INT NULL,
         file_size BIGINT NULL,
         version_notes TEXT NULL,
+        ipfs_cid VARCHAR(255) NULL,
+        mime_type VARCHAR(100) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
     // Total = number of unique version groups (name + author + unique_number)
@@ -61,7 +64,7 @@ if ($action === 'get_files') {
     $offset = ($page - 1) * $page_size;
     $rows = [];
     // Only the latest version of each group is returned, with a version_count
-    $sql = "SELECT af.id, af.name, af.file_path, af.author, af.unique_number, af.file_date, af.version, af.parent_version_id, af.version_notes, af.created_at,
+    $sql = "SELECT af.id, af.name, af.file_path, af.author, af.unique_number, af.file_date, af.version, af.parent_version_id, af.version_notes, af.ipfs_cid, af.mime_type, af.created_at,
                 (SELECT COUNT(*) FROM archive_files af2
                  WHERE af2.folder_id = af.folder_id
                    AND af2.name = af.name
@@ -97,6 +100,9 @@ if ($action === 'get_files') {
                 'version_count'=> (int)($r['version_count'] ?? 1),
                 'version_notes'=>$r['version_notes'],
                 'parent_version_id'=> isset($r['parent_version_id']) ? (int)$r['parent_version_id'] : null,
+                'ipfs_cid'=>$r['ipfs_cid'] ?? null,
+                'mime_type'=>$r['mime_type'] ?? null,
+                'ipfs_url'=> !empty($r['ipfs_cid']) ? pinata_gateway_url($r['ipfs_cid']) : null,
                 'created_at'=>$r['created_at']
             ];
         }
@@ -121,6 +127,8 @@ if ($action === 'get_versions') {
         parent_version_id INT NULL,
         file_size BIGINT NULL,
         version_notes TEXT NULL,
+        ipfs_cid VARCHAR(255) NULL,
+        mime_type VARCHAR(100) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
     $root = $id;
@@ -146,7 +154,7 @@ if ($action === 'get_versions') {
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $versions = [];
-    if ($st2 = $conn->prepare("SELECT id, name, author, unique_number, file_date, file_path, version, version_notes, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
+    if ($st2 = $conn->prepare("SELECT id, name, author, unique_number, file_date, file_path, version, version_notes, ipfs_cid, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
         $st2->bind_param("iiii", $root, $root, $offset, $page_size);
         $st2->execute();
         $res2 = $st2->get_result();
@@ -160,6 +168,8 @@ if ($action === 'get_versions') {
                 'file_path'=>$v['file_path'],
                 'version'=>(int)($v['version'] ?? 1),
                 'version_notes'=>$v['version_notes'],
+                'ipfs_cid'=>$v['ipfs_cid'] ?? null,
+                'ipfs_url'=> !empty($v['ipfs_cid']) ? pinata_gateway_url($v['ipfs_cid']) : null,
                 'created_at'=>$v['created_at'],
             ];
         }

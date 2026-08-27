@@ -50,9 +50,8 @@ if ($folders_result && $folders_result->num_rows > 0) {
     }
 }
 
-// Fetch all folders (archive + legislative) for main content area
+// Fetch archive folders for main content area
 $all_folders = [];
-// Archive folders with file counts
 if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
     $af_result = $conn->query("
         SELECT af.id, af.name, af.slug, af.created_at,
@@ -78,39 +77,6 @@ if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
         }
     }
 }
-// Legislative folders with file counts
-if ($conn->query("SHOW TABLES LIKE 'legislative_folders'")->num_rows > 0) {
-    $lf_result = $conn->query("
-        SELECT lf.id, lf.name, lf.type, lf.created_at,
-               COUNT(DISTINCT lr.id) AS file_count,
-               MAX(lr.created_at) AS last_modified
-        FROM legislative_folders lf
-        LEFT JOIN legislative_records lr ON lr.folder_id = lf.id
-        GROUP BY lf.id, lf.name, lf.type, lf.created_at
-        ORDER BY lf.created_at DESC
-    ");
-    if ($lf_result) {
-        while ($row = $lf_result->fetch_assoc()) {
-            $type = strtolower($row['type'] ?? '');
-            $icon = 'bi-folder-fill';
-            $icon_color = 'slate';
-            if ($type === 'ordinance' || $type === 'resolution') { $icon = 'bi-file-earmark-text'; $icon_color = 'orange'; }
-            elseif ($type === 'billing') { $icon = 'bi-receipt'; $icon_color = 'green'; }
-            elseif ($type === 'public hearing') { $icon = 'bi-megaphone'; $icon_color = 'blue'; }
-            elseif ($type === 'meeting') { $icon = 'bi-journal-text'; $icon_color = 'purple'; }
-            $all_folders[] = [
-                'id' => $row['id'],
-                'name' => $row['name'],
-                'source' => 'legislative',
-                'file_count' => (int)$row['file_count'],
-                'last_modified' => $row['last_modified'],
-                'created_at' => $row['created_at'],
-                'icon_color' => $icon_color,
-                'icon' => $icon
-            ];
-        }
-    }
-}
 
 // Handle folder parameter from sidebar dropdown
 $selected_folder = isset($_GET['folder']) ? trim($_GET['folder']) : null;
@@ -119,36 +85,16 @@ $page_subtitle = "Select a folder from the sidebar to view files";
 
 // Set page title and subtitle based on selected folder
 if ($selected_folder) {
-    switch ($selected_folder) {
-        case 'ordinances':
-            $page_title = "Version Tracking - Ordinances & Resolutions";
-            $page_subtitle = "Track versions for ordinances and resolutions";
-            break;
-        case 'billing':
-            $page_title = "Version Tracking - Billing";
-            $page_subtitle = "Track versions for billing records";
-            break;
-        case 'public-hearings':
-            $page_title = "Version Tracking - Public Hearings";
-            $page_subtitle = "Track versions for public hearing records";
-            break;
-        case 'meetings':
-            $page_title = "Version Tracking - Meeting Records";
-            $page_subtitle = "Track versions for meeting and session records";
-            break;
-        default:
-            // Check if it's an archive folder
-            if (strpos($selected_folder, 'archive_') === 0) {
-                $folder_id = (int)str_replace('archive_', '', $selected_folder);
-                foreach ($archive_folders as $folder) {
-                    if ($folder['id'] == $folder_id) {
-                        $page_title = "Version Tracking - " . $folder['name'];
-                        $page_subtitle = "Track versions for " . $folder['name'] . " files";
-                        break;
-                    }
-                }
+    // Check if it's an archive folder
+    if (strpos($selected_folder, 'archive_') === 0) {
+        $folder_id = (int)str_replace('archive_', '', $selected_folder);
+        foreach ($archive_folders as $folder) {
+            if ($folder['id'] == $folder_id) {
+                $page_title = "Version Tracking - " . $folder['name'];
+                $page_subtitle = "Track versions for " . $folder['name'] . " files";
+                break;
             }
-            break;
+        }
     }
 }
 
@@ -168,8 +114,8 @@ $conn->close();
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <title>Version Tracking</title>
-    <meta name="description" content="Version tracking for legislative records">
-    <meta name="keywords" content="version tracking, archives, legislative records">
+    <meta name="description" content="Version tracking for archive records">
+    <meta name="keywords" content="version tracking, archives">
     <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
     <?php include 'includes/header_scripts.php'; ?>
@@ -214,7 +160,7 @@ $conn->close();
                         <!-- Page Title -->
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
-                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Version Tracking</h2>
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100"><i class="bi bi-clock-history text-red-600 dark:text-red-400 mr-1"></i>Version Tracking</h2>
                             </div>
                         </div>
                         
@@ -541,7 +487,7 @@ $conn->close();
                             '<i class="bi ' + folder.icon + '"></i>' +
                         '</div>' +
                         '<div class="text-xs font-medium px-2 py-0.5 rounded-full ' + colors.bg + ' ' + colors.text + ' border ' + colors.border + '">' +
-                            (folder.source === 'legislative' ? 'Legislative' : 'Archive') +
+                            'Archive' +
                         '</div>' +
                     '</div>' +
                     '<div class="min-w-0 mt-4">' +
@@ -588,60 +534,11 @@ $conn->close();
 
             if (folder.source === 'archive') {
                 selectArchiveFolder('archive_' + folder.id, folder.name, folder.id);
-            } else {
-                // Find the matching vtFolderConfig key or load directly
-                var typeLower = (folder.name || '').toLowerCase();
-                var configKey = null;
-                if (typeLower.indexOf('ordinance') >= 0 || typeLower.indexOf('resolution') >= 0) configKey = 'ordRes';
-                else if (typeLower.indexOf('billing') >= 0) configKey = 'billing';
-                else if (typeLower.indexOf('public hearing') >= 0) configKey = 'publicHearing';
-                else if (typeLower.indexOf('meeting') >= 0) configKey = 'meeting';
-
-                if (configKey && vtFolderConfig[configKey]) {
-                    selectFolder(configKey, folder.name);
-                } else {
-                    // Generic legislative folder — load via legislative_api with folder_id
-                    vtLoadLegislativeFolder(folder.id, folder.name);
-                }
             }
 
             // Update URL without reload
             var newUrl = 'version_tracking.php?folder=' + vtSelectedFolder;
             history.pushState(null, '', newUrl);
-        }
-
-        function vtLoadLegislativeFolder(folderId, folderName) {
-            vtCurrentLoadContext = function() { vtLoadLegislativeFolder(folderId, folderName); };
-            var grid = document.getElementById('vt-files-grid');
-            grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">Loading...</div>';
-
-            fetch('legislative_api.php?action=get_files&folder_id=' + encodeURIComponent(folderId) + '&page=' + vtCurrentPage + '&page_size=' + vtPageSize)
-                .then(function(r) { return r.json(); })
-                .then(function(d) {
-                    if (d.success && d.files) {
-                        vtAllFiles = d.files.map(function(f) {
-                            return { id: f.id, title: f.name || f.title, created_at: f.created_at, version: f.version || 1, version_count: f.version_count || 1, type: f.type || 'Legislative', file_path: f.file_path, author: f.author, unique_number: f.unique_number, version_notes: f.version_notes, file_date: f.file_date };
-                        });
-                    } else {
-                        vtAllFiles = [];
-                    }
-                    document.getElementById('vt-stat-total').textContent = d.total || vtAllFiles.length;
-                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(function(f) { return f.version_count && f.version_count > 1; }).length;
-                    var todayStr = new Date().toISOString().split('T')[0];
-                    var todayCount = vtAllFiles.filter(function(f) { return f.created_at && f.created_at.startsWith(todayStr); }).length;
-                    document.getElementById('vt-stat-today').textContent = todayCount;
-                    document.getElementById('vt-search-files').value = '';
-                    vtFilteredFiles = [];
-                    vtPagination.setPage(d.page || 1);
-                    vtPagination.update(d.total || vtAllFiles.length);
-                    renderFiles(vtAllFiles);
-                })
-                .catch(function(error) {
-                    console.error('Error loading legislative folder:', error);
-                    vtAllFiles = [];
-                    vtFilteredFiles = [];
-                    renderFiles([]);
-                });
         }
 
         function vtBackToFolders() {
@@ -658,15 +555,6 @@ $conn->close();
             vtFilteredFiles = [];
             history.pushState(null, '', 'version_tracking.php');
         }
-
-        // Folder config
-        const vtFolderConfig = {
-            ordRes: { label: 'Ordinances & Resos', types: ['Ordinance', 'Resolution'], iconColor: 'orange' },
-            billing: { label: 'Billing', types: ['Billing'], iconColor: 'green' },
-            publicHearing: { label: 'Public Hearings', types: ['Public Hearing'], iconColor: 'blue' },
-            meeting: { label: 'Meeting/Sessions', types: ['Meeting'], iconColor: 'purple' },
-            phpFiles: { label: 'PHP Files', types: [], iconColor: 'teal' } // Using mock data for now
-        };
 
         // Initialize
         (function() {
@@ -693,37 +581,8 @@ $conn->close();
                         var folderName = archiveLink.querySelector('span').textContent;
                         selectArchiveFolder('archive_' + folderId, folderName, folderId);
                     }
-                } else if (folderParam.startsWith('legislative_')) {
-                    var legId = folderParam.replace('legislative_', '');
-                    var found = vtAllFolders.find(function(f) { return f.source === 'legislative' && String(f.id) === legId; });
-                    if (found) {
-                        vtSelectFolderFromGrid(found);
-                        return;
-                    }
-                } else {
-                    // Map legislative folder params to their display configuration
-                    var folderMapping = {
-                        'ordinances': { key: 'ordRes', label: 'Ordinances & Resolutions' },
-                        'billing': { key: 'billing', label: 'Billing' },
-                        'public-hearings': { key: 'publicHearing', label: 'Public Hearings' },
-                        'meetings': { key: 'meeting', label: 'Meeting Records' }
-                    };
-                    
-                    if (folderMapping[folderParam]) {
-                        var config = folderMapping[folderParam];
-                        selectFolder(config.key, config.label);
-                    }
                 }
             }
-
-            // Attach folder button click handlers
-            document.querySelectorAll('.vt-folder-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var key = this.getAttribute('data-folder-key');
-                    var label = this.getAttribute('data-folder-label');
-                    selectFolder(key, label);
-                });
-            });
 
             // Search functionality
             var searchInput = document.getElementById('vt-search-files');
@@ -821,102 +680,6 @@ $conn->close();
                     document.getElementById('vt-stat-today').textContent = '0';
                     renderFiles([]);
                 });
-        }
-
-        function selectFolder(key, label) {
-            vtCurrentPage = 1;
-            vtFilteredFiles = [];
-            vtSelectedFolder = key;
-            document.getElementById('vt-page-title').textContent = 'Version Tracking — ' + label;
-            document.getElementById('page-title').textContent = label;
-            document.getElementById('vt-search-files').placeholder = 'Search in ' + label + '...';
-
-            // Update active state on folder buttons
-            document.querySelectorAll('.vt-folder-btn').forEach(function(btn) {
-                btn.classList.remove('bg-red-600/90', 'to-orange-500/80', 'ring-1', 'ring-white/20', 'border', 'border-white/15', 'text-white');
-                btn.classList.add('text-white/80', 'hover:bg-white/10');
-            });
-            document.querySelectorAll('.vt-folder-btn[data-folder-key="' + key + '"]').forEach(function(btn) {
-                btn.classList.add('bg-red-600/90', 'to-orange-500/80', 'ring-1', 'ring-white/20', 'border', 'border-white/15', 'text-white');
-            });
-
-            // Hide folder grid, show files section
-            document.getElementById('vt-folder-grid-section').classList.add('hidden');
-            document.getElementById('vt-files-section').classList.remove('hidden');
-            document.getElementById('vt-back-btn').classList.remove('hidden');
-            document.getElementById('vt-back-btn').classList.add('flex');
-            document.getElementById('vt-no-search-results').classList.add('hidden');
-
-            // Load files
-            loadFiles(key);
-        }
-
-        function loadFiles(key) {
-            vtCurrentLoadContext = function() { loadFiles(key); };
-            var grid = document.getElementById('vt-files-grid');
-            grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">Loading...</div>';
-
-            if (key === 'phpFiles') {
-                vtAllFiles = [
-                    { id: 1, title: 'authdatabase.php', created_at: '2026-07-05T10:30:00Z', version: 2, version_count: 2, type: 'PHP', author: 'System', file_path: 'authdatabase.php' },
-                    { id: 2, title: 'sidebar-centralized.php', created_at: '2026-07-04T09:15:00Z', version: 3, version_count: 3, type: 'PHP', author: 'System', file_path: 'sidebar-centralized.php' },
-                    { id: 3, title: 'storage.php', created_at: '2026-06-28T14:20:00Z', version: 1, version_count: 1, type: 'PHP', author: 'System', file_path: 'storage.php' },
-                    { id: 4, title: 'version_tracking.php', created_at: '2026-06-25T11:45:00Z', version: 5, version_count: 5, type: 'PHP', author: 'System', file_path: 'version_tracking.php' },
-                    { id: 5, title: 'report_analytics.php', created_at: '2026-05-10T16:00:00Z', version: 2, version_count: 2, type: 'PHP', author: 'System', file_path: 'report_analytics.php' }
-                ];
-                
-                document.getElementById('vt-stat-total').textContent = vtAllFiles.length;
-                document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => (f.version_count || f.version || 1) > 1).length;
-                
-                let todayCount = 0;
-                let todayStr = new Date().toISOString().split('T')[0];
-                vtAllFiles.forEach(f => {
-                    if (f.created_at && f.created_at.startsWith(todayStr)) todayCount++;
-                });
-                document.getElementById('vt-stat-today').textContent = todayCount;
-
-                document.getElementById('vt-search-files').value = '';
-                vtFilteredFiles = [];
-                vtPagination.update(vtAllFiles.length);
-                renderFiles(vtAllFiles);
-            } else {
-                const config = vtFolderConfig[key];
-                var promises = config.types.map(function(t) {
-                    return fetch('legislative_api.php?action=get_files&type=' + encodeURIComponent(t) + '&page=' + vtCurrentPage + '&page_size=' + vtPageSize)
-                        .then(function(r){ return r.json(); })
-                        .then(function(d){ return d; });
-                });
-
-                Promise.all(promises).then(function(results) {
-                    var allFiles = [];
-                    var totalCount = 0;
-                    results.forEach(function(d) {
-                        if (d.success && d.files) {
-                            allFiles = allFiles.concat(d.files);
-                            totalCount += (d.total || d.files.length);
-                        }
-                    });
-                    vtAllFiles = allFiles.sort(function(a, b) {
-                        return new Date(b.created_at) - new Date(a.created_at);
-                    });
-
-                    document.getElementById('vt-stat-total').textContent = totalCount || vtAllFiles.length;
-                    document.getElementById('vt-stat-versions').textContent = vtAllFiles.filter(f => (f.version_count || f.version || 1) > 1).length;
-                    
-                    let todayCount = 0;
-                    let todayStr = new Date().toISOString().split('T')[0];
-                    vtAllFiles.forEach(f => {
-                        if (f.created_at && f.created_at.startsWith(todayStr)) todayCount++;
-                    });
-                    document.getElementById('vt-stat-today').textContent = todayCount;
-
-                    document.getElementById('vt-search-files').value = '';
-                    vtFilteredFiles = [];
-                    vtPagination.setPage(results[0]?.page || 1);
-                    vtPagination.update(totalCount || vtAllFiles.length);
-                    renderFiles(vtAllFiles);
-                });
-            }
         }
 
         function renderFiles(files) {
@@ -1072,97 +835,48 @@ $conn->close();
                 });
             });
             
-            // Check if it's an archive file (type 'Archive')
-            const isArchiveFile = record && record.type === 'Archive';
-            
-            if (isArchiveFile) {
-                // Use archives_api.php for archive file versions
-                fetch('archives_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
-                .then(r => r.json())
-                .then(d => {
-                    vtCompareVersions = (d.success && d.versions) ? d.versions : [];
-                    vtCompareRecord = record;
-                    if(d.success) {
-                        if(d.versions.length === 0) {
-                            list.innerHTML = '<div class="text-center text-gray-500">No version history found.</div>';
-                        } else {
-                            list.innerHTML = d.versions.map(v => {
-                                var notes = v.version_notes ? String(v.version_notes).trim() : '';
-                                var vAuthor = v.author || record.author || 'System';
-                                var unq = v.unique_number ? String(v.unique_number).trim() : '';
-                                return `
-                                <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
-                                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                                ${v.created_at} • ${vAuthor}
-                                                ${unq ? ' <span class="font-mono">#' + escapeHtml(unq) + '</span>' : ''}
-                                            </div>
-                                        </div>
-                                        <div class="flex space-x-2">
-                                            <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path || record.file_path, title: v.title || record.title, type: isArchiveFile ? 'Archive' : (record.type||'')})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
-                                            <a href="${v.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
+            // Load version history from archives_api
+            fetch('archives_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
+            .then(r => r.json())
+            .then(d => {
+                vtCompareVersions = (d.success && d.versions) ? d.versions : [];
+                vtCompareRecord = record;
+                if(d.success) {
+                    if(d.versions.length === 0) {
+                        list.innerHTML = '<div class="text-center text-gray-500">No version history found.</div>';
+                    } else {
+                        list.innerHTML = d.versions.map(v => {
+                            var notes = v.version_notes ? String(v.version_notes).trim() : '';
+                            var vAuthor = v.author || record.author || 'System';
+                            var unq = v.unique_number ? String(v.unique_number).trim() : '';
+                            return `
+                            <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            ${v.created_at} • ${vAuthor}
+                                            ${unq ? ' <span class="font-mono">#' + escapeHtml(unq) + '</span>' : ''}
                                         </div>
                                     </div>
-                                    ${notes ? '<div class="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-600 px-2 py-1"><span class="font-semibold">Change note:</span> ' + escapeHtml(notes) + '</div>' : ''}
-                                </div>
-                            `;
-                            }).join('');
-                        }
-                    } else {
-                        list.innerHTML = '<div class="text-red-500 text-center">Failed to load version history</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading archive versions:', error);
-                    list.innerHTML = '<div class="text-red-500 text-center">Error loading version history</div>';
-                });
-            } else {
-                fetch('legislative_api.php?action=get_versions&id=' + (record && record.id ? record.id : ''))
-                .then(r => r.json())
-                .then(d => {
-                    vtCompareVersions = (d.success && d.versions) ? d.versions : [];
-                    vtCompareRecord = record;
-                    if(d.success) {
-                        if(d.versions.length === 0) {
-                            list.innerHTML = '<div class="text-center text-gray-500">No history found.</div>';
-                        } else {
-                            list.innerHTML = d.versions.map(v => {
-                                var notes = v.version_notes ? String(v.version_notes).trim() : '';
-                                var unq = v.unique_number ? String(v.unique_number).trim() : '';
-                                return `
-                                <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
-                                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                                ${v.created_at} • ${v.author}
-                                                ${unq ? ' <span class="font-mono">#' + escapeHtml(unq) + '</span>' : ''}
-                                            </div>
-                                        </div>
-                                        <div class="flex space-x-2">
-                                            <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path, title: v.title || record.title, type: record.type||''})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
-                                            <a href="download.php?${new URLSearchParams({
-                                                id: v.id,
-                                                title: (record && record.title) ? record.title : (v.title || 'Document'),
-                                                type: (record && record.type) ? record.type : '',
-                                                month: (record && record.month) ? record.month : '',
-                                                year: (record && record.year) ? record.year : '',
-                                                author: (record && record.author) ? record.author : ''
-                                            }).toString()}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
-                                        </div>
+                                    <div class="flex space-x-2">
+                                        <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path || record.file_path, title: v.title || record.title, type: 'Archive'})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
+                                        <a href="${v.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
                                     </div>
-                                    ${notes ? '<div class="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-600 px-2 py-1"><span class="font-semibold">Change note:</span> ' + escapeHtml(notes) + '</div>' : ''}
                                 </div>
-                            `;
-                            }).join('');
-                        }
-                    } else {
-                        list.innerHTML = '<div class="text-red-500 text-center">Failed to load versions</div>';
+                                ${notes ? '<div class="mt-2 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-slate-600 px-2 py-1"><span class="font-semibold">Change note:</span> ' + escapeHtml(notes) + '</div>' : ''}
+                            </div>
+                        `;
+                        }).join('');
                     }
-                });
-            }
+                } else {
+                    list.innerHTML = '<div class="text-red-500 text-center">Failed to load version history</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading archive versions:', error);
+                list.innerHTML = '<div class="text-red-500 text-center">Error loading version history</div>';
+            });
 
             document.getElementById('versionModal').classList.remove('hidden');
         }
@@ -1184,7 +898,35 @@ $conn->close();
                 body.innerHTML = '<img src="' + fp + '" alt="' + escapeHtml(title) + '" class="max-w-full max-h-full mx-auto object-contain rounded shadow-lg" style="max-height:65vh">';
             } else if (ext === 'pdf') {
                 body.innerHTML = '<iframe src="' + fp + '" class="w-full h-full rounded border-0" style="height:65vh" title="' + escapeHtml(title) + '"></iframe>';
-            } else if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) {
+            } else if (ext === 'docx') {
+                var pathOnly = String(fp).split('?')[0];
+                body.innerHTML = '<div class="text-center py-10" id="vt-docx-loading"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto mb-3"></div><p class="text-sm text-gray-500 dark:text-gray-400">Extracting document text…</p></div>';
+                fetch('preview_docx_text.php?path=' + encodeURIComponent(pathOnly))
+                    .then(function(res) { return res.json(); })
+                    .then(function(d) {
+                        if (d && d.success) {
+                            var pre = document.createElement('pre');
+                            pre.className = 'w-full h-full rounded border-0 bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-100 p-4 text-sm leading-relaxed whitespace-pre-wrap font-sans overflow-auto';
+                            pre.style.height = '65vh';
+                            pre.textContent = d.text;
+                            body.innerHTML = '';
+                            body.appendChild(pre);
+                        } else {
+                            body.innerHTML = '<div class="text-center py-12 px-4">' +
+                                '<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center"><i class="bi bi-file-earmark-word text-2xl text-gray-400"></i></div>' +
+                                '<p class="text-gray-500 dark:text-gray-400 mb-4">' + (d && d.error ? escapeHtml(d.error) : 'No readable text could be extracted from this document.') + '</p>' +
+                                '<a href="' + fp + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                            '</div>';
+                        }
+                    })
+                    .catch(function() {
+                        body.innerHTML = '<div class="text-center py-12 px-4">' +
+                            '<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center"><i class="bi bi-file-earmark-word text-2xl text-gray-400"></i></div>' +
+                            '<p class="text-gray-500 dark:text-gray-400 mb-4">Preview not available for this file type.</p>' +
+                            '<a href="' + fp + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                        '</div>';
+                    });
+            } else if (['doc','xls','xlsx','ppt','pptx'].includes(ext)) {
                 body.innerHTML = '<iframe src="https://docs.google.com/gview?embedded=true&url=' + encodeURIComponent(window.location.origin + '/' + fp) + '" class="w-full h-full rounded border-0" style="height:65vh" title="' + escapeHtml(title) + '"></iframe>';
             } else if (['mp4','webm','ogg','mp3','wav'].includes(ext)) {
                 var tag = ['mp3','wav'].includes(ext) ? 'audio' : 'video';
@@ -1244,6 +986,11 @@ $conn->close();
                 '<div class="flex justify-end space-x-3 pt-2">' +
                     '<button onclick="closeComparePicker()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancel</button>' +
                     '<button onclick="vtRunCompare()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">Compare</button>' +
+                '</div>' +
+                '<div class="border-t border-gray-200 dark:border-slate-600 pt-3 mt-1">' +
+                    '<button onclick="vtRunAiCompare()" class="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-red-600 hover:from-purple-700 hover:to-red-700 text-white rounded-lg font-medium transition-colors" title="Use the Archive Assistant (Gemini) to produce a structured AI diff (Summary / Additions / Removals / Modifications)">' +
+                        '<i class="bi bi-stars mr-1"></i>AI Compare with Archive Assistant' +
+                    '</button>' +
                 '</div>';
             document.getElementById('cmp-sel-base').value = String(0);
             document.getElementById('cmp-sel-a').value = String(latest);
@@ -1289,6 +1036,94 @@ $conn->close();
             vtBuildCompareViewer(arr, body);
         }
 
+        function vtApiUrl() {
+            if (typeof ArchiveAssistant !== 'undefined' && ArchiveAssistant.resolveApiUrl) {
+                try { return ArchiveAssistant.resolveApiUrl(); } catch (e) {}
+            }
+            var parts = window.location.pathname.split('/');
+            parts.pop();
+            return window.location.origin + parts.join('/') + '/api/gemini.php';
+        }
+
+        function vtEnsureMdLibs() {
+            if (window.marked && window.DOMPurify) return Promise.resolve();
+            var load = function (src) {
+                return new Promise(function (resolve) {
+                    var s = document.createElement('script');
+                    s.src = src;
+                    s.onload = resolve;
+                    s.onerror = resolve;
+                    document.head.appendChild(s);
+                });
+            };
+            return Promise.resolve()
+                .then(function () { return window.DOMPurify ? Promise.resolve() : load('https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js'); })
+                .then(function () { return window.marked ? Promise.resolve() : load('https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js'); });
+        }
+
+        function vtRenderMd(el, text) {
+            if (window.marked && window.DOMPurify) {
+                el.innerHTML = window.DOMPurify.sanitize(window.marked.parse(text || ''));
+            } else {
+                el.classList.add('whitespace-pre-wrap');
+                el.textContent = text;
+            }
+        }
+
+        function vtRunAiCompare() {
+            var baseIdx = parseInt(document.getElementById('cmp-sel-base').value);
+            var aIdx = parseInt(document.getElementById('cmp-sel-a').value);
+            var base = vtCompareVersions[baseIdx];
+            var a = vtCompareVersions[aIdx];
+            closeComparePicker();
+            if (!base || !a) return;
+
+            var source = 'archive';
+
+            var title = (vtCompareRecord && vtCompareRecord.title) ? vtCompareRecord.title : 'File';
+            document.getElementById('cmp-viewer-title').textContent = 'Compare — ' + title;
+            document.getElementById('compareViewerModal').classList.remove('hidden');
+
+            var body = document.getElementById('cmp-viewer-body');
+            body.innerHTML =
+                '<div class="mb-5">' +
+                    '<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"><i class="bi bi-stars text-purple-600 mr-1"></i>AI Summary — actual file contents (Gemini)</h3>' +
+                    '<div id="cmp-ai-summary" class="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-sm text-gray-800 dark:text-gray-200">' +
+                        '<div class="text-center py-8 text-gray-500"><div class="animate-spin inline-block w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full mb-2"></div>Reading both files and comparing contents...</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="cmp-sbs"></div>';
+
+            vtBuildCompareViewer([base, a], document.getElementById('cmp-sbs'));
+
+            vtEnsureMdLibs().then(function () {
+                return fetch(vtApiUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_v1: { source: source, id: base.id }, file_v2: { source: source, id: a.id } })
+                });
+            }).then(function (res) {
+                return res.json().catch(function () { return null; });
+            }).then(function (d) {
+                var el = document.getElementById('cmp-ai-summary');
+                if (!el) return;
+                if (d && d.success) {
+                    var head = document.createElement('div');
+                    head.className = 'text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1';
+                    head.textContent = 'Read actual contents of: ' + (d.file_v1_name || 'V1') + ' vs ' + (d.file_v2_name || 'V2');
+                    el.innerHTML = '';
+                    el.appendChild(head);
+                    vtRenderMd(el, d.response || 'No comparison returned.');
+                } else {
+                    var msg = (d && d.error) ? d.error : 'AI comparison failed.';
+                    el.innerHTML = '<div class="text-red-600">' + vtEsc(msg) + '</div>';
+                }
+            }).catch(function () {
+                var el = document.getElementById('cmp-ai-summary');
+                if (el) el.innerHTML = '<div class="text-red-600">Network error while running the AI comparison.</div>';
+            });
+        }
+
         function vtFileExt(fp) {
             var s = String(fp || '').toLowerCase();
             return s.indexOf('?') >= 0 ? s.split('?')[0].split('.').pop() : s.split('.').pop();
@@ -1301,8 +1136,8 @@ $conn->close();
                 return '<div class="' + color + ' text-white text-center text-xs font-bold px-3 py-2 rounded-t-lg truncate">' +
                     'v' + v.version + ' · ' + (v.author || 'System') + '</div>';
             }).join('');
-            if (VT_TEXT_EXTS.indexOf(ext) >= 0) {
-                vtLoadTextCompare(versions, body);
+            if (VT_TEXT_EXTS.indexOf(ext) >= 0 || ext === 'docx') {
+                vtLoadTextCompare(versions, body, ext === 'docx');
             } else if (VT_IMAGE_EXTS.indexOf(ext) >= 0) {
                 var imgs = versions.map(function(v) {
                     return '<div class="flex-1 min-w-0"><img src="' + v.file_path + '" class="w-full h-auto object-contain rounded-lg" style="max-height:70vh"></div>';
@@ -1334,12 +1169,38 @@ $conn->close();
             }
         }
 
-        function vtLoadTextCompare(versions, body) {
+        function vtFetchText(v, isDocx) {
+            if (isDocx) {
+                var pathOnly = String(v.file_path || '').split('?')[0];
+                return fetch('preview_docx_text.php?path=' + encodeURIComponent(pathOnly))
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) { return (d && d.success) ? d.text : ''; })
+                    .catch(function() { return ''; });
+            }
+            return fetch(v.file_path).then(function(r) { return r.ok ? r.text() : ''; }).catch(function() { return ''; });
+        }
+
+        function vtLoadTextCompare(versions, body, isDocx) {
             var colors = ['bg-red-600', 'bg-blue-600', 'bg-green-600'];
             var fetchPromises = versions.map(function(v) {
-                return fetch(v.file_path).then(function(r) { return r.ok ? r.text() : ''; }).catch(function() { return ''; });
+                return vtFetchText(v, isDocx === true);
             });
             Promise.all(fetchPromises).then(function(texts) {
+                var anyText = texts.some(function(t) { return String(t || '').trim() !== ''; });
+                if (!anyText) {
+                    var cards = versions.map(function(v) {
+                        return '<div class="flex-1 min-w-0 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg text-center">' +
+                            '<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">No readable text could be extracted for comparison.</p>' +
+                            '<a href="' + v.file_path + '" target="_blank" class="inline-block px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Open / Download</a>' +
+                        '</div>';
+                    }).join('');
+                    var hdr = versions.map(function(v, i) {
+                        return '<div class="' + colors[i % 3] + ' text-white text-center text-xs font-bold px-3 py-2 rounded-t-lg truncate">' +
+                            'v' + v.version + ' · ' + (v.author || 'System') + '</div>';
+                    }).join('');
+                    body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + hdr + '</div><div class="flex flex-col md:flex-row gap-3 mt-3">' + cards + '</div>';
+                    return;
+                }
                 var baseLines = vtSplitLines(texts[0]);
                 var colsHtml = '';
                 versions.forEach(function(v, idx) {
@@ -1364,7 +1225,10 @@ $conn->close();
                         header + '<div class="max-h-[70vh] overflow-y-auto font-mono text-xs text-gray-800 dark:text-gray-200">' + rowsHtml + '</div>' +
                     '</div>';
                 });
-                body.innerHTML = '<div class="flex flex-col md:flex-row gap-3">' + colsHtml + '</div>';
+                var banner = (isDocx === true)
+                    ? '<div class="text-xs text-gray-500 dark:text-gray-400 mb-3">Comparing the extracted text content of the Word documents (formatting and images are not compared).</div>'
+                    : '';
+                body.innerHTML = banner + '<div class="flex flex-col md:flex-row gap-3">' + colsHtml + '</div>';
             });
         }
 
@@ -1434,7 +1298,7 @@ $conn->close();
             }
         }
     </script>
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>

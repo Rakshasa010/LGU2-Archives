@@ -42,6 +42,7 @@ if (empty($raw_input) && isset($GLOBALS['HTTP_RAW_POST_DATA'])) {
 }
 
 require_once '../authdatabase.php';
+require_once __DIR__ . '/../includes/pinata.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -127,174 +128,64 @@ $source_record_id = isset($data['source_record_id']) ? (int)$data['source_record
 $folder_name = $data['folder_name'] ?? $type;
 $metadata    = $data['metadata'] ?? [];
 
-// --- Find or create legislative folder ---
-$folder_id = null;
+// --- Stage the document into the External Documents queue (no auto-routing) ---
+require_once __DIR__ . '/../includes/llrm-intake.php';
 
-// Try to find existing folder by name and type
-$findFolder = $conn->prepare("SELECT id FROM legislative_folders WHERE name = ? AND type = ? LIMIT 1");
-$findFolder->bind_param("ss", $folder_name, $type);
-$findFolder->execute();
-$folderRes = $findFolder->get_result();
-if ($folderRow = $folderRes->fetch_assoc()) {
-    $folder_id = (int)$folderRow['id'];
-}
-$findFolder->close();
-
-// Create folder if not found
-if (!$folder_id) {
-    $createFolder = $conn->prepare("INSERT INTO legislative_folders (name, type, created_by) VALUES (?, ?, NULL)");
-    $createFolder->bind_param("ss", $folder_name, $type);
-    if ($createFolder->execute()) {
-        $folder_id = (int)$conn->insert_id;
-    }
-    $createFolder->close();
+$doc = [
+    'title'             => $title,
+    'type'              => $type,
+    'author'            => $author,
+    'source_system'     => $source_system,
+    'source_record_id'  => $source_record_id,
+    'reference_number'  => $data['reference_number'] ?? null,
+    'external_id'       => $data['external_id'] ?? null,
+    'description'       => $data['description'] ?? null,
+    'tags'              => $data['tags'] ?? null,
+];
+if (!empty($data['document_date'])) {
+    $doc['document_date'] = $data['document_date'];
+} elseif (!empty($metadata['session_date'])) {
+    $doc['document_date'] = $metadata['session_date'];
 }
 
-// --- Handle file content (if provided) ---
-$file_path = null;
-$version = 1;
-$parent_version_id = null;
-
+$fileSpec = null;
 if (!empty($data['file_content']) && !empty($data['file_name'])) {
-    // Decode base64 file content
-    $file_data = base64_decode($data['file_content'], true);
-    if ($file_data === false) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Invalid base64 file content']);
-        exit;
-    }
-
-    // Create upload directory: uploads/legislative/{Type}/{Year}/
-    $clean_type = preg_replace('/[^a-zA-Z0-9]/', '', $type);
-    $target_dir = __DIR__ . '/../uploads/legislative/' . $clean_type . '/' . $year . '/';
-    if (!is_dir($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
-
-    // Generate safe filename
-    $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $data['file_name']);
-    $filename = 'v1_' . $safe_name;
-    $target_path = $target_dir . $filename;
-
-    // Ensure unique filename
-    $counter = 1;
-    while (file_exists($target_path)) {
-        $filename = 'v1_' . $counter . '_' . $safe_name;
-        $target_path = $target_dir . $filename;
-        $counter++;
-    }
-
-    // Write file to disk
-    if (file_put_contents($target_path, $file_data) !== false) {
-        // Store relative path
-        $file_path = 'uploads/legislative/' . $clean_type . '/' . $year . '/' . $filename;
-    } else {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Failed to save file to disk']);
-        exit;
-    }
+    $fileSpec = ['base64' => $data['file_content'], 'orig_name' => $data['file_name']];
 } elseif (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-    // Handle multipart file upload
-    $clean_type = preg_replace('/[^a-zA-Z0-9]/', '', $type);
-    $target_dir = __DIR__ . '/../uploads/legislative/' . $clean_type . '/' . $year . '/';
-    if (!is_dir($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
-
-    $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\.]/', '_', $_FILES['file']['name']);
-    $filename = 'v1_' . $safe_name;
-    $target_path = $target_dir . $filename;
-
-    $counter = 1;
-    while (file_exists($target_path)) {
-        $filename = 'v1_' . $counter . '_' . $safe_name;
-        $target_path = $target_dir . $filename;
-        $counter++;
-    }
-
-    if (move_uploaded_file($_FILES['file']['tmp_name'], $target_path)) {
-        $file_path = 'uploads/legislative/' . $clean_type . '/' . $year . '/' . $filename;
-    }
+    $fileSpec = ['tmp_path' => $_FILES['file']['tmp_name'], 'orig_name' => $_FILES['file']['name'], 'copy' => false];
 }
 
-// --- Check for duplicates (same title + type from same source system) ---
-$duplicate = false;
-if ($source_record_id) {
-    $checkDup = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND type = ? AND author = ? ORDER BY id DESC LIMIT 1");
-    $checkDup->bind_param("sss", $title, $type, $author);
-    $checkDup->execute();
-    $dupRes = $checkDup->get_result();
-    if ($dupRes->fetch_assoc()) {
-        $duplicate = true;
-    }
-    $checkDup->close();
-}
+$result = llrm_intake_stage($conn, $doc, $fileSpec, ['notification_prefix' => $source_system]);
 
-if ($duplicate) {
+if (!empty($result['duplicate'])) {
     http_response_code(409);
     echo json_encode([
         'success' => false,
-        'error' => 'Duplicate record already exists',
-        'message' => 'A record with the same title, type, and author already exists in the archive.'
+        'error'   => 'Duplicate record already exists',
+        'message' => 'A record with the same title already exists in the External Documents queue.',
+        'existing_id' => $result['existing_id'] ?? null,
     ]);
+    $conn->close();
     exit;
 }
 
-// --- Insert into legislative_records ---
-$insertSql = "INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-$insertStmt = $conn->prepare($insertSql);
-$insertStmt->bind_param("ssssssiii",
-    $title,
-    $type,
-    $month,
-    $year,
-    $author,
-    $file_path,
-    $folder_id,
-    $version,
-    $parent_version_id
-);
-
-if ($insertStmt->execute()) {
-    $new_id = (int)$conn->insert_id;
-    $insertStmt->close();
-
-    // Log the intake
-    $logSql = "INSERT INTO analytics_events (event_type, record_id, record_title, record_type, created_at)
-               VALUES ('external_intake', ?, ?, ?, NOW())";
-    $logStmt = $conn->prepare($logSql);
-    $logStmt->bind_param("iss", $new_id, $title, $type);
-    $logStmt->execute();
-    $logStmt->close();
-
-    // Create notification for admins
-    $notifContent = "New archived record from {$source_system}: {$title}";
-    $notifSql = "INSERT INTO notifications (time, date, content, about, status, created_at)
-                 VALUES (?, CURDATE(), ?, 'External Intake', 'unread', NOW())";
-    $notifStmt = $conn->prepare($notifSql);
-    $timeStr = date('h:i A');
-    $notifStmt->bind_param("ss", $timeStr, $notifContent);
-    $notifStmt->execute();
-    $notifStmt->close();
-
-    echo json_encode([
-        'success' => true,
-        'id' => $new_id,
-        'message' => 'Record archived successfully',
-        'folder_id' => $folder_id,
-        'file_path' => $file_path,
-        'source_system' => $source_system,
-        'source_record_id' => $source_record_id
-    ]);
-} else {
-    $insertStmt->close();
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Database error: ' . $conn->error
-    ]);
+if (empty($result['success'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => $result['error'] ?? 'Intake failed']);
+    $conn->close();
+    exit;
 }
+
+echo json_encode([
+    'success'          => true,
+    'id'               => $result['id'],
+    'message'          => 'Document received and staged in External Documents. Awaiting manual routing.',
+    'status'           => 'pending',
+    'file_path'        => $result['file_path'],
+    'ipfs_cid'         => $result['ipfs_cid'],
+    'source_system'    => $source_system,
+    'source_record_id' => $source_record_id
+]);
 
 $conn->close();
 ?>

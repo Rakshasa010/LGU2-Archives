@@ -7,11 +7,24 @@ if (!isset($_SESSION['user_id'])) {
 require_once 'authdatabase.php';
 
 $userId = (int)$_SESSION['user_id'];
-$roleStmt = $conn->prepare("SELECT role, full_name, dark_mode FROM users WHERE id = ?");
+$roleStmt = $conn->prepare("SELECT role, full_name, dark_mode, profile_picture FROM users WHERE id = ?");
 $roleStmt->bind_param("i", $userId);
 $roleStmt->execute();
 $user = $roleStmt->get_result()->fetch_assoc();
 $roleStmt->close();
+
+$profile_picture_url = null;
+if (is_string($user['profile_picture'] ?? null) && $user['profile_picture'] !== '') {
+    $candidatePath = $user['profile_picture'];
+    $candidateUrl = $user['profile_picture'];
+    if (strpos($user['profile_picture'], 'uploads/') !== 0) {
+        $candidatePath = 'uploads/profile_pictures/' . $user['profile_picture'];
+        $candidateUrl = 'uploads/profile_pictures/' . $user['profile_picture'];
+    }
+    if (file_exists($candidatePath)) {
+        $profile_picture_url = $candidateUrl;
+    }
+}
 
 if (!$user) {
     header('Location: login.php');
@@ -49,7 +62,7 @@ $search = $_GET['search'] ?? '';
 $filterType = $_GET['type'] ?? '';
 $filterSource = $_GET['source'] ?? '';
 
-$where = "WHERE 1=1";
+$where = "WHERE (status IS NULL OR LOWER(status) <> 'routed')";
 $params = [];
 $types = "";
 
@@ -111,8 +124,20 @@ while ($t = $typeRes->fetch_assoc()) {
 $totalPages = $total > 0 ? (int)ceil($total / $perPage) : 0;
 
 $pageTitle = 'External Documents';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?php echo htmlspecialchars($pageTitle); ?> - Archives</title>
+    <link rel="icon" type="image/png" href="Images/Val-logo/valenzuela logo.webp">
+<?php
 include 'includes/header_scripts.php';
-
+?>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/archives-landing.css">
+<?php
 function formatFileSize($bytes) {
     if ($bytes <= 0) return '0 B';
     $units = ['B','KB','MB','GB'];
@@ -178,9 +203,13 @@ function formatFileSize($bytes) {
                         </div>
                         <div class="relative">
                             <button id="profile-btn" class="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition duration-200">
-                                <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
-                                    <i class="bi bi-person-fill"></i>
-                                </div>
+                                <?php if ($profile_picture_url): ?>
+                                    <img src="<?php echo htmlspecialchars($profile_picture_url); ?>" alt="Profile" class="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-600">
+                                <?php else: ?>
+                                    <div class="bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                <?php endif; ?>
                                 <div class="hidden sm:block text-left">
                                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] md:max-w-none"><?php echo htmlspecialchars($user['full_name'] ?? 'User'); ?></p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo (strtolower($user['role'] ?? '') === 'admin') ? 'Administrator' : 'User'; ?></p>
@@ -279,6 +308,18 @@ function formatFileSize($bytes) {
                     <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Documents pushed from LLRM will appear here.</p>
                 </div>
             <?php else: ?>
+                <div class="card p-3 bg-white dark:bg-slate-800 rounded-2xl shadow border border-gray-100 dark:border-slate-700 mb-4 flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                        <input type="checkbox" id="select-all-page" class="w-4 h-4 accent-red-600 cursor-pointer">
+                        Select all on page
+                    </label>
+                    <button type="button" id="clear-selection" class="px-3 py-1.5 text-xs font-medium bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg transition hover:bg-gray-300 dark:hover:bg-slate-500">Clear</button>
+                    <span id="sel-count" class="text-sm font-semibold text-gray-800 dark:text-gray-200">0 selected</span>
+                    <div class="flex-1"></div>
+                    <button type="button" id="bulk-route-btn" class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="bi bi-folder-plus mr-1"></i> Route Selected (<span id="bulk-count">0</span>)
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <?php foreach ($documents as $doc):
                         $fileExt = strtolower(pathinfo($doc['file_name'] ?? '', PATHINFO_EXTENSION));
@@ -297,6 +338,13 @@ function formatFileSize($bytes) {
                                 <i class="bi <?php echo $iconClass; ?> text-5xl"></i>
                             <?php endif; ?>
                             <span class="absolute top-2 right-2 px-2 py-1 text-xs font-bold text-white source-badge rounded-full uppercase"><?php echo htmlspecialchars($doc['source_system']); ?></span>
+                            <span class="absolute top-2 left-2 px-2 py-1 text-xs font-bold text-white rounded-full uppercase <?php echo (strtolower($doc['status'] ?? '') === 'routed') ? 'bg-emerald-500' : 'bg-amber-500'; ?>"><?php echo htmlspecialchars(strtolower($doc['status'] ?? 'pending')); ?></span>
+                            <?php if (strtolower($doc['status'] ?? '') !== 'routed'): ?>
+                                <label class="absolute bottom-2 left-2 flex items-center gap-1.5 bg-white/90 dark:bg-slate-900/80 rounded-lg px-2 py-1 cursor-pointer select-none shadow-sm z-10">
+                                    <input type="checkbox" class="doc-select w-4 h-4 accent-red-600 cursor-pointer" value="<?php echo (int)$doc['id']; ?>">
+                                    <span class="text-[11px] font-medium text-gray-700 dark:text-gray-300">Select</span>
+                                </label>
+                            <?php endif; ?>
                         </div>
                         <div class="p-4">
                             <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate mb-2" title="<?php echo htmlspecialchars($doc['title']); ?>"><?php echo htmlspecialchars($doc['title']); ?></div>
@@ -333,6 +381,15 @@ function formatFileSize($bytes) {
                                 </div>
                             <?php endif; ?>
                             <div class="mt-3 flex gap-2">
+                                <?php if (strtolower($doc['status'] ?? '') !== 'routed'): ?>
+                                    <button type="button" class="route-btn flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg text-center transition" data-id="<?php echo $doc['id']; ?>" data-type="<?php echo htmlspecialchars($doc['document_type'] ?? ''); ?>" data-title="<?php echo htmlspecialchars($doc['title']); ?>">
+                                        <i class="bi bi-folder-plus mr-1"></i> Route to Folder
+                                    </button>
+                                <?php else: ?>
+                                    <span class="flex-1 px-3 py-1.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 rounded-lg text-center">
+                                        <i class="bi bi-check-circle mr-1"></i> Routed
+                                    </span>
+                                <?php endif; ?>
                                 <?php if (!empty($doc['file_path'])): ?>
                                     <a href="<?php echo htmlspecialchars($doc['file_path']); ?>" download="<?php echo htmlspecialchars($doc['file_name'] ?? ''); ?>" class="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-center transition">
                                         <i class="bi bi-download mr-1"></i> Download
@@ -366,10 +423,353 @@ function formatFileSize($bytes) {
     </div>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
         </main>
+        <!-- Route to Folder Modal -->
+        <div id="routeModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Route to Folder</h3>
+                        <p id="routeModalTitle" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
+                    </div>
+                    <button type="button" onclick="closeRouteModal()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Destination Folder</label>
+                    <select id="routeFolderSelect" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"></select>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Folders are pre-suggested by document type; you may choose any folder.</p>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" onclick="closeRouteModal()" class="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg transition">Cancel</button>
+                    <button type="button" id="routeConfirmBtn" class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition">Confirm Route</button>
+                </div>
+            </div>
+        </div>
+        <?php include 'includes/footer.php'; ?>
         </div>
     </div>
+    <script>
+        (function(){
+            var profileBtn = document.getElementById('profile-btn');
+            var profileDropdown = document.getElementById('profile-dropdown');
+            var notifBtn = document.getElementById('notification-btn');
+            var notifDropdown = document.getElementById('notification-dropdown');
+            var notifCount = document.getElementById('notif-count');
+
+            profileBtn && profileBtn.addEventListener('click', function(e){
+                e.stopPropagation();
+                notifDropdown && notifDropdown.classList.add('hidden');
+                profileDropdown && profileDropdown.classList.toggle('hidden');
+            });
+
+            notifBtn && notifBtn.addEventListener('click', function(e){
+                e.stopPropagation();
+                profileDropdown && profileDropdown.classList.add('hidden');
+                notifDropdown && notifDropdown.classList.toggle('hidden');
+                try {
+                    var ids = Array.from(document.querySelectorAll('#notif-list [data-id]')).map(function(el){ return el.getAttribute('data-id'); });
+                    if (ids.length > 0) {
+                        fetch('notifications_log.php', {
+                            method:'POST',
+                            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                            body:'event_type='+encodeURIComponent('alert_shown')+'&ids='+encodeURIComponent(JSON.stringify(ids))
+                        }).then(function(){});
+                    }
+                } catch(err){}
+            });
+
+            document.addEventListener('click', function(e){
+                if (!e.target.closest || !e.target.closest('#profile-dropdown')) {
+                    profileDropdown && profileDropdown.classList.add('hidden');
+                }
+                if (!e.target.closest || !e.target.closest('#notification-dropdown')) {
+                    notifDropdown && notifDropdown.classList.add('hidden');
+                }
+            });
+
+            function renderNotifList(items){
+                var container = document.getElementById('notif-list');
+                if (!container) return;
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-400">No notifications</div>';
+                    return;
+                }
+                var html = items.map(function(n){
+                    var href = n.link ? n.link : ('audit-logs.php?id='+encodeURIComponent(n.id));
+                    var badge = '';
+                    var textWeight = (n.status === 'unread') ? 'font-semibold' : 'font-medium';
+                    if (n.status === 'unread') badge = ' ring-2 ring-red-200';
+                    return '<a href="'+href+'" data-id="'+n.id+'" class="flex items-center space-x-3 py-2 border-b border-gray-200 dark:border-slate-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md'+badge+'">'+
+                           '<div class="flex-shrink-0"><span class="block w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">'+
+                           '<i class="bi bi-bell text-red-600 dark:text-red-400"></i></span></div>'+
+                           '<div class="flex-1 min-w-0">'+
+                           '<p class="text-sm '+textWeight+' text-gray-800 dark:text-gray-200 truncate">'+escapeHtml(n.content)+'</p>'+
+                           '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
+                           '</div></a>';
+                }).join('');
+                html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
+                container.innerHTML = html;
+                var btnAll = container.querySelector('#mark-all-read');
+                if (btnAll) {
+                    btnAll.addEventListener('click', function(){
+                        container.querySelectorAll('a[data-id]').forEach(function(a){
+                            a.classList.remove('ring-2','ring-red-200');
+                            var p = a.querySelector('p.text-sm');
+                            if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                        });
+                        try {
+                            fetch('notifications_update.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'all=1&status=read'
+                            }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                        } catch(e){ refresh(); }
+                        notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+                    });
+                }
+            }
+            function escapeHtml(s){
+                if (typeof s !== 'string') return '';
+                return s.replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+            }
+            function fetchLatest(){
+                fetch('notifications_fetch.php?page_size=5&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (d && d.success) renderNotifList(d.items||[]);
+                }).catch(function(){});
+            }
+            function fetchUnread(){
+                fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function(r){ return r.json(); }).then(function(d){
+                    if (!notifCount) return;
+                    var total = (d && d.success) ? (d.total||0) : 0;
+                    notifCount.textContent = String(total);
+                    notifCount.style.display = total > 0 ? 'inline-flex' : 'none';
+                }).catch(function(){});
+            }
+            function refresh(){
+                fetchLatest();
+                fetchUnread();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', refresh);
+            } else {
+                refresh();
+            }
+            window.addEventListener('focus', refresh);
+        })();
+        (function(){
+            var sidebarToggle = document.getElementById('sidebar-toggle');
+            var mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            var sidebar = document.getElementById('sidebar');
+            var mobileSidebar = document.getElementById('mobile-sidebar');
+            var sidebarOverlay = document.getElementById('sidebar-overlay');
+            var closeMobileSidebar = document.getElementById('close-mobile-sidebar');
+
+            sidebarToggle && sidebarToggle.addEventListener('click', function(){
+                sidebar && sidebar.classList.toggle('sidebar-collapsed');
+                try { localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('sidebar-collapsed')); } catch(err){}
+            });
+
+            mobileMenuBtn && mobileMenuBtn.addEventListener('click', function(){
+                mobileSidebar && mobileSidebar.classList.remove('-translate-x-full');
+                sidebarOverlay && (sidebarOverlay.classList.remove('opacity-0', 'pointer-events-none'),
+                                   sidebarOverlay.classList.add('opacity-100', 'pointer-events-auto'));
+            });
+
+            closeMobileSidebar && closeMobileSidebar.addEventListener('click', function(){
+                mobileSidebar && mobileSidebar.classList.add('-translate-x-full');
+                sidebarOverlay && (sidebarOverlay.classList.add('opacity-0', 'pointer-events-none'),
+                                   sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto'));
+            });
+
+            sidebarOverlay && sidebarOverlay.addEventListener('click', function(){
+                mobileSidebar && mobileSidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                sidebarOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            });
+        })();
+    </script>
+    <script>
+        (function(){
+            var routeModal = document.getElementById('routeModal');
+            var routeSelect = document.getElementById('routeFolderSelect');
+            var routeTitle = document.getElementById('routeModalTitle');
+            var currentId = null;
+            var currentIds = [];
+            var bulkMode = false;
+            var allFolders = [];
+            var suggestions = [];
+
+            function getSelected(){
+                return Array.prototype.map.call(document.querySelectorAll('.doc-select:checked'), function(el){ return el.value; });
+            }
+            function updateBulkUi(){
+                var n = getSelected().length;
+                var cnt = document.getElementById('sel-count');
+                var bc = document.getElementById('bulk-count');
+                var btn = document.getElementById('bulk-route-btn');
+                var sa = document.getElementById('select-all-page');
+                var boxes = document.querySelectorAll('.doc-select');
+                if (cnt) cnt.textContent = n + ' selected';
+                if (bc) bc.textContent = String(n);
+                if (btn) btn.disabled = n === 0;
+                if (sa) sa.checked = boxes.length > 0 && n === boxes.length;
+            }
+            function clearSelection(){
+                document.querySelectorAll('.doc-select').forEach(function(cb){ cb.checked = false; });
+                updateBulkUi();
+            }
+
+            function loadFolders(cb){
+                fetch('api/route-external-document.php?action=folders')
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){
+                        if (d.success) allFolders = d.folders || [];
+                        if (cb) cb();
+                    })
+                    .catch(function(){ if (cb) cb(); });
+            }
+
+            function suggestFor(type){
+                return fetch('api/route-external-document.php?action=suggest&type=' + encodeURIComponent(type))
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){ return (d.success && d.suggestions) ? d.suggestions : []; })
+                    .catch(function(){ return []; });
+            }
+
+            function renderSelect(){
+                var leg = allFolders.filter(function(f){ return f.kind === 'legislative'; });
+                var arch = allFolders.filter(function(f){ return f.kind === 'archive'; });
+                var html = '<optgroup label="Legislative Folders">';
+                leg.forEach(function(f){ html += '<option value="legislative:' + f.id + '">' + f.name + '</option>'; });
+                html += '</optgroup>';
+                html += '<optgroup label="Archive Folders">';
+                arch.forEach(function(f){ html += '<option value="archive:' + f.id + '">' + f.name + '</option>'; });
+                html += '</optgroup>';
+                routeSelect.innerHTML = html;
+
+                if (suggestions.length > 0) {
+                    var s = suggestions[0];
+                    var val = s.kind + ':' + s.id;
+                    if (routeSelect.querySelector('option[value="' + val + '"]')) {
+                        routeSelect.value = val;
+                    }
+                }
+            }
+
+            document.querySelectorAll('.doc-select').forEach(function(cb){
+                cb.addEventListener('change', updateBulkUi);
+            });
+            var selectAllBtn = document.getElementById('select-all-page');
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener('change', function(){
+                    var checked = this.checked;
+                    document.querySelectorAll('.doc-select').forEach(function(cb){ cb.checked = checked; });
+                    updateBulkUi();
+                });
+            }
+            var clearSelBtn = document.getElementById('clear-selection');
+            if (clearSelBtn) clearSelBtn.addEventListener('click', clearSelection);
+            updateBulkUi();
+
+            document.querySelectorAll('.route-btn').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    bulkMode = false;
+                    currentIds = [];
+                    currentId = this.getAttribute('data-id');
+                    var type = this.getAttribute('data-type') || '';
+                    var title = this.getAttribute('data-title') || 'Document';
+                    if (routeTitle) routeTitle.textContent = title;
+                    suggestions = [];
+                    loadFolders(function(){
+                        suggestFor(type).then(function(s){
+                            suggestions = s;
+                            renderSelect();
+                        });
+                    });
+                    routeModal.classList.remove('hidden');
+                });
+            });
+
+            var bulkRouteBtn = document.getElementById('bulk-route-btn');
+            if (bulkRouteBtn) {
+                bulkRouteBtn.addEventListener('click', function(){
+                    var sel = getSelected();
+                    if (sel.length === 0) return;
+                    bulkMode = true;
+                    currentId = null;
+                    currentIds = sel;
+                    if (routeTitle) routeTitle.textContent = sel.length + ' document' + (sel.length > 1 ? 's' : '') + ' selected';
+                    suggestions = [];
+                    loadFolders(function(){
+                        renderSelect();
+                    });
+                    routeModal.classList.remove('hidden');
+                });
+            }
+
+            var confirmBtn = document.getElementById('routeConfirmBtn');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function(){
+                    if (!bulkMode && !currentId) return;
+                    if (bulkMode && currentIds.length === 0) return;
+                    var parts = routeSelect.value.split(':');
+                    if (parts.length !== 2) return;
+                    var body = new URLSearchParams();
+                    if (bulkMode) {
+                        currentIds.forEach(function(id){ body.append('external_ids[]', id); });
+                    } else {
+                        body.append('external_id', currentId);
+                    }
+                    body.append('folder_kind', parts[0]);
+                    body.append('folder_id', parts[1]);
+                    var btn = this;
+                    btn.disabled = true;
+                    btn.textContent = bulkMode ? 'Routing ' + currentIds.length + ' document(s)...' : 'Routing...';
+                    fetch('api/route-external-document.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body.toString() })
+                        .then(function(r){ return r.json(); })
+                        .then(function(d){
+                            if (d.success) {
+                                if (d.bulk) {
+                                    var folderLabel = routeSelect.options[routeSelect.selectedIndex] ? routeSelect.options[routeSelect.selectedIndex].text : 'folder';
+                                    var msg = 'Routed ' + d.routed + ' of ' + d.total + ' document(s) to "' + folderLabel + '".';
+                                    var fails = [];
+                                    (d.results || []).forEach(function(r){
+                                        if (!r.success) fails.push('#' + r.id + ': ' + (r.error || 'Routing failed'));
+                                    });
+                                    if (fails.length > 0) msg += '\n\nFailed (' + fails.length + '):\n' + fails.join('\n');
+                                    alert(msg);
+                                } else {
+                                    alert(d.message || 'Document routed successfully.');
+                                }
+                                window.location.reload();
+                            } else {
+                                alert('Error: ' + (d.error || 'Routing failed'));
+                                btn.disabled = false;
+                                btn.textContent = 'Confirm Route';
+                            }
+                        })
+                        .catch(function(err){
+                            alert('Request failed: ' + err);
+                            btn.disabled = false;
+                            btn.textContent = 'Confirm Route';
+                        });
+                });
+            }
+
+            window.closeRouteModal = function(){
+                if (routeModal) routeModal.classList.add('hidden');
+                currentId = null;
+                currentIds = [];
+                bulkMode = false;
+            };
+
+            routeModal && routeModal.addEventListener('click', function(e){
+                if (e.target === routeModal) closeRouteModal();
+            });
+        })();
+    </script>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

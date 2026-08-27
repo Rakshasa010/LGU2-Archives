@@ -1,5 +1,7 @@
 <?php
 require 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
+require_once __DIR__ . '/includes/mongodb_atlas.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -40,6 +42,15 @@ if (!$current_folder) {
     exit();
 }
 
+// Log folder open for monitored users
+require_once __DIR__ . '/monitoring_helper.php';
+log_monitored_user_action(
+    $conn,
+    $_SESSION['user_id'] ?? 0,
+    'Folder Open',
+    'Opened folder "' . htmlspecialchars($current_folder['name']) . '"'
+);
+
 // Get parent folder
 $parent_folder = null;
 if (!$is_legislative && $current_folder['parent_id']) {
@@ -73,6 +84,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              $new_id = $conn->insert_id;
              $folder_path = "uploads/archives/" . $new_id . "/";
              if (!file_exists($folder_path)) { @mkdir($folder_path, 0777, true); }
+             // Create the folder's MongoDB database (best-effort)
+             try {
+                 $atlas = new MongoDBAtlas();
+                 $mongoFolder = $atlas->ensureFolderDatabase($new_id, 'archive', $name);
+                 if (!$mongoFolder['success']) {
+                     error_log('MongoDB folder db creation failed for folder #'.$new_id.' : ' . $mongoFolder['error']);
+                 }
+             } catch (Exception $e) {
+                 error_log('MongoDB folder db error for folder #'.$new_id.' : ' . $e->getMessage());
+             }
              $conn->query("CREATE TABLE IF NOT EXISTS notifications (
                  id INT AUTO_INCREMENT PRIMARY KEY,
                  time VARCHAR(20) NOT NULL,
@@ -85,8 +106,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              $ntime = date('h:i A'); $ndate = date('Y-m-d');
              $ncontent = 'Folder created: ' . $name . ' (ID ' . $new_id . ')';
              $nabout = 'Storage'; $nstatus = 'unread';
-             if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                 $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+             // Get user name for notification
+             $userNameForNotif = null;
+             if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                 $userStmt->bind_param("i", $_SESSION['user_id']);
+                 $userStmt->execute();
+                 if ($userRes = $userStmt->get_result()) {
+                     if ($urow = $userRes->fetch_assoc()) {
+                         $userNameForNotif = trim($urow['full_name'] ?? '');
+                     }
+                 }
+                 $userStmt->close();
+             }
+             if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                 $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                  $ins->execute(); $ins->close();
              }
              echo json_encode(['success' => true, 'folder' => ['id' => $new_id, 'name' => $name, 'slug' => $slug]]);
@@ -125,7 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'file_date' => "DATE DEFAULT NULL",
                     'unique_number' => "VARCHAR(100) DEFAULT NULL",
                     'version' => "INT DEFAULT 1",
-                    'parent_version_id' => "INT NULL"
+                    'parent_version_id' => "INT NULL",
+                    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+                    'mime_type' => "VARCHAR(100) DEFAULT NULL"
                 ];
                 foreach ($cols_needed as $col => $def) {
                     if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
@@ -143,7 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'version' => "INT DEFAULT 1",
                     'parent_version_id' => "INT NULL",
                     'folder_id' => "INT DEFAULT NULL",
-                    'file_size' => "BIGINT DEFAULT NULL"
+                    'file_size' => "BIGINT DEFAULT NULL",
+                    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+                    'mime_type' => "VARCHAR(100) DEFAULT NULL"
                 ];
                 foreach ($cols_needed as $col => $def) {
                     if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
@@ -179,6 +216,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if (move_uploaded_file($tmp_name, $file_path)) {
                         $final_name = basename($file_path);
+
+                        // Pin the file to Pinata IPFS (best-effort; the local copy is always kept)
+                        $mimeType = function_exists('mime_content_type') ? mime_content_type($file_path) : null;
+                        if (!$mimeType) { $mimeType = 'application/octet-stream'; }
+                        $ipfsCid = null;
+                        $pinataGroupId = null;
+                        $groupInfo = pinata_ensure_folder_group($conn, $is_legislative ? 'legislative_folders' : 'archive_folders', $current_folder_id, $current_folder['name'] ?? '');
+                        if ($groupInfo['success']) {
+                            $pinataGroupId = $groupInfo['id'];
+                        } elseif (!empty($groupInfo['error'])) {
+                            log_upload_error("Pinata group setup failed for folder #$current_folder_id: " . $groupInfo['error']);
+                        }
+                        $pinataResult = pinata_upload_file($file_path, $final_name, ['record' => 'archive', 'folder_id' => (string)$current_folder_id], $pinataGroupId);
+                        if ($pinataResult['success']) {
+                            $ipfsCid = $pinataResult['cid'];
+                            if (!empty($pinataResult['group']) && empty($pinataResult['group']['success'])) {
+                                log_upload_error("Pinata group add failed for $final_name: " . ($pinataResult['group']['error'] ?? 'unknown error'));
+                            }
+                        } else {
+                            log_upload_error("Pinata pin failed for $final_name: " . ($pinataResult['error'] ?? 'unknown error'));
+                        }
+
                         $unq = empty($unq_base) ? null : ($unq_base . ($count > 1 ? "-$i" : ''));
                         $isBlankUnq = empty($unq);
                         $version = 1;
@@ -240,20 +299,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         if ($is_legislative) {
-                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)");
                             $month = $fdate ? date('F', strtotime($fdate)) : date('F');
                             $year = $fdate ? date('Y', strtotime($fdate)) : date('Y');
                             $type = $current_folder['type'];
                             $fileSize = filesize($file_path);
-                            $stmt->bind_param("ssssssssiiiss", $safe_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes);
+                            $stmt->bind_param("ssssssssiiissss", $safe_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
                         } else {
                             $fileSize = filesize($file_path);
-                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->bind_param("issssssiis", $current_folder_id, $safe_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes);
+                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, version_notes, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->bind_param("issssssiisss", $current_folder_id, $safe_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
                         }
 
                         if ($stmt->execute()) {
                             $new_id = $conn->insert_id;
+                            // --- MongoDB Atlas Step: Insert heavy file metadata into the folder's database ---
+                            try {
+                                $atlas = new MongoDBAtlas();
+                                $mongoDoc = [
+                                    'mysql_id'    => (int)$new_id,
+                                    'ipfs_cid'    => $ipfsCid,
+                                    'file_name'   => $final_name,
+                                    'file_size'   => $fileSize,
+                                    'mime_type'   => $mimeType,
+                                    'created_at'  => date('c')
+                                ];
+                                // Ensure the folder's Mongo database exists and get its name
+                                $folderDb = $atlas->ensureFolderDatabase($current_folder_id, $is_legislative ? 'legislative' : 'archive', $current_folder['name'] ?? $safe_name);
+                                if (!$folderDb['success'] || empty($folderDb['db_name'])) {
+                                    $mongoResult = $atlas->insertOne($mongoDoc);
+                                } else {
+                                    $mongoResult = $atlas->insertOneInDb($folderDb['db_name'], 'files', $mongoDoc);
+                                }
+                                if ($mongoResult['success'] && !empty($mongoResult['new_id'])) {
+                                    // Update MySQL record's mongo_id column with the MongoDB _id string
+                                    $targetTable = $is_legislative ? 'legislative_records' : 'archive_files';
+                                    $conn->query("UPDATE {$targetTable} SET mongo_id = '" . $conn->real_escape_string($mongoResult['new_id']) . "' WHERE id = $new_id");
+                                } else {
+                                    // Best-effort: log the failure but don't block the upload
+                                    $errMsg = $mongoResult['error'] ?? 'unknown error';
+                                    error_log('MongoDB Atlas insert failed for record #'.$new_id.' : '.$errMsg);
+                                }
+                            } catch (Exception $e) {
+                                error_log('MongoDB Atlas insert error for record #'.$new_id.' : ' . $e->getMessage());
+                            }
+                            // ---------------------------------------------------
                             if ($isBlankUnq) {
                                 // Generate folder-prefixed document ID
                                 $unq = $folderPrefix . " - " . str_pad($newSequence, 6, '0', STR_PAD_LEFT);
@@ -287,6 +377,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'file_date' => $fdate,
                                 'unique_number' => $unq,
                                 'size' => $bytes,
+                                'ipfs_cid' => $ipfsCid,
+                                'ipfs_url' => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'folder_id' => $current_folder_id
                             ];
@@ -325,8 +417,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ntime = date('h:i A'); $ndate = date('Y-m-d');
                 $ncontent = ($num > 1) ? "$num files uploaded in folder #$current_folder_id" : "New upload: {$uploadedFiles[0]['name']} in folder #$current_folder_id";
                 $nabout = 'Uploads'; $nstatus = 'unread';
-                if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                    $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                // Get user name for notification
+                $userNameForNotif = null;
+                if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                    $userStmt->bind_param("i", $_SESSION['user_id']);
+                    $userStmt->execute();
+                    if ($userRes = $userStmt->get_result()) {
+                        if ($urow = $userRes->fetch_assoc()) {
+                            $userNameForNotif = trim($urow['full_name'] ?? '');
+                        }
+                    }
+                    $userStmt->close();
+                }
+                if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                    $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                     $ins->execute(); $ins->close();
                 }
                 echo json_encode([
@@ -830,25 +934,9 @@ function formatFileSize($fileSize) {
                                                 <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="<?php echo htmlspecialchars($record['title']); ?>"><?php echo htmlspecialchars($record['title']); ?></div>
                                             </div>
                                             <div class="relative flex-shrink-0">
-                                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#leg-menu-<?php echo $record['id']; ?>') && !e.target.closest('button')){ document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                                <button type="button" title="More options" data-id="<?php echo $record['id']; ?>" data-kind="legislative" data-title="<?php echo htmlspecialchars($record['title'], ENT_QUOTES, 'UTF-8'); ?>" data-url="<?php echo htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8'); ?>" data-size="<?php echo (int)$fileSize; ?>" data-created="<?php echo htmlspecialchars($record['created_at'], ENT_QUOTES, 'UTF-8'); ?>" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                                 </button>
-                                                <!-- Dropdown Menu -->
-                                                <div id="leg-menu-<?php echo $record['id']; ?>" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                                    <button onclick="previewFile('<?php echo htmlspecialchars($record['title']); ?>', <?php echo $record['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $record['created_at']; ?>'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye"></i> <span>View</span>
-                                                    </button>
-                                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($record['title']); ?>" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" title="Download file" onclick="document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');">
-                                                        <i class="bi bi-download"></i> <span>Download</span>
-                                                    </a>
-                                                    <button onclick="openLegislativeVersionHistory(<?php echo $record['id']; ?>, '<?php echo addslashes(htmlspecialchars($record['title'])); ?>'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-clock-history"></i> <span>History</span>
-                                                    </button>
-                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="pushToLLRM(<?php echo $record['id']; ?>, 'legislative'); document.getElementById('leg-menu-<?php echo $record['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-cloud-upload"></i> <span>Push to LLRM</span>
-                                                    </button>
-                                                </div>
                                             </div>
                                         </div>
                                         <!-- Metadata -->
@@ -949,29 +1037,9 @@ function formatFileSize($fileSize) {
                                                 <div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="<?php echo htmlspecialchars($file['name']); ?>"><?php echo htmlspecialchars($file['name']); ?></div>
                                             </div>
                                             <div class="relative flex-shrink-0">
-                                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.toggle('hidden'); setTimeout(() => { document.addEventListener('click', function _close(e){ if(!e.target.closest('#file-menu-<?php echo $file['id']; ?>') && !e.target.closest('button')){ document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden'); document.removeEventListener('click', _close); }}); }, 10);">
+                                                <button type="button" title="More options" data-id="<?php echo $file['id']; ?>" data-kind="archive" data-title="<?php echo htmlspecialchars($file['name'], ENT_QUOTES, 'UTF-8'); ?>" data-url="<?php echo htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8'); ?>" data-size="<?php echo (int)$fileSize; ?>" data-created="<?php echo htmlspecialchars($file['created_at'], ENT_QUOTES, 'UTF-8'); ?>" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                                 </button>
-                                                <!-- Dropdown Menu -->
-                                                <div id="file-menu-<?php echo $file['id']; ?>" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                                    <button onclick="previewFile('<?php echo htmlspecialchars($file['name']); ?>', <?php echo $file['id']; ?>, '<?php echo addslashes($fileUrl); ?>', <?php echo $fileSize; ?>, '<?php echo $file['created_at']; ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye"></i> <span>View</span>
-                                                    </button>
-                                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" download="<?php echo htmlspecialchars($file['name']); ?>" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" title="Download file" onclick="document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');">
-                                                        <i class="bi bi-download"></i> <span>Download</span>
-                                                    </a>
-                                                    <button onclick="openArchiveVersionHistory(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-clock-history"></i> <span>History</span>
-                                                    </button>
-                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="moveToHiddenFolder(<?php echo $file['id']; ?>, '<?php echo addslashes(htmlspecialchars($file['name'])); ?>'); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-eye-slash-fill"></i> <span>Move to Hidden Folder</span>
-                                                    </button>
-                                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                                    <button onclick="pushArchiveFileToLLRM(<?php echo $file['id']; ?>); document.getElementById('file-menu-<?php echo $file['id']; ?>').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-3 transition-colors">
-                                                        <i class="bi bi-cloud-upload"></i> <span>Push to LLRM</span>
-                                                    </button>
-                                                </div>
                                             </div>
                                         </div>
                                         <!-- Metadata -->
@@ -1192,6 +1260,7 @@ function formatFileSize($fileSize) {
                 var t = '';
                 if (['mp4','webm','ogg','avi','mov'].indexOf(ext) >= 0) t = 'video';
                 else if (ext === 'pdf') t = 'pdf';
+                else if (ext === 'docx') t = 'docx';
                 else if (['jpg','jpeg','png','gif','webp'].indexOf(ext) >= 0) t = 'image';
                 
                 document.getElementById('previewTitle').textContent = name;
@@ -1203,6 +1272,39 @@ function formatFileSize($fileSize) {
                     previewContent.innerHTML = `<video controls class="max-h-[70vh] max-w-full rounded-lg shadow-lg" src="${url}"></video>`;
                 } else if (t === 'pdf') {
                     previewContent.innerHTML = `<iframe src="${url}" class="w-full h-[70vh] rounded-lg shadow-lg" title="PDF Preview"></iframe>`;
+                } else if (t === 'docx') {
+                    previewContent.innerHTML = `<div class="text-center py-10 w-full" id="docx-loading">
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto mb-3"></div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Extracting document text…</p>
+                    </div>`;
+                    fetch('preview_docx_text.php?path=' + encodeURIComponent(url))
+                        .then(function(res) { return res.json(); })
+                        .then(function(d) {
+                            if (d && d.success) {
+                                var pre = document.createElement('pre');
+                                pre.className = 'w-full max-h-[70vh] overflow-auto rounded-lg bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-100 p-5 text-sm leading-relaxed whitespace-pre-wrap font-sans text-left';
+                                pre.textContent = d.text;
+                                previewContent.innerHTML = '';
+                                previewContent.appendChild(pre);
+                            } else {
+                                previewContent.innerHTML = `<div class="text-center">
+                                    <i class="bi bi-file-earmark-word text-6xl text-gray-500 mb-4"></i>
+                                    <p class="text-gray-600 dark:text-gray-400">${d && d.error ? d.error : 'Preview not available for this file type.'}</p>
+                                    <a href="${url}" download class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                                        <i class="bi bi-download"></i> Download File
+                                    </a>
+                                </div>`;
+                            }
+                        })
+                        .catch(function() {
+                            previewContent.innerHTML = `<div class="text-center">
+                                <i class="bi bi-file-earmark-word text-6xl text-gray-500 mb-4"></i>
+                                <p class="text-gray-600 dark:text-gray-400">Preview not available for this file type.</p>
+                                <a href="${url}" download class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                                    <i class="bi bi-download"></i> Download File
+                                </a>
+                            </div>`;
+                        });
                 } else {
                     previewContent.innerHTML = `<div class="text-center">
                         <i class="bi bi-file-earmark text-6xl text-gray-500 mb-4"></i>
@@ -1389,35 +1491,6 @@ function formatFileSize($fileSize) {
             return div.innerHTML;
         }
 
-        function moveToHiddenFolder(id, name) {
-            // Check if user has hidden folder setup and unlocked
-            fetch('confidential_vault.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'move_to_hidden_folder', file_id: id, source_type: '<?php echo $is_legislative ? "legislative" : "archive"; ?>' })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('Success', `File "${name}" moved to hidden folder`, 'success');
-                    // Remove the file from current view
-                    const fileElement = document.getElementById('<?php echo $is_legislative ? "record" : "file"; ?>-' + id);
-                    if (fileElement) {
-                        fileElement.style.opacity = '0.5';
-                        fileElement.style.transform = 'scale(0.95)';
-                        setTimeout(() => {
-                            fileElement.remove();
-                        }, 300);
-                    }
-                } else {
-                    showNotification('Error', data.message || 'Failed to move file', 'error');
-                }
-            })
-            .catch(e => {
-                showNotification('Error', 'Connection error', 'error');
-            });
-        }
-
         function pushToLLRM(recordId, type) {
             if (!confirm('Push this document to LLRM system?')) return;
             showNotification('Info', 'Pushing to LLRM...', 'info');
@@ -1594,16 +1667,9 @@ function formatFileSize($fileSize) {
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${record.title}">${record.title}</div></div>
                             <div class="relative flex-shrink-0">
-                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('leg-menu-${record.id}').classList.toggle('hidden');">
+                                <button type="button" title="More options" data-id="${record.id}" data-kind="legislative" data-title="${escAttr(record.title)}" data-url="${escAttr(fileUrl)}" data-size="${fileSize}" data-created="${escAttr(record.created_at)}" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                 </button>
-                                <div id="leg-menu-${record.id}" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                    <button onclick="previewFile('${record.title}', ${record.id}, '${fileUrl}', ${fileSize}, '${record.created_at}'); document.getElementById('leg-menu-${record.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-eye"></i><span>View</span></button>
-                                    <a href="${fileUrl}" download="${record.title}" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" onclick="document.getElementById('leg-menu-${record.id}').classList.add('hidden');"><i class="bi bi-download"></i><span>Download</span></a>
-                                    <button onclick="openLegislativeVersionHistory(${record.id}, '${record.title}'); document.getElementById('leg-menu-${record.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-clock-history"></i><span>History</span></button>
-                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="openRequestersModal(${record.id}, 'legislative', '${record.title.replace(/'/g, "\\'")}'); document.getElementById('leg-menu-${record.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-people"></i><span>View Requesters</span></button>
-                                </div>
                             </div>
                         </div>
                         <div class="space-y-2 text-xs">
@@ -1670,18 +1736,9 @@ function formatFileSize($fileSize) {
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${file.name}">${file.name}</div></div>
                             <div class="relative flex-shrink-0">
-                                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="More options" onclick="event.stopPropagation(); document.getElementById('file-menu-${file.id}').classList.toggle('hidden');">
+                                <button type="button" title="More options" data-id="${file.id}" data-kind="archive" data-title="${escAttr(file.name)}" data-url="${escAttr(fileUrl)}" data-size="${fileSize}" data-created="${escAttr(file.created_at)}" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer" onclick="openCardMenu(event)">
                                     <i class="bi bi-three-dots-vertical text-lg"></i>
                                 </button>
-                                <div id="file-menu-${file.id}" class="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-50 py-2">
-                                    <button onclick="previewFile('${file.name}', ${file.id}, '${fileUrl}', ${fileSize}, '${file.created_at}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-eye"></i><span>View</span></button>
-                                    <a href="${fileUrl}" download="${file.name}" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors" onclick="document.getElementById('file-menu-${file.id}').classList.add('hidden');"><i class="bi bi-download"></i><span>Download</span></a>
-                                    <button onclick="openArchiveVersionHistory(${file.id}, '${file.name}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-clock-history"></i><span>History</span></button>
-                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="openRequestersModal(${file.id}, 'archive', '${file.name.replace(/'/g, "\\'")}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors"><i class="bi bi-people"></i><span>View Requesters</span></button>
-                                    <hr class="my-1 border-gray-200 dark:border-slate-600">
-                                    <button onclick="moveToHiddenFolder(${file.id}, '${file.name}'); document.getElementById('file-menu-${file.id}').classList.add('hidden');" class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"><i class="bi bi-eye-slash-fill"></i><span>Move to Hidden Folder</span></button>
-                                </div>
                             </div>
                         </div>
                         <div class="space-y-2 text-xs">
@@ -1705,6 +1762,102 @@ function formatFileSize($fileSize) {
             return fileSize >= 1073741824 ? (fileSize / 1073741824).toFixed(2) + ' GB' :
                   (fileSize >= 1048576 ? (fileSize / 1048576).toFixed(2) + ' MB' :
                   (fileSize >= 1024 ? (fileSize / 1024).toFixed(2) + ' KB' : fileSize + ' B'));
+        }
+
+        function escAttr(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function closeCardMenus() {
+            var m = document.getElementById('card-context-menu');
+            if (m) m.remove();
+        }
+
+        function openCardMenu(event) {
+            event.stopPropagation();
+            closeCardMenus();
+
+            var btn = event.currentTarget;
+            var id = btn.getAttribute('data-id');
+            var kind = btn.getAttribute('data-kind');
+            var title = btn.getAttribute('data-title');
+            var url = btn.getAttribute('data-url');
+            var size = parseInt(btn.getAttribute('data-size') || '0', 10);
+            var created = btn.getAttribute('data-created');
+
+            var menu = document.createElement('div');
+            menu.id = 'card-context-menu';
+            menu.className = 'fixed bg-white dark:bg-slate-700 rounded-lg shadow-xl border border-gray-200 dark:border-slate-600 z-[9999] py-2 min-w-[220px]';
+            menu.style.pointerEvents = 'auto';
+
+            var items = [
+                { icon: 'bi-eye', label: 'View', action: function(){ previewFile(title, id, url, size, created); } },
+                { icon: 'bi-download', label: 'Download', href: url, download: title },
+                { icon: 'bi-clock-history', label: 'History', action: function(){ if (kind === 'legislative') { openLegislativeVersionHistory(id, title); } else { openArchiveVersionHistory(id, title); } } },
+                { icon: 'bi-people', label: 'View Requesters', action: function(){ openRequestersModal(id, kind, title); } }
+            ];
+            if (kind === 'archive') {
+            }
+            items.push({ divider: true });
+            items.push({ icon: 'bi-cloud-upload', label: 'Push to LLRM', purple: true, action: function(){ if (kind === 'legislative') { pushToLLRM(id, 'legislative'); } else { pushArchiveFileToLLRM(id); } } });
+
+            items.forEach(function(item){
+                if (item.divider) {
+                    var hr = document.createElement('hr');
+                    hr.className = 'my-1 border-gray-200 dark:border-slate-600';
+                    menu.appendChild(hr);
+                    return;
+                }
+                var el;
+                if (item.href) {
+                    el = document.createElement('a');
+                    el.href = item.href;
+                    el.setAttribute('download', item.download || '');
+                } else {
+                    el = document.createElement('button');
+                    el.type = 'button';
+                }
+                var textColor = 'text-gray-700 dark:text-gray-200';
+                if (item.danger) textColor = 'text-red-600 dark:text-red-400';
+                if (item.purple) textColor = 'text-purple-600 dark:text-purple-400';
+                el.className = 'block w-full text-left px-4 py-2.5 text-sm ' + textColor + ' hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center gap-3 transition-colors cursor-pointer';
+                el.innerHTML = '<i class="bi ' + item.icon + '"></i><span>' + item.label + '</span>';
+                el.addEventListener('click', function(e){
+                    if (!item.href) {
+                        e.preventDefault();
+                        closeCardMenus();
+                        if (item.action) item.action();
+                    } else {
+                        setTimeout(closeCardMenus, 0);
+                    }
+                });
+                menu.appendChild(el);
+            });
+
+            document.body.appendChild(menu);
+
+            var rect = btn.getBoundingClientRect();
+            var menuW = menu.offsetWidth;
+            var menuH = menu.offsetHeight;
+            var left = rect.right - menuW;
+            var top = rect.bottom + 4;
+            if (left < 8) left = 8;
+            if (top + menuH > window.innerHeight - 8) {
+                top = rect.top - menuH - 4;
+                if (top < 8) top = 8;
+            }
+            menu.style.top = top + 'px';
+            menu.style.left = left + 'px';
+
+            setTimeout(function(){
+                document.addEventListener('click', function _h(e){
+                    if (!e.target.closest || !e.target.closest('#card-context-menu')) {
+                        closeCardMenus();
+                        document.removeEventListener('click', _h);
+                    }
+                });
+            }, 0);
+            window.addEventListener('scroll', closeCardMenus, { once: true });
         }
 
         // Handle highlight on page load

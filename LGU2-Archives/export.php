@@ -1,4 +1,5 @@
 <?php
+/*
 session_start();
 if (!isset($_SESSION['user_id'])) {
 	header('Location: login.php');
@@ -71,7 +72,8 @@ $notif_cols = [
     'file_version' => "VARCHAR(60) DEFAULT NULL",
     'needed_date' => "DATE DEFAULT NULL",
     'request_note' => "TEXT",
-    'purpose' => "VARCHAR(255) DEFAULT NULL"
+    'purpose' => "VARCHAR(255) DEFAULT NULL",
+    'user_name' => "VARCHAR(100) DEFAULT NULL"
 ];
 foreach ($notif_cols as $col => $def) {
     $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
@@ -102,8 +104,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_request'])) {
         $request_note = $request_note !== '' ? $request_note : null;
         $purpose = $purpose !== '' ? $purpose : null;
 
-        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, file_name, file_version, needed_date, request_note, purpose, link) VALUES (?,?,?,?,?,?,?,?,?,?,?)")) {
-            $ins->bind_param("sssssssssss", $ntime, $ndate, $file_name, $about, $status, $file_name, $file_version, $needed_date, $request_note, $purpose, $link);
+        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, file_name, file_version, needed_date, request_note, purpose, link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")) {
+            // Get user name for notification
+            $userNameForNotif = null;
+            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                $userStmt->bind_param("i", $_SESSION['user_id']);
+                $userStmt->execute();
+                if ($userRes = $userStmt->get_result()) {
+                    if ($urow = $userRes->fetch_assoc()) {
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                    }
+                }
+                $userStmt->close();
+            }
+            $ins->bind_param("ssssssssssss", $ntime, $ndate, $file_name, $about, $userNameForNotif, $status, $file_name, $file_version, $needed_date, $request_note, $purpose, $link);
             if ($ins->execute()) {
                 $export_notice = "Request Copy created for " . $file_name . ".";
             } else {
@@ -162,6 +176,8 @@ foreach ($mock_notifications as $req) {
 	<script src="assets/js/theme-head.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 	<link rel="stylesheet" href="assets/css/archives-landing.css">
+	<link rel="stylesheet" href="assets/css/mobile-responsive.css">
+	<script src="assets/js/mobile-responsive.js"></script>
 	<link rel="stylesheet" href="assets/css/audit-logs.css">
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
@@ -712,7 +728,7 @@ foreach ($mock_notifications as $req) {
             </div>
         </div>
 
-	<script src="assets/js/archives-landing.js"></script>
+	<script src="assets/js/archives-landing.js?v=2"></script>
 	<script src="assets/js/theme-toggle.js"></script>
 	<script src="assets/js/export-fulfillment.js?v=<?php echo uniqid() . '_' . rand(1000, 9999); ?>"></script>
 	<script>
@@ -827,3 +843,4 @@ foreach ($mock_notifications as $req) {
 	</script>
 </body>
 </html>
+*/

@@ -61,6 +61,8 @@ if ($folders_result && $folders_result->num_rows > 0) {
     <script src="assets/js/archives-landing-head.js"></script>
     <script src="assets/js/theme-head.js"></script>
     <link rel="stylesheet" href="assets/css/archives-landing.css">
+    <link rel="stylesheet" href="assets/css/mobile-responsive.css">
+    <script src="assets/js/mobile-responsive.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="apple-touch-icon" href="Images/Val-logo/valenzuela logo.webp">
@@ -206,9 +208,21 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                 echo '<div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">Password updated successfully!</div>';
                                 // Log to notifications
                                 $conn->query("CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, time VARCHAR(20) NOT NULL, date DATE NOT NULL, content VARCHAR(255) NOT NULL, about VARCHAR(100) NOT NULL, status ENUM('unread','read') NOT NULL DEFAULT 'unread', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
-                                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                                // Get user name for notification
+                                $userNameForNotif = null;
+                                if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                                    $userStmt->bind_param("i", $user_id);
+                                    $userStmt->execute();
+                                    if ($userRes = $userStmt->get_result()) {
+                                        if ($urow = $userRes->fetch_assoc()) {
+                                            $userNameForNotif = trim($urow['full_name'] ?? '');
+                                        }
+                                    }
+                                    $userStmt->close();
+                                }
+                                $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
                                 $ntime = date('h:i A'); $ndate = date('Y-m-d'); $ncontent = ($is_admin ? 'Admin: ' : 'User: ') . ($user['username'] ?? 'User') . ' changed password.'; $nabout = 'Security'; $nstatus = 'unread';
-                                $nt->bind_param("sssss", $ntime, $ndate, $ncontent, $nabout, $nstatus);
+                                $nt->bind_param("ssssss", $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                                 $nt->execute();
                             } else {
                                 echo '<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">Failed to update password.</div>';
@@ -311,9 +325,22 @@ if ($folders_result && $folders_result->num_rows > 0) {
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )");
 
-                            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?, ?, ?, ?, ?)");
+                            // Get user name for notification
+                            $userNameForNotif = null;
+                            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                                $userStmt->bind_param("i", $user_id);
+                                $userStmt->execute();
+                                if ($userRes = $userStmt->get_result()) {
+                                    if ($urow = $userRes->fetch_assoc()) {
+                                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                                    }
+                                }
+                                $userStmt->close();
+                            }
+
+                            $nt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
                             if ($nt) {
-                                $nt->bind_param("sssss", $notif_time, $notif_date, $notif_content, $notif_about, $notif_status);
+                                $nt->bind_param("ssssss", $notif_time, $notif_date, $notif_content, $notif_about, $userNameForNotif, $notif_status);
                                 $nt->execute();
                                 $nt->close();
                             }
@@ -475,7 +502,7 @@ if ($folders_result && $folders_result->num_rows > 0) {
     </div>
     </div>
 
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/archives.js"></script>
 

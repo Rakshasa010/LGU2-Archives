@@ -15,18 +15,34 @@ if (!function_exists('storage_dir_metrics')) {
     function storage_dir_metrics($path, $capacityBytes = null) {
         $bytes = 0;
         $fileCount = 0;
+        $storageTop = [];
 
         if (is_dir($path)) {
+            $baseReal = realpath($path);
             $it = new RecursiveIteratorIterator(
                 new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)
             );
             foreach ($it as $file) {
                 if ($file->isFile()) {
-                    $bytes += $file->getSize();
+                    $size = $file->getSize();
+                    $bytes += $size;
                     $fileCount++;
+                    $src = 'Other';
+                    if ($baseReal !== false) {
+                        $rel = str_replace('\\', '/', substr($file->getPathname(), strlen($baseReal) + 1));
+                        $seg = strtolower(strtok($rel, '/'));
+                        if ($seg === 'archives') $src = 'Archive';
+                        elseif ($seg === 'legislative') $src = 'Legislative';
+                        elseif ($seg === 'external') $src = 'External';
+                        elseif ($seg === 'profile_pictures') $src = 'Profile';
+                    }
+                    $storageTop[] = ['name' => $file->getFilename(), 'path' => $file->getPathname(), 'src' => $src, 'size' => $size];
                 }
             }
         }
+
+        usort($storageTop, function($a, $b) { return $b['size'] - $a['size']; });
+        $storageTop = array_slice($storageTop, 0, 15);
 
         if ($capacityBytes === null) {
             $capacityBytes = 50 * 1024 * 1024 * 1024; // 50 GB default
@@ -36,9 +52,11 @@ if (!function_exists('storage_dir_metrics')) {
 
         return [
             'bytes' => $bytes,
+            'totalBytes' => $bytes,
             'fileCount' => $fileCount,
             'capacityBytes' => $capacityBytes,
             'pct' => $pct,
+            'storageTop' => $storageTop,
             'usedText' => storage_format_bytes($bytes),
             'totalText' => storage_format_bytes($capacityBytes)
         ];

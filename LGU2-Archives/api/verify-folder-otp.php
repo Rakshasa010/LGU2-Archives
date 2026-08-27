@@ -44,4 +44,8 @@ if ($code === '' || $code !== (string)$_SESSION['folder_otp_code']) {
 // Success: clear the OTP session data
 unset($_SESSION['folder_otp_code'], $_SESSION['folder_otp_expires'], $_SESSION['folder_otp_sent_at']);
 
+// Mark a fresh verification so server-side actions (e.g. downloads) can
+// require an OTP that was just entered.
+$_SESSION['folder_otp_verified'] = time();
+
 echo json_encode(['success' => true, 'data' => ['verified' => true]]);

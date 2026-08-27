@@ -1,6 +1,9 @@
 <?php
 // Include database connection
 include 'authdatabase.php';
+require_once __DIR__ . '/includes/mongodb_atlas.php';
+require_once __DIR__ . '/includes/pinata.php';
+require_once __DIR__ . '/monitoring_helper.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -38,7 +41,7 @@ function log_analytics_event(mysqli $conn, array $event): void {
 
 
 function get_legislative_file_info(mysqli $conn, int $id): ?array {
-    $stmt = $conn->prepare("SELECT file_path, title, type, month, year, author FROM legislative_records WHERE id = ?");
+    $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author, mongo_id, folder_id FROM legislative_records WHERE id = ?");
     if (!$stmt) return null;
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -96,6 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'bytes' => null
         ]);
 
+        // Log file preview for monitored users
+        log_monitored_user_action(
+            $conn,
+            $_SESSION['user_id'] ?? 0,
+            'File Preview',
+            'Previewed file "' . htmlspecialchars($record['title']) . '" in folder "' . htmlspecialchars($record['type']) . '"'
+        );
+
         $filename = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $record['title']) . '_' . $record['id'];
         generatePDF($record, $filename, 'inline');
         $conn->close();
@@ -130,8 +141,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($idInt > 0) {
             $fileInfo = get_legislative_file_info($conn, $idInt);
         }
+        // --- MongoDB Atlas Step: Query supplementary metadata ---
+        $mongoMetadata = null;
+        if ($idInt > 0) {
+            $atlas = new MongoDBAtlas();
+            // Resolve the per-folder database first (routed files live there)
+            $folderDbName = null;
+            if ($fileInfo && !empty($fileInfo['folder_id'])) {
+                $folderReg = $atlas->getFolderDatabase((int)$fileInfo['folder_id']);
+                if ($folderReg['success'] && !empty($folderReg['db_name'])) {
+                    $folderDbName = $folderReg['db_name'];
+                    $mongoResult = $atlas->findOneInDb($folderDbName, 'files', ['mysql_id' => $idInt]);
+                } else {
+                    $mongoResult = ['success' => false];
+                }
+            } else {
+                // Try querying by mysql_id first (legacy/default db)
+                $mongoResult = $atlas->findOne(['mysql_id' => $idInt]);
+            }
+            if ($mongoResult['success'] && $mongoResult['document']) {
+                $mongoMetadata = $mongoResult['document'];
+            } elseif ($fileInfo && !empty($fileInfo['mongo_id'])) {
+                // Fallback: query by MongoDB _id using the value stored in MySQL's mongo_id column
+                try {
+                    $mongoId = new MongoDB\BSON\ObjectId($fileInfo['mongo_id']);
+                    if ($folderDbName) {
+                        $mongoResult2 = $atlas->findOneInDb($folderDbName, 'files', ['_id' => $mongoId]);
+                    } else {
+                        $mongoResult2 = $atlas->findOne(['_id' => $mongoId]);
+                    }
+                    if ($mongoResult2['success'] && $mongoResult2['document']) {
+                        $mongoMetadata = $mongoResult2['document'];
+                    }
+                } catch (Exception $e) {
+                    error_log('MongoDB fallback lookup failed: ' . $e->getMessage());
+                }
+            }
+        }
+        // Merge MongoDB metadata with file info (MongoDB values take precedence where available)
+        if ($fileInfo && $mongoMetadata) {
+            // Use MongoDB file_size and mime_type if available, otherwise fall back to MySQL
+            if (isset($mongoMetadata['file_size'])) $fileInfo['file_size'] = $mongoMetadata['file_size'];
+            if (isset($mongoMetadata['mime_type'])) $fileInfo['mime_type'] = $mongoMetadata['mime_type'];
+        }
+        // ---------------------------------------------------
         if ($fileInfo && isset($fileInfo['file_path'])) {
             $path = resolve_local_path($fileInfo['file_path']);
+            $ipfsCid = $fileInfo['ipfs_cid'] ?? null;
+            // When the file only exists on IPFS, keep rendering the preview —
+            // view_file below serves it through the Pinata gateway.
+            if (!$path && !empty($ipfsCid) && pinata_is_configured()) {
+                $path = $fileInfo['file_path'];
+            }
             if ($path) {
                 $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
                 $viewUrl = 'download.php?action=view_file&id=' . urlencode((string)$idInt);
@@ -151,7 +212,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                 . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
                                 . '<iframe src="' . $viewUrl . '" class="w-full h-[70vh] rounded-lg border bg-white"></iframe>'
                                 . '</div>';
-                } elseif (in_array($ext, ['doc','docx','xls','xlsx','ppt','pptx'])) {
+                } elseif ($ext === 'docx') {
+                    require_once __DIR__ . '/includes/docx_preview.php';
+                    $docxText = docx_extract_text($path);
+                    if ($docxText !== null && trim($docxText) !== '') {
+                        $viewerHtml = '<div class="space-y-4">'
+                                    . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                    . '<pre class="w-full max-h-[70vh] overflow-auto rounded-lg border bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-100 p-4 text-sm leading-relaxed whitespace-pre-wrap font-sans">' . htmlspecialchars($docxText) . '</pre>'
+                                    . '</div>';
+                    } else {
+                        $gview = 'https://docs.google.com/gview?embedded=true&url=' . urlencode($viewUrlAbs);
+                        $viewerHtml = '<div class="space-y-4">'
+                                    . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
+                                    . '<iframe src="' . $gview . '" class="w-full h-[70vh] rounded-lg border bg-white"></iframe>'
+                                    . '<div class="text-xs text-gray-500 dark:text-gray-400">If the preview fails, use Open to view in a new tab.</div>'
+                                    . '<div class="flex justify-end"><a href="' . $viewUrl . '" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded">Open</a></div>'
+                                    . '</div>';
+                    }
+                } elseif (in_array($ext, ['doc','xls','xlsx','ppt','pptx'])) {
                     $gview = 'https://docs.google.com/gview?embedded=true&url=' . urlencode($viewUrlAbs);
                     $viewerHtml = '<div class="space-y-4">'
                                 . '<div class="border-b pb-2 text-xl font-semibold">' . htmlspecialchars($record['title']) . '</div>'
@@ -194,6 +272,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             http_response_code(404);
             echo 'File not found';
             exit;
+        }
+        // Serve via the Pinata dedicated gateway when an IPFS CID is stored.
+        $ipfsCid = $info['ipfs_cid'] ?? null;
+        if (!empty($ipfsCid) && pinata_is_configured()) {
+            pinata_stream_cid($ipfsCid, true, basename((string)$info['file_path']));
         }
         $path = resolve_local_path((string)$info['file_path']);
         if (!$path) {
@@ -280,7 +363,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         </div>
 
                         <div class="flex gap-3">
-                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                            <form action="download.php" method="post" target="_blank" class="flex-1" id="dl-pdf-form">
                                 <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
                                 <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
                                 <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
@@ -293,7 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                     PDF
                                 </button>
                             </form>
-                            <form action="download.php" method="post" target="_blank" class="flex-1">
+                            <form action="download.php" method="post" target="_blank" class="flex-1" id="dl-docx-form">
                                 <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
                                 <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
                                 <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
@@ -306,19 +389,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                                     DOCX
                                 </button>
                             </form>
-                            <form action="download.php" method="post" target="_blank" class="flex-1">
-                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($record['id']); ?>">
-                                <input type="hidden" name="title" value="<?php echo htmlspecialchars($record['title']); ?>">
-                                <input type="hidden" name="type" value="<?php echo htmlspecialchars($record['type']); ?>">
-                                <input type="hidden" name="month" value="<?php echo htmlspecialchars($record['month']); ?>">
-                                <input type="hidden" name="year" value="<?php echo htmlspecialchars($record['year']); ?>">
-                                <input type="hidden" name="author" value="<?php echo htmlspecialchars($record['author']); ?>">
-                                <input type="hidden" name="format" value="xml">
-                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition border border-gray-200 dark:border-slate-600">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7L9 18l-5-5"></path></svg>
-                                    XML
-                                </button>
-                            </form>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+                            <i class="bi bi-shield-lock"></i>
+                            <span>A one-time code will be sent to your email to verify this download.</span>
                         </div>
 
                         <div class="flex justify-end pt-2">
@@ -330,6 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         </div>
 
         <script id="download-record" type="application/json"><?php echo json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
+        <script src="assets/js/folder-otp.js"></script>
         <script>
             // Simple animation
             document.addEventListener('DOMContentLoaded', () => {
@@ -341,6 +417,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     }, 50);
                 }
             });
+
+            // OTP gate: PDF/DOCX download only proceeds after a verified OTP code.
+            (function () {
+                var formIds = ['dl-pdf-form', 'dl-docx-form'];
+                formIds.forEach(function (id) {
+                    var form = document.getElementById(id);
+                    if (!form) return;
+                    form.addEventListener('submit', function (e) {
+                        if (form.dataset.otpVerified === '1') return;
+                        e.preventDefault();
+                        window.folderOTP.guard(null, function () {
+                            form.dataset.otpVerified = '1';
+                            form.submit();
+                        });
+                    });
+                });
+            })();
         </script>
         <?php include 'includes/footer_scripts.php'; ?>
     </body>
@@ -352,6 +445,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Check if all required POST data is present
     if (!isset($_POST['id'], $_POST['title'], $_POST['type'], $_POST['month'], $_POST['year'], $_POST['author'], $_POST['format'])) {
         die('Invalid request');
+    }
+
+    // Downloads require a fresh OTP verification (set by api/verify-folder-otp.php).
+    $otpVerified = isset($_SESSION['folder_otp_verified'])
+        && (time() - (int)$_SESSION['folder_otp_verified']) <= 300;
+    if (!$otpVerified) {
+        http_response_code(403);
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Download Blocked</title></head>'
+            . '<body style="font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#fef2f2;">'
+            . '<div style="text-align:center;background:#fff;padding:32px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.08);max-width:420px;">'
+            . '<div style="font-size:40px;">&#128274;</div>'
+            . '<h2 style="margin:12px 0 8px;color:#111827;">Download blocked</h2>'
+            . '<p style="color:#6b7280;font-size:14px;margin-bottom:20px;">This download requires a one-time verification code. Please go back, choose PDF or DOCX, and complete the code sent to your email.</p>'
+            . '<button onclick="window.close()" style="background:#dc2626;color:#fff;border:0;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;">Close window</button>'
+            . '</div></body></html>';
+        $conn->close();
+        exit;
     }
 
     $record = [
@@ -387,6 +497,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'download_format' => $format,
         'bytes' => null
     ]);
+
+    // Log file download for monitored users
+    log_monitored_user_action(
+        $conn,
+        $_SESSION['user_id'] ?? 0,
+        'File Download',
+        'Downloaded "' . htmlspecialchars($record['title']) . '" as ' . strtoupper($format) . ' from folder "' . htmlspecialchars($record['type']) . '"'
+    );
     
 
     // Generate filename
@@ -396,11 +514,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         case 'pdf':
             generatePDF($record, $filename);
             break;
+        case 'doc':
         case 'docx':
             generateWord($record, $filename);
-            break;
-        case 'xml':
-            generateXML($record, $filename);
             break;
         default:
             die('Invalid format');

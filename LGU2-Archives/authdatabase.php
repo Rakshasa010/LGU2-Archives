@@ -1,4 +1,6 @@
 <?php
+// Force Asia/Manila (PHT) timezone for all PHP date() usage across the app
+date_default_timezone_set('Asia/Manila');
 // Load database configuration from .env (project root)
 function load_env($path) {
     $vars = [];
@@ -13,16 +15,17 @@ function load_env($path) {
 $env = load_env(__DIR__ . '/../.env');
 
 // Database configuration from .env with XAMPP fallbacks
-$servername = $env['MYSQL_HOST'] ?? 'localhost';
-$username   = $env['MYSQL_USER'] ?? 'root';
-$password   = $env['MYSQL_PASSWORD'] ?? '';
-$dbname     = $env['MYSQL_DATABASE'] ?? 'las_lgu2_archives';
+$servername = $env['DB_HOST'] ?? $env['MYSQL_HOST'] ?? 'localhost';
+$username   = $env['DB_USER'] ?? $env['MYSQL_USER'] ?? 'root';
+$password   = $env['DB_PASSWORD'] ?? $env['MYSQL_PASSWORD'] ?? '';
+$dbname     = $env['DB_NAME'] ?? $env['MYSQL_DATABASE'] ?? 'las_lgu2_archives';
+$dbport     = (int)($env['DB_PORT'] ?? $env['MYSQL_PORT'] ?? 3306);
 
 // Include guard: skip connection setup + migration if already connected
 if (!isset($conn) || !($conn instanceof mysqli)) {
 
 // Create connection
-$conn = new mysqli($servername, $username, $password);
+$conn = new mysqli($servername, $username, $password, '', $dbport);
 
 // Check connection
 if ($conn->connect_error) {
@@ -69,6 +72,8 @@ $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     folder_id INT NULL,
     file_size BIGINT NULL,
     version_notes TEXT NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    mime_type VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMP NULL
 )";
@@ -96,7 +101,11 @@ $leg_cols_needed = [
     'parent_version_id' => "INT NULL",
     'folder_id' => "INT NULL",
     'file_size' => "BIGINT NULL",
-    'version_notes' => "TEXT NULL"
+    'version_notes' => "TEXT NULL",
+    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+    'mime_type' => "VARCHAR(100) DEFAULT NULL",
+    'pinata_file_id' => "VARCHAR(64) DEFAULT NULL",
+    'pinata_grouped' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
 foreach ($leg_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM legislative_records LIKE '$col'")->num_rows == 0) {
@@ -114,6 +123,8 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) DEFAULT 'user',
     status ENUM('pending','active','rejected') NOT NULL DEFAULT 'active',
     profile_picture VARCHAR(255) DEFAULT NULL,
+    google_id VARCHAR(255) NULL UNIQUE,
+    google_picture VARCHAR(500) NULL,
     must_change_password TINYINT(1) NOT NULL DEFAULT 0,
     dark_mode TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -121,6 +132,18 @@ $users_sql = "CREATE TABLE IF NOT EXISTS users (
 )";
 
 $conn->query($users_sql);
+
+// Add google_id column if it doesn't exist (Google OAuth)
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'google_id'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL UNIQUE AFTER email");
+}
+
+// Add google_picture column if it doesn't exist (Google OAuth)
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'google_picture'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN google_picture VARCHAR(500) NULL AFTER google_id");
+}
 
 // Add profile_picture column if it doesn't exist (for existing databases)
 $check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
@@ -172,6 +195,12 @@ if ($check_column->num_rows == 0) {
     $conn->query("UPDATE users SET login_count = 1");
 }
 
+// Add is_monitored column for user monitoring feature
+$check_column = $conn->query("SHOW COLUMNS FROM users LIKE 'is_monitored'");
+if ($check_column->num_rows == 0) {
+    $conn->query("ALTER TABLE users ADD COLUMN is_monitored TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+}
+
 // Create analytics_events table (used by report_analytics.php)
 $analytics_sql = "CREATE TABLE IF NOT EXISTS analytics_events (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -210,10 +239,11 @@ if ($check_column->num_rows == 0) {
     $conn->query("ALTER TABLE archive_folders ADD INDEX idx_parent_id (parent_id)");
 }
 
-// Add document_prefix and last_sequence_number columns to archive_folders
+// Add document_prefix, last_sequence_number and pinata_group_id columns to archive_folders
 $archive_folder_cols = [
     'document_prefix' => "VARCHAR(255) NULL",
-    'last_sequence_number' => "INT DEFAULT 0"
+    'last_sequence_number' => "INT DEFAULT 0",
+    'pinata_group_id' => "VARCHAR(64) NULL"
 ];
 foreach ($archive_folder_cols as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM archive_folders LIKE '$col'")->num_rows == 0) {
@@ -235,10 +265,11 @@ $leg_folders_sql = "CREATE TABLE IF NOT EXISTS legislative_folders (
 )";
 $conn->query($leg_folders_sql);
 
-// Add document_prefix and last_sequence_number columns to legislative_folders
+// Add document_prefix, last_sequence_number and pinata_group_id columns to legislative_folders
 $leg_folder_cols = [
     'document_prefix' => "VARCHAR(255) NULL",
-    'last_sequence_number' => "INT DEFAULT 0"
+    'last_sequence_number' => "INT DEFAULT 0",
+    'pinata_group_id' => "VARCHAR(64) NULL"
 ];
 foreach ($leg_folder_cols as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM legislative_folders LIKE '$col'")->num_rows == 0) {
@@ -258,6 +289,8 @@ $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
     parent_version_id INT NULL,
     file_size BIGINT NULL,
     version_notes TEXT NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    mime_type VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_folder_id (folder_id)
 )";
@@ -271,7 +304,11 @@ $archive_cols_needed = [
     'version' => "INT DEFAULT 1",
     'parent_version_id' => "INT NULL",
     'file_size' => "BIGINT NULL",
-    'version_notes' => "TEXT NULL"
+    'version_notes' => "TEXT NULL",
+    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+    'mime_type' => "VARCHAR(100) DEFAULT NULL",
+    'pinata_file_id' => "VARCHAR(64) DEFAULT NULL",
+    'pinata_grouped' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
 foreach ($archive_cols_needed as $col => $def) {
     if ($conn->query("SHOW COLUMNS FROM archive_files LIKE '$col'")->num_rows == 0) {
@@ -351,6 +388,24 @@ if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE notifications ADD COLUMN action VARCHAR(50) NULL AFTER user_agent");
 }
 
+// Add user_name column for monitoring feature
+$check_user_name = $conn->query("SHOW COLUMNS FROM notifications LIKE 'user_name'");
+if ($check_user_name && $check_user_name->num_rows == 0) {
+    $conn->query("ALTER TABLE notifications ADD COLUMN user_name VARCHAR(100) NULL AFTER about");
+}
+
+// Create contact_messages table (landing page contact form)
+$contact_sql = "CREATE TABLE IF NOT EXISTS contact_messages (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    sender_name VARCHAR(150) NOT NULL,
+    sender_email VARCHAR(200) NOT NULL,
+    department VARCHAR(200) NULL,
+    message TEXT NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+$conn->query($contact_sql);
+
 // Create user_hidden_folders table for user-specific secure file storage
 $hidden_folder_sql = "CREATE TABLE IF NOT EXISTS user_hidden_folders (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
@@ -414,6 +469,43 @@ if ($check_old_vault && $check_old_vault->num_rows > 0) {
 
 // Optional: Set charset to utf8mb4 for better Unicode support
 $conn->set_charset("utf8mb4");
+
+// Create external_documents table (documents pushed from external systems, e.g. LLRM)
+$external_docs_sql = "CREATE TABLE IF NOT EXISTS external_documents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    document_type VARCHAR(50) NOT NULL DEFAULT 'archive',
+    document_date DATE NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'archived',
+    description TEXT NULL,
+    tags VARCHAR(500) NULL,
+    reference_number VARCHAR(100) NULL,
+    file_path VARCHAR(500) NULL,
+    file_name VARCHAR(255) NULL,
+    file_size BIGINT DEFAULT 0,
+    file_type VARCHAR(100) NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    source_system VARCHAR(50) NOT NULL DEFAULT 'llrm',
+    external_id VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_ref (reference_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+$conn->query($external_docs_sql);
+
+// Add Pinata IPFS columns to external_documents if missing
+$external_docs_cols = [
+    'ipfs_cid' => "VARCHAR(255) DEFAULT NULL",
+    'mime_type' => "VARCHAR(100) DEFAULT NULL",
+    'pinata_file_id' => "VARCHAR(64) DEFAULT NULL",
+    'pinata_grouped' => "TINYINT(1) NOT NULL DEFAULT 0"
+];
+foreach ($external_docs_cols as $col => $def) {
+    $chk = $conn->query("SHOW COLUMNS FROM external_documents LIKE '$col'");
+    if ($chk && $chk->num_rows == 0) {
+        $conn->query("ALTER TABLE external_documents ADD COLUMN $col $def");
+    }
+}
 
 } // end include guard
 

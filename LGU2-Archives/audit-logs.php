@@ -46,7 +46,8 @@
         'file_version' => "VARCHAR(60) DEFAULT NULL",
         'needed_date' => "DATE DEFAULT NULL",
         'request_note' => "TEXT",
-        'purpose' => "VARCHAR(255) DEFAULT NULL"
+        'purpose' => "VARCHAR(255) DEFAULT NULL",
+        'user_name' => "VARCHAR(100) DEFAULT NULL"
     ];
     foreach ($notif_cols as $col => $def) {
         $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
@@ -73,11 +74,11 @@
         'Export (Reports & Analytics)',
         'Export (Archives ZIP)',
         'Approval',
-        'Backup'
+        'Monitored User Activity'
     ];
     sort($categories);
     
-    if ($res = $conn->query("SELECT id, time, date, content, about, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
+    if ($res = $conn->query("SELECT id, time, date, content, about, user_name, status, created_at, link FROM notifications ORDER BY date DESC, id DESC")) {
         while ($row = $res->fetch_assoc()) {
             $notifications[] = $row;
             $total_logs++;
@@ -117,6 +118,8 @@
         <script src="assets/js/theme-head.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <link rel="stylesheet" href="assets/css/archives-landing.css">
+        <link rel="stylesheet" href="assets/css/mobile-responsive.css">
+        <script src="assets/js/mobile-responsive.js"></script>
         <link rel="stylesheet" href="assets/css/audit-logs.css">
     </head>
     <body class="bg-gray-100 dark:bg-slate-900 font-sans antialiased transition-colors duration-200">
@@ -149,7 +152,7 @@
                         </div>
                         <div class="flex-1 flex items-center justify-center md:justify-start min-w-0">
                             <div class="ml-2 md:ml-4 min-w-0">
-                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100">Audit Logs</h2>
+                                <h2 id="page-title" class="text-base md:text-xl font-bold text-gray-800 dark:text-gray-100"><i class="bi bi-shield-check text-red-600 dark:text-red-400 mr-1"></i>Audit Logs</h2>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">View and manage system audit logs</p>
                             </div>
                         </div>
@@ -294,8 +297,9 @@
                                             <tr class="text-xs uppercase tracking-wider text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-600">
                                                 <th class="px-4 py-3 font-bold w-12 text-center">#</th>
                                                 <th class="px-4 py-3 font-bold w-36">Time & Date</th>
+                                                <th class="px-4 py-3 font-bold w-40">User</th>
                                                 <th class="px-4 py-3 font-bold">Content</th>
-                                                <th class="px-4 py-3 font-bold w-48">Category</th>
+                                                <th class="px-4 py-3 font-bold w-48">Action</th>
                                                 <th class="px-4 py-3 font-bold w-16 text-center"><i class="bi bi-check2-all text-lg"></i></th>
                                             </tr>
                                         </thead>
@@ -348,6 +352,8 @@
                 $badgeColor = 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50';
             } elseif (stripos($about, 'Security') !== false) {
                 $badgeColor = 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
+            } elseif (stripos($about, 'Monitored') !== false) {
+                $badgeColor = 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50';
             }
                                             ?>
                                             <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isUnread ? 'bg-[#fff5f5] dark:bg-red-900/20 border-l-[3px] border-l-red-500' : 'bg-white dark:bg-slate-800 border-l-[3px] border-l-transparent text-gray-700 dark:text-slate-300'; ?> hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors md:table-row flex flex-col md:flex-row mb-2 md:mb-0 border border-gray-100 dark:border-slate-700/50 md:border-0 rounded-lg md:rounded-none shadow-sm md:shadow-none">
@@ -359,6 +365,14 @@
                                                         <div class="text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-search="<?php echo htmlspecialchars($dispDate); ?>"><?php echo $relativeTime; ?></div>
                                                     </div>
                                                 </td>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <span class="md:hidden font-bold inline-block w-20 text-left mb-1">User</span>
+                                                    <?php if (!empty($note['user_name'])): ?>
+                                                        <span class="font-medium text-gray-900 dark:text-gray-100"><?php echo htmlspecialchars($note['user_name']); ?></span>
+                                                    <?php else: ?>
+                                                        <span class="text-gray-400 dark:text-gray-500">System</span>
+                                                    <?php endif; ?>
+                                                </td>
                                                 <td class="px-4 py-3 text-sm leading-relaxed">
                                                     <span class="md:hidden font-bold block w-20 text-left mb-1">Content</span>
                                                     <?php if (!empty($note['link'])): ?>
@@ -368,7 +382,7 @@
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="px-4 py-3 text-sm">
-                                                    <span class="md:hidden font-bold inline-block w-20 text-left">Cat.</span>
+                                                    <span class="md:hidden font-bold inline-block w-20 text-left">Action</span>
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold <?php echo $badgeColor; ?>"><?php echo htmlspecialchars($about); ?></span>
                                                     <span class="hidden" data-search="<?php echo htmlspecialchars($about); ?>"></span>
                                                 </td>
@@ -392,8 +406,8 @@
             </div>
         </div>
 
-        <script src="assets/js/archives-landing.js"></script>
-        <script src="assets/js/audit-logs.js"></script>
+        <script src="assets/js/archives-landing.js?v=2"></script>
+        <script src="assets/js/audit-logs.js?v=5"></script>
         <script src="assets/js/theme-toggle.js"></script>
     
     <script>

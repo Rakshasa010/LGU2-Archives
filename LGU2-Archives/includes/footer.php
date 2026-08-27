@@ -5,17 +5,19 @@
         <!-- Column 1: Left -->
         <div>
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                <div style="width: 40px; height: 40px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                <div style="width: 40px; height: 40px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <img src="Images/Val-logo/valenzuela logo.webp" alt="Valenzuela City Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
                 <span style="font-weight: bold; font-size: 1.25rem;">SPVALENZUELA</span>
             </div>
             <p style="color: #94a3b8; line-height: 1.6; margin-bottom: 1.5rem;">
                 The legislative branch of the City Government of Valenzuela, committed to transparent governance and sustainable urban development.
             </p>
             <div style="display: flex; gap: 0.75rem;">
-                <a href="#" style="width: 36px; height: 36px; background-color: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">
+                <a href="https://www.facebook.com/ValenzuelaCityGov/" target="_blank" rel="noopener" style="width: 36px; height: 36px; background-color: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">
                     <i class="bi bi-facebook"></i>
                 </a>
-                <a href="#" style="width: 36px; height: 36px; background-color: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">
+                <a href="https://x.com/valenzuelacity" target="_blank" rel="noopener" style="width: 36px; height: 36px; background-color: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;">
                     <i class="bi bi-twitter-x"></i>
                 </a>
             </div>

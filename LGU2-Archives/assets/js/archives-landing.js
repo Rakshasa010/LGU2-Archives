@@ -307,18 +307,17 @@ try { if (localStorage.getItem('sidebarCollapsed') === 'true') { sidebar?.classL
             btnAll.addEventListener('click', function(){
                 var anchors = Array.from(container.querySelectorAll('a[data-id]'));
                 anchors.forEach(function(a){
-                    var id = a.getAttribute('data-id');
-                    try {
-                        fetch('notifications_update.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'id='+encodeURIComponent(id)+'&status=read'
-                        }).then(function(){});
-                    } catch(e){}
                     a.classList.remove('ring-2','ring-red-200');
                     var p = a.querySelector('p.text-sm');
                     if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
                 });
+                try {
+                    fetch('notifications_update.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'all=1&status=read'
+                    }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                } catch(e){ refresh(); }
                 notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
             });
         }

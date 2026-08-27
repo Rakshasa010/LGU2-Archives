@@ -22,7 +22,8 @@ $notif_cols = [
     'file_version' => "VARCHAR(60) DEFAULT NULL",
     'needed_date' => "DATE DEFAULT NULL",
     'request_note' => "TEXT",
-    'purpose' => "VARCHAR(255) DEFAULT NULL"
+    'purpose' => "VARCHAR(255) DEFAULT NULL",
+    'user_name' => "VARCHAR(100) DEFAULT NULL"
 ];
 foreach ($notif_cols as $col => $def) {
     $exists = $conn->query("SHOW COLUMNS FROM notifications LIKE '$col'");
@@ -71,7 +72,7 @@ $total = 0;
 if ($res && ($row = $res->fetch_assoc())) $total = intval($row['cnt']);
 $stmt->close();
 $offset = ($page - 1) * $page_size;
-$sql_items = 'SELECT id, time, date, content, about, status, created_at, link, file_name, file_version, needed_date, request_note, purpose, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
+$sql_items = 'SELECT id, time, date, content, about, user_name, status, created_at, link, file_name, file_version, needed_date, request_note, purpose, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds FROM notifications' . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY date DESC, id DESC LIMIT ?, ?';
 $params_items = $params;
 $types_items = $types . 'ii';
 $params_items[] = $offset;

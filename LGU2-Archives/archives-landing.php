@@ -26,7 +26,7 @@ function fmt_bytes($bytes) {
 }
 
 function calculateStorageMetrics($conn, $uploadsMetrics = null) {
-    return storage_db_metrics($conn);
+    return storage_dir_metrics(__DIR__ . DIRECTORY_SEPARATOR . 'uploads');
 }
 
 $uploads_path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads';
@@ -85,9 +85,18 @@ $leg_res = $conn->query("SELECT COUNT(*) AS c FROM legislative_records");
 if ($leg_res && $row = $leg_res->fetch_assoc()) $leg_count = (int)$row['c'];
 $arch_res = $conn->query("SELECT COUNT(*) AS c FROM archive_files");
 if ($arch_res && $row = $arch_res->fetch_assoc()) $arch_count = (int)$row['c'];
+
+// Active ordinances (successfully passed) based on the Ordinances & Resolutions archive folder
+$approved_count = 0;
+$ord_folder = $conn->query("SELECT id FROM archive_folders WHERE slug = 'ordinances-resolutions' AND parent_id IS NULL LIMIT 1");
+if ($ord_folder && $row = $ord_folder->fetch_assoc()) {
+    $ord_id = (int)$row['id'];
+    $res = $conn->query("SELECT COUNT(*) AS c FROM archive_files WHERE folder_id = $ord_id");
+    if ($res && $r = $res->fetch_assoc()) $approved_count = (int)$r['c'];
+}
 $dashboard_chart_data['files_by_source'] = [
-    'labels' => ['Legislative', 'Archives'],
-    'data' => [$leg_count, $arch_count]
+    'labels' => ['Active Ordinances'],
+    'data' => [$approved_count]
 ];
 
 $dashboard_buckets = count($archive_folders);
@@ -127,10 +136,10 @@ $has_archive = $conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0;
 $has_leg = $conn->query("SHOW TABLES LIKE 'legislative_records'")->num_rows > 0;
 $all_files_union = [];
 if ($has_archive) {
-    $all_files_union[] = "SELECT f.id, f.name COLLATE utf8mb4_unicode_ci AS name, f.folder_id, f.created_at, fo.name COLLATE utf8mb4_unicode_ci AS folder_name, 'archive' COLLATE utf8mb4_unicode_ci AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
+    $all_files_union[] = "SELECT f.id, CONVERT(f.name USING utf8mb4) AS name, f.folder_id, f.created_at, CONVERT(fo.name USING utf8mb4) AS folder_name, 'archive' AS src FROM archive_files f JOIN archive_folders fo ON fo.id = f.folder_id WHERE f.created_at IS NOT NULL";
 }
 if ($has_leg) {
-    $all_files_union[] = "SELECT lr.id, lr.title COLLATE utf8mb4_unicode_ci AS name, lr.folder_id, lr.created_at, lf.name COLLATE utf8mb4_unicode_ci AS folder_name, 'legislative' COLLATE utf8mb4_unicode_ci AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
+    $all_files_union[] = "SELECT lr.id, CONVERT(lr.title USING utf8mb4) AS name, lr.folder_id, lr.created_at, CONVERT(lf.name USING utf8mb4) AS folder_name, 'legislative' AS src FROM legislative_records lr JOIN legislative_folders lf ON lf.id = lr.folder_id WHERE lr.created_at IS NOT NULL";
 }
 
 if (!empty($all_files_union)) {
@@ -324,6 +333,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             <div class="text-center lg:text-left">
                                 <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($dashboard_date); ?></p>
                                 <h1 class="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mt-2">
+                                    <i class="bi bi-person-fill text-red-600 dark:text-red-400 align-middle mr-2"></i>
                                     <?php echo htmlspecialchars($welcome_greeting); ?>, <?php echo htmlspecialchars($display_name); ?>!
                                 </h1>
                                 <p class="max-w-2xl text-lg text-gray-600 dark:text-gray-300 mx-auto lg:mx-0 mt-3">
@@ -522,7 +532,21 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         }
                         $qa_series_labels = array_keys($days);
                         $qa_series_downloads = array_values($series_downloads);
-                        $qa_series_uploads = array_values($series_folders);
+                        // Uploads series mirrors the Total Uploads card: analytics_events upload events
+                        $series_upload_events = $days;
+                        $has_analytics_events = false;
+                        if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
+                            $has_analytics_events = true;
+                            $ue_where = "event_type='upload'";
+                            if ($f_from) $ue_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
+                            if ($f_to) $ue_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
+                            if ($fa_type) $ue_where .= " AND record_type = '".$conn->real_escape_string($fa_type)."'";
+                            $q_ue = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM analytics_events WHERE $ue_where $dl_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            if ($r = $conn->query($q_ue)) {
+                                while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_upload_events[$k])) $series_upload_events[$k] = (int)$row['c']; }
+                            }
+                        }
+                        $qa_series_uploads = $has_analytics_events ? array_values($series_upload_events) : array_values($series_folders);
                         $qa_series_records = array_values($series_records);
                         $qa_series_records_merged = array_values($series_records_merged);
                         $qa_series_files_with_versions = array_values($series_files_with_versions);
@@ -581,9 +605,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6 items-start">
+                    <div class="grid grid-cols-1 xl:grid-cols-10 gap-4 mb-6 items-start">
                         <!-- Main Search Section -->
-                        <div class="w-full xl:order-2">
+                        <div class="w-full xl:order-1 xl:col-span-7">
                         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
                             <!-- Search Header -->
                             <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
@@ -706,7 +730,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             </div>
                         </div>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-1">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden xl:order-2 xl:col-span-3">
                         <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 px-6 py-4 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -782,16 +806,10 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                     </div>
 
                                     <div class="pt-4 border-t border-gray-100 dark:border-slate-700">
-                                        <div class="grid grid-cols-2 gap-3">
-                                            <a href="storage.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium">
-                                                <i class="bi bi-folder"></i>
-                                                Browse
-                                            </a>
-                                            <a href="export.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium">
-                                                <i class="bi bi-download"></i>
-                                                Export
-                                            </a>
-                                        </div>
+                                        <a href="storage.php" class="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm font-medium">
+                                            <i class="bi bi-folder"></i>
+                                            Browse
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -813,8 +831,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         </div>
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Files by Source</h3>
-                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo $leg_count + $arch_count; ?> total</span>
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Active Ordinances</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo $approved_count; ?> total</span>
                             </div>
                             <div class="relative w-full h-64 md:h-72 flex justify-center">
                                 <canvas id="filesBySourceChart"></canvas>
@@ -971,9 +989,9 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     data: {
                         labels: sourceLabels,
                         datasets: [{
-                            label: 'Files',
+                            label: 'Active Ordinances',
                             data: sourceValues,
-                            backgroundColor: ['#dc2626', '#3b82f6']
+                            backgroundColor: ['#22c55e']
                         }]
                     },
                     options: {
@@ -1168,7 +1186,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
 
     <script src="assets/js/recent-views.js"></script>
     <script src="assets/js/archives.js"></script>
-    <script src="assets/js/archives-landing.js"></script>
+    <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/highlight-record.js"></script>
     <?php include 'includes/footer_scripts.php'; ?>
     <script>
@@ -1230,21 +1248,29 @@ if (is_string($profile_picture) && $profile_picture !== '') {
         // Mini sparkline: Downloads
         const qaDownloadsMiniCtx = document.getElementById('qaDownloadsMini')?.getContext('2d');
         if (qaDownloadsMiniCtx) {
-            new Chart(qaDownloadsMiniCtx, {
-                type: 'line',
-                data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.2)', fill: true, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            try {
+                new Chart(qaDownloadsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                console.error('qaDownloadsMini failed:', err);
+            }
         }
 
         // Mini sparkline: Uploads
         const qaUploadsMiniCtx = document.getElementById('qaUploadsMini')?.getContext('2d');
         if (qaUploadsMiniCtx) {
-            new Chart(qaUploadsMiniCtx, {
-                type: 'line',
-                data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            try {
+                new Chart(qaUploadsMiniCtx, {
+                    type: 'line',
+                    data: { labels: seriesLabels, datasets: [{ data: seriesUploads, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+            } catch (err) {
+                console.error('qaUploadsMini failed:', err);
+            }
         }
 
         // Records Trend Line
@@ -1520,7 +1546,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
             const detailsBtn = document.getElementById('storage-details-btn');
             const refreshBtn = document.getElementById('storage-refresh-btn');
             const cleanupBtn = document.getElementById('storage-cleanup-btn');
-            const exportBtn = document.getElementById('storage-export-btn');
             
             // Details Button - Show storage breakdown toast
             if (detailsBtn) {
@@ -1594,56 +1619,6 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         
                         setTimeout(() => cleanupToast.remove(), 4000);
                     }, 1500);
-                });
-            }
-            
-            // Export Button - Generate and download report
-            if (exportBtn) {
-                exportBtn.addEventListener('click', function() {
-                    const btn = this;
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<i class="bi bi-cloud-download mr-2 animate-bounce"></i>Generating...';
-                    btn.disabled = true;
-                    
-                    const pct = document.getElementById('storagePercentage')?.textContent || '0%';
-                    const used = document.getElementById('storageUsed')?.textContent || '0 B';
-                    const timestamp = new Date().toLocaleString();
-                    
-                    // Generate CSV report
-                    const reportContent = `Storage Analysis Report
-Generated: ${timestamp}
-
-SUMMARY
-Storage Percentage: ${pct}
-Storage Used: ${used}
-Total Capacity: 50 GB
-Status: ${document.getElementById('storageStatus')?.textContent}
-
-This is an automatically generated storage analysis report.
-For detailed information, visit the Storage Overview dashboard.`;
-                    
-                    // Create download
-                    setTimeout(() => {
-                        const blob = new Blob([reportContent], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `storage-report-${new Date().toISOString().split('T')[0]}.txt`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        URL.revokeObjectURL(url);
-                        
-                        const exportToast = document.createElement('div');
-                        exportToast.className = 'fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl';
-                        exportToast.innerHTML = '✓ Report downloaded successfully';
-                        document.body.appendChild(exportToast);
-                        
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
-                        
-                        setTimeout(() => exportToast.remove(), 3000);
-                    }, 1200);
                 });
             }
         })();

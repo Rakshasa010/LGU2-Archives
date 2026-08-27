@@ -72,14 +72,26 @@ try {
     
     // Log to notifications table (using existing system)
     try {
-        $notifStmt = $conn->prepare("INSERT INTO notifications (time, date, content, about, status, created_at) VALUES (?, ?, ?, ?, 'unread', NOW())");
+        // Get user name for notification
+        $userNameForNotif = null;
+        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+            $userStmt->bind_param("i", $_SESSION['user_id']);
+            $userStmt->execute();
+            if ($userRes = $userStmt->get_result()) {
+                if ($urow = $userRes->fetch_assoc()) {
+                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                }
+            }
+            $userStmt->close();
+        }
+        $notifStmt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, 'unread', NOW())");
         if ($notifStmt) {
             $time = date('h:i A');
             $date = date('Y-m-d');
             $content = "Export request #{$request_id} fulfilled: '{$request['staged_file_name']}' for {$request['requester_name']}";
             $about = 'Export Completed';
             
-            $notifStmt->bind_param("ssss", $time, $date, $content, $about);
+            $notifStmt->bind_param("sssss", $time, $date, $content, $about, $userNameForNotif);
             $notifStmt->execute();
             $notifStmt->close();
         }

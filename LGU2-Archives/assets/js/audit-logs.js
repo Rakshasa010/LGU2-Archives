@@ -103,6 +103,7 @@
         if (/export/i.test(about)) return 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50';
         if (/profile update/i.test(about)) return 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50';
         if (/security/i.test(about)) return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
+        if (/monitored/i.test(about)) return 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50';
         return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
     }
     function escapeHtml(s) {
@@ -154,12 +155,16 @@
                         '<div class="note-time text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-ts="' + baseMs + '" data-base="' + escapeHtml(dispTime) + '" data-search="' + escapeHtml(dispDate) + '">' + relTime + '</div>' +
                     '</div>' +
                 '</td>' +
+                '<td class="px-4 py-3 text-sm">' +
+                    '<span class="md:hidden font-bold inline-block w-20 text-left mb-1">User</span>' +
+                    (note.user_name ? '<span class="font-medium text-gray-900 dark:text-gray-100">' + escapeHtml(note.user_name) + '</span>' : '<span class="text-gray-400 dark:text-gray-500">System</span>') +
+                '</td>' +
                 '<td class="px-4 py-3 text-sm leading-relaxed">' +
                     '<span class="md:hidden font-bold block w-20 text-left mb-1">Content</span>' +
                     contentHtml +
                 '</td>' +
                 '<td class="px-4 py-3 text-sm">' +
-                    '<span class="md:hidden font-bold inline-block w-20 text-left">Cat.</span>' +
+                    '<span class="md:hidden font-bold inline-block w-20 text-left">Action</span>' +
                     '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ' + badgeColor + '">' + escapeHtml(note.about) + '</span>' +
                     '<span class="hidden" data-search="' + escapeHtml(note.about) + '"></span>' +
                 '</td>' +
@@ -234,13 +239,13 @@
             if (!data || !data.success) return;
             renderRows(data.items || []);
             Object.keys(stored).forEach(function (k) { var val = stored[k]; updateRowStatus(k, val); });
-            var aboutSel = document.getElementById('filter-about');
+                var aboutSel = document.getElementById('filter-about');
             if (aboutSel) {
-                // Clear existing dynamic options (keep the first "About" option)
+                var prevVal = aboutSel.value;
                 while (aboutSel.options.length > 1) {
                     aboutSel.remove(1);
                 }
-                var staticAbout = ['Approval', 'Backup', 'Export (Archives ZIP)', 'Export (Reports & Analytics)', 'Login', 'Profile Update', 'Security', 'Uploads', 'User Registration'];
+                var staticAbout = ['Approval','Export (Archives ZIP)','Export (Reports & Analytics)','External Intake','Login','Monitored User Activity','Profile Update','Security','Uploads','User Management','User Registration'];
                 var combined = Array.from(new Set(staticAbout));
                 combined.sort();
                 combined.forEach(function (opt) {
@@ -250,11 +255,7 @@
                     o.textContent = opt;
                     aboutSel.appendChild(o);
                 });
-
-                // Restore selected value if valid
-                var params = new URLSearchParams(window.location.search);
-                var currentAbout = params.get('about');
-                if (currentAbout) aboutSel.value = currentAbout;
+                if (prevVal) aboutSel.value = prevVal;
             }
             if (pageInfo) pageInfo.textContent = String(data.page) + ' / ' + Math.max(1, Math.ceil((data.total || 0) / (data.page_size || 10)));
             var maxPage = Math.max(1, Math.ceil((data.total || 0) / (data.page_size || 10)));
@@ -275,7 +276,13 @@
         document.querySelectorAll('#notesBody tr').forEach(function (r) { if ((r.getAttribute('data-status') || '').toLowerCase() === 'unread') unread++; });
         if (unreadCountEl) unreadCountEl.textContent = unread + ' unread';
         var bellBadge = document.getElementById('notif-count');
-        if (bellBadge) bellBadge.textContent = unread || '';
+        if (bellBadge) {
+            fetch('notifications_fetch.php?status=unread&page_size=1&page=1').then(function (r) { return r.json(); }).then(function (d) {
+                var total = (d && d.success) ? (d.total || 0) : 0;
+                bellBadge.textContent = String(total);
+                bellBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+            }).catch(function () { });
+        }
     }
 
     function updateUrlParams() {
@@ -402,7 +409,6 @@
             return st === 'unread' && !hidden;
         });
         var ids = rows.map(function (r) { return r.getAttribute('data-id'); }).filter(Boolean);
-        if (ids.length === 0) return;
 
         // Apply visual transition
         rows.forEach(function (r) {
@@ -415,12 +421,13 @@
         updateUnreadCount();
         try { logEvent('alert_dismissed', ids); } catch (e) { }
 
-        // Single batch fetch
+        // Mark every unread notification server-side (not just the visible page),
+        // then refresh the badge so it reflects the true total.
         fetch('notifications_update.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'ids=' + encodeURIComponent(ids.join(',')) + '&status=read'
-        }).then(function () { }).catch(function () { });
+            body: 'all=1&status=read'
+        }).then(function () { updateUnreadCount(); }).catch(function () { updateUnreadCount(); });
     });
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { fetchNotifications(); });

@@ -1,6 +1,8 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require 'authdatabase.php';
+    require_once __DIR__ . '/includes/mongodb_atlas.php';
+    require_once __DIR__ . '/monitoring_helper.php';
     if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
@@ -70,8 +72,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ntime = date('h:i A'); $ndate = date('Y-m-d');
         $ncontent = 'Yearly export requested: ' . $year . ' by user #' . $uid;
         $nabout = 'Export (Archives ZIP)'; $nstatus = 'unread';
-        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-            $ins->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+        // Get user name for notification
+        $userNameForNotif = null;
+        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+            $userStmt->bind_param("i", $uid);
+            $userStmt->execute();
+            if ($userRes = $userStmt->get_result()) {
+                if ($urow = $userRes->fetch_assoc()) {
+                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                }
+            }
+            $userStmt->close();
+        }
+        if ($ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+            $ins->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
             $ins->execute(); $ins->close();
         }
         if (!class_exists('ZipArchive')) {
@@ -153,16 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         $data = ['success' => true, 'year' => $year, 'categories' => []];
-        $leg = $conn->prepare("SELECT type, COUNT(*) AS cnt FROM legislative_records WHERE parent_version_id IS NULL AND YEAR(created_at) = ? GROUP BY type");
-        if ($leg) {
-            $leg->bind_param("i", $year);
-            $leg->execute();
-            $res = $leg->get_result();
-            while ($row = $res->fetch_assoc()) {
-                $data['categories'][] = ['name' => $row['type'], 'count' => (int)$row['cnt'], 'group' => 'Legislative'];
-            }
-            $leg->close();
-        }
         $arc = $conn->prepare("SELECT fo.id, fo.name AS folder_name, COUNT(af.id) AS cnt FROM archive_folders fo LEFT JOIN archive_files af ON af.folder_id = fo.id AND YEAR(af.created_at) = ? GROUP BY fo.id, fo.name ORDER BY fo.name");
         if ($arc) {
             $arc->bind_param("i", $year);
@@ -192,12 +196,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->close();
             exit();
         }
-        $reserved = ['ordinances-resolution', 'public-hearings', 'meeting-records'];
-        if (in_array($slug, $reserved, true)) {
-            echo json_encode(['success' => false, 'message' => 'Folder already exists']);
-            $conn->close();
-            exit();
-        }
         $chk = $conn->prepare("SELECT id FROM archive_folders WHERE slug = ? LIMIT 1");
         if ($chk) {
             $chk->bind_param("s", $slug);
@@ -221,7 +219,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $ins->bind_param("ssis", $name, $slug, $uid, $prefix);
         if ($ins->execute()) {
-            echo json_encode(['success' => true, 'folder' => ['id' => $conn->insert_id, 'name' => $name, 'slug' => $slug]]);
+            $newFolderId = (int)$conn->insert_id;
+            // Create the folder's MongoDB database (best-effort)
+            try {
+                $atlas = new MongoDBAtlas();
+                $mongoFolder = $atlas->ensureFolderDatabase($newFolderId, 'archive', $name);
+                if (!$mongoFolder['success']) {
+                    error_log('MongoDB folder db creation failed for folder #'.$newFolderId.' : ' . $mongoFolder['error']);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB folder db error for folder #'.$newFolderId.' : ' . $e->getMessage());
+            }
+            echo json_encode(['success' => true, 'folder' => ['id' => $newFolderId, 'name' => $name, 'slug' => $slug]]);
             $ins->close();
             $conn->close();
             exit();
@@ -292,6 +301,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $delFiles->execute();
                 $delFiles->close();
             }
+            // Delete corresponding MongoDB Atlas metadata documents (best-effort)
+            $mongoIds = array_map('intval', array_column($files, 'id'));
+            try {
+                $atlas = new MongoDBAtlas();
+                if ($mongoIds) {
+                    $mr = $atlas->deleteMany(['mysql_id' => ['$in' => $mongoIds]]);
+                    if (!$mr['success']) {
+                        error_log('MongoDB Atlas delete failed for folder #'.$folder_id.': ' . $mr['error']);
+                    }
+                }
+                // Drop the folder's own database + clear its registry entry
+                $folderReg = $atlas->getFolderDatabase($folder_id);
+                if ($folderReg['success'] && !empty($folderReg['db_name'])) {
+                    $atlas->dropDatabase($folderReg['db_name']);
+                    $atlas->deleteManyInDb($atlas->getDbName(), 'folder_registry', ['folder_id' => $folder_id]);
+                }
+            } catch (Exception $e) {
+                error_log('MongoDB Atlas delete error for folder #'.$folder_id.': ' . $e->getMessage());
+            }
             if ($delFolder = $conn->prepare("DELETE FROM archive_folders WHERE id = ?")) {
                 $delFolder->bind_param("i", $folder_id);
                 $delFolder->execute();
@@ -356,11 +384,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nabout = 'Hidden Folder';
             $nstatus = 'unread';
             
-            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            // Get user name for notification
+            $userNameForNotif = null;
+            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                $userStmt->bind_param("i", $uid);
+                $userStmt->execute();
+                if ($userRes = $userStmt->get_result()) {
+                    if ($urow = $userRes->fetch_assoc()) {
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                    }
+                }
+                $userStmt->close();
+            }
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                $notif->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                 $notif->execute();
                 $notif->close();
             }
+            
+            // Log hidden folder setup for monitored users
+            log_monitored_user_action($conn, $uid, 'Hidden Folder Access', 'Set up hidden folder');
             
             echo json_encode(['success' => true, 'message' => 'Hidden folder set up successfully']);
         } else {
@@ -411,11 +455,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nabout = 'Hidden Folder';
             $nstatus = 'unread';
             
-            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-                $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+            // Get user name for notification
+            $userNameForNotif = null;
+            if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+                $userStmt->bind_param("i", $uid);
+                $userStmt->execute();
+                if ($userRes = $userStmt->get_result()) {
+                    if ($urow = $userRes->fetch_assoc()) {
+                        $userNameForNotif = trim($urow['full_name'] ?? '');
+                    }
+                }
+                $userStmt->close();
+            }
+            
+            if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+                $notif->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
                 $notif->execute();
                 $notif->close();
             }
+            
+            // Log hidden folder unlock for monitored users
+            log_monitored_user_action($conn, $uid, 'Hidden Folder Access', 'Unlocked hidden folder');
             
             echo json_encode(['success' => true, 'message' => 'Hidden folder unlocked']);
         } else {
@@ -434,11 +494,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nabout = 'Hidden Folder';
         $nstatus = 'unread';
         
-        if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, status) VALUES (?,?,?,?,?)")) {
-            $notif->bind_param('sssss', $ntime, $ndate, $ncontent, $nabout, $nstatus);
+        // Get user name for notification
+        $userNameForNotif = null;
+        if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+            $userStmt->bind_param("i", $uid);
+            $userStmt->execute();
+            if ($userRes = $userStmt->get_result()) {
+                if ($urow = $userRes->fetch_assoc()) {
+                    $userNameForNotif = trim($urow['full_name'] ?? '');
+                }
+            }
+            $userStmt->close();
+        }
+        
+        if ($notif = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?,?,?,?,?,?)")) {
+            $notif->bind_param('ssssss', $ntime, $ndate, $ncontent, $nabout, $userNameForNotif, $nstatus);
             $notif->execute();
             $notif->close();
         }
+        
+        // Log hidden folder lock for monitored users
+        log_monitored_user_action($conn, $uid, 'Hidden Folder Access', 'Locked hidden folder');
         
         unset($_SESSION['hidden_folder_unlocked']);
         echo json_encode(['success' => true, 'message' => 'Hidden folder locked']);
@@ -569,9 +645,9 @@ if (isset($_SESSION['user_id'])) {
     ];
 
     foreach ($folder_types as $type => $name) {
-        // Check if folder exists
-        $checkStmt = $conn->prepare("SELECT id, document_prefix FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
-        $checkStmt->bind_param("s", $type);
+        // Check if folder exists (by name so Ordinance and Resolution reuse the same folder)
+        $checkStmt = $conn->prepare("SELECT id, document_prefix FROM legislative_folders WHERE name = ? AND parent_id IS NULL LIMIT 1");
+        $checkStmt->bind_param("s", $name);
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
         if ($folder = $checkResult->fetch_assoc()) {
@@ -592,8 +668,84 @@ if (isset($_SESSION['user_id'])) {
             $insertStmt->execute();
             $legislative_folders[$type] = $conn->insert_id;
             $insertStmt->close();
+            try {
+                $atlas = new MongoDBAtlas();
+                $atlas->ensureFolderDatabase((int)$legislative_folders[$type], 'legislative', $name);
+            } catch (Exception $e) {
+                error_log('MongoDB folder db seed error: ' . $e->getMessage());
+            }
         }
         $checkStmt->close();
+    }
+
+    // Ensure archive folders exist (Ordinances & Resolutions + Pending Bills with subfolders)
+    $uid = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+    $seed_folders = [
+        ['name' => 'Ordinances & Resolutions', 'slug' => 'ordinances-resolutions', 'parent_id' => null],
+        ['name' => 'Pending Bills', 'slug' => 'pending-bills', 'parent_id' => null],
+        ['name' => '1st Reading', 'slug' => '1st-reading', 'parent_id' => 'pending-bills'],
+        ['name' => '2nd Reading', 'slug' => '2nd-reading', 'parent_id' => 'pending-bills'],
+        ['name' => '3rd Reading', 'slug' => '3rd-reading', 'parent_id' => 'pending-bills'],
+    ];
+    $seed_slug_to_id = [];
+    foreach ($seed_folders as $sf) {
+        $parent_id = null;
+        if (!empty($sf['parent_id'])) {
+            $parent_id = isset($seed_slug_to_id[$sf['parent_id']]) ? $seed_slug_to_id[$sf['parent_id']] : null;
+        }
+        if ($parent_id === null) {
+            $checkSeed = $conn->prepare("SELECT id FROM archive_folders WHERE slug = ? AND parent_id IS NULL LIMIT 1");
+            if ($checkSeed) {
+                $checkSeed->bind_param("s", $sf['slug']);
+                $checkSeed->execute();
+                $seedRes = $checkSeed->get_result();
+                if ($rowSeed = $seedRes->fetch_assoc()) {
+                    $seed_slug_to_id[$sf['slug']] = (int)$rowSeed['id'];
+                } else {
+                    $prefix = generate_document_prefix($sf['name']);
+                    $insertSeed = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by, document_prefix) VALUES (?, ?, NULL, ?, ?)");
+                    if ($insertSeed) {
+                        $insertSeed->bind_param("ssis", $sf['name'], $sf['slug'], $uid, $prefix);
+                        $insertSeed->execute();
+                        $seed_slug_to_id[$sf['slug']] = $conn->insert_id;
+                        $insertSeed->close();
+                        try {
+                            $atlas = new MongoDBAtlas();
+                            $atlas->ensureFolderDatabase((int)$seed_slug_to_id[$sf['slug']], 'archive', $sf['name']);
+                        } catch (Exception $e) {
+                            error_log('MongoDB folder db seed error: ' . $e->getMessage());
+                        }
+                    }
+                }
+                $checkSeed->close();
+            }
+        } else {
+            $checkSeed = $conn->prepare("SELECT id FROM archive_folders WHERE slug = ? AND parent_id = ? LIMIT 1");
+            if ($checkSeed) {
+                $checkSeed->bind_param("si", $sf['slug'], $parent_id);
+                $checkSeed->execute();
+                $seedRes = $checkSeed->get_result();
+                if ($rowSeed = $seedRes->fetch_assoc()) {
+                    $seed_slug_to_id[$sf['slug']] = (int)$rowSeed['id'];
+                } else {
+                    $prefix = generate_document_prefix($sf['name']);
+                    $insertSeed = $conn->prepare("INSERT INTO archive_folders (name, slug, parent_id, created_by, document_prefix) VALUES (?, ?, ?, ?, ?)");
+                    if ($insertSeed) {
+                        $insertSeed->bind_param("ssiis", $sf['name'], $sf['slug'], $parent_id, $uid, $prefix);
+                        $insertSeed->execute();
+                        $seed_slug_to_id[$sf['slug']] = $conn->insert_id;
+                        $insertSeed->close();
+                        try {
+                            $atlas = new MongoDBAtlas();
+                            $atlas->ensureFolderDatabase((int)$seed_slug_to_id[$sf['slug']], 'archive', $sf['name']);
+                        } catch (Exception $e) {
+                            error_log('MongoDB folder db seed error: ' . $e->getMessage());
+                        }
+                    }
+                }
+                $checkSeed->close();
+            }
+        }
     }
 
     // helper methods and shared storage logic (copied from archives-landing.php)
@@ -607,10 +759,10 @@ if (isset($_SESSION['user_id'])) {
     }
 
     function calculateStorageMetrics($conn) {
-        if (!function_exists('storage_db_metrics')) {
+        if (!function_exists('storage_dir_metrics')) {
             require_once __DIR__ . '/includes/storage_shared.php';
         }
-        return storage_db_metrics($conn);
+        return storage_dir_metrics(__DIR__ . '/uploads');
     }
 
     // support AJAX data fetch
@@ -637,7 +789,7 @@ if (isset($_SESSION['user_id'])) {
     $fileCount = $storage['fileCount'];
 
     $archive_folders = [];
-    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders ORDER BY created_at DESC");
+    $folders_result = $conn->query("SELECT id, name, slug FROM archive_folders WHERE parent_id IS NULL ORDER BY created_at DESC");
     if ($folders_result && $folders_result->num_rows > 0) {
         while ($row = $folders_result->fetch_assoc()) {
             $archive_folders[] = $row;
@@ -647,6 +799,25 @@ if (isset($_SESSION['user_id'])) {
     $archive_folders_total = count($archive_folders);
     $page_size_folders = 20;
     $archive_folders = array_slice($archive_folders, 0, $page_size_folders);
+
+    // Per-year file counts for the Yearly Archives cards (last 5 years, current first)
+    $yearly_stats = [];
+    $currentYear = (int)date('Y');
+    for ($y = $currentYear; $y >= $currentYear - 4; $y--) {
+        $yearly_stats[$y] = 0;
+    }
+    $stat_stmt = $conn->prepare("SELECT YEAR(created_at) AS y, COUNT(*) AS cnt FROM archive_files WHERE YEAR(created_at) BETWEEN ? AND ? GROUP BY YEAR(created_at)");
+    if ($stat_stmt) {
+        $yearStart = $currentYear - 4;
+        $stat_stmt->bind_param("ii", $yearStart, $currentYear);
+        $stat_stmt->execute();
+        $stat_res = $stat_stmt->get_result();
+        while ($row = $stat_res->fetch_assoc()) {
+            $y = (int)$row['y'];
+            if (isset($yearly_stats[$y])) $yearly_stats[$y] += (int)$row['cnt'];
+        }
+        $stat_stmt->close();
+    }
     $conn->close();
     
     $display_name = $user_data['full_name'] ?? 'User';
@@ -761,8 +932,16 @@ if (isset($_SESSION['user_id'])) {
                
                     <!-- Recent Archives Section -->
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 mb-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Yearly Archives</h2>
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-red-600 to-orange-500 rounded-xl flex items-center justify-center text-white text-lg shadow-md">
+                                    <i class="bi bi-calendar-range"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 leading-tight">Yearly Archives</h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Last 5 years of archived files</p>
+                                </div>
+                            </div>
                             <form id="year-export-form" method="POST" action="storage.php" target="_blank" class="hidden">
                                 <input type="hidden" name="action" value="export_year_zip">
                                 <input type="hidden" name="year" id="year-export-input" value="">
@@ -771,7 +950,7 @@ if (isset($_SESSION['user_id'])) {
                                 <input type="hidden" name="zip_password_confirm" id="year-export-zip-pass-confirm" value="">
                             </form>
                         </div>
-                        <div id="yearly-archives-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                        <div id="yearly-archives-grid" class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
                     </div>
                     <div id="year-export-modal" class="hidden fixed inset-0 z-50">
                         <div class="flex items-center justify-center min-h-screen px-4">
@@ -822,52 +1001,26 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
             <div id="archive-folders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Ordinance']; ?>&legislative=true" data-archive="ordinances-resolution" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-orange-500/50 transition-all group h-40">
+                <?php
+                $folder_palette = [
+                    ['bg' => 'bg-red-100 dark:bg-red-900/40', 'text' => 'text-red-600 dark:text-red-400', 'hover' => 'hover:border-red-500/50'],
+                    ['bg' => 'bg-orange-100 dark:bg-orange-900/40', 'text' => 'text-orange-600 dark:text-orange-400', 'hover' => 'hover:border-orange-500/50'],
+                    ['bg' => 'bg-amber-100 dark:bg-amber-900/40', 'text' => 'text-amber-600 dark:text-amber-400', 'hover' => 'hover:border-amber-500/50'],
+                    ['bg' => 'bg-green-100 dark:bg-green-900/40', 'text' => 'text-green-600 dark:text-green-400', 'hover' => 'hover:border-green-500/50'],
+                    ['bg' => 'bg-teal-100 dark:bg-teal-900/40', 'text' => 'text-teal-600 dark:text-teal-400', 'hover' => 'hover:border-teal-500/50'],
+                    ['bg' => 'bg-cyan-100 dark:bg-cyan-900/40', 'text' => 'text-cyan-600 dark:text-cyan-400', 'hover' => 'hover:border-cyan-500/50'],
+                    ['bg' => 'bg-blue-100 dark:bg-blue-900/40', 'text' => 'text-blue-600 dark:text-blue-400', 'hover' => 'hover:border-blue-500/50'],
+                    ['bg' => 'bg-indigo-100 dark:bg-indigo-900/40', 'text' => 'text-indigo-600 dark:text-indigo-400', 'hover' => 'hover:border-indigo-500/50'],
+                    ['bg' => 'bg-purple-100 dark:bg-purple-900/40', 'text' => 'text-purple-600 dark:text-purple-400', 'hover' => 'hover:border-purple-500/50'],
+                    ['bg' => 'bg-pink-100 dark:bg-pink-900/40', 'text' => 'text-pink-600 dark:text-pink-400', 'hover' => 'hover:border-pink-500/50'],
+                ];
+                $folder_palette_count = count($folder_palette);
+                foreach ($archive_folders as $folder):
+                    $fc = $folder_palette[(int)$folder['id'] % $folder_palette_count];
+                ?>
+                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg <?php echo $fc['hover']; ?> transition-all group h-40">
                     <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Ordinances & Res...</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="ordinances-resolution">Calculating...</div>
-                    </div>
-                </a>
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Public Hearing']; ?>&legislative=true" data-archive="public-hearings" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-blue-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Public Hearings</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="public-hearings">Calculating...</div>
-                    </div>
-                </a>
-                <a href="folder_view.php?id=<?php echo $legislative_folders['Meeting']; ?>&legislative=true" data-archive="meeting-records" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-indigo-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl group-hover:scale-110 transition-transform">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
-                        </div>
-                    </div>
-                    <div class="min-w-0 mt-4">
-                        <div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">Meeting Records</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="meeting-records">Calculating...</div>
-                    </div>
-                </a>
-                <?php foreach ($archive_folders as $folder): ?>
-                <a id="folder-card-<?php echo (int)$folder['id']; ?>" href="folder_view.php?id=<?php echo $folder['id']; ?>" data-archive="<?php echo htmlspecialchars($folder['slug'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40">
-                    <div class="flex items-start justify-between">
-                        <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
+                        <div class="w-12 h-12 <?php echo $fc['bg']; ?> rounded-xl flex items-center justify-center <?php echo $fc['text']; ?> text-2xl group-hover:scale-110 transition-transform relative overflow-hidden">
                             <i class="bi bi-folder-fill"></i>
                             <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10">
                                 <i class="bi bi-person-fill"></i>
@@ -1307,16 +1460,29 @@ if (isset($_SESSION['user_id'])) {
                 if (!confirmCreate?.disabled) confirmCreate?.click();
             }
         });
+        const FOLDER_COLORS = [
+            { tile: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400', text: 'text-red-600 dark:text-red-400', hover: 'hover:border-red-500/50' },
+            { tile: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400', text: 'text-orange-600 dark:text-orange-400', hover: 'hover:border-orange-500/50' },
+            { tile: 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400', text: 'text-amber-600 dark:text-amber-400', hover: 'hover:border-amber-500/50' },
+            { tile: 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400', text: 'text-green-600 dark:text-green-400', hover: 'hover:border-green-500/50' },
+            { tile: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400', text: 'text-teal-600 dark:text-teal-400', hover: 'hover:border-teal-500/50' },
+            { tile: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400', text: 'text-cyan-600 dark:text-cyan-400', hover: 'hover:border-cyan-500/50' },
+            { tile: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400', text: 'text-blue-600 dark:text-blue-400', hover: 'hover:border-blue-500/50' },
+            { tile: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400', text: 'text-indigo-600 dark:text-indigo-400', hover: 'hover:border-indigo-500/50' },
+            { tile: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400', text: 'text-purple-600 dark:text-purple-400', hover: 'hover:border-purple-500/50' },
+            { tile: 'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400', text: 'text-pink-600 dark:text-pink-400', hover: 'hover:border-pink-500/50' }
+        ];
         const createFolderCard = (name, slug, id) => {
             const safeName = escapeHtml(name);
             const safeSlug = escapeHtml(slug);
+            const fc = FOLDER_COLORS[(parseInt(id, 10) || 0) % FOLDER_COLORS.length];
             const card = document.createElement('a');
             card.href = 'folder_view.php?id=' + id;
             card.setAttribute('data-archive', slug);
             card.className = 'block bg-gradient-to-br from-white to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-lg border border-gray-200 dark:border-slate-600 p-5 hover:shadow-xl transition-all group';
             card.innerHTML = `
                 <div class="mb-3 group-hover:scale-110 transition-transform">
-                    <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-12 h-12 ${fc.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                 </div>
@@ -1554,7 +1720,26 @@ if (isset($_SESSION['user_id'])) {
                            '<p class="text-xs text-gray-500 dark:text-gray-400">'+escapeHtml(n.date)+' '+escapeHtml(n.time)+'</p>'+
                            '</div></a>';
                 }).join('');
+                html += '<div class="pt-2"><button id="mark-all-read" class="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Mark all as read</button></div>';
                 container.innerHTML = html;
+                var btnAll = container.querySelector('#mark-all-read');
+                if (btnAll) {
+                    btnAll.addEventListener('click', function(){
+                        container.querySelectorAll('a[data-id]').forEach(function(a){
+                            a.classList.remove('ring-2','ring-red-200');
+                            var p = a.querySelector('p.text-sm');
+                            if (p) { p.classList.remove('font-semibold'); p.classList.add('font-medium'); }
+                        });
+                        try {
+                            fetch('notifications_update.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'all=1&status=read'
+                            }).then(function(){ refresh(); }).catch(function(){ refresh(); });
+                        } catch(e){ refresh(); }
+                        notifCount && (notifCount.textContent = '0', notifCount.style.display = 'none');
+                    });
+                }
             }
             function escapeHtml(s){
                 if (typeof s !== 'string') return '';
@@ -1586,25 +1771,40 @@ if (isset($_SESSION['user_id'])) {
         })();
         (function(){
             function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+            var yearlyStats = <?php echo json_encode($yearly_stats); ?>;
             function yearCard(year){
                 var now = new Date().getFullYear();
                 var isActive = (year === now);
                 var el = document.createElement('div');
                 
+                var count = (yearlyStats && yearlyStats[year] != null) ? yearlyStats[year] : 0;
+                var accent = isActive
+                    ? 'from-red-500 to-orange-500'
+                    : (function(){
+                        var idx = (now - year) % 4;
+                        var gradients = ['from-slate-500 to-slate-700', 'from-blue-500 to-indigo-600', 'from-emerald-500 to-teal-600', 'from-purple-500 to-fuchsia-600'];
+                        return gradients[idx];
+                    })();
                 var topBorder = isActive ? 'border-red-500' : 'border-gray-300 dark:border-slate-600';
-                var headerColor = isActive ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200';
                 var bgClass = isActive ? 'bg-red-50 dark:bg-red-900/10' : 'bg-gray-50 dark:bg-slate-700/50';
                 
-                el.className = 'flex flex-col justify-between p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-md transition-all relative overflow-hidden group h-40';
+                el.className = 'flex flex-col p-5 rounded-2xl border-t-4 border-r border-b border-l ' + topBorder + ' ' + bgClass + ' shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all relative overflow-hidden group';
                 
                 var activeBadge = isActive ? '<span class="absolute top-4 right-4 flex items-center gap-1.5 text-[10px] uppercase font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full ring-1 ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Active</span>' : '';
                 
                 el.innerHTML = activeBadge
-                    + '<div class="text-2xl font-bold ' + headerColor + ' mb-1">' + year + '</div>'
-                    + '<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">Files tracked & archived</div>'
-                    + '<div class="flex gap-2 mt-auto">'
-                    + '<button data-year="'+year+'" class="view-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm transition-colors group-hover:border-gray-300 dark:group-hover:border-slate-500 relative overflow-hidden">View</button>'
-                    + '<button data-year="'+year+'" class="export-year-btn flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)] transition-colors">Export ZIP</button>'
+                    + '<div class="flex items-start justify-between gap-3">'
+                    + '<div class="flex items-center gap-3">'
+                    + '<div class="w-12 h-12 bg-gradient-to-br ' + accent + ' rounded-xl flex items-center justify-center text-white text-xl shadow-md group-hover:scale-110 transition-transform shrink-0"><i class="bi bi-calendar2-check"></i></div>'
+                    + '<div class="min-w-0">'
+                    + '<div class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">' + year + '</div>'
+                    + '<div class="text-[11px] font-semibold uppercase tracking-wider ' + (isActive ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400') + ' mt-1">' + count + ' ' + (count === 1 ? 'file' : 'files') + ' archived</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '<div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600/60 flex gap-2">'
+                    + '<button data-year="'+year+'" class="view-year-btn flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm transition-colors group-hover:border-gray-300 dark:group-hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"><i class="bi bi-eye text-[13px]"></i>View</button>'
+                    + '<button data-year="'+year+'" class="export-year-btn flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)] transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/40"><i class="bi bi-download text-[13px]"></i>Export ZIP</button>'
                     + '</div>';
                 return el;
             }
@@ -1857,8 +2057,6 @@ if (isset($_SESSION['user_id'])) {
         // Archive Folders Pagination
         (function(){
             const foldersGrid = document.getElementById('archive-folders-grid');
-            const legisHeaders = foldersGrid ? foldersGrid.querySelectorAll('a[href*="legislative=true"]') : [];
-            const legisCount = legisHeaders.length;
             const foldersPagination = new PaginationControls('foldersPagination', { onPageChange: loadFoldersPage });
             foldersPagination.update(<?php echo $archive_folders_total; ?>);
 
@@ -1871,22 +2069,21 @@ if (isset($_SESSION['user_id'])) {
                     .then(function(r){ return r.json(); })
                     .then(function(data){
                         if (!data || !data.success) return;
-                        // Remove user-created cards (keep legislative headers)
+                        // Remove all existing cards
                         var allCards = Array.from(foldersGrid.querySelectorAll('a[data-archive]'));
                         allCards.forEach(function(card){
-                            if (!card.getAttribute('href').includes('legislative=true')) {
-                                card.remove();
-                            }
+                            card.remove();
                         });
                         // Add new cards
                         (data.folders || []).forEach(function(folder){
+                            var fc = FOLDER_COLORS[(parseInt(folder.id, 10) || 0) % FOLDER_COLORS.length];
                             var card = document.createElement('a');
                             card.id = 'folder-card-' + folder.id;
                             card.href = 'folder_view.php?id=' + folder.id;
                             card.setAttribute('data-archive', folder.slug || '');
-                            card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg hover:border-slate-500/50 transition-all group h-40';
+                            card.className = 'flex flex-col justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-lg ' + fc.hover + ' transition-all group h-40';
                             var createdDate = new Date(folder.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
+                            card.innerHTML = '<div class="flex items-start justify-between"><div class="w-12 h-12 ' + fc.tile + ' rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform relative overflow-hidden"><i class="bi bi-folder-fill"></i><div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10"><i class="bi bi-person-fill"></i></div></div><div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();"><i class="bi bi-three-dots"></i></div></div><div class="min-w-0 mt-4"><div class="font-bold text-gray-900 dark:text-gray-100 text-lg truncate">' + (folder.name || '').replace(/</g, '&lt;') + '</div><div class="text-sm text-gray-500 dark:text-gray-400 archive-meta mt-1" data-archive-meta="' + (folder.slug || '').replace(/</g, '&lt;') + '">Created: ' + createdDate + '</div></div>';
                             foldersGrid.appendChild(card);
                         });
                     })
@@ -1911,6 +2108,8 @@ if (isset($_SESSION['user_id'])) {
     </script>
         </div>
     </div>
+    </main>
+        <?php include 'includes/footer.php'; ?>
     <?php include 'includes/footer_scripts.php'; ?>
 </body>
 </html>

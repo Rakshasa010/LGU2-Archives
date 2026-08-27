@@ -24,6 +24,7 @@ ini_set('log_errors', 1);
 $raw_input = file_get_contents('php://input');
 
 require_once 'authdatabase.php';
+require_once __DIR__ . '/includes/pinata.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -65,7 +66,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS external_documents (
     title VARCHAR(255) NOT NULL,
     document_type VARCHAR(50) NOT NULL DEFAULT 'archive',
     document_date DATE NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'archived',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
     description TEXT NULL,
     tags VARCHAR(500) NULL,
     reference_number VARCHAR(100) NULL,
@@ -73,6 +74,8 @@ $conn->query("CREATE TABLE IF NOT EXISTS external_documents (
     file_name VARCHAR(255) NULL,
     file_size BIGINT DEFAULT 0,
     file_type VARCHAR(100) NULL,
+    ipfs_cid VARCHAR(255) NULL,
+    mime_type VARCHAR(100) NULL,
     source_system VARCHAR(50) NOT NULL DEFAULT 'llrm',
     external_id VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -109,7 +112,7 @@ switch ($action) {
         $title = trim($_POST['title'] ?? '');
         $documentType = trim($_POST['document_type'] ?? 'archive');
         $documentDate = trim($_POST['document_date'] ?? '');
-        $status = trim($_POST['status'] ?? 'archived');
+        $status = trim($_POST['status'] ?? 'pending');
         $description = trim($_POST['description'] ?? '');
         $tags = trim($_POST['tags'] ?? '');
         $referenceNumber = trim($_POST['reference_number'] ?? '');
@@ -145,6 +148,8 @@ switch ($action) {
         $fileName = null;
         $fileSize = 0;
         $fileType = null;
+        $ipfsCid = null;
+        $mimeType = null;
 
         if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
             $fileName = $_FILES['file']['name'];
@@ -189,6 +194,26 @@ switch ($action) {
 
             if (move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
                 $filePath = 'uploads/external/' . date('Y-m') . '/' . $finalName;
+
+                // Pin the uploaded file to Pinata IPFS (best-effort; local copy is always kept)
+                $mimeType = function_exists('mime_content_type') ? mime_content_type($targetPath) : null;
+                if (!$mimeType) { $mimeType = $fileType ?: 'application/octet-stream'; }
+                $pinataGroupId = null;
+                $groupInfo = pinata_ensure_group('LAS/External Documents');
+                if ($groupInfo['success']) {
+                    $pinataGroupId = $groupInfo['id'];
+                } elseif (!empty($groupInfo['error'])) {
+                    error_log('Pinata group setup failed for External Documents: ' . $groupInfo['error']);
+                }
+                $pinataResult = pinata_upload_file($targetPath, $finalName, ['record' => 'external_document', 'reference_number' => $referenceNumber], $pinataGroupId);
+                if ($pinataResult['success']) {
+                    $ipfsCid = $pinataResult['cid'];
+                    if (!empty($pinataResult['group']) && empty($pinataResult['group']['success'])) {
+                        error_log('Pinata group add failed for ' . $finalName . ': ' . ($pinataResult['group']['error'] ?? 'unknown error'));
+                    }
+                } else {
+                    error_log('Pinata pin failed for ' . $finalName . ': ' . ($pinataResult['error'] ?? 'unknown error'));
+                }
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'error' => 'Failed to save uploaded file']);
@@ -204,11 +229,11 @@ switch ($action) {
         // --- Insert into external_documents ---
         $insertSql = "INSERT INTO external_documents 
             (title, document_type, document_date, status, description, tags, reference_number, 
-             file_path, file_name, file_size, file_type, source_system, external_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+             file_path, file_name, file_size, file_type, ipfs_cid, mime_type, source_system, external_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
         $insertStmt = $conn->prepare($insertSql);
-        $insertStmt->bind_param("sssssssssssss",
+        $insertStmt->bind_param("sssssssssssssss",
             $title,
             $documentType,
             $documentDate,
@@ -220,6 +245,8 @@ switch ($action) {
             $fileName,
             $fileSize,
             $fileType,
+            $ipfsCid,
+            $mimeType,
             $sourceSystem,
             $externalId
         );
@@ -238,13 +265,16 @@ switch ($action) {
 
             // Create notification for admins
             $notifContent = "New archived document from {$sourceSystem}: {$title}";
-            $notifSql = "INSERT INTO notifications (time, date, content, about, status, created_at)
-                         VALUES (?, CURDATE(), ?, 'External Intake', 'unread', NOW())";
+            $notifSql = "INSERT INTO notifications (time, date, content, about, user_name, status, created_at)
+                         VALUES (?, CURDATE(), ?, 'External Intake', NULL, 'unread', NOW())";
             $notifStmt = $conn->prepare($notifSql);
             $timeStr = date('h:i A');
             $notifStmt->bind_param("ss", $timeStr, $notifContent);
             $notifStmt->execute();
             $notifStmt->close();
+
+            // Auto-routing is removed: LLRM-sourced documents are staged in the
+            // External Documents queue and must be manually routed by a user.
 
             http_response_code(201);
             echo json_encode([
@@ -258,6 +288,8 @@ switch ($action) {
                     'file_path'       => $filePath,
                     'file_name'       => $fileName,
                     'file_size'       => $fileSize,
+                    'ipfs_cid'        => $ipfsCid,
+                    'ipfs_url'        => $ipfsCid ? pinata_gateway_url($ipfsCid) : null,
                     'created_at'      => date('Y-m-d H:i:s'),
                 ],
                 'message'  => 'Document received and saved successfully.',
@@ -294,7 +326,7 @@ switch ($action) {
         $docType = $_GET['type'] ?? '';
         $sourceSystem = $_GET['source_system'] ?? '';
 
-        $where = "WHERE 1=1";
+        $where = "WHERE (status IS NULL OR LOWER(status) <> 'routed')";
         $params = [];
         $types = "";
 
