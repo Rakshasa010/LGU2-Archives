@@ -16,6 +16,8 @@
     var verifying = false;
     var otpEnd = 0;
     var timerInt = null;
+    var customTitle = null;
+    var customPurpose = null;
 
     var modal = null;
     var backdrop = null, closeBtn = null, cancelBtn = null;
@@ -90,7 +92,7 @@
         fetch('api/send-folder-otp.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+            body: JSON.stringify({ purpose: customPurpose || '' })
         })
             .then(function (r) { return r.json(); })
             .then(function (data) {
@@ -120,6 +122,8 @@
 
     function openModal() {
         if (!modal) build();
+        var titleEl = document.getElementById('folder-otp-title');
+        if (titleEl && customTitle) titleEl.textContent = customTitle;
         resetModal();
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
@@ -133,6 +137,8 @@
         stopTimer();
         clearStatus();
         pendingCallback = null;
+        customTitle = null;
+        customPurpose = null;
     }
 
     function verify() {
@@ -296,9 +302,11 @@
     }
 
     window.folderOTP = {
-        guard: function (url, callback) {
+        guard: function (url, callback, options) {
             pendingUrl = url;
             pendingCallback = callback;
+            customTitle = (options && options.title) || null;
+            customPurpose = (options && options.purpose) || null;
             openModal();
         }
     };

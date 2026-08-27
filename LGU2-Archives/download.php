@@ -40,6 +40,26 @@ function log_analytics_event(mysqli $conn, array $event): void {
 }
 
 
+function log_download_audit(mysqli $conn, string $about, string $content): void {
+    $uid = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+    if ($uid <= 0) return;
+    $userName = null;
+    if ($u = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
+        $u->bind_param("i", $uid);
+        $u->execute();
+        $r = $u->get_result();
+        if ($r && $row = $r->fetch_assoc()) $userName = trim($row['full_name'] ?? '');
+        $u->close();
+    }
+    $t = date('h:i A'); $d = date('Y-m-d'); $s = 'unread';
+    $ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+    if ($ins) {
+        $ins->bind_param('ssssss', $t, $d, $content, $about, $userName, $s);
+        $ins->execute();
+        $ins->close();
+    }
+}
+
 function get_legislative_file_info(mysqli $conn, int $id): ?array {
     $stmt = $conn->prepare("SELECT file_path, ipfs_cid, title, type, month, year, author, mongo_id, folder_id FROM legislative_records WHERE id = ?");
     if (!$stmt) return null;
@@ -106,6 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'File Preview',
             'Previewed file "' . htmlspecialchars($record['title']) . '" in folder "' . htmlspecialchars($record['type']) . '"'
         );
+
+        // Log file preview in audit logs (all users)
+        log_download_audit($conn, 'File Preview', 'Previewed file "' . htmlspecialchars($record['title']) . '" in folder "' . htmlspecialchars($record['type']) . '"');
 
         $filename = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $record['title']) . '_' . $record['id'];
         generatePDF($record, $filename, 'inline');
@@ -273,6 +296,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             echo 'File not found';
             exit;
         }
+        // Log file view in audit logs (all users)
+        $viewTitle = $info['title'] ?? ('Record #' . $id);
+        log_download_audit($conn, 'File Preview', 'Viewed file "' . htmlspecialchars($viewTitle) . '"');
         // Serve via the Pinata dedicated gateway when an IPFS CID is stored.
         $ipfsCid = $info['ipfs_cid'] ?? null;
         if (!empty($ipfsCid) && pinata_is_configured()) {
@@ -505,6 +531,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'File Download',
         'Downloaded "' . htmlspecialchars($record['title']) . '" as ' . strtoupper($format) . ' from folder "' . htmlspecialchars($record['type']) . '"'
     );
+
+    // Log file download in audit logs (all users)
+    log_download_audit($conn, 'File Download', 'Downloaded "' . htmlspecialchars($record['title']) . '" as ' . strtoupper($format) . ' from folder "' . htmlspecialchars($record['type']) . '"');
     
 
     // Generate filename

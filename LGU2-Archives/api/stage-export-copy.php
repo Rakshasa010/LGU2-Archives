@@ -223,7 +223,7 @@ try {
             $time = date('h:i A');
             $date = date('Y-m-d');
             $content = "File '{$file['name']}' staged for export request #$request_id by user #{$_SESSION['user_id']}";
-            $about = 'Export Fulfillment';
+            $about = 'Export Staged';
             
             $notifStmt->bind_param("sssss", $time, $date, $content, $about, $userNameForNotif);
             

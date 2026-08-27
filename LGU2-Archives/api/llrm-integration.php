@@ -31,6 +31,7 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . '/../authdatabase.php';
 require_once __DIR__ . '/../includes/llrm-service.php';
+require_once __DIR__ . '/../monitoring_helper.php';
 
 // Verify admin role
 $userId = (int)$_SESSION['user_id'];
@@ -144,6 +145,14 @@ switch ($action) {
         }
         $result = $llrm->downloadDocument($id);
         if (isset($result['success']) && $result['success']) {
+            // Log LLRM download for monitored users
+            log_monitored_user_action($conn, $_SESSION['user_id'], 'File Download', 'Downloaded LLRM document #' . $id);
+            // Log LLRM download in audit logs (all users)
+            $_uid = (int)$_SESSION['user_id']; $_userName = null;
+            if ($_u = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) { $_u->bind_param("i", $_uid); $_u->execute(); $_r = $_u->get_result(); if ($_r && $_ur = $_r->fetch_assoc()) $_userName = trim($_ur['full_name'] ?? ''); $_u->close(); }
+            $_t = date('h:i A'); $_d = date('Y-m-d'); $_s = 'unread'; $_c = 'Downloaded LLRM document #' . $id; $_a = 'File Download';
+            $_ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+            if ($_ins) { $_ins->bind_param('ssssss', $_t, $_d, $_c, $_a, $_userName, $_s); $_ins->execute(); $_ins->close(); }
             // Stream file to browser
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="llrm_document_' . $id . '"');

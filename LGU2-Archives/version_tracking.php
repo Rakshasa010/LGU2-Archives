@@ -498,9 +498,6 @@ $conn->close();
                         '</div>' +
                     '</div>';
 
-                card.addEventListener('click', function() {
-                    vtSelectFolderFromGrid(folder);
-                });
                 grid.appendChild(card);
             });
         }
@@ -572,7 +569,9 @@ $conn->close();
                     // Find from vtAllFolders
                     var found = vtAllFolders.find(function(f) { return f.source === 'archive' && String(f.id) === folderId; });
                     if (found) {
-                        vtSelectFolderFromGrid(found);
+                        window.folderOTP.guard(null, function() {
+                            vtSelectFolderFromGrid(found);
+                        });
                         return;
                     }
                     // Fallback: find from sidebar links
@@ -1297,6 +1296,31 @@ $conn->close();
                 chevron.className = 'bi bi-chevron-down text-sm';
             }
         }
+    </script>
+    <script src="assets/js/folder-otp.js"></script>
+    <script>
+    (function () {
+        var grid = document.getElementById('vt-folder-grid');
+        if (!grid || !window.folderOTP) return;
+        grid.addEventListener('click', function (e) {
+            var card = e.target.closest('.vt-folder-card');
+            if (!card) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var folderId = card.getAttribute('data-folder-id');
+            var folderSource = card.getAttribute('data-folder-source');
+            var folder = null;
+            if (typeof vtAllFolders !== 'undefined') {
+                folder = vtAllFolders.find(function(f) {
+                    return String(f.id) === folderId && f.source === folderSource;
+                });
+            }
+            if (!folder) return;
+            window.folderOTP.guard(null, function () {
+                vtSelectFolderFromGrid(folder);
+            });
+        });
+    })();
     </script>
     <script src="assets/js/archives-landing.js?v=2"></script>
     <script src="assets/js/theme-toggle.js"></script>
