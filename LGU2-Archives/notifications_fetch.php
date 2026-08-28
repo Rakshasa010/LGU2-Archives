@@ -85,12 +85,11 @@ $items = [];
 while ($res && ($row = $res->fetch_assoc())) $items[] = $row;
 $stmt->close();
 $about_options = [];
-$excluded_about = ['backup','comment','import','messages','metadata','storage','system maintenance','system administrator'];
 // Select distinct about values, trimming whitespace and ensuring non-empty
 $r = $conn->query("SELECT DISTINCT TRIM(about) as about FROM notifications WHERE about IS NOT NULL AND about != '' ORDER BY about ASC");
 if ($r) {
     while ($a = $r->fetch_assoc()) {
-        if (!empty($a['about']) && !in_array(strtolower($a['about']), $excluded_about)) {
+        if (!empty($a['about'])) {
             $about_options[] = $a['about'];
         }
     }

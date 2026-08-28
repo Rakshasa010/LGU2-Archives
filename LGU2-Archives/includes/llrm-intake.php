@@ -313,28 +313,26 @@ if (!function_exists('llrm_intake_normalize_type')) {
         $type = $folder['kind'] === 'legislative' ? ($normalized['leg_type'] ?? $folder['type'] ?? $rawType) : $rawType;
 
         // Duplicate guard
-        if (empty($opts['allow_duplicates'])) {
-            if ($folder['kind'] === 'legislative') {
-                $chk = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND type = ? LIMIT 1");
-                $chk->bind_param("ss", $title, $type);
-                $chk->execute();
-                $dup = $chk->get_result()->fetch_assoc();
-                $chk->close();
-            } else {
-                $chk = $conn->prepare("SELECT id FROM archive_files WHERE name = ? AND folder_id = ? LIMIT 1");
-                $chk->bind_param("si", $title, $folder['id']);
-                $chk->execute();
-                $dup = $chk->get_result()->fetch_assoc();
-                $chk->close();
-            }
-            if ($dup) {
-                return [
-                    'success'     => false,
-                    'duplicate'   => true,
-                    'error'       => 'Duplicate record already exists',
-                    'existing_id' => (int)$dup['id'],
-                ];
-            }
+        if ($folder['kind'] === 'legislative') {
+            $chk = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND type = ? LIMIT 1");
+            $chk->bind_param("ss", $title, $type);
+            $chk->execute();
+            $dup = $chk->get_result()->fetch_assoc();
+            $chk->close();
+        } else {
+            $chk = $conn->prepare("SELECT id FROM archive_files WHERE name = ? AND folder_id = ? LIMIT 1");
+            $chk->bind_param("si", $title, $folder['id']);
+            $chk->execute();
+            $dup = $chk->get_result()->fetch_assoc();
+            $chk->close();
+        }
+        if ($dup) {
+            return [
+                'success'     => false,
+                'duplicate'   => true,
+                'error'       => 'Duplicate record already exists',
+                'existing_id' => (int)$dup['id'],
+            ];
         }
 
         // Month / year from document date (or now)
