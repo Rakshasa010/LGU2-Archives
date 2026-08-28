@@ -79,29 +79,72 @@ if (!$targetFolder) {
     exit;
 }
 
-// Move the file
+$userId = (int)$_SESSION['user_id'];
+
+// Get file info before moving (for audit log)
 $filesTbl = $fileKind === 'legislative' ? 'legislative_records' : 'archive_files';
+$titleCol = $fileKind === 'legislative' ? 'title' : 'name';
+$srcStmt = $conn->prepare("SELECT $titleCol, folder_id FROM $filesTbl WHERE id = ?");
+$srcStmt->bind_param("i", $fileId);
+$srcStmt->execute();
+$fileRow = $srcStmt->get_result()->fetch_assoc();
+$srcStmt->close();
+
+if (!$fileRow) {
+    http_response_code(404);
+    echo json_encode(['success' => false, 'error' => 'File not found']);
+    exit;
+}
+
+$fileName = $fileRow[$titleCol] ?? 'Unknown';
+$sourceFolderId = (int)$fileRow['folder_id'];
+
+// Get source folder name
+$srcFolderStmt = $conn->prepare("SELECT name FROM $foldersTbl WHERE id = ?");
+$srcFolderStmt->bind_param("i", $sourceFolderId);
+$srcFolderStmt->execute();
+$srcFolderRow = $srcFolderStmt->get_result()->fetch_assoc();
+$srcFolderStmt->close();
+$sourceFolderName = $srcFolderRow['name'] ?? 'Unknown';
+
+// Move the file
 $folderCol = 'folder_id';
+$updStmt = $conn->prepare("UPDATE $filesTbl SET $folderCol = ? WHERE id = ?");
+$updStmt->bind_param("ii", $targetFolderId, $fileId);
 
-$stmt = $conn->prepare("UPDATE $filesTbl SET $folderCol = ? WHERE id = ?");
-$stmt->bind_param("ii", $targetFolderId, $fileId);
+if ($updStmt->execute()) {
+    // Audit log
+    $conn->query("CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        action VARCHAR(255) NOT NULL,
+        file_id VARCHAR(100) NULL,
+        details TEXT NULL,
+        timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_action (action),
+        INDEX idx_timestamp (timestamp)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-if ($stmt->execute()) {
-    if ($stmt->affected_rows > 0 || $conn->affected_rows > 0) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'File moved to "' . $targetFolder['name'] . '" successfully.',
-            'target_folder' => [
-                'id'   => (int)$targetFolder['id'],
-                'name' => $targetFolder['name'],
-            ],
-        ]);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'File not found or already in that folder']);
-    }
+    $action = 'File Moved';
+    $detail = "Moved \"$fileName\" from \"$sourceFolderName\" to \"" . $targetFolder['name'] . "\" ($fileKind)";
+    $logStmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, file_id, details) VALUES (?, ?, ?, ?)");
+    $fidStr = $fileKind . ':' . $fileId;
+    $logStmt->bind_param("isss", $userId, $action, $fidStr, $detail);
+    $logStmt->execute();
+    $logStmt->close();
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'File moved to "' . $targetFolder['name'] . '" successfully.',
+        'target_folder' => [
+            'id'   => (int)$targetFolder['id'],
+            'name' => $targetFolder['name'],
+        ],
+    ]);
 } else {
     echo json_encode(['success' => false, 'error' => 'Database error: ' . $conn->error]);
 }
 
-$stmt->close();
+$updStmt->close();
 $conn->close();
