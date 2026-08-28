@@ -49,13 +49,18 @@
         var days = Math.floor(hrs / 24);
         return days + 'd ago';
     }
+    function formatExactDate(ms) {
+        var d = new Date(ms);
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    }
     function updateRelativeTimes() {
         var nodes = document.querySelectorAll('.note-time');
         nodes.forEach(function (el) {
             var ms = parseInt(el.dataset.ts || '0', 10);
-            var base = el.dataset.base || '';
-            if (!isNaN(ms) && base) {
-                el.innerHTML = base + ' <span class="text-gray-500">' + formatRelative(ms) + '</span>';
+            var exactDate = el.dataset.exactDate || '';
+            if (!isNaN(ms) && exactDate) {
+                el.innerHTML = exactDate + ' &middot; ' + formatRelative(ms);
             }
         });
     }
@@ -100,9 +105,18 @@
         if (/login/i.test(about)) return 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50';
         if (/register|registration/i.test(about)) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
         if (/upload/i.test(about)) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50';
+        if (/file download/i.test(about)) return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50';
+        if (/file preview/i.test(about)) return 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50';
+        if (/export request/i.test(about)) return 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50';
+        if (/export staged/i.test(about)) return 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50';
+        if (/export completed/i.test(about)) return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
+        if (/export cancelled/i.test(about)) return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
+        if (/zip export/i.test(about)) return 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800/50';
+        if (/report export/i.test(about)) return 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border border-teal-200 dark:border-teal-800/50';
         if (/export/i.test(about)) return 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50';
         if (/profile update/i.test(about)) return 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50';
         if (/security/i.test(about)) return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
+        if (/logout|session timeout/i.test(about)) return 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50';
         if (/monitored/i.test(about)) return 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50';
         return 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
     }
@@ -127,6 +141,7 @@
             }
             var dispTime = String(note.time || '');
             var relTime = formatRelative(baseMs);
+            var exactDate = formatExactDate(baseMs);
             var dispDate = note.created_at || note.date || '';
             var isRead = String(note.status || 'unread').toLowerCase() === 'read';
             var unreadBg = isRead
@@ -152,7 +167,7 @@
                     '<span class="md:hidden font-bold inline-block w-20 text-left mb-1">Time</span>' +
                     '<div class="inline-block align-top">' +
                         '<div class="text-sm font-bold text-gray-900 dark:text-gray-100" title="' + escapeHtml(dispDate) + '">' + escapeHtml(dispTime) + '</div>' +
-                        '<div class="note-time text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-ts="' + baseMs + '" data-base="' + escapeHtml(dispTime) + '" data-search="' + escapeHtml(dispDate) + '">' + relTime + '</div>' +
+                        '<div class="note-time text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-ts="' + baseMs + '" data-exact-date="' + escapeHtml(exactDate) + '" data-search="' + escapeHtml(dispDate) + '">' + exactDate + ' &middot; ' + relTime + '</div>' +
                     '</div>' +
                 '</td>' +
                 '<td class="px-4 py-3 text-sm">' +
@@ -245,8 +260,9 @@
                 while (aboutSel.options.length > 1) {
                     aboutSel.remove(1);
                 }
-                var staticAbout = ['Approval','Export (Archives ZIP)','Export (Reports & Analytics)','External Intake','Login','Monitored User Activity','Profile Update','Security','Uploads','User Management','User Registration'];
-                var combined = Array.from(new Set(staticAbout));
+                var staticAbout = ['Approval','Export (Archives ZIP)','Export (Reports & Analytics)','Export Cancelled','Export Completed','Export Request','Export Staged','External Intake','File Download','File Preview','Login','Logout','Monitored User Activity','Profile Update','Report Export','Security','Session Timeout','Uploads','User Management','User Registration','ZIP Export'];
+                var serverAbout = data.about_options || [];
+                var combined = Array.from(new Set(staticAbout.concat(serverAbout)));
                 combined.sort();
                 combined.forEach(function (opt) {
                     if (!opt) return;

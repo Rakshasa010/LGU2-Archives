@@ -68,11 +68,19 @@
     $categories = [
         'Uploads',
         'Login',
+        'Logout',
+        'Session Timeout',
         'Profile Update',
         'Security',
         'User Registration',
-        'Export (Reports & Analytics)',
-        'Export (Archives ZIP)',
+        'File Download',
+        'File Preview',
+        'Export Request',
+        'Export Staged',
+        'Export Completed',
+        'Export Cancelled',
+        'ZIP Export',
+        'Report Export',
         'Approval',
         'Monitored User Activity'
     ];
@@ -271,6 +279,8 @@
                             <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <input type="hidden" id="filter-from" value="">
+                        <input type="hidden" id="filter-to" value="">
                                         <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 hidden md:block mx-1"></div>
                                         <div class="flex items-center gap-1 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 p-0.5 shadow-sm">
                                             <button type="button" id="date-preset-today" class="px-2.5 py-1.5 rounded text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">Today</button>
@@ -330,6 +340,7 @@
                                             $createdTs = isset($note['created_at']) ? strtotime($note['created_at']) : null;
                                             $dispTime = $createdTs ? date('h:i A', $createdTs) : ($note['time'] ?? '');
                                             $dispDate = $createdTs ? date('Y-m-d', $createdTs) : ($note['date'] ?? '');
+                                            $exactDate = $createdTs ? date('M d, Y', $createdTs) : date('M d, Y', strtotime($note['date'] ?? ''));
                                             
                                             $relativeTime = $createdTs ? time_elapsed_string('@'.$createdTs) : '';
                                             
@@ -362,7 +373,7 @@
                                                     <span class="md:hidden font-bold inline-block w-20 text-left mb-1">Time</span>
                                                     <div class="inline-block align-top">
                                                         <div class="text-sm font-bold text-gray-900 dark:text-gray-100" title="<?php echo htmlspecialchars($dispDate); ?>"><?php echo htmlspecialchars($dispTime); ?></div>
-                                                        <div class="text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-search="<?php echo htmlspecialchars($dispDate); ?>"><?php echo $relativeTime; ?></div>
+                                                        <div class="note-time text-[11px] text-gray-500 dark:text-gray-400 font-medium" data-ts="<?php echo $createdTs ? ($createdTs * 1000) : 0; ?>" data-exact-date="<?php echo htmlspecialchars($exactDate); ?>" data-search="<?php echo htmlspecialchars($dispDate); ?>"><?php echo htmlspecialchars($exactDate) . ' &middot; ' . $relativeTime; ?></div>
                                                     </div>
                                                 </td>
                                                 <td class="px-4 py-3 text-sm">
@@ -407,7 +418,7 @@
         </div>
 
         <script src="assets/js/archives-landing.js?v=2"></script>
-        <script src="assets/js/audit-logs.js?v=5"></script>
+        <script src="assets/js/audit-logs.js?v=7"></script>
         <script src="assets/js/theme-toggle.js"></script>
     
     <script>

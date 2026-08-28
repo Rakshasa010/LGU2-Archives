@@ -28,15 +28,6 @@ $action = $_GET['action'] ?? '';
 
 if ($action === 'folders') {
     $folders = [];
-    $leg = $conn->query("SELECT MIN(id) AS id, name, MAX(type) AS type FROM legislative_folders WHERE parent_id IS NULL GROUP BY name ORDER BY name ASC");
-    while ($row = $leg ? $leg->fetch_assoc() : null) {
-        $folders[] = [
-            'kind' => 'legislative',
-            'id'   => (int)$row['id'],
-            'name' => $row['name'],
-            'type' => $row['type'],
-        ];
-    }
     $arch = $conn->query("SELECT id, name FROM archive_folders ORDER BY name ASC");
     while ($row = $arch ? $arch->fetch_assoc() : null) {
         $folders[] = [
@@ -54,24 +45,13 @@ if ($action === 'suggest') {
     $type = $_GET['type'] ?? 'archive';
     $normalized = llrm_intake_normalize_type($type);
     $kinds = [];
-    if ($normalized['kind'] === 'legislative') {
-        $st = $conn->prepare("SELECT id, name FROM legislative_folders WHERE type = ? AND parent_id IS NULL LIMIT 1");
-        $st->bind_param("s", $normalized['leg_type']);
-        $st->execute();
-        $row = $st->get_result()->fetch_assoc();
-        $st->close();
-        if ($row) {
-            $kinds[] = ['kind' => 'legislative', 'id' => (int)$row['id']];
-        }
-    } else {
-        $st = $conn->prepare("SELECT id, name FROM archive_folders WHERE name = ? LIMIT 1");
-        $st->bind_param("s", $normalized['folder_name']);
-        $st->execute();
-        $row = $st->get_result()->fetch_assoc();
-        $st->close();
-        if ($row) {
-            $kinds[] = ['kind' => 'archive', 'id' => (int)$row['id']];
-        }
+    $st = $conn->prepare("SELECT id, name FROM archive_folders WHERE name = ? LIMIT 1");
+    $st->bind_param("s", $normalized['folder_name']);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc();
+    $st->close();
+    if ($row) {
+        $kinds[] = ['kind' => 'archive', 'id' => (int)$row['id']];
     }
     echo json_encode(['success' => true, 'suggestions' => $kinds, 'type' => $type]);
     exit;
@@ -156,7 +136,7 @@ $routeOne = function ($conn, $externalId, $folderKind, $folderId) {
         }
     }
 
-    $result = llrm_intake_route($conn, $routeDoc, $fileSpec, ['notification_prefix' => $ext['source_system']]);
+    $result = llrm_intake_route($conn, $routeDoc, $fileSpec, ['notification_prefix' => $ext['source_system'], 'allow_duplicates' => true]);
 
     if (empty($result['success'])) {
         return [
