@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_request'])) {
         $link = map_export_link($file_name, $location);
         $ntime = date('h:i A');
         $ndate = date('Y-m-d');
-        $about = 'Export Request';
+        $about = 'Request Copy';
         $status = 'unread';
         $needed_date = $needed_date !== '' ? $needed_date : null;
         $request_note = $request_note !== '' ? $request_note : null;

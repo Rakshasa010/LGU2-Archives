@@ -14,7 +14,6 @@
 
 require 'authdatabase.php';
 require_once __DIR__ . '/includes/pinata.php';
-require_once __DIR__ . '/monitoring_helper.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -69,27 +68,6 @@ if (empty($cid)) {
     http_response_code(404);
     exit('No IPFS content stored for this document');
 }
-
-// Log IPFS preview/download for monitored users
-$action_type = $is_view ? 'File Preview' : 'File Download';
-$verb = $is_view ? 'Previewed' : 'Downloaded';
-log_monitored_user_action($conn, $_SESSION['user_id'], $action_type, $verb . ' IPFS file "' . htmlspecialchars($filename ?? 'Unknown') . '"');
-
-// Log IPFS preview/download in audit logs (all users)
-$_audit_about = $is_view ? 'File Preview' : 'File Download';
-$_audit_content = $verb . ' IPFS file "' . htmlspecialchars($filename ?? 'Unknown') . '"';
-$_uid = (int)$_SESSION['user_id'];
-$_userName = null;
-if ($_u = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
-    $_u->bind_param("i", $_uid);
-    $_u->execute();
-    $_r = $_u->get_result();
-    if ($_r && $_ur = $_r->fetch_assoc()) $_userName = trim($_ur['full_name'] ?? '');
-    $_u->close();
-}
-$_t = date('h:i A'); $_d = date('Y-m-d'); $_s = 'unread';
-$_ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-if ($_ins) { $_ins->bind_param('ssssss', $_t, $_d, $_audit_content, $_audit_about, $_userName, $_s); $_ins->execute(); $_ins->close(); }
 
 // Stream through the server so the dedicated gateway URL is never exposed to clients.
 pinata_stream_cid($cid, $is_view, $filename);

@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         )");
         $ntime = date('h:i A'); $ndate = date('Y-m-d');
         $ncontent = 'Yearly export requested: ' . $year . ' by user #' . $uid;
-        $nabout = 'ZIP Export'; $nstatus = 'unread';
+        $nabout = 'Export (Archives ZIP)'; $nstatus = 'unread';
         // Get user name for notification
         $userNameForNotif = null;
         if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
@@ -981,44 +981,9 @@ if (isset($_SESSION['user_id'])) {
                                             <i class="bi bi-eye"></i>
                                         </button>
                                     </div>
-                                    <div class="text-right">
-                                        <button type="button" id="year-export-forgot-zip" class="text-xs text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 font-semibold">Forgot ZIP Password?</button>
-                                    </div>
                                     <div class="flex justify-end gap-2 pt-2">
                                         <button type="button" id="year-export-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
                                         <button type="button" id="year-export-confirm" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Reset ZIP Password Modal (after OTP verification) -->
-                    <div id="reset-zip-modal" class="hidden fixed inset-0 z-[60]">
-                        <div class="flex items-center justify-center min-h-screen px-4">
-                            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
-                            <div class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 border border-gray-200 dark:border-slate-700">
-                                <div class="mb-4">
-                                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Reset ZIP Password</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">Create a new ZIP password for exports.</div>
-                                </div>
-                                <div class="space-y-3">
-                                    <div class="relative">
-                                        <input type="password" id="reset-zip-new" class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="New ZIP password (min 4 chars)" />
-                                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" data-toggle-password="reset-zip-new" aria-label="Show new ZIP password">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </div>
-                                    <div class="relative">
-                                        <input type="password" id="reset-zip-confirm" class="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100" placeholder="Confirm new ZIP password" />
-                                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" data-toggle-password="reset-zip-confirm" aria-label="Show confirm ZIP password">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </div>
-                                    <div id="reset-zip-error" class="hidden text-xs text-red-600 dark:text-red-400"></div>
-                                    <div class="flex justify-end gap-2 pt-2">
-                                        <button type="button" id="reset-zip-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
-                                        <button type="button" id="reset-zip-save" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Save New Password</button>
                                     </div>
                                 </div>
                             </div>
@@ -2084,70 +2049,6 @@ if (isset($_SESSION['user_id'])) {
             });
             window.addEventListener('keydown', function(e){
                 if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
-            });
-        })();
-    </script>
-
-    <script>
-        (function(){
-            var forgotBtn = document.getElementById('year-export-forgot-zip');
-            var resetModal = document.getElementById('reset-zip-modal');
-            var resetNew = document.getElementById('reset-zip-new');
-            var resetConfirm = document.getElementById('reset-zip-confirm');
-            var resetError = document.getElementById('reset-zip-error');
-            var resetSave = document.getElementById('reset-zip-save');
-            var resetCancel = document.getElementById('reset-zip-cancel');
-            var ZIP_STORAGE_KEY = 'year_export_zip_password';
-
-            if (!forgotBtn || !resetModal) return;
-
-            function closeResetModal() {
-                resetModal.classList.add('hidden');
-                if (resetNew) resetNew.value = '';
-                if (resetConfirm) resetConfirm.value = '';
-                if (resetError) { resetError.textContent = ''; resetError.classList.add('hidden'); }
-            }
-
-            forgotBtn.addEventListener('click', function() {
-                // Close the export modal first
-                var exportModal = document.getElementById('year-export-modal');
-                if (exportModal) exportModal.classList.add('hidden');
-                // Trigger OTP verification, then show reset modal
-                if (window.folderOTP && window.folderOTP.guard) {
-                    window.folderOTP.guard(null, function() {
-                        resetModal.classList.remove('hidden');
-                        setTimeout(function(){ resetNew && resetNew.focus(); }, 50);
-                    }, { title: 'Reset ZIP Password', purpose: 'reset_zip_password' });
-                }
-            });
-
-            resetCancel && resetCancel.addEventListener('click', closeResetModal);
-            resetModal.addEventListener('click', function(e) { if (e.target === resetModal) closeResetModal(); });
-
-            resetSave && resetSave.addEventListener('click', function() {
-                var np = resetNew ? resetNew.value : '';
-                var nc = resetConfirm ? resetConfirm.value : '';
-                if (!np || np.length < 4) {
-                    resetError.textContent = 'Password must be at least 4 characters.';
-                    resetError.classList.remove('hidden');
-                    return;
-                }
-                if (np !== nc) {
-                    resetError.textContent = 'Passwords do not match.';
-                    resetError.classList.remove('hidden');
-                    return;
-                }
-                // Save new ZIP password to localStorage
-                try { localStorage.setItem(ZIP_STORAGE_KEY, np); } catch(e) {}
-                closeResetModal();
-                if (typeof showToast === 'function') { try { showToast('ZIP password updated successfully.', 'success'); } catch(e){} }
-                // Re-open the export modal with the new password pre-filled
-                var yearInput = document.getElementById('year-export-input');
-                if (yearInput && yearInput.value && typeof openYearExport === 'function') {
-                    openYearExport(yearInput.value);
-                    var zipInput = document.getElementById('year-export-zip-password-input');
-                    if (zipInput) zipInput.value = np;
-                }
             });
         })();
     </script>

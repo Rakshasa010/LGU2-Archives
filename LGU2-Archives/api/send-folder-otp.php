@@ -21,13 +21,6 @@ require '../authdatabase.php';
 header('Content-Type: application/json');
 
 $uid = (int)$_SESSION['user_id'];
-
-// Read purpose from JSON body
-$json = [];
-$jsonRaw = file_get_contents('php://input');
-if ($jsonRaw) { $json = json_decode($jsonRaw, true) ?: []; }
-$purpose = trim((string)($json['purpose'] ?? ''));
-$_SESSION['folder_otp_purpose'] = $purpose;
 $email = '';
 $full_name = '';
 $stmt = $conn->prepare("SELECT email, full_name FROM users WHERE id = ?");
@@ -87,31 +80,18 @@ if (file_exists($cfgFile)) {
             if (!empty($cfg['smtp_options'])) { $mailer->SMTPOptions = $cfg['smtp_options']; }
             $mailer->CharSet = 'UTF-8';
             $mailer->setFrom($cfg['from_email'] ?? $smtpUser, $cfg['from_name'] ?? 'Archives');
-
-            // Customize subject and body based on purpose
-            $otpHtml = htmlspecialchars((string)$otp);
-            if ($purpose === 'reset_zip_password') {
-                $emailSubject = 'Your ZIP Password Reset Code';
-                $emailDesc = 'required to reset your ZIP password';
-            } elseif ($purpose === 'reset_export_password') {
-                $emailSubject = 'Your Export Password Reset Code';
-                $emailDesc = 'required to verify export access';
-            } else {
-                $emailSubject = 'Your Folder Access Verification Code';
-                $emailDesc = 'required to open an archive folder';
-            }
-
             $mailer->addAddress($email, $full_name ?: 'Archives User');
-            $mailer->Subject = $emailSubject;
+            $mailer->Subject = 'Your Folder Access Verification Code';
             $mailer->isHTML(true);
+            $otpHtml = htmlspecialchars((string)$otp);
             $mailer->Body = '<div style="font-family:Arial,sans-serif;background:#f5f6f8;padding:24px;border-radius:12px;">
                 <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:24px;border:1px solid #e5e7eb;">
                     <div style="font-size:16px;color:#111827;margin-bottom:8px;">Your One-Time Password (OTP)</div>
                     <div style="font-size:28px;letter-spacing:8px;font-weight:700;color:#dc2626;background:#fff7ed;border:1px dashed #fca5a5;padding:14px 16px;text-align:center;border-radius:10px;margin:12px 0;">' . $otpHtml . '</div>
-                    <div style="font-size:13px;color:#6b7280;">This code is ' . htmlspecialchars($emailDesc) . ' and expires in <strong>3 minutes</strong>. If you did not request this, you can ignore this email.</div>
+                    <div style="font-size:13px;color:#6b7280;">This code is required to open an archive folder and expires in <strong>3 minutes</strong>. If you did not request this, you can ignore this email.</div>
                 </div>
             </div>';
-            $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 3 minutes. (' . $emailDesc . ')';
+            $mailer->AltBody = 'Your OTP code is ' . $otp . '. It expires in 3 minutes.';
             $mailer->send();
             $sent = true;
         } catch (Throwable $e) {

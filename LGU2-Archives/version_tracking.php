@@ -498,6 +498,15 @@ $conn->close();
                         '</div>' +
                     '</div>';
 
+                card.addEventListener('click', function() {
+                    if (window.folderOTP) {
+                        window.folderOTP.guard(null, function() {
+                            vtSelectFolderFromGrid(folder);
+                        });
+                    } else {
+                        vtSelectFolderFromGrid(folder);
+                    }
+                });
                 grid.appendChild(card);
             });
         }
@@ -569,9 +578,7 @@ $conn->close();
                     // Find from vtAllFolders
                     var found = vtAllFolders.find(function(f) { return f.source === 'archive' && String(f.id) === folderId; });
                     if (found) {
-                        window.folderOTP.guard(null, function() {
-                            vtSelectFolderFromGrid(found);
-                        });
+                        vtSelectFolderFromGrid(found);
                         return;
                     }
                     // Fallback: find from sidebar links
@@ -1300,24 +1307,13 @@ $conn->close();
     <script src="assets/js/folder-otp.js"></script>
     <script>
     (function () {
-        var grid = document.getElementById('vt-folder-grid');
-        if (!grid || !window.folderOTP) return;
-        grid.addEventListener('click', function (e) {
-            var card = e.target.closest('.vt-folder-card');
-            if (!card) return;
+        if (!window.folderOTP) return;
+        document.addEventListener('click', function (e) {
+            var link = e.target.closest('a.vt-folder-link');
+            if (!link) return;
             e.preventDefault();
-            e.stopPropagation();
-            var folderId = card.getAttribute('data-folder-id');
-            var folderSource = card.getAttribute('data-folder-source');
-            var folder = null;
-            if (typeof vtAllFolders !== 'undefined') {
-                folder = vtAllFolders.find(function(f) {
-                    return String(f.id) === folderId && f.source === folderSource;
-                });
-            }
-            if (!folder) return;
             window.folderOTP.guard(null, function () {
-                vtSelectFolderFromGrid(folder);
+                window.location.href = link.href;
             });
         });
     })();

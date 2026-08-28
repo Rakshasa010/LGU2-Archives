@@ -43,22 +43,6 @@ log_monitored_user_action(
     $verb . ' file "' . htmlspecialchars($file_name) . '"'
 );
 
-// Log file preview/download in audit logs (all users)
-$_audit_about = $is_view ? 'File Preview' : 'File Download';
-$_audit_content = $verb . ' file "' . htmlspecialchars($file_name) . '"';
-$_uid = (int)$_SESSION['user_id'];
-$_userName = null;
-if ($_u = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
-    $_u->bind_param("i", $_uid);
-    $_u->execute();
-    $_r = $_u->get_result();
-    if ($_r && $_ur = $_r->fetch_assoc()) $_userName = trim($_ur['full_name'] ?? '');
-    $_u->close();
-}
-$_t = date('h:i A'); $_d = date('Y-m-d'); $_s = 'unread';
-$_ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-if ($_ins) { $_ins->bind_param('ssssss', $_t, $_d, $_audit_content, $_audit_about, $_userName, $_s); $_ins->execute(); $_ins->close(); }
-
 // Serve via the Pinata dedicated gateway when an IPFS CID is stored.
 // Falls back to the local copy below when no CID exists or Pinata isn't configured.
 if (!empty($ipfs_cid) && pinata_is_configured()) {

@@ -216,12 +216,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
         }
         $stmt->close();
     }
-    // Allow OTP bypass: if user verified OTP, skip password check
-    if (!$ok && !empty($_POST['otp_bypass'])) {
-        $otpVerified = isset($_SESSION['folder_otp_verified'])
-            && (time() - (int)$_SESSION['folder_otp_verified']) <= 300;
-        if ($otpVerified) $ok = true;
-    }
     if ($ok) {
         $conn->query("CREATE TABLE IF NOT EXISTS notifications (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -235,7 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
         $ntime = date('h:i A');
         $ndate = date('Y-m-d');
         $ncontent = 'Export requested: '.strtoupper($action).' by user #'.$uid;
-        $nabout = 'Report Export';
+        $nabout = 'Export (Reports & Analytics)';
         $nstatus = 'unread';
         // Get user name for notification
         $userNameForNotif = null;
@@ -349,28 +343,11 @@ HTML;
         }
         }
     } else {
-        $export_error = !empty($_POST['otp_bypass']) ? 'OTP verification expired. Please try again.' : 'Invalid password for export.';
+        $export_error = 'Invalid password for export.';
     }
 }
 
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-    // Log CSV export in audit logs (all users)
-    $csv_uid = (int)$_SESSION['user_id'];
-    $csv_userName = null;
-    if ($userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
-        $userStmt->bind_param("i", $csv_uid);
-        $userStmt->execute();
-        if ($userRes = $userStmt->get_result()) {
-            if ($urow = $userRes->fetch_assoc()) $csv_userName = trim($urow['full_name'] ?? '');
-        }
-        $userStmt->close();
-    }
-    $csv_t = date('h:i A'); $csv_d = date('Y-m-d'); $csv_s = 'unread';
-    $csv_content = 'Export requested: CSV by user #' . $csv_uid;
-    $csv_about = 'Report Export';
-    $csv_ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-    if ($csv_ins) { $csv_ins->bind_param('ssssss', $csv_t, $csv_d, $csv_content, $csv_about, $csv_userName, $csv_s); $csv_ins->execute(); $csv_ins->close(); }
-
     $filename = 'report_analytics_' . date('Ymd_His') . '.csv';
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -1104,9 +1081,6 @@ $funnel_types = array_values($funnel_types);
                         <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Password</label>
                         <input type="password" name="confirm_password" required class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100">
                     </div>
-                    <div class="text-right">
-                        <button type="button" id="export-forgot-btn" class="text-xs text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 font-semibold">Forgot Password?</button>
-                    </div>
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" id="export-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
                         <button type="submit" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export</button>
@@ -1395,27 +1369,6 @@ $funnel_types = array_values($funnel_types);
         exportTxtBtn?.addEventListener('click', () => openExport('txt'));
         exportCancel?.addEventListener('click', closeExport);
         exportModal?.addEventListener('click', (e) => { if (e.target === exportModal) closeExport(); });
-    </script>
-    <script src="assets/js/folder-otp.js"></script>
-    <script>
-        (function(){
-            var forgotBtn = document.getElementById('export-forgot-btn');
-            if (!forgotBtn) return;
-            forgotBtn.addEventListener('click', function() {
-                closeExport();
-                if (window.folderOTP && window.folderOTP.guard) {
-                    window.folderOTP.guard(null, function() {
-                        var form = document.getElementById('export-form');
-                        var otpInput = document.createElement('input');
-                        otpInput.type = 'hidden';
-                        otpInput.name = 'otp_bypass';
-                        otpInput.value = '1';
-                        form.appendChild(otpInput);
-                        form.submit();
-                    }, { title: 'Reset Export Password', purpose: 'reset_export_password' });
-                }
-            });
-        })();
     </script>
 
     <script>

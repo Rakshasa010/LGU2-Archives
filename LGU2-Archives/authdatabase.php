@@ -518,24 +518,6 @@ $__timeout = 300;
 $__script = basename($_SERVER['PHP_SELF'] ?? '');
 if ($__script !== 'login.php') {
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $__timeout)) {
-        // Log session timeout for monitored users before destroying session
-        if (isset($_SESSION['user_id'])) {
-            require_once __DIR__ . '/monitoring_helper.php';
-            log_monitored_user_action($conn, $_SESSION['user_id'], 'Session Timeout', 'Session expired due to inactivity');
-            // Log session timeout in audit logs (all users)
-            $to_uid = (int)$_SESSION['user_id'];
-            $to_userName = null;
-            if ($to_u = $conn->prepare("SELECT full_name FROM users WHERE id = ?")) {
-                $to_u->bind_param("i", $to_uid);
-                $to_u->execute();
-                $to_r = $to_u->get_result();
-                if ($to_r && $to_row = $to_r->fetch_assoc()) $to_userName = trim($to_row['full_name'] ?? '');
-                $to_u->close();
-            }
-            $to_t = date('h:i A'); $to_d = date('Y-m-d'); $to_s = 'unread'; $to_c = 'Session expired due to inactivity'; $to_a = 'Session Timeout';
-            $to_ins = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            if ($to_ins) { $to_ins->bind_param('ssssss', $to_t, $to_d, $to_c, $to_a, $to_userName, $to_s); $to_ins->execute(); $to_ins->close(); }
-        }
         session_unset();
         session_destroy();
         header("Location: login.php?expired=1");
