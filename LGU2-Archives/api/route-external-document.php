@@ -156,7 +156,7 @@ $routeOne = function ($conn, $externalId, $folderKind, $folderId) {
         }
     }
 
-    $result = llrm_intake_route($conn, $routeDoc, $fileSpec, ['notification_prefix' => $ext['source_system']]);
+    $result = llrm_intake_route($conn, $routeDoc, $fileSpec, ['notification_prefix' => $ext['source_system'], 'skip_duplicate' => true]);
 
     if (empty($result['success'])) {
         return [

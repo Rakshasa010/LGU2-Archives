@@ -639,11 +639,8 @@ function formatFileSize($bytes) {
             }
 
             function renderSelect(){
-                var leg = allFolders.filter(function(f){ return f.kind === 'legislative'; });
                 var arch = allFolders.filter(function(f){ return f.kind === 'archive'; });
-                var html = '<optgroup label="Legislative Folders">';
-                leg.forEach(function(f){ html += '<option value="legislative:' + f.id + '">' + f.name + '</option>'; });
-                html += '</optgroup>';
+                var html = '<option value="">-- Select Folder --</option>';
                 html += '<optgroup label="Archive Folders">';
                 arch.forEach(function(f){ html += '<option value="archive:' + f.id + '">' + f.name + '</option>'; });
                 html += '</optgroup>';
