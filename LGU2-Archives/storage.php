@@ -996,7 +996,6 @@ if (isset($_SESSION['user_id'])) {
                 <div class="flex items-center gap-2">
                     <button id="create-folder-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Create Folder</button>
                     <?php if (isset($is_admin) && $is_admin): ?>
-                    <button id="delete-folder-btn" class="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-gray-200 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">Delete Folder</button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1025,9 +1024,6 @@ if (isset($_SESSION['user_id'])) {
                             <div class="absolute inset-0 flex items-center justify-center text-white dark:text-slate-800 text-[14px] mt-1 z-10">
                                 <i class="bi bi-person-fill"></i>
                             </div>
-                        </div>
-                        <div class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="event.preventDefault();">
-                            <i class="bi bi-three-dots"></i>
                         </div>
                     </div>
                     <div class="min-w-0 mt-4">
