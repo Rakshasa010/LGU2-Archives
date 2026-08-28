@@ -113,24 +113,24 @@ $updStmt = $conn->prepare("UPDATE $filesTbl SET $folderCol = ? WHERE id = ?");
 $updStmt->bind_param("ii", $targetFolderId, $fileId);
 
 if ($updStmt->execute()) {
-    // Audit log
-    $conn->query("CREATE TABLE IF NOT EXISTS audit_logs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        action VARCHAR(255) NOT NULL,
-        file_id VARCHAR(100) NULL,
-        details TEXT NULL,
-        timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_user_id (user_id),
-        INDEX idx_action (action),
-        INDEX idx_timestamp (timestamp)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Audit log via notifications table (same as audit-logs.php reads from)
+    $notifTime = date('h:i A');
+    $notifDate = date('Y-m-d');
+    $notifContent = "File moved: \"$fileName\" from \"$sourceFolderName\" to \"" . $targetFolder['name'] . "\"";
+    $notifAbout = 'Storage';
+    $notifStatus = 'unread';
 
-    $action = 'File Moved';
-    $detail = "Moved \"$fileName\" from \"$sourceFolderName\" to \"" . $targetFolder['name'] . "\" ($fileKind)";
-    $logStmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, file_id, details) VALUES (?, ?, ?, ?)");
-    $fidStr = $fileKind . ':' . $fileId;
-    $logStmt->bind_param("isss", $userId, $action, $fidStr, $detail);
+    // Get user name
+    $userName = null;
+    $userStmt = $conn->prepare("SELECT full_name FROM users WHERE id = ?");
+    $userStmt->bind_param("i", $userId);
+    $userStmt->execute();
+    $uRes = $userStmt->get_result()->fetch_assoc();
+    $userStmt->close();
+    if ($uRes) $userName = trim($uRes['full_name'] ?? '');
+
+    $logStmt = $conn->prepare("INSERT INTO notifications (time, date, content, about, user_name, status) VALUES (?, ?, ?, ?, ?, ?)");
+    $logStmt->bind_param('ssssss', $notifTime, $notifDate, $notifContent, $notifAbout, $userName, $notifStatus);
     $logStmt->execute();
     $logStmt->close();
 

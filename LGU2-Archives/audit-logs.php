@@ -74,6 +74,7 @@
         'Export (Reports & Analytics)',
         'Export (Archives ZIP)',
         'Approval',
+        'Storage',
         'Monitored User Activity'
     ];
     sort($categories);
@@ -354,6 +355,8 @@
                 $badgeColor = 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
             } elseif (stripos($about, 'Monitored') !== false) {
                 $badgeColor = 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50';
+            } elseif (stripos($about, 'Storage') !== false) {
+                $badgeColor = 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border border-teal-200 dark:border-teal-800/50';
             }
                                             ?>
                                             <tr id="note-<?php echo (int)$note['id']; ?>" data-id="<?php echo (int)$note['id']; ?>" data-status="<?php echo htmlspecialchars($note['status']); ?>" class="<?php echo $isUnread ? 'bg-[#fff5f5] dark:bg-red-900/20 border-l-[3px] border-l-red-500' : 'bg-white dark:bg-slate-800 border-l-[3px] border-l-transparent text-gray-700 dark:text-slate-300'; ?> hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors md:table-row flex flex-col md:flex-row mb-2 md:mb-0 border border-gray-100 dark:border-slate-700/50 md:border-0 rounded-lg md:rounded-none shadow-sm md:shadow-none">
