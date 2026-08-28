@@ -1198,6 +1198,29 @@ function formatFileSize($fileSize) {
         </div>
     </div>
 
+    <!-- Move File Modal -->
+    <div id="moveFileModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Move to Folder</h3>
+                    <p id="moveFileTitle" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
+                </div>
+                <button type="button" onclick="closeMoveFileModal()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Destination Folder</label>
+                <select id="moveFolderSelect" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"></select>
+            </div>
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="closeMoveFileModal()" class="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg transition">Cancel</button>
+                <button type="button" id="moveConfirmBtn" class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition">Move</button>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/pagination.js"></script>
     <script>
         const isLegislative = <?php echo $is_legislative ? 'true' : 'false'; ?>;
@@ -1773,6 +1796,91 @@ function formatFileSize($fileSize) {
             if (m) m.remove();
         }
 
+        /* ── Move File to Folder ───────────────────────────────── */
+        var moveState = { fileId: null, fileKind: null, fileName: '' };
+
+        function openMoveFileModal(id, kind, title) {
+            closeCardMenus();
+            moveState = { fileId: id, fileKind: kind, fileName: title };
+            var titleEl = document.getElementById('moveFileTitle');
+            if (titleEl) titleEl.textContent = title;
+            var sel = document.getElementById('moveFolderSelect');
+            sel.innerHTML = '<option value="">Loading folders...</option>';
+            document.getElementById('moveFileModal').classList.remove('hidden');
+
+            fetch('api/move-file.php?action=folders')
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if (!d.success || !d.folders || d.folders.length === 0) {
+                        sel.innerHTML = '<option value="">No folders available</option>';
+                        return;
+                    }
+                    var html = '<option value="">-- Select Folder --</option>';
+                    var filtered = d.folders.filter(function(f){ return f.kind === kind; });
+                    if (filtered.length > 0) {
+                        filtered.forEach(function(f){ html += '<option value="' + f.kind + ':' + f.id + '">' + f.name + '</option>'; });
+                    } else {
+                        html = '<option value="">No folders available</option>';
+                    }
+                    sel.innerHTML = html;
+                })
+                .catch(function(){
+                    sel.innerHTML = '<option value="">Failed to load folders</option>';
+                });
+        }
+
+        function closeMoveFileModal() {
+            document.getElementById('moveFileModal').classList.add('hidden');
+            moveState = { fileId: null, fileKind: null, fileName: '' };
+        }
+
+        (function(){
+            var confirmBtn = document.getElementById('moveConfirmBtn');
+            if (!confirmBtn) return;
+            confirmBtn.addEventListener('click', function(){
+                var sel = document.getElementById('moveFolderSelect');
+                var parts = (sel.value || '').split(':');
+                if (parts.length !== 2 || !parts[1]) {
+                    alert('Please select a destination folder.');
+                    return;
+                }
+                if (!moveState.fileId || !moveState.fileKind) return;
+
+                var body = new URLSearchParams();
+                body.append('file_kind', moveState.fileKind);
+                body.append('file_id', moveState.fileId);
+                body.append('folder_kind', parts[0]);
+                body.append('target_folder_id', parts[1]);
+
+                var btn = confirmBtn;
+                btn.disabled = true;
+                btn.textContent = 'Moving...';
+
+                fetch('api/move-file.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body.toString() })
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){
+                        btn.disabled = false;
+                        btn.textContent = 'Move';
+                        if (d.success) {
+                            alert(d.message || 'File moved successfully.');
+                            closeMoveFileModal();
+                            window.location.reload();
+                        } else {
+                            alert('Error: ' + (d.error || 'Move failed'));
+                        }
+                    })
+                    .catch(function(err){
+                        btn.disabled = false;
+                        btn.textContent = 'Move';
+                        alert('Request failed: ' + err);
+                    });
+            });
+        })();
+
+        document.getElementById('moveFileModal').addEventListener('click', function(e){
+            if (e.target === this) closeMoveFileModal();
+        });
+
         function openCardMenu(event) {
             event.stopPropagation();
             closeCardMenus();
@@ -1794,10 +1902,9 @@ function formatFileSize($fileSize) {
                 { icon: 'bi-eye', label: 'View', action: function(){ previewFile(title, id, url, size, created); } },
                 { icon: 'bi-download', label: 'Download', href: url, download: title },
                 { icon: 'bi-clock-history', label: 'History', action: function(){ if (kind === 'legislative') { openLegislativeVersionHistory(id, title); } else { openArchiveVersionHistory(id, title); } } },
-                { icon: 'bi-people', label: 'View Requesters', action: function(){ openRequestersModal(id, kind, title); } }
+                { icon: 'bi-people', label: 'View Requesters', action: function(){ openRequestersModal(id, kind, title); } },
+                { icon: 'bi-folder-symlink', label: 'Move to Folder', action: function(){ openMoveFileModal(id, kind, title); } }
             ];
-            if (kind === 'archive') {
-            }
             items.push({ divider: true });
             items.push({ icon: 'bi-cloud-upload', label: 'Push to LLRM', purple: true, action: function(){ if (kind === 'legislative') { pushToLLRM(id, 'legislative'); } else { pushArchiveFileToLLRM(id); } } });
 
