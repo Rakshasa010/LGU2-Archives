@@ -382,7 +382,7 @@ function formatFileSize($bytes) {
                             <?php endif; ?>
                             <div class="mt-3 flex gap-2">
                                 <?php if (strtolower($doc['status'] ?? '') !== 'routed'): ?>
-                                    <button type="button" class="route-btn flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg text-center transition" data-id="<?php echo $doc['id']; ?>" data-type="<?php echo htmlspecialchars($doc['document_type'] ?? ''); ?>" data-title="<?php echo htmlspecialchars($doc['title']); ?>">
+                                    <button type="button" class="route-btn flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg text-center transition" data-id="<?php echo $doc['id']; ?>" data-type="<?php echo htmlspecialchars($doc['document_type'] ?? ''); ?>" data-title="<?php echo htmlspecialchars($doc['title']); ?>" data-date="<?php echo htmlspecialchars($doc['document_date'] ?? ''); ?>" data-ref="<?php echo htmlspecialchars($doc['reference_number'] ?? ''); ?>" data-author="<?php echo htmlspecialchars($doc['source_system'] ?? 'LLRM'); ?>">
                                         <i class="bi bi-folder-plus mr-1"></i> Route to Folder
                                     </button>
                                 <?php else: ?>
@@ -426,7 +426,7 @@ function formatFileSize($bytes) {
         </main>
         <!-- Route to Folder Modal -->
         <div id="routeModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex items-start justify-between mb-4">
                     <div>
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Route to Folder</h3>
@@ -436,11 +436,72 @@ function formatFileSize($bytes) {
                         <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
+
+                <!-- AI Scan Button -->
+                <div id="aiScanSection" class="mb-4 hidden">
+                    <button type="button" id="aiScanBtn" class="w-full px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="bi bi-magic"></i> Auto Scan & Fill with AI
+                    </button>
+                    <p class="text-xs text-amber-600 dark:text-amber-400 mt-1.5 text-center"><i class="bi bi-exclamation-triangle mr-1"></i>AI may make mistakes. Double-check all fields before confirming.</p>
+                </div>
+                <div id="aiScanStatus" class="hidden mb-4 text-center">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg text-sm">
+                        <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        <span>Scanning document with AI...</span>
+                    </div>
+                </div>
+
+                <!-- Metadata Fields -->
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Title</label>
+                        <input type="text" id="routeMetaTitle" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm" placeholder="Document title">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Author</label>
+                            <input type="text" id="routeMetaAuthor" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm" placeholder="Author or office">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Type</label>
+                            <select id="routeMetaType" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm">
+                                <option value="">-- Select Type --</option>
+                                <option value="ordinance">Ordinance</option>
+                                <option value="resolution">Resolution</option>
+                                <option value="public hearing">Public Hearing</option>
+                                <option value="meeting">Meeting</option>
+                                <option value="executive order">Executive Order</option>
+                                <option value="memorandum">Memorandum</option>
+                                <option value="certificate">Certificate</option>
+                                <option value="permit">Permit</option>
+                                <option value="contract">Contract</option>
+                                <option value="report">Report</option>
+                                <option value="letter">Letter</option>
+                                <option value="form">Form</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Date</label>
+                            <input type="date" id="routeMetaDate" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Reference Number</label>
+                            <input type="text" id="routeMetaRef" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm" placeholder="Ref number">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Folder Selection -->
                 <div class="mb-4">
                     <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Destination Folder</label>
                     <select id="routeFolderSelect" class="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"></select>
                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Folders are pre-suggested by document type; you may choose any folder.</p>
                 </div>
+
+                <!-- Actions -->
                 <div class="flex gap-2 justify-end">
                     <button type="button" onclick="closeRouteModal()" class="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg transition">Cancel</button>
                     <button type="button" id="routeConfirmBtn" class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition">Confirm Route</button>
@@ -601,6 +662,16 @@ function formatFileSize($bytes) {
             var allFolders = [];
             var suggestions = [];
 
+            // Metadata field elements
+            var metaTitle = document.getElementById('routeMetaTitle');
+            var metaAuthor = document.getElementById('routeMetaAuthor');
+            var metaType = document.getElementById('routeMetaType');
+            var metaDate = document.getElementById('routeMetaDate');
+            var metaRef = document.getElementById('routeMetaRef');
+            var aiScanSection = document.getElementById('aiScanSection');
+            var aiScanStatus = document.getElementById('aiScanStatus');
+            var aiScanBtn = document.getElementById('aiScanBtn');
+
             function getSelected(){
                 return Array.prototype.map.call(document.querySelectorAll('.doc-select:checked'), function(el){ return el.value; });
             }
@@ -655,6 +726,66 @@ function formatFileSize($bytes) {
                 }
             }
 
+            function populateMetadataFields(data) {
+                if (metaTitle) metaTitle.value = data.title || '';
+                if (metaAuthor) metaAuthor.value = data.author || '';
+                if (metaType) metaType.value = data.type || '';
+                if (metaDate) metaDate.value = data.date || '';
+                if (metaRef) metaRef.value = data.ref || '';
+            }
+
+            function clearMetadataFields() {
+                if (metaTitle) metaTitle.value = '';
+                if (metaAuthor) metaAuthor.value = '';
+                if (metaType) metaType.value = '';
+                if (metaDate) metaDate.value = '';
+                if (metaRef) metaRef.value = '';
+            }
+
+            function setAiLoading(loading) {
+                if (aiScanSection) aiScanSection.classList.toggle('hidden', loading);
+                if (aiScanStatus) aiScanStatus.classList.toggle('hidden', !loading);
+                if (aiScanBtn) aiScanBtn.disabled = loading;
+            }
+
+            // AI Scan button handler
+            if (aiScanBtn) {
+                aiScanBtn.addEventListener('click', function() {
+                    if (!currentId) return;
+                    setAiLoading(true);
+                    fetch('api/ai-extract-metadata.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ external_id: currentId })
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){
+                        setAiLoading(false);
+                        if (d.success && d.metadata) {
+                            var m = d.metadata;
+                            if (m.title && metaTitle) metaTitle.value = m.title;
+                            if (m.author && metaAuthor) metaAuthor.value = m.author;
+                            if (m.type && metaType) metaType.value = m.type;
+                            if (m.date && metaDate) metaDate.value = m.date;
+                            if (m.reference_number && metaRef) metaRef.value = m.reference_number;
+                            // Visual feedback
+                            [metaTitle, metaAuthor, metaType, metaDate, metaRef].forEach(function(el) {
+                                if (el && el.value) {
+                                    el.classList.add('ring-2', 'ring-purple-400');
+                                    setTimeout(function(){ el.classList.remove('ring-2', 'ring-purple-400'); }, 2000);
+                                }
+                            });
+                        } else {
+                            alert('AI could not extract metadata: ' + (d.error || 'Unknown error') + '\n\nYou can fill in the fields manually.');
+                        }
+                    })
+                    .catch(function(err){
+                        setAiLoading(false);
+                        alert('AI scan failed: ' + err + '\n\nYou can fill in the fields manually.');
+                    });
+                });
+            }
+
             document.querySelectorAll('.doc-select').forEach(function(cb){
                 cb.addEventListener('change', updateBulkUi);
             });
@@ -677,7 +808,19 @@ function formatFileSize($bytes) {
                     currentId = this.getAttribute('data-id');
                     var type = this.getAttribute('data-type') || '';
                     var title = this.getAttribute('data-title') || 'Document';
+                    var date = this.getAttribute('data-date') || '';
+                    var ref = this.getAttribute('data-ref') || '';
+                    var author = this.getAttribute('data-author') || 'LLRM Import';
+
                     if (routeTitle) routeTitle.textContent = title;
+
+                    // Populate metadata fields with existing data
+                    populateMetadataFields({ title: title, author: author, type: type, date: date, ref: ref });
+
+                    // Show AI scan section only for single mode
+                    if (aiScanSection) aiScanSection.classList.remove('hidden');
+                    if (aiScanStatus) aiScanStatus.classList.add('hidden');
+
                     suggestions = [];
                     loadFolders(function(){
                         suggestFor(type).then(function(s){
@@ -698,6 +841,12 @@ function formatFileSize($bytes) {
                     currentId = null;
                     currentIds = sel;
                     if (routeTitle) routeTitle.textContent = sel.length + ' document' + (sel.length > 1 ? 's' : '') + ' selected';
+
+                    // Clear metadata fields for bulk mode
+                    clearMetadataFields();
+                    if (aiScanSection) aiScanSection.classList.add('hidden');
+                    if (aiScanStatus) aiScanStatus.classList.add('hidden');
+
                     suggestions = [];
                     loadFolders(function(){
                         renderSelect();
@@ -718,6 +867,17 @@ function formatFileSize($bytes) {
                         currentIds.forEach(function(id){ body.append('external_ids[]', id); });
                     } else {
                         body.append('external_id', currentId);
+                        // Include metadata overrides
+                        var titleVal = metaTitle ? metaTitle.value.trim() : '';
+                        var authorVal = metaAuthor ? metaAuthor.value.trim() : '';
+                        var typeVal = metaType ? metaType.value : '';
+                        var dateVal = metaDate ? metaDate.value : '';
+                        var refVal = metaRef ? metaRef.value.trim() : '';
+                        if (titleVal) body.append('title', titleVal);
+                        if (authorVal) body.append('author', authorVal);
+                        if (typeVal) body.append('document_type', typeVal);
+                        if (dateVal) body.append('document_date', dateVal);
+                        if (refVal) body.append('reference_number', refVal);
                     }
                     body.append('folder_kind', parts[0]);
                     body.append('folder_id', parts[1]);

@@ -291,6 +291,7 @@ if (!function_exists('llrm_intake_normalize_type')) {
         $sourceSystem = $doc['source_system'] ?? 'LLRM';
         $sourceRecordId = isset($doc['source_record_id']) ? (int)$doc['source_record_id'] : null;
         $fileDate = $doc['document_date'] ?? $doc['file_date'] ?? null;
+        $versionNotes = !empty($doc['version_notes']) ? trim($doc['version_notes']) : null;
 
         if ($title === '') {
             return ['success' => false, 'error' => 'Missing required field: title'];
@@ -390,8 +391,8 @@ if (!function_exists('llrm_intake_normalize_type')) {
 
         // Insert record
         if ($folder['kind'] === 'legislative') {
-            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, created_at, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?, NOW(), ?, ?)");
-            $stmt->bind_param("ssssssssiiss",
+            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, created_at, ipfs_cid, mime_type, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?, NOW(), ?, ?, ?)");
+            $stmt->bind_param("ssssssssiiisss",
                 $title,
                 $type,
                 $month,
@@ -403,11 +404,12 @@ if (!function_exists('llrm_intake_normalize_type')) {
                 $folder['id'],
                 $fileResult['file_size'],
                 $ipfsCid,
-                $fileResult['mime_type']
+                $fileResult['mime_type'],
+                $versionNotes
             );
         } else {
-            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, 1, NULL, ?, ?, ?)");
-            $stmt->bind_param("isssssiss",
+            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, ipfs_cid, mime_type, version_notes) VALUES (?, ?, ?, ?, ?, ?, 1, NULL, ?, ?, ?, ?)");
+            $stmt->bind_param("issssissss",
                 $folder['id'],
                 $title,
                 $fileResult['file_path'],
@@ -416,7 +418,8 @@ if (!function_exists('llrm_intake_normalize_type')) {
                 $uniqueNumber,
                 $fileResult['file_size'],
                 $ipfsCid,
-                $fileResult['mime_type']
+                $fileResult['mime_type'],
+                $versionNotes
             );
         }
 

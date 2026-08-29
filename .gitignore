@@ -5,6 +5,12 @@ lgu2_deploy_key.pub
 *.key
 *.pub
 
+# Environment and secrets
+.env
+credentials.json
+*.json.bak
+test_payload*.json
+
 # Temporary files
 *.tmp
 *.log
@@ -16,5 +22,3 @@ Thumbs.db
 .idea/
 *.swp
 *~
-
-.env

@@ -1,14 +1,32 @@
 <?php
 /**
  * LLRM Integration Configuration
- * 
+ *
  * Stores API credentials and endpoint URLs for communicating
  * with the LLRM Legislative Records Management System.
+ *
+ * API key is loaded from the .env file in the project root.
  */
+
+// Load .env if not already loaded
+function llrm_config_load_env($path) {
+    $vars = [];
+    if (!file_exists($path)) return $vars;
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || strpos($line, '#') === 0 || strpos($line, '=') === false) continue;
+        [$key, $value] = explode('=', $line, 2);
+        $vars[trim($key)] = trim($value, " \t\n\r\0\"'");
+    }
+    return $vars;
+}
+
+$envPath = __DIR__ . '/../../.env';
+$env = llrm_config_load_env($envPath);
 
 return [
     // API Key provided by LLRM system
-    'api_key'          => 'ar_c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8',
+    'api_key'          => $env['LLRM_API_KEY'] ?? '',
     'module_name'      => 'archives',
     'api_version'      => 'v1',
 

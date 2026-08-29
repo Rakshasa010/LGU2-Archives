@@ -73,8 +73,8 @@ if (!is_array($json_input)) {
 }
 
 // --- API Key Authentication ---
-// Configure your API key here (share this with the LLRM system)
-$VALID_API_KEY = 'llrm_archive_intake_2026_secure_key';
+// API key is loaded from .env (via authdatabase.php)
+$VALID_API_KEY = $env['LLRM_INTAKE_API_KEY'] ?? '';
 
 // Check Bearer token or X-API-Key header or body param
 $api_key = '';

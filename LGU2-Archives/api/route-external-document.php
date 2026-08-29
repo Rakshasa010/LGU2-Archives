@@ -88,6 +88,17 @@ $externalIds = $_POST['external_ids'] ?? [];
 $folderKind = $_POST['folder_kind'] ?? '';
 $folderId = (int)($_POST['folder_id'] ?? 0);
 
+// Optional metadata overrides (single routing only)
+$metaOverrides = [
+    'title'            => isset($_POST['title']) ? trim($_POST['title']) : null,
+    'author'           => isset($_POST['author']) ? trim($_POST['author']) : null,
+    'document_type'    => isset($_POST['document_type']) ? trim($_POST['document_type']) : null,
+    'document_date'    => isset($_POST['document_date']) ? trim($_POST['document_date']) : null,
+    'reference_number' => isset($_POST['reference_number']) ? trim($_POST['reference_number']) : null,
+];
+// Remove empty overrides
+$metaOverrides = array_filter($metaOverrides, function($v) { return $v !== null && $v !== ''; });
+
 $isBulk = is_array($externalIds) && count($externalIds) > 0;
 
 if ($isBulk) {
@@ -117,7 +128,7 @@ if (!$folderExists) {
 }
 
 // Route one pending external document into the chosen folder
-$routeOne = function ($conn, $externalId, $folderKind, $folderId) {
+$routeOne = function ($conn, $externalId, $folderKind, $folderId, $overrides = []) {
     $stmt = $conn->prepare("SELECT * FROM external_documents WHERE id = ?");
     $stmt->bind_param("i", $externalId);
     $stmt->execute();
@@ -132,17 +143,22 @@ $routeOne = function ($conn, $externalId, $folderKind, $folderId) {
         return ['success' => false, 'code' => 'already_routed', 'error' => 'Document has already been routed'];
     }
 
-    // Build route document + file source from the staged record
+    // Build route document + file source from the staged record, applying overrides
     $routeDoc = [
-        'title'             => $ext['title'],
-        'type'              => $ext['document_type'] ?? 'archive',
-        'author'            => 'LLRM Import',
-        'document_date'     => $ext['document_date'] ?? null,
+        'title'             => $overrides['title'] ?? $ext['title'],
+        'type'              => $overrides['document_type'] ?? ($ext['document_type'] ?? 'archive'),
+        'author'            => $overrides['author'] ?? 'LLRM Import',
+        'document_date'     => $overrides['document_date'] ?? ($ext['document_date'] ?? null),
         'source_system'     => $ext['source_system'] ?? 'LLRM',
         'source_record_id'  => $ext['external_id'] !== null && ctype_digit($ext['external_id']) ? (int)$ext['external_id'] : null,
         'target_folder_kind' => $folderKind,
         'target_folder_id'  => $folderId,
     ];
+
+    // Store reference_number in version_notes (target tables lack a ref column)
+    if (!empty($overrides['reference_number'])) {
+        $routeDoc['version_notes'] = 'Reference: ' . $overrides['reference_number'];
+    }
 
     $fileSpec = null;
     if (!empty($ext['file_path'])) {
@@ -217,7 +233,7 @@ if ($isBulk) {
     exit;
 }
 
-$res = $routeOne($conn, $externalId, $folderKind, $folderId);
+$res = $routeOne($conn, $externalId, $folderKind, $folderId, $metaOverrides);
 if (empty($res['success'])) {
     $code = $res['code'] ?? 'route_failed';
     $httpCode = $code === 'not_found' ? 404 : ($code === 'already_routed' ? 409 : 400);
