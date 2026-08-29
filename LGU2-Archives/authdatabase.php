@@ -64,6 +64,7 @@ $table_sql = "CREATE TABLE IF NOT EXISTS legislative_records (
     month VARCHAR(20) NOT NULL,
     year VARCHAR(4) NOT NULL,
     author VARCHAR(255) NULL,
+    reference_number VARCHAR(100) NULL,
     file_path VARCHAR(255) NULL,
     file_date DATE NULL,
     unique_number VARCHAR(100) NULL,
@@ -95,6 +96,7 @@ if ($check_column->num_rows == 0) {
 // Add missing columns to legislative_records
 $leg_cols_needed = [
     'author' => "VARCHAR(255) DEFAULT NULL",
+    'reference_number' => "VARCHAR(100) DEFAULT NULL",
     'file_date' => "DATE DEFAULT NULL",
     'unique_number' => "VARCHAR(100) DEFAULT NULL",
     'version' => "INT DEFAULT 1",
@@ -283,6 +285,7 @@ $files_sql = "CREATE TABLE IF NOT EXISTS archive_files (
     name VARCHAR(255) NOT NULL,
     file_path VARCHAR(255) NOT NULL,
     author VARCHAR(255) DEFAULT NULL,
+    reference_number VARCHAR(100) DEFAULT NULL,
     file_date DATE DEFAULT NULL,
     unique_number VARCHAR(100) DEFAULT NULL,
     version INT DEFAULT 1,
@@ -299,6 +302,7 @@ $conn->query($files_sql);
 // Add missing columns to archive_files
 $archive_cols_needed = [
     'author' => "VARCHAR(255) DEFAULT NULL",
+    'reference_number' => "VARCHAR(100) DEFAULT NULL",
     'file_date' => "DATE DEFAULT NULL",
     'unique_number' => "VARCHAR(100) DEFAULT NULL",
     'version' => "INT DEFAULT 1",

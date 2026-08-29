@@ -143,6 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fdate = $_POST['fileDate'] ?? null;
             $unq_base = $_POST['fileUniqueNumber'] ?? null;
             $version_notes = $_POST['versionNotes'] ?? null;
+            $reference_number = !empty($_POST['reference_number']) ? trim($_POST['reference_number']) : null;
             if ($fdate === '') $fdate = null;
 
             $uploadedFiles = [];
@@ -196,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $count = count($_FILES['files']['name']);
+            $userTitle = !empty($_POST['fileName']) ? trim($_POST['fileName']) : null;
             for ($i = 0; $i < $count; $i++) {
                 $errCode = $_FILES['files']['error'][$i];
                 if ($errCode === UPLOAD_ERR_OK) {
@@ -203,6 +205,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $tmp_name = $_FILES['files']['tmp_name'][$i];
                     
                     $safe_name = preg_replace('/[^a-zA-Z0-9\-\_\. ]/', '_', $name);
+                    // Use user-entered title if provided, otherwise use sanitized filename
+                    $title_for_match = $userTitle ?: $safe_name;
                     $file_path = $target_dir . $safe_name;
                     $counter = 1;
                     $path_info = pathinfo($safe_name);
@@ -244,21 +248,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $parent_version_id = null;
 
                         // AUTOMATIC VERSIONING: if a matching document family already exists
-                        // (same name + author + unique number), this upload automatically becomes
+                        // (same title/name + author + reference_number), this upload automatically becomes
                         // the next version — no confirmation or notes required.
                         $vtbl = $is_legislative ? 'legislative_records' : 'archive_files';
                         $vname_col = $is_legislative ? 'title' : 'name';
                         $root_row = null;
-                        if ($matchStmt = $conn->prepare("SELECT id, unique_number FROM $vtbl WHERE folder_id = ? AND $vname_col = ? AND COALESCE(author,'') = COALESCE(?, '') AND COALESCE(unique_number,'') = COALESCE(?, '') AND parent_version_id IS NULL LIMIT 1")) {
-                            $matchStmt->bind_param("isss", $current_folder_id, $safe_name, $author, $unq);
-                            $matchStmt->execute();
-                            $root_row = $matchStmt->get_result()->fetch_assoc();
-                            $matchStmt->close();
+
+                        // Phase 1: match on title/name + author + reference_number (if provided)
+                        if (!empty($reference_number)) {
+                            if ($matchStmt = $conn->prepare("SELECT id FROM $vtbl WHERE $vname_col = ? AND COALESCE(author,'') = COALESCE(?, '') AND reference_number = ? AND parent_version_id IS NULL LIMIT 1")) {
+                                $matchStmt->bind_param("sss", $title_for_match, $author, $reference_number);
+                                $matchStmt->execute();
+                                $root_row = $matchStmt->get_result()->fetch_assoc();
+                                $matchStmt->close();
+                            }
                         }
-                        // If no unique number was provided, fall back to name + author only
-                        if (!$root_row && $isBlankUnq) {
-                            if ($matchStmt = $conn->prepare("SELECT id, unique_number FROM $vtbl WHERE folder_id = ? AND $vname_col = ? AND COALESCE(author,'') = COALESCE(?, '') AND parent_version_id IS NULL LIMIT 1")) {
-                                $matchStmt->bind_param("iss", $current_folder_id, $safe_name, $author);
+                        // Phase 2: fallback to title/name + author only (when no reference_number)
+                        if (!$root_row) {
+                            if ($matchStmt = $conn->prepare("SELECT id FROM $vtbl WHERE $vname_col = ? AND COALESCE(author,'') = COALESCE(?, '') AND (reference_number IS NULL OR reference_number = '') AND parent_version_id IS NULL LIMIT 1")) {
+                                $matchStmt->bind_param("ss", $title_for_match, $author);
                                 $matchStmt->execute();
                                 $root_row = $matchStmt->get_result()->fetch_assoc();
                                 $matchStmt->close();
@@ -299,16 +307,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         if ($is_legislative) {
-                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)");
+                            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, reference_number, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, version_notes, created_at, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)");
                             $month = $fdate ? date('F', strtotime($fdate)) : date('F');
                             $year = $fdate ? date('Y', strtotime($fdate)) : date('Y');
                             $type = $current_folder['type'];
                             $fileSize = filesize($file_path);
-                            $stmt->bind_param("ssssssssiiissss", $safe_name, $type, $month, $year, $author, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
+                            $stmt->bind_param("ssssssssiiisssss", $title_for_match, $type, $month, $year, $author, $reference_number, $file_path, $fdate, $unq, $version, $parent_version_id, $current_folder_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
                         } else {
                             $fileSize = filesize($file_path);
-                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, version_notes, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->bind_param("issssssiisss", $current_folder_id, $safe_name, $file_path, $author, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
+                            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, reference_number, file_date, unique_number, version, parent_version_id, file_size, version_notes, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->bind_param("issssssiissss", $current_folder_id, $title_for_match, $file_path, $author, $reference_number, $fdate, $unq, $version, $parent_version_id, $fileSize, $version_notes, $ipfsCid, $mimeType);
                         }
 
                         if ($stmt->execute()) {
@@ -371,7 +379,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $uploadedFiles[] = [
                                 'id' => $new_id,
-                                'name' => $safe_name,
+                                'title' => $title_for_match,
+                                'name' => $title_for_match,
                                 'file_path' => $file_path,
                                 'author' => $author,
                                 'file_date' => $fdate,
@@ -383,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'folder_id' => $current_folder_id
                             ];
                             if ($version > 1) {
-                                $versionedFiles[] = ['name' => $safe_name, 'version' => $version];
+                                $versionedFiles[] = ['title' => $title_for_match, 'name' => $title_for_match, 'version' => $version];
                             }
                         } else {
                             $db_err = $stmt->error;
@@ -480,10 +489,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($is_legislative) {
             $type = $current_folder['type'];
             if ($type === 'Ordinance') {
-                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?)");
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND parent_version_id IS NULL AND (title LIKE ? OR author LIKE ? OR reference_number LIKE ?)");
                 $cnt->bind_param("isss", $current_folder_id, $like, $like, $like);
             } else {
-                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?)");
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND folder_id = ? AND parent_version_id IS NULL AND (title LIKE ? OR author LIKE ? OR reference_number LIKE ?)");
                 $cnt->bind_param("sisss", $type, $current_folder_id, $like, $like, $like);
             }
             $cnt->execute();
@@ -491,7 +500,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($cnt_r = $cnt_res->fetch_assoc()) $files_total = (int)$cnt_r['cnt'];
             $cnt->close();
         } else {
-            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ? AND (name LIKE ? OR author LIKE ? OR unique_number LIKE ?)");
+            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ? AND parent_version_id IS NULL AND (name LIKE ? OR author LIKE ? OR reference_number LIKE ?)");
             $cnt->bind_param("isss", $current_folder_id, $like, $like, $like);
             $cnt->execute();
             $cnt_res = $cnt->get_result();
@@ -518,7 +527,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file_offset = max(0, $offset - $subfolders_total);
             if ($file_offset >= 0 && $file_offset < $files_total) {
                 $f_limit = min($page_size, $files_total - $file_offset);
-                $f_stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? AND (name LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT ?, ?");
+                $f_stmt = $conn->prepare("SELECT af.*,
+                    (SELECT COUNT(*) FROM archive_files af2 WHERE af2.name = af.name AND COALESCE(af2.author,'') = COALESCE(af.author,'') AND COALESCE(af2.reference_number,'') = COALESCE(af.reference_number,'')) AS version_count
+                    FROM archive_files af WHERE af.folder_id = ? AND af.parent_version_id IS NULL AND (af.name LIKE ? OR af.author LIKE ? OR af.reference_number LIKE ?) $orderClause LIMIT ?, ?");
                 $f_stmt->bind_param("isssii", $current_folder_id, $like, $like, $like, $file_offset, $f_limit);
                 $f_stmt->execute();
                 $f_res = $f_stmt->get_result();
@@ -530,10 +541,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $f_limit = min($page_size, $files_total - $offset);
                 $type = $current_folder['type'];
                 if ($type === 'Ordinance') {
-                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT ?, ?");
+                    $f_stmt = $conn->prepare("SELECT lr.*,
+                        (SELECT COUNT(*) FROM legislative_records lr2 WHERE lr2.title = lr.title AND COALESCE(lr2.author,'') = COALESCE(lr.author,'') AND COALESCE(lr2.reference_number,'') = COALESCE(lr.reference_number,'')) AS version_count
+                        FROM legislative_records lr WHERE lr.type IN ('Ordinance', 'Resolution') AND lr.folder_id = ? AND lr.parent_version_id IS NULL AND (lr.title LIKE ? OR lr.author LIKE ? OR lr.reference_number LIKE ?) $orderClause LIMIT ?, ?");
                     $f_stmt->bind_param("isssii", $current_folder_id, $like, $like, $like, $offset, $f_limit);
                 } else {
-                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND folder_id = ? AND (title LIKE ? OR author LIKE ? OR unique_number LIKE ?) $orderClause LIMIT ?, ?");
+                    $f_stmt = $conn->prepare("SELECT lr.*,
+                        (SELECT COUNT(*) FROM legislative_records lr2 WHERE lr2.title = lr.title AND COALESCE(lr2.author,'') = COALESCE(lr.author,'') AND COALESCE(lr2.reference_number,'') = COALESCE(lr.reference_number,'')) AS version_count
+                        FROM legislative_records lr WHERE lr.type = ? AND lr.folder_id = ? AND lr.parent_version_id IS NULL AND (lr.title LIKE ? OR lr.author LIKE ? OR lr.reference_number LIKE ?) $orderClause LIMIT ?, ?");
                     $f_stmt->bind_param("sisssii", $type, $current_folder_id, $like, $like, $like, $offset, $f_limit);
                 }
                 $f_stmt->execute();
@@ -612,10 +627,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($is_legislative) {
             $type = $current_folder['type'];
             if ($type === 'Ordinance') {
-                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ?");
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? AND parent_version_id IS NULL");
                 $cnt->bind_param("i", $current_folder_id);
             } else {
-                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND folder_id = ?");
+                $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM legislative_records WHERE type = ? AND folder_id = ? AND parent_version_id IS NULL");
                 $cnt->bind_param("si", $type, $current_folder_id);
             }
             $cnt->execute();
@@ -623,7 +638,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($cnt_r = $cnt_res->fetch_assoc()) $files_total = (int)$cnt_r['cnt'];
             $cnt->close();
         } else {
-            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ?");
+            $cnt = $conn->prepare("SELECT COUNT(*) AS cnt FROM archive_files WHERE folder_id = ? AND parent_version_id IS NULL");
             $cnt->bind_param("i", $current_folder_id);
             $cnt->execute();
             $cnt_res = $cnt->get_result();
@@ -650,7 +665,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file_offset = max(0, $offset - $subfolders_total);
             if ($file_offset >= 0 && $file_offset < $files_total) {
                 $f_limit = min($page_size, $files_total - $file_offset);
-                $f_stmt = $conn->prepare("SELECT * FROM archive_files WHERE folder_id = ? $orderClause LIMIT ?, ?");
+                $f_stmt = $conn->prepare("SELECT af.*,
+                    (SELECT COUNT(*) FROM archive_files af2 WHERE af2.name = af.name AND COALESCE(af2.author,'') = COALESCE(af.author,'') AND COALESCE(af2.reference_number,'') = COALESCE(af.reference_number,'')) AS version_count
+                    FROM archive_files af WHERE af.folder_id = ? AND af.parent_version_id IS NULL $orderClause LIMIT ?, ?");
                 $f_stmt->bind_param("iii", $current_folder_id, $file_offset, $f_limit);
                 $f_stmt->execute();
                 $f_res = $f_stmt->get_result();
@@ -662,10 +679,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $f_limit = min($page_size, $files_total - $offset);
                 $type = $current_folder['type'];
                 if ($type === 'Ordinance') {
-                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type IN ('Ordinance', 'Resolution') AND folder_id = ? $orderClause LIMIT ?, ?");
+                    $f_stmt = $conn->prepare("SELECT lr.*,
+                        (SELECT COUNT(*) FROM legislative_records lr2 WHERE lr2.title = lr.title AND COALESCE(lr2.author,'') = COALESCE(lr.author,'') AND COALESCE(lr2.reference_number,'') = COALESCE(lr.reference_number,'')) AS version_count
+                        FROM legislative_records lr WHERE lr.type IN ('Ordinance', 'Resolution') AND lr.folder_id = ? AND lr.parent_version_id IS NULL $orderClause LIMIT ?, ?");
                     $f_stmt->bind_param("iii", $current_folder_id, $offset, $f_limit);
                 } else {
-                    $f_stmt = $conn->prepare("SELECT * FROM legislative_records WHERE type = ? AND folder_id = ? $orderClause LIMIT ?, ?");
+                    $f_stmt = $conn->prepare("SELECT lr.*,
+                        (SELECT COUNT(*) FROM legislative_records lr2 WHERE lr2.title = lr.title AND COALESCE(lr2.author,'') = COALESCE(lr.author,'') AND COALESCE(lr2.reference_number,'') = COALESCE(lr.reference_number,'')) AS version_count
+                        FROM legislative_records lr WHERE lr.type = ? AND lr.folder_id = ? AND lr.parent_version_id IS NULL $orderClause LIMIT ?, ?");
                     $f_stmt->bind_param("sii", $type, $current_folder_id, $offset, $f_limit);
                 }
                 $f_stmt->execute();
@@ -1111,9 +1132,15 @@ function formatFileSize($fileSize) {
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
                     <input type="date" id="fileDate" name="fileDate" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unique Number (Optional)</label>
-                    <input type="text" id="fileUniqueNumber" name="fileUniqueNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="Enter unique number">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reference Number</label>
+                        <input type="text" id="referenceNumber" name="reference_number" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="e.g., Ref-2026-001">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unique Number (Optional)</label>
+                        <input type="text" id="fileUniqueNumber" name="fileUniqueNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100" placeholder="Enter unique number">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Version Notes / What changed?</label>
@@ -1406,14 +1433,72 @@ function formatFileSize($fileSize) {
             document.getElementById(modalId).classList.add('hidden');
         }
 
-        function openArchiveVersionHistory(id, name) {
+        async function openArchiveVersionHistory(id, name) {
             document.getElementById('versionHistoryTitle').textContent = name;
+            document.getElementById('versionList').innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4"><i class="bi bi-arrow-repeat animate-spin"></i> Loading versions...</div>';
             document.getElementById('versionHistoryModal').classList.remove('hidden');
+            try {
+                const res = await fetch('archives_api.php?action=get_versions&id=' + id);
+                const data = await res.json();
+                const container = document.getElementById('versionList');
+                if (data.success && data.versions && data.versions.length > 0) {
+                    container.innerHTML = data.versions.map(v => `
+                        <div class="bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${v.version > 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'} text-sm font-bold">v${v.version}</span>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">${escapeHtml(v.title || v.name || name)}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">${v.author ? escapeHtml(v.author) : 'Unknown'} &middot; ${v.file_date || ''} &middot; ${v.created_at ? new Date(v.created_at).toLocaleDateString() : ''}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${v.version_notes ? '<span class="text-xs text-gray-400 dark:text-gray-500 italic max-w-[150px] truncate" title="' + escapeHtml(v.version_notes) + '">' + escapeHtml(v.version_notes) + '</span>' : ''}
+                                    <a href="${v.file_path}" target="_blank" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" title="Download"><i class="bi bi-download"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No version history available.</div>';
+                }
+            } catch (e) {
+                document.getElementById('versionList').innerHTML = '<div class="text-sm text-red-500 text-center py-4">Failed to load version history.</div>';
+            }
         }
 
-        function openLegislativeVersionHistory(id, name) {
+        async function openLegislativeVersionHistory(id, name) {
             document.getElementById('versionHistoryTitle').textContent = name;
+            document.getElementById('versionList').innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4"><i class="bi bi-arrow-repeat animate-spin"></i> Loading versions...</div>';
             document.getElementById('versionHistoryModal').classList.remove('hidden');
+            try {
+                const res = await fetch('legislative_api.php?action=get_versions&id=' + id);
+                const data = await res.json();
+                const container = document.getElementById('versionList');
+                if (data.success && data.versions && data.versions.length > 0) {
+                    container.innerHTML = data.versions.map(v => `
+                        <div class="bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${v.version > 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'} text-sm font-bold">v${v.version}</span>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">${escapeHtml(v.title || name)}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">${v.author ? escapeHtml(v.author) : 'Unknown'} &middot; ${v.file_date || ''} &middot; ${v.created_at ? new Date(v.created_at).toLocaleDateString() : ''}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${v.version_notes ? '<span class="text-xs text-gray-400 dark:text-gray-500 italic max-w-[150px] truncate" title="' + escapeHtml(v.version_notes) + '">' + escapeHtml(v.version_notes) + '</span>' : ''}
+                                    <a href="${v.file_path}" target="_blank" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" title="Download"><i class="bi bi-download"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No version history available.</div>';
+                }
+            } catch (e) {
+                document.getElementById('versionList').innerHTML = '<div class="text-sm text-red-500 text-center py-4">Failed to load version history.</div>';
+            }
         }
 
         async function openRequestersModal(fileId, fileSource, fileName) {
@@ -1565,8 +1650,10 @@ function formatFileSize($fileSize) {
 
             const formData = new FormData();
             formData.append('action', 'upload_files_bulk');
+            formData.append('fileName', document.getElementById('fileName').value);
             formData.append('fileAuthor', document.getElementById('fileAuthor').value);
             formData.append('fileDate', document.getElementById('fileDate').value);
+            formData.append('reference_number', document.getElementById('referenceNumber').value);
             formData.append('fileUniqueNumber', document.getElementById('fileUniqueNumber').value);
             formData.append('versionNotes', document.getElementById('versionNotes').value);
             for (let i = 0; i < fileInput.files.length; i++) {
@@ -1686,6 +1773,7 @@ function formatFileSize($fileSize) {
 
                 return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="record-${record.id}">
                     <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('${record.title}', ${record.id}, '${fileUrl}', ${fileSize}, '${record.created_at}')">${previewHtml}</div>
+                    ${record.version_count > 1 ? `<div class="absolute top-3 right-3 z-20 text-[10px] font-bold px-2 py-1 rounded-full bg-red-600 text-white shadow-lg">${record.version_count} version${record.version_count > 1 ? 's' : ''}</div>` : ''}
                     <div class="p-4 flex flex-col flex-1">
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${record.title}">${record.title}</div></div>
@@ -1755,6 +1843,7 @@ function formatFileSize($fileSize) {
 
                 return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="file-${file.id}">
                     <div class="h-40 bg-gray-100 dark:bg-slate-700 rounded-t-xl flex items-center justify-center overflow-hidden relative cursor-pointer group" onclick="previewFile('${file.name}', ${file.id}, '${fileUrl}', ${fileSize}, '${file.created_at}')">${previewHtml}</div>
+                    ${file.version_count > 1 ? `<div class="absolute top-3 right-3 z-20 text-[10px] font-bold px-2 py-1 rounded-full bg-red-600 text-white shadow-lg">${file.version_count} version${file.version_count > 1 ? 's' : ''}</div>` : ''}
                     <div class="p-4 flex flex-col flex-1">
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="min-w-0 flex-1"><div class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate line-clamp-2" title="${file.name}">${file.name}</div></div>

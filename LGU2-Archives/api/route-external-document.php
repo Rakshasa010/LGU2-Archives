@@ -148,17 +148,13 @@ $routeOne = function ($conn, $externalId, $folderKind, $folderId, $overrides = [
         'title'             => $overrides['title'] ?? $ext['title'],
         'type'              => $overrides['document_type'] ?? ($ext['document_type'] ?? 'archive'),
         'author'            => $overrides['author'] ?? 'LLRM Import',
+        'reference_number'  => $overrides['reference_number'] ?? ($ext['reference_number'] ?? null),
         'document_date'     => $overrides['document_date'] ?? ($ext['document_date'] ?? null),
         'source_system'     => $ext['source_system'] ?? 'LLRM',
         'source_record_id'  => $ext['external_id'] !== null && ctype_digit($ext['external_id']) ? (int)$ext['external_id'] : null,
         'target_folder_kind' => $folderKind,
         'target_folder_id'  => $folderId,
     ];
-
-    // Store reference_number in version_notes (target tables lack a ref column)
-    if (!empty($overrides['reference_number'])) {
-        $routeDoc['version_notes'] = 'Reference: ' . $overrides['reference_number'];
-    }
 
     $fileSpec = null;
     if (!empty($ext['file_path'])) {

@@ -50,9 +50,9 @@ if ($action === 'get_files') {
         mime_type VARCHAR(100) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
-    // Total = number of unique version groups (name + author + unique_number)
+    // Total = number of unique version groups (name + author + reference_number)
     $total = 0;
-    if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM archive_files WHERE folder_id = ? GROUP BY name, COALESCE(author,''), COALESCE(unique_number,'')) t")) {
+    if ($stc = $conn->prepare("SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM archive_files WHERE folder_id = ? GROUP BY name, COALESCE(author,''), COALESCE(reference_number,'')) t")) {
         $stc->bind_param("i", $folder_id);
         $stc->execute();
         $rc = $stc->get_result();
@@ -64,12 +64,12 @@ if ($action === 'get_files') {
     $offset = ($page - 1) * $page_size;
     $rows = [];
     // Only the latest version of each group is returned, with a version_count
-    $sql = "SELECT af.id, af.name, af.file_path, af.author, af.unique_number, af.file_date, af.version, af.parent_version_id, af.version_notes, af.ipfs_cid, af.mime_type, af.created_at,
+    $sql = "SELECT af.id, af.name, af.file_path, af.author, af.reference_number, af.file_date, af.version, af.parent_version_id, af.version_notes, af.ipfs_cid, af.mime_type, af.created_at,
                 (SELECT COUNT(*) FROM archive_files af2
                  WHERE af2.folder_id = af.folder_id
                    AND af2.name = af.name
                    AND COALESCE(af2.author,'') = COALESCE(af.author,'')
-                   AND COALESCE(af2.unique_number,'') = COALESCE(af.unique_number,'')
+                   AND COALESCE(af2.reference_number,'') = COALESCE(af.reference_number,'')
                 ) AS version_count
             FROM archive_files af
             WHERE af.folder_id = ?
@@ -78,7 +78,7 @@ if ($action === 'get_files') {
                 WHERE af3.folder_id = af.folder_id
                   AND af3.name = af.name
                   AND COALESCE(af3.author,'') = COALESCE(af.author,'')
-                  AND COALESCE(af3.unique_number,'') = COALESCE(af.unique_number,'')
+                  AND COALESCE(af3.reference_number,'') = COALESCE(af.reference_number,'')
                   AND (af3.version > af.version OR (af3.version = af.version AND af3.id > af.id))
               )
             ORDER BY af.created_at DESC
@@ -94,7 +94,7 @@ if ($action === 'get_files') {
                 'name'=>$r['name'],
                 'file_path'=>$r['file_path'],
                 'author'=>$r['author'] ?? 'System',
-                'unique_number'=>$r['unique_number'],
+                'reference_number'=>$r['reference_number'] ?? null,
                 'file_date'=>$r['file_date'],
                 'version'=> (int)($r['version'] ?? 1),
                 'version_count'=> (int)($r['version_count'] ?? 1),
@@ -154,7 +154,7 @@ if ($action === 'get_versions') {
     if ($page > $total_pages) $page = $total_pages;
     $offset = ($page - 1) * $page_size;
     $versions = [];
-    if ($st2 = $conn->prepare("SELECT id, name, author, unique_number, file_date, file_path, version, version_notes, ipfs_cid, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
+    if ($st2 = $conn->prepare("SELECT id, name, author, reference_number, file_date, file_path, version, version_notes, ipfs_cid, created_at FROM archive_files WHERE id = ? OR parent_version_id = ? ORDER BY version DESC, id DESC LIMIT ?, ?")) {
         $st2->bind_param("iiii", $root, $root, $offset, $page_size);
         $st2->execute();
         $res2 = $st2->get_result();
@@ -163,7 +163,7 @@ if ($action === 'get_versions') {
                 'id'=>(int)$v['id'],
                 'title'=>$v['name'],
                 'author'=>$v['author'] ?? 'System',
-                'unique_number'=>$v['unique_number'],
+                'reference_number'=>$v['reference_number'] ?? null,
                 'file_date'=>$v['file_date'],
                 'file_path'=>$v['file_path'],
                 'version'=>(int)($v['version'] ?? 1),

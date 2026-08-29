@@ -288,6 +288,7 @@ if (!function_exists('llrm_intake_normalize_type')) {
         $title = trim((string)($doc['title'] ?? ''));
         $rawType = $doc['type'] ?? $doc['document_type'] ?? 'archive';
         $author = $doc['author'] ?? $doc['uploaded_by_name'] ?? 'LLRM Import';
+        $referenceNumber = !empty($doc['reference_number']) ? trim($doc['reference_number']) : null;
         $sourceSystem = $doc['source_system'] ?? 'LLRM';
         $sourceRecordId = isset($doc['source_record_id']) ? (int)$doc['source_record_id'] : null;
         $fileDate = $doc['document_date'] ?? $doc['file_date'] ?? null;
@@ -314,16 +315,27 @@ if (!function_exists('llrm_intake_normalize_type')) {
         $type = $folder['kind'] === 'legislative' ? ($normalized['leg_type'] ?? $folder['type'] ?? $rawType) : $rawType;
 
         // Duplicate guard (skippable via opts['skip_duplicate'])
+        // Matching criteria: title + author + reference_number only
         if (empty($opts['skip_duplicate'])) {
             if ($folder['kind'] === 'legislative') {
-                $chk = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND type = ? LIMIT 1");
-                $chk->bind_param("ss", $title, $type);
+                if (!empty($referenceNumber)) {
+                    $chk = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND reference_number = ? LIMIT 1");
+                    $chk->bind_param("sss", $title, $author, $referenceNumber);
+                } else {
+                    $chk = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND (reference_number IS NULL OR reference_number = '') LIMIT 1");
+                    $chk->bind_param("ss", $title, $author);
+                }
                 $chk->execute();
                 $dup = $chk->get_result()->fetch_assoc();
                 $chk->close();
             } else {
-                $chk = $conn->prepare("SELECT id FROM archive_files WHERE name = ? AND folder_id = ? LIMIT 1");
-                $chk->bind_param("si", $title, $folder['id']);
+                if (!empty($referenceNumber)) {
+                    $chk = $conn->prepare("SELECT id FROM archive_files WHERE name = ? AND COALESCE(author,'') = COALESCE(?, '') AND reference_number = ? LIMIT 1");
+                    $chk->bind_param("sss", $title, $author, $referenceNumber);
+                } else {
+                    $chk = $conn->prepare("SELECT id FROM archive_files WHERE name = ? AND COALESCE(author,'') = COALESCE(?, '') AND (reference_number IS NULL OR reference_number = '') LIMIT 1");
+                    $chk->bind_param("ss", $title, $author);
+                }
                 $chk->execute();
                 $dup = $chk->get_result()->fetch_assoc();
                 $chk->close();
@@ -389,18 +401,47 @@ if (!function_exists('llrm_intake_normalize_type')) {
         // Unique number from the folder's document prefix + sequence
         $uniqueNumber = llrm_intake_next_unique_number($conn, $folder);
 
+        // AUTOMATIC VERSIONING: if a matching document family already exists
+        // (same title/name + author + reference_number), this becomes the next version.
+        $version = 1;
+        $parentVersionId = null;
+        $vtbl = $folder['kind'] === 'legislative' ? 'legislative_records' : 'archive_files';
+        $vnameCol = $folder['kind'] === 'legislative' ? 'title' : 'name';
+        $rootRow = null;
+        if (!empty($referenceNumber)) {
+            $vchk = $conn->prepare("SELECT id FROM $vtbl WHERE $vnameCol = ? AND COALESCE(author,'') = COALESCE(?, '') AND reference_number = ? AND parent_version_id IS NULL LIMIT 1");
+            $vchk->bind_param("sss", $title, $author, $referenceNumber);
+        } else {
+            $vchk = $conn->prepare("SELECT id FROM $vtbl WHERE $vnameCol = ? AND COALESCE(author,'') = COALESCE(?, '') AND (reference_number IS NULL OR reference_number = '') AND parent_version_id IS NULL LIMIT 1");
+            $vchk->bind_param("ss", $title, $author);
+        }
+        $vchk->execute();
+        $rootRow = $vchk->get_result()->fetch_assoc();
+        $vchk->close();
+        if ($rootRow) {
+            $rootId = (int)$rootRow['id'];
+            $vmx = $conn->query("SELECT MAX(version) AS mx FROM $vtbl WHERE id = $rootId OR parent_version_id = $rootId");
+            if ($vmx && ($vmxRow = $vmx->fetch_assoc())) {
+                $version = ((int)($vmxRow['mx'] ?? 0)) + 1;
+            }
+            $parentVersionId = $rootId;
+        }
+
         // Insert record
         if ($folder['kind'] === 'legislative') {
-            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, created_at, ipfs_cid, mime_type, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NULL, ?, ?, NOW(), ?, ?, ?)");
-            $stmt->bind_param("ssssssssiiisss",
+            $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, reference_number, file_path, file_date, unique_number, version, parent_version_id, folder_id, file_size, created_at, ipfs_cid, mime_type, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
+            $stmt->bind_param("ssssssssiiiiissss",
                 $title,
                 $type,
                 $month,
                 $year,
                 $author,
+                $referenceNumber,
                 $fileResult['file_path'],
                 $fileDate,
                 $uniqueNumber,
+                $version,
+                $parentVersionId,
                 $folder['id'],
                 $fileResult['file_size'],
                 $ipfsCid,
@@ -408,14 +449,17 @@ if (!function_exists('llrm_intake_normalize_type')) {
                 $versionNotes
             );
         } else {
-            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, file_date, unique_number, version, parent_version_id, file_size, ipfs_cid, mime_type, version_notes) VALUES (?, ?, ?, ?, ?, ?, 1, NULL, ?, ?, ?, ?)");
-            $stmt->bind_param("issssissss",
+            $stmt = $conn->prepare("INSERT INTO archive_files (folder_id, name, file_path, author, reference_number, file_date, unique_number, version, parent_version_id, file_size, ipfs_cid, mime_type, version_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("issssssisssss",
                 $folder['id'],
                 $title,
                 $fileResult['file_path'],
                 $author,
+                $referenceNumber,
                 $fileDate,
                 $uniqueNumber,
+                $version,
+                $parentVersionId,
                 $fileResult['file_size'],
                 $ipfsCid,
                 $fileResult['mime_type'],

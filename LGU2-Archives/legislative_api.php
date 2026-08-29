@@ -125,34 +125,21 @@ switch ($action) {
         $year = date('Y', strtotime($date));
         $version_notes = $_POST['version_notes'] ?? null;
         $unq = $_POST['fileUniqueNumber'] ?? null;
+        $reference_number = !empty($_POST['reference_number']) ? trim($_POST['reference_number']) : null;
 
-        // AUTOMATIC VERSIONING: if a matching document family exists (same title + author + unique number),
+        // AUTOMATIC VERSIONING: if a matching document family exists (same title + author + reference_number),
         // this upload automatically becomes the next version — no confirmation needed.
         $root_row = null;
-        $matchSql = "SELECT id, unique_number FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND COALESCE(unique_number,'') = COALESCE(?, '') AND parent_version_id IS NULL" . ($folder_id ? " AND folder_id = ?" : " AND folder_id IS NULL") . " LIMIT 1";
-        $matchStmt = $conn->prepare($matchSql);
-        if ($folder_id) {
-            $matchStmt->bind_param("sssi", $title, $author, $unq, $folder_id);
+        if (!empty($reference_number)) {
+            $matchStmt = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND reference_number = ? AND parent_version_id IS NULL LIMIT 1");
+            $matchStmt->bind_param("sss", $title, $author, $reference_number);
         } else {
-            $matchStmt->bind_param("sss", $title, $author, $unq);
+            $matchStmt = $conn->prepare("SELECT id FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND (reference_number IS NULL OR reference_number = '') AND parent_version_id IS NULL LIMIT 1");
+            $matchStmt->bind_param("ss", $title, $author);
         }
         $matchStmt->execute();
         $root_row = $matchStmt->get_result()->fetch_assoc();
         $matchStmt->close();
-
-        $isBlankUnq = empty($unq);
-        if (!$root_row && $isBlankUnq) {
-            $matchSql = "SELECT id, unique_number FROM legislative_records WHERE title = ? AND COALESCE(author,'') = COALESCE(?, '') AND parent_version_id IS NULL" . ($folder_id ? " AND folder_id = ?" : " AND folder_id IS NULL") . " LIMIT 1";
-            $matchStmt = $conn->prepare($matchSql);
-            if ($folder_id) {
-                $matchStmt->bind_param("ssi", $title, $author, $folder_id);
-            } else {
-                $matchStmt->bind_param("ss", $title, $author);
-            }
-            $matchStmt->execute();
-            $root_row = $matchStmt->get_result()->fetch_assoc();
-            $matchStmt->close();
-        }
 
         // Handle versioning
         $version = 1;
@@ -181,11 +168,6 @@ switch ($action) {
                 $version = ($vRow['max_ver'] ?? 1) + 1;
             }
             $parent_version_id = $root_id;
-            // Inherit the family's unique number if none was provided
-            if ($isBlankUnq && !empty($root_row['unique_number'])) {
-                $unq = $root_row['unique_number'];
-                $isBlankUnq = false;
-            }
         }
 
         // Create upload directory
@@ -255,8 +237,8 @@ switch ($action) {
             // Check if columns exist (graceful fallback if DB update failed)
             $cols = $conn->query("SHOW COLUMNS FROM legislative_records LIKE 'version'");
             if ($cols->num_rows > 0) {
-                $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id, version, parent_version_id, version_notes, unique_number, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("ssssssiiissss", $title, $type, $month, $year, $author, $target_path, $folder_id, $version, $parent_version_id, $version_notes, $unq, $ipfsCid, $mimeType);
+                $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, reference_number, file_path, folder_id, version, parent_version_id, version_notes, unique_number, ipfs_cid, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssssssissss", $title, $type, $month, $year, $author, $reference_number, $target_path, $folder_id, $version, $parent_version_id, $version_notes, $unq, $ipfsCid, $mimeType);
             } else {
                 // Fallback for old schema
                 $stmt = $conn->prepare("INSERT INTO legislative_records (title, type, month, year, author, file_path, folder_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -403,8 +385,8 @@ switch ($action) {
         if ($page > $total_pages) $page = $total_pages;
         $offset = ($page - 1) * $page_size;
         
-        $sql = "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.created_at, lr.last_accessed, lr.version, lr.folder_id, lr.file_path, lr.unique_number, lr.file_date, lr.version_notes,
-                        (SELECT COUNT(*) FROM legislative_records lv WHERE lv.id = lr.id OR lv.parent_version_id = lr.id) AS version_count
+        $sql = "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.created_at, lr.last_accessed, lr.version, lr.folder_id, lr.file_path, lr.reference_number, lr.file_date, lr.version_notes,
+                        (SELECT COUNT(*) FROM legislative_records lv WHERE lv.title = lr.title AND COALESCE(lv.author,'') = COALESCE(lr.author,'') AND COALESCE(lv.reference_number,'') = COALESCE(lr.reference_number,'')) AS version_count
                 FROM legislative_records lr
                 WHERE $where_sql
                 ORDER BY lr.year DESC, lr.month DESC, lr.created_at DESC

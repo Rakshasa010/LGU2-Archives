@@ -65,7 +65,7 @@ if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
     if ($af_result) {
         while ($row = $af_result->fetch_assoc()) {
             $all_folders[] = [
-                'id' => $row['id'],
+                'id' => (int)$row['id'],
                 'name' => $row['name'],
                 'source' => 'archive',
                 'file_count' => (int)$row['file_count'],
@@ -652,7 +652,7 @@ $conn->close();
                                 type: 'Archive',
                                 file_path: f.file_path,
                                 author: f.author || f.created_by || 'System',
-                                unique_number: f.unique_number,
+                                reference_number: f.reference_number,
                                 version_notes: f.version_notes,
                                 file_date: f.file_date
                             };
@@ -766,7 +766,7 @@ $conn->close();
             var verStr = record.version ? 'v' + record.version : 'v1.0';
             var versionCount = record.version_count && record.version_count > 1 ? record.version_count : null;
             var authorStr = record.author && String(record.author).trim() ? String(record.author) : '';
-            var unqStr = record.unique_number && String(record.unique_number).trim() ? String(record.unique_number) : '';
+            var refStr = record.reference_number && String(record.reference_number).trim() ? String(record.reference_number) : '';
 
             var card = document.createElement('div');
             card.className = 'bg-white dark:bg-slate-800 shadow-lg rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden hover:border-gray-200 dark:hover:border-slate-600 hover:shadow-xl transition-all duration-200 group cursor-pointer flex flex-col h-full';
@@ -783,7 +783,7 @@ $conn->close();
                 <div class="p-4 flex-1 flex flex-col">
                     <div class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate mb-1" title="${escapeHtml(record.title)}">${escapeHtml(record.title)}</div>
                     ${authorStr ? `<div class="text-xs text-gray-500 dark:text-gray-400 truncate mb-1"><i class="bi bi-person mr-1"></i>${escapeHtml(authorStr)}</div>` : ''}
-                    ${unqStr ? `<div class="text-[10px] text-gray-400 dark:text-gray-500 font-mono truncate mb-1">#${escapeHtml(unqStr)}</div>` : ''}
+                    ${refStr ? `<div class="text-[10px] text-gray-400 dark:text-gray-500 font-mono truncate mb-1">#${escapeHtml(refStr)}</div>` : ''}
                     <div class="mt-auto flex items-center justify-between pt-3">
                         <div class="text-xs text-gray-500 dark:text-gray-400">${dateStr}</div>
                         <div class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${theme.pill}">${verStr}</div>
@@ -808,7 +808,7 @@ $conn->close();
                 return (file.title || '').toLowerCase().includes(query)
                     || (file.name || '').toLowerCase().includes(query)
                     || (file.author || '').toLowerCase().includes(query)
-                    || (file.unique_number || '').toLowerCase().includes(query);
+                    || (file.reference_number || '').toLowerCase().includes(query);
             });
 
             renderFiles(vtFilteredFiles);
@@ -854,7 +854,7 @@ $conn->close();
                         list.innerHTML = d.versions.map(v => {
                             var notes = v.version_notes ? String(v.version_notes).trim() : '';
                             var vAuthor = v.author || record.author || 'System';
-                            var unq = v.unique_number ? String(v.unique_number).trim() : '';
+                            var refNum = v.reference_number ? String(v.reference_number).trim() : '';
                             return `
                             <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
                                 <div class="flex items-center justify-between">
@@ -862,11 +862,11 @@ $conn->close();
                                         <div class="font-medium text-gray-800 dark:text-white">Version ${v.version}</div>
                                         <div class="text-xs text-gray-500 dark:text-gray-400">
                                             ${v.created_at} • ${vAuthor}
-                                            ${unq ? ' <span class="font-mono">#' + escapeHtml(unq) + '</span>' : ''}
+                                            ${refNum ? ' <span class="font-mono">#' + escapeHtml(refNum) + '</span>' : ''}
                                         </div>
                                     </div>
                                     <div class="flex space-x-2">
-                                        <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path || record.file_path, title: v.title || record.title, type: 'Archive'})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
+                                        <button onclick="event.stopPropagation(); vtPreviewFile('${vtQuote({file_path: v.file_path || record.file_path, title: v.title || record.title, type: record.type})}')" class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30">Preview</button>
                                         <a href="${v.file_path || '#'}" target="_blank" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30">Download</a>
                                     </div>
                                 </div>
@@ -880,7 +880,7 @@ $conn->close();
                 }
             })
             .catch(error => {
-                console.error('Error loading archive versions:', error);
+                console.error('Error loading version history:', error);
                 list.innerHTML = '<div class="text-red-500 text-center">Error loading version history</div>';
             });
 
