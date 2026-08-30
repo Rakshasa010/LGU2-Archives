@@ -753,12 +753,21 @@ function formatFileSize($bytes) {
                 aiScanBtn.addEventListener('click', function() {
                     if (!currentId) return;
                     setAiLoading(true);
-                    fetch('api/ai-extract-metadata.php', {
+                    var apiUrl = window.location.pathname.replace(/\/[^\/]*$/, '') + '/api/ai-extract-metadata.php';
+                    fetch(apiUrl, {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ external_id: currentId })
                     })
-                    .then(function(r){ return r.json(); })
+                    .then(function(r){
+                        if (!r.ok) {
+                            return r.text().then(function(txt) {
+                                throw new Error('Server returned ' + r.status + ': ' + txt.substring(0, 200));
+                            });
+                        }
+                        return r.json();
+                    })
                     .then(function(d){
                         setAiLoading(false);
                         if (d.success && d.metadata) {
@@ -781,7 +790,7 @@ function formatFileSize($bytes) {
                     })
                     .catch(function(err){
                         setAiLoading(false);
-                        alert('AI scan failed: ' + err + '\n\nYou can fill in the fields manually.');
+                        alert('AI scan failed: ' + err.message + '\n\nYou can fill in the fields manually.');
                     });
                 });
             }

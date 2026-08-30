@@ -12,24 +12,45 @@
  *   { success: false, error: "..." }
  */
 
+error_reporting(0);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', dirname(__DIR__) . '/error.log');
+
+ob_start();
 header('Content-Type: application/json');
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Fatal error: ' . $error['message'] . ' in ' . basename($error['file']) . ':' . $error['line']]);
+    }
+});
 
 session_start();
 if (!isset($_SESSION['user_id'])) {
+    while (ob_get_level()) { ob_end_clean(); }
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Unauthorized']);
     exit;
 }
 
 try {
-    require_once '../authdatabase.php';
+    require_once __DIR__ . '/../authdatabase.php';
     require_once __DIR__ . '/../includes/gemini.php';
     require_once __DIR__ . '/../includes/docx_preview.php';
 } catch (Throwable $e) {
+    error_log('[ai-extract-metadata] Init failed: ' . $e->getMessage());
+    while (ob_get_level()) { ob_end_clean(); }
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Server initialization failed: ' . $e->getMessage()]);
     exit;
 }
+
+while (ob_get_level()) { ob_end_clean(); }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
