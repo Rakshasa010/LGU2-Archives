@@ -712,7 +712,7 @@ function gemini_parse_message_refs($message, $conn) {
 
 /**
  * Resolve a list of refs and build Gemini content parts for each.
- * PDFs become base64 inline_data; DOCX/TXT become text parts. Each document
+ * PDFs become base64 inlineData; DOCX/TXT become text parts. Each document
  * is introduced by a labelled text part.
  *
  * @param array $refs List of refs (arrays, paths, or CIDs).
@@ -755,7 +755,7 @@ function gemini_attach_content_parts(array $refs, $conn) {
 
 /**
  * Build a Gemini content part from an on-disk file.
- * PDFs become base64 inline_data; DOCX and text files become raw text parts.
+ * PDFs become base64 inlineData; DOCX and text files become raw text parts.
  *
  * @return array|null ['part' => array] on success, ['error' => string] on failure.
  */
@@ -780,9 +780,9 @@ function gemini_file_content_part($absPath, $label = '') {
         }
         return [
             'part'  => [
-                'inline_data' => [
-                    'mime_type' => 'application/pdf',
-                    'data'      => base64_encode($data),
+                'inlineData' => [
+                    'mimeType' => 'application/pdf',
+                    'data'     => base64_encode($data),
                 ],
             ],
             'label' => $label !== '' ? $label : basename($absPath),

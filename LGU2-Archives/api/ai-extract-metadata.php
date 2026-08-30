@@ -151,7 +151,7 @@ if ($mimeType === 'application/pdf') {
     $userMsg = 'Extract metadata from this PDF. Return ONLY the JSON object.';
     $parts = [
         ['text' => $userMsg],
-        ['inline_data' => ['mime_type' => 'application/pdf', 'data' => $fileContent]],
+        ['inlineData' => ['mimeType' => 'application/pdf', 'data' => $fileContent]],
     ];
 } else {
     $userMsg = "Extract metadata from this document. Return ONLY the JSON object.\n\nFILE: {$ext['file_name']}\n\nCONTENT:\n{$fileContent}";
