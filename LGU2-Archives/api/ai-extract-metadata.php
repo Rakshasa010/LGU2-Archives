@@ -12,6 +12,8 @@
  *   { success: false, error: "..." }
  */
 
+header('Content-Type: application/json');
+
 session_start();
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -19,11 +21,15 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once '../authdatabase.php';
-require_once __DIR__ . '/../includes/gemini.php';
-require_once __DIR__ . '/../includes/docx_preview.php';
-
-header('Content-Type: application/json');
+try {
+    require_once '../authdatabase.php';
+    require_once __DIR__ . '/../includes/gemini.php';
+    require_once __DIR__ . '/../includes/docx_preview.php';
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server initialization failed: ' . $e->getMessage()]);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

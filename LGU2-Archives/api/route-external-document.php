@@ -12,6 +12,8 @@
  *   POST (external_ids[], folder_kind, folder_id)   Route multiple documents in bulk
  */
 
+header('Content-Type: application/json');
+
 session_start();
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -19,10 +21,14 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once '../authdatabase.php';
-require_once __DIR__ . '/../includes/llrm-intake.php';
-
-header('Content-Type: application/json');
+try {
+    require_once '../authdatabase.php';
+    require_once __DIR__ . '/../includes/llrm-intake.php';
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server initialization failed: ' . $e->getMessage()]);
+    exit;
+}
 
 $action = $_GET['action'] ?? '';
 
