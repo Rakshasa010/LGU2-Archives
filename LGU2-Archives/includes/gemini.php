@@ -78,7 +78,6 @@ function gemini_request_payload($system, array $messages, array $opts = []) {
             'temperature'     => $opts['temperature'] ?? 0.7,
             'maxOutputTokens' => $opts['maxOutputTokens'] ?? 2048,
             'topP'            => $opts['topP'] ?? 0.95,
-            'thinkingConfig'  => ['thinkingBudget' => 0],
         ],
     ];
     if (!empty($system)) {
