@@ -55,7 +55,7 @@ function gemini_is_configured() {
 
 function gemini_model() {
     $cfg = gemini_config();
-    return $cfg['model'] !== '' ? $cfg['model'] : 'gemini-2.5-flash';
+    return $cfg['model'] !== '' ? $cfg['model'] : 'gemini-3.5-flash';
 }
 
 function gemini_endpoint($stream = false) {
