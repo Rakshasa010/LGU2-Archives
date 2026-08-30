@@ -19,6 +19,7 @@ ini_set('error_log', dirname(__DIR__) . '/error.log');
 
 ob_start();
 header('Content-Type: application/json');
+header('X-API-Version: 2.0');
 
 register_shutdown_function(function() {
     $error = error_get_last();
@@ -64,9 +65,13 @@ if (!gemini_is_configured()) {
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input = $_POST;
+if (empty($input)) {
+    $raw = file_get_contents('php://input');
+    $input = json_decode($raw, true);
+}
 if (!is_array($input)) {
-    $input = $_POST;
+    $input = [];
 }
 
 $externalId = (int)($input['external_id'] ?? 0);

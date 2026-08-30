@@ -754,11 +754,12 @@ function formatFileSize($bytes) {
                     if (!currentId) return;
                     setAiLoading(true);
                     var apiUrl = window.location.pathname.replace(/\/[^\/]*$/, '') + '/api/ai-extract-metadata.php';
+                    var body = 'external_id=' + encodeURIComponent(currentId);
                     fetch(apiUrl, {
                         method: 'POST',
                         credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ external_id: currentId })
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body
                     })
                     .then(function(r){
                         if (!r.ok) {
