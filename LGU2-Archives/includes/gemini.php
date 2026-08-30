@@ -55,7 +55,7 @@ function gemini_is_configured() {
 
 function gemini_model() {
     $cfg = gemini_config();
-    return $cfg['model'] !== '' ? $cfg['model'] : 'gemini-3.5-flash';
+    return $cfg['model'] !== '' ? $cfg['model'] : 'gemini-2.5-flash';
 }
 
 function gemini_endpoint($stream = false) {
@@ -78,6 +78,7 @@ function gemini_request_payload($system, array $messages, array $opts = []) {
             'temperature'     => $opts['temperature'] ?? 0.7,
             'maxOutputTokens' => $opts['maxOutputTokens'] ?? 2048,
             'topP'            => $opts['topP'] ?? 0.95,
+            'thinkingConfig'  => ['thinkingBudget' => 0],
         ],
     ];
     if (!empty($system)) {

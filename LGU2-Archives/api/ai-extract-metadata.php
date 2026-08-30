@@ -167,6 +167,8 @@ $result = gemini_generate($system, $messages, [
 ]);
 
 if (!$result['success']) {
+    $debugInfo = $result['status'] ?? 'no_status';
+    error_log('[ai-extract-metadata] Gemini failed (HTTP ' . $debugInfo . '): ' . ($result['error'] ?? 'unknown'));
     echo json_encode(['success' => false, 'error' => 'AI failed: ' . ($result['error'] ?? 'Unknown error')]);
     exit;
 }
