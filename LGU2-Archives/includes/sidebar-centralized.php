@@ -244,18 +244,6 @@ html, body {
                     </button>
                 </div>
                 <div id="version-tracking-submenu-desktop" class="mt-1 ml-4 space-y-1 overflow-hidden max-h-0 transition-all duration-300">
-                    <!-- Legislative Folders -->
-                    <div class="mb-1.5">
-                    <div class="group flex w-full items-center justify-between px-4 py-3 text-white/90 hover:text-white rounded-2xl transition-all duration-300 hover:translate-x-1 hover:bg-white/12 hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]">
-                        <a href="version_tracking.php" class="flex items-center gap-3" aria-current="<?php echo $sidebar_active_page === 'version-tracking' ? 'page' : 'false'; ?>">
-                            <i class="bi bi-book"></i>
-                            <span class="sidebar-text">Version Tracking</span>
-                        </a>
-                        <button type="button" id="version-tracking-toggle-desktop" aria-expanded="false" aria-controls="version-tracking-submenu-desktop" class="text-xs transition-transform duration-200 hover:bg-white/10 p-1 rounded-lg" onclick="event.stopPropagation();">
-                            <i class="bi bi-chevron-down" id="version-tracking-chevron-desktop"></i>
-                        </button>
-                    </div>
-                    <div id="version-tracking-submenu-desktop" class="mt-1 ml-4 space-y-1 overflow-hidden max-h-0 transition-all duration-300">
                         <!-- Dynamic Archive Folders -->
                         <?php if (!empty($archive_folders)): ?>
                             <?php foreach ($archive_folders as $folder): ?>

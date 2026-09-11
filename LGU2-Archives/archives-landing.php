@@ -351,6 +351,8 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $fa_type = isset($_GET['type']) ? $_GET['type'] : null;
                         // event filter (download / upload)
                         $q_event = isset($_GET['event']) ? $_GET['event'] : null;
+                        // view filter: day, month, year
+                        $q_view = isset($_GET['view']) ? $_GET['view'] : 'day';
                         $safe_event = $q_event ? $conn->real_escape_string(strtolower($q_event)) : null;
                         $f_from = null;
                         $f_to = null;
@@ -476,15 +478,47 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 }
                             }
                         }
-                        $days = [];
-                        for ($i = 13; $i >= 0; $i--) { $d = date('Y-m-d', strtotime("-$i days")); $days[$d] = 0; }
-                        $series_downloads = $days;
-                        $series_records = $days;
-                        $series_folders = $days;
-                        $dl_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)";
-                        $rec_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)";
+                        // View-based time periods
+                        $time_periods = [];
+                        switch ($q_view) {
+                            case 'month':
+                                $view_interval = 24;
+                                $view_interval_unit = 'MONTH';
+                                $date_format_sql = "DATE_FORMAT(created_at, '%Y-%m')";
+                                $date_format_php = 'Y-m';
+                                for ($i = $view_interval; $i >= 0; $i--) {
+                                    $d = date($date_format_php, strtotime("-$i month"));
+                                    $time_periods[$d] = 0;
+                                }
+                                break;
+                            case 'year':
+                                $view_interval = 10;
+                                $view_interval_unit = 'YEAR';
+                                $date_format_sql = "YEAR(created_at)";
+                                $date_format_php = 'Y';
+                                for ($i = $view_interval; $i >= 0; $i--) {
+                                    $d = date($date_format_php, strtotime("-$i year"));
+                                    $time_periods[$d] = 0;
+                                }
+                                break;
+                            default: // day
+                                $view_interval = 29;
+                                $view_interval_unit = 'DAY';
+                                $date_format_sql = 'DATE(created_at)';
+                                $date_format_php = 'Y-m-d';
+                                for ($i = $view_interval; $i >= 0; $i--) {
+                                    $d = date($date_format_php, strtotime("-$i days"));
+                                    $time_periods[$d] = 0;
+                                }
+                                break;
+                        }
+                        $series_downloads = $time_periods;
+                        $series_records = $time_periods;
+                        $series_folders = $time_periods;
+                        $dl_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL $view_interval $view_interval_unit)";
+                        $rec_limit_clause = " AND created_at >= DATE_SUB(CURDATE(), INTERVAL $view_interval $view_interval_unit)";
                         if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
-                            $q = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM analytics_events WHERE $where_dl $dl_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            $q = "SELECT $date_format_sql AS d, COUNT(*) AS c FROM analytics_events WHERE $where_dl $dl_limit_clause GROUP BY $date_format_sql ORDER BY d";
                             if ($r = $conn->query($q)) {
                                 while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_downloads[$k])) $series_downloads[$k] = (int)$row['c']; }
                             }
@@ -498,7 +532,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                                 while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_downloads[$k])) $series_downloads[$k] = (int)$row['c']; }
                             }
                         }
-                        $q = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM legislative_records WHERE $where_rec $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                        $q = "SELECT $date_format_sql AS d, COUNT(*) AS c FROM legislative_records WHERE $where_rec $rec_limit_clause GROUP BY $date_format_sql ORDER BY d";
                         if ($r = $conn->query($q)) {
                             while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_records[$k])) $series_records[$k] = (int)$row['c']; }
                         }
@@ -506,7 +540,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             $wf = "(parent_version_id IS NULL OR parent_version_id = 0)";
                             if ($f_from) $wf .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                             if ($f_to) $wf .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
-                            $qf = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM archive_files WHERE $wf $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            $qf = "SELECT $date_format_sql AS d, COUNT(*) AS c FROM archive_files WHERE $wf $rec_limit_clause GROUP BY $date_format_sql ORDER BY d";
                             if ($r = $conn->query($qf)) {
                                 while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_folders[$k])) $series_folders[$k] = (int)$row['c']; }
                             }
@@ -515,25 +549,25 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         foreach ($series_records_merged as $k => $v) {
                             $series_records_merged[$k] = $v + ($series_folders[$k] ?? 0);
                         }
-                        // Files with versions series: all rows (including every version), 14 days
-                        $series_files_with_versions = $days;
+                        // Files with versions series: all rows (including every version)
+                        $series_files_with_versions = $time_periods;
                         if ($conn->query("SHOW TABLES LIKE 'archive_files'")->num_rows > 0) {
                             $wfv = "1=1";
                             if ($f_from) $wfv .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                             if ($f_to) $wfv .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
-                            $qf = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM archive_files WHERE $wfv $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            $qf = "SELECT $date_format_sql AS d, COUNT(*) AS c FROM archive_files WHERE $wfv $rec_limit_clause GROUP BY $date_format_sql ORDER BY d";
                             if ($r = $conn->query($qf)) {
                                 while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_files_with_versions[$k])) $series_files_with_versions[$k] = (int)$row['c']; }
                             }
                         }
-                        $ql = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM legislative_records WHERE $leg_all_where $rec_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                        $ql = "SELECT $date_format_sql AS d, COUNT(*) AS c FROM legislative_records WHERE $leg_all_where $rec_limit_clause GROUP BY $date_format_sql ORDER BY d";
                         if ($r = $conn->query($ql)) {
                             while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_files_with_versions[$k])) $series_files_with_versions[$k] += (int)$row['c']; }
                         }
-                        $qa_series_labels = array_keys($days);
+                        $qa_series_labels = array_keys($time_periods);
                         $qa_series_downloads = array_values($series_downloads);
                         // Uploads series mirrors the Total Uploads card: analytics_events upload events
-                        $series_upload_events = $days;
+                        $series_upload_events = $time_periods;
                         $has_analytics_events = false;
                         if ($conn->query("SHOW TABLES LIKE 'analytics_events'")->num_rows > 0) {
                             $has_analytics_events = true;
@@ -541,7 +575,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                             if ($f_from) $ue_where .= " AND created_at >= '".$conn->real_escape_string($f_from)." 00:00:00'";
                             if ($f_to) $ue_where .= " AND created_at <= '".$conn->real_escape_string($f_to)." 23:59:59'";
                             if ($fa_type) $ue_where .= " AND record_type = '".$conn->real_escape_string($fa_type)."'";
-                            $q_ue = "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM analytics_events WHERE $ue_where $dl_limit_clause GROUP BY DATE(created_at) ORDER BY d";
+                            $q_ue = "SELECT $date_format_sql AS d, COUNT(*) AS c FROM analytics_events WHERE $ue_where $dl_limit_clause GROUP BY $date_format_sql ORDER BY d";
                             if ($r = $conn->query($q_ue)) {
                                 while ($row = $r->fetch_assoc()) { $k = $row['d']; if (isset($series_upload_events[$k])) $series_upload_events[$k] = (int)$row['c']; }
                             }
@@ -551,9 +585,19 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         $qa_series_records_merged = array_values($series_records_merged);
                         $qa_series_files_with_versions = array_values($series_files_with_versions);
                         ?>
-            
+
+                        <!-- KPI View Filter -->
+                        <div class="flex items-center gap-2 mt-4 mb-3">
+                            <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">View by:</label>
+                            <div class="inline-flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden shadow-sm">
+                                <button type="button" class="kpi-view-btn px-3 py-1.5 text-xs font-medium transition-colors <?php echo $q_view === 'day' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?>" data-view="day">Daily</button>
+                                <button type="button" class="kpi-view-btn px-3 py-1.5 text-xs font-medium transition-colors border-x border-gray-300 dark:border-slate-600 <?php echo $q_view === 'month' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?>" data-view="month">Monthly</button>
+                                <button type="button" class="kpi-view-btn px-3 py-1.5 text-xs font-medium transition-colors <?php echo $q_view === 'year' ? 'bg-red-600 text-white' : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600'; ?>" data-view="year">Yearly</button>
+                            </div>
+                        </div>
+
                         <!-- KPI Stat cards: exact wrapper structure matches report_analytics.php lines 679-717 -->
-                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></div>
@@ -1448,6 +1492,22 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                 window.location.assign(url);
             }
             applyBtn && applyBtn.addEventListener('click', applyFilters);
+        })();
+    </script>
+    <script>
+        // KPI View Filter (Daily / Monthly / Yearly)
+        (function(){
+            var viewBtns = document.querySelectorAll('.kpi-view-btn');
+            viewBtns.forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    var view = btn.getAttribute('data-view');
+                    var p = new URLSearchParams(window.location.search);
+                    p.delete('view');
+                    if (view && view !== 'day') p.set('view', view);
+                    var url = window.location.pathname + (p.toString() ? ('?'+p.toString()) : '');
+                    window.location.assign(url);
+                });
+            });
         })();
     </script>
     <script>
