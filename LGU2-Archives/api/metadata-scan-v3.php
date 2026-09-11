@@ -99,7 +99,7 @@ if ($ext_lower === 'pdf') {
     }
     $fileContent = base64_encode($raw);
     $mimeType = 'application/pdf';
-    unset($raw);
+    // Keep $raw for text extraction below, free memory of nothing else.
 } elseif ($ext_lower === 'docx') {
     if (!function_exists('docx_extract_text')) require_once __DIR__ . '/../includes/docx_preview.php';
     $text = @docx_extract_text($absFile);
@@ -129,10 +129,74 @@ $prompt = 'You are a metadata extraction assistant. '
     . '"date" must be YYYY-MM-DD format.';
 
 if ($mimeType === 'application/pdf') {
-    $parts = [
-        ['text' => $prompt . "\n\nExtract metadata from this PDF. Return ONLY the JSON object."],
-        ['inlineData' => ['mimeType' => 'application/pdf', 'data' => $fileContent]],
-    ];
+    // Extract text from PDF — don't send raw PDF as inlineData (Gemini rejects it).
+    $pdfText = null;
+
+    // Method 1: pdftotext (poppler-utils, common on Linux hosting)
+    if (function_exists('shell_exec')) {
+        $tmpPdf = tempnam(sys_get_temp_dir(), 'scan_') . '.pdf';
+        file_put_contents($tmpPdf, $raw);
+        $escaped = escapeshellarg($tmpPdf);
+        $pdftext = shell_exec("pdftotext {$escaped} - 2>/dev/null");
+        @unlink($tmpPdf);
+        if ($pdftext !== null && trim($pdftext) !== '') {
+            $pdfText = $pdftext;
+        }
+    }
+
+    // Method 2: Simple regex extraction from PDF streams
+    if ($pdfText === null || trim($pdfText) === '') {
+        $pdfRaw = $raw;
+        $textChunks = [];
+        if (preg_match_all('/BT\s*(.*?)\s*ET/s', $pdfRaw, $btMatches)) {
+            foreach ($btMatches[1] as $bt) {
+                if (preg_match_all('/\(([^)]*)\)\s*Tj/', $bt, $strMatches)) {
+                    foreach ($strMatches[1] as $s) {
+                        $textChunks[] = $s;
+                    }
+                }
+                if (preg_match_all('/<([0-9A-Fa-f]+)>\s*Tj/', $bt, $hexMatches)) {
+                    foreach ($hexMatches[1] as $h) {
+                        $textChunks[] = hex2bin($h);
+                    }
+                }
+            }
+        }
+        if (!empty($textChunks)) {
+            $pdfText = implode("\n", $textChunks);
+        }
+    }
+
+    // Method 3: Brute-force text extraction — find readable strings in the raw PDF
+    if ($pdfText === null || trim($pdfText) === '') {
+        $pdfRaw = $raw;
+        $readable = [];
+        if (preg_match_all('/[^\x00-\x1F]{4,}/', $pdfRaw, $m)) {
+            foreach ($m[0] as $chunk) {
+                $clean = preg_replace('/[^\x20-\x7E\xA0-\xFF]/', '', $chunk);
+                if (strlen($clean) >= 4) {
+                    $readable[] = $clean;
+                }
+            }
+        }
+        if (!empty($readable)) {
+            $pdfText = implode("\n", $readable);
+        }
+    }
+
+    if ($pdfText === null || trim($pdfText) === '') {
+        echo json_encode(['success' => false, 'error' => 'Could not extract text from PDF. Fill fields manually.']);
+        exit;
+    }
+
+    if (mb_strlen($pdfText) > 120000) {
+        $pdfText = mb_substr($pdfText, 0, 120000);
+    }
+
+    $fname = $ext['file_name'] ?? basename($absFile);
+    $parts = [['text' => $prompt . "\n\nFilename: {$fname}\n\nContent extracted from PDF:\n{$pdfText}"]];
+    unset($raw);
+
 } else {
     $fname = $ext['file_name'] ?? basename($absFile);
     $parts = [['text' => $prompt . "\n\nFilename: {$fname}\n\nContent:\n{$fileContent}"]];
