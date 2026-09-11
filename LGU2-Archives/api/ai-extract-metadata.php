@@ -161,9 +161,7 @@ if ($mimeType === 'application/pdf') {
 $messages = [['role' => 'user', 'parts' => $parts]];
 
 $result = gemini_generate($system, $messages, [
-    'temperature'     => 0.1,
     'maxOutputTokens' => 2048,
-    'topP'            => 0.9,
 ]);
 
 if (!$result['success']) {
