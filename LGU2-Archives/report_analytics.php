@@ -223,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
             date DATE NOT NULL,
             content VARCHAR(255) NOT NULL,
             about VARCHAR(100) NOT NULL,
+            user_name VARCHAR(100) NULL,
             status ENUM('unread','read') NOT NULL DEFAULT 'unread',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
@@ -272,75 +273,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_action'])) {
                 echo "No recent activity available\n";
             }
             exit();
-        } elseif ($action === 'pdf') {
-            $html = '<!doctype html><html><head><meta charset="utf-8"><title>Reports & Analytics</title><style>body{font-family:Arial,sans-serif;color:#111}h1{font-size:20px;margin:0 0 8px}h2{font-size:16px;margin:16px 0 8px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ddd;padding:6px}th{background:#f3f4f6;text-align:left}</style></head><body>';
-            $html .= '<h1>Reports & Analytics</h1><div>Generated At: '.date('Y-m-d H:i:s').'</div>';
-            $html .= '<h2>Summary</h2><table><tr><th>Metric</th><th>Value</th></tr>';
-            $html .= '<tr><td>Total Records</td><td>'.(int)($stats['total_records'] ?? 0).'</td></tr>';
-            $html .= '<tr><td>Total Downloads</td><td>'.(int)($stats['downloads'] ?? 0).'</td></tr>';
-            $html .= '<tr><td>Uploads Folder Size</td><td>'.htmlspecialchars(storage_format_bytes($uploads_bytes)).'</td></tr></table>';
-            $html .= '<h2>Downloads by Type</h2><table><tr><th>Type</th><th>Count</th></tr>';
-            foreach (($stats['downloads_by_type'] ?? []) as $k=>$v) $html .= '<tr><td>'.htmlspecialchars($k).'</td><td>'.(int)$v.'</td></tr>';
-            $html .= '</table><h2>Downloads by Format</h2><table><tr><th>Format</th><th>Count</th></tr>';
-            foreach (($stats['downloads_by_format'] ?? []) as $k=>$v) $html .= '<tr><td>'.htmlspecialchars($k).'</td><td>'.(int)$v.'</td></tr>';
-            $html .= '</table><h2>Recent Activity</h2>';
+        } elseif ($action === 'csv') {
+            $filename = 'report_analytics_' . date('Ymd_His') . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Report', 'Generated At']);
+            fputcsv($out, ['Reports & Analytics', date('Y-m-d H:i:s')]);
+            fputcsv($out, []);
+            fputcsv($out, ['Summary']);
+            fputcsv($out, ['Total Records', (string)($stats['total_records'] ?? 0)]);
+            fputcsv($out, ['Total Downloads', (string)($stats['downloads'] ?? 0)]);
+            fputcsv($out, ['Uploads Folder Size', storage_format_bytes($uploads_bytes)]);
+            fputcsv($out, []);
+            fputcsv($out, ['Downloads by Type']);
+            fputcsv($out, ['Type', 'Count']);
+            if (!empty($stats['downloads_by_type'])) {
+                foreach ($stats['downloads_by_type'] as $type => $count) {
+                    fputcsv($out, [$type, (string)$count]);
+                }
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['Downloads by Format']);
+            fputcsv($out, ['Format', 'Count']);
+            if (!empty($stats['downloads_by_format'])) {
+                foreach ($stats['downloads_by_format'] as $format => $count) {
+                    fputcsv($out, [$format, (string)$count]);
+                }
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['Recent Activity']);
             if (!empty($stats['recent_activity'])) {
-                $html .= '<table><tr><th>When</th><th>Event</th><th>Title</th><th>Type</th><th>Format</th></tr>';
+                fputcsv($out, ['When', 'Event', 'Title', 'Type', 'Format']);
                 foreach ($stats['recent_activity'] as $r) {
-                    $html .= '<tr><td>'.htmlspecialchars($r['created_at']).'</td><td>'.htmlspecialchars($r['event_type']).'</td><td>'.htmlspecialchars($r['record_title'] ?? '').'</td><td>'.htmlspecialchars($r['record_type'] ?? '').'</td><td>'.htmlspecialchars(strtoupper($r['download_format'] ?? '')).'</td></tr>';
+                    fputcsv($out, [
+                        $r['created_at'] ?? '',
+                        $r['event_type'] ?? '',
+                        $r['record_title'] ?? '',
+                        $r['record_type'] ?? '',
+                        strtoupper($r['download_format'] ?? ''),
+                    ]);
                 }
-                $html .= '</table>';
             } elseif (!empty($stats['recent_downloads'])) {
-                $html .= '<table><tr><th>When</th><th>Title</th><th>Type</th><th>Author</th></tr>';
+                fputcsv($out, ['When', 'Title', 'Type', 'Author']);
                 foreach ($stats['recent_downloads'] as $r) {
-                    $html .= '<tr><td>'.htmlspecialchars($r['last_accessed'] ?? '').'</td><td>'.htmlspecialchars($r['title'] ?? '').'</td><td>'.htmlspecialchars($r['type'] ?? '').'</td><td>'.htmlspecialchars($r['author'] ?? '').'</td></tr>';
+                    fputcsv($out, [
+                        $r['last_accessed'] ?? '',
+                        $r['title'] ?? '',
+                        $r['type'] ?? '',
+                        $r['author'] ?? '',
+                    ]);
                 }
-                $html .= '</table>';
             } else {
-            $html .= <<<HTML
-
-<div>No recent activity available</div>
-<script>window.print && setTimeout(function(){window.print();},250)</script>
-<script>
-    (function() {
-        function fetchAndUpdateStorage() {
-            fetch("archives-landing.php?action=get_storage_data")
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        const pct = data.percentage;
-                        const usedText = data.usedText;
-                        const totalText = data.totalText;
-                        const fileCount = data.fileCount;
-
-                        ["mobile", "desktop"].forEach(prefix => {
-                            const bar = document.getElementById(prefix + '-storage-bar');
-                            const pctEl = document.getElementById(prefix + '-storage-pct');
-                            const textEl = document.getElementById(prefix + '-storage-text');
-                            const filesEl = document.getElementById(prefix + '-storage-files');
-                            
-                            if (bar) bar.style.width = pct + '%';
-                            if (pctEl) pctEl.textContent = pct + '%';
-                            if (textEl) textEl.textContent = usedText + ' of ' + totalText;
-                            if (filesEl) filesEl.textContent = fileCount + ' files tracked';
-                        });
-                    }
-                }).catch(err => console.warn('Storage fetch error:', err));
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', fetchAndUpdateStorage);
-        } else {
-            fetchAndUpdateStorage();
-        }
-        setInterval(fetchAndUpdateStorage, 60000);
-    })();
-</script>
-</body></html>
-HTML;
-            header('Content-Type: text/html; charset=UTF-8');
-            echo $html;
+                fputcsv($out, ['No recent activity available']);
+            }
+            fclose($out);
             exit();
-        }
         }
     } else {
         $export_error = 'Invalid password for export.';
@@ -712,8 +702,8 @@ $funnel_types = array_values($funnel_types);
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <div class="flex items-center gap-2">
-                                    <button id="export-pdf-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export PDF</button>
                                     <button id="export-txt-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export Plain</button>
+                                    <?php /* <button id="export-pdf-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</button> */ ?>
                                     <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
                                     <div class="relative">
                                         <button id="more-actions-btn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200" title="More options">
@@ -1075,7 +1065,7 @@ $funnel_types = array_values($funnel_types);
                     <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">Confirm Export</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400">Enter your password to continue.</div>
                 </div>
-                <form id="export-form" method="post" class="space-y-3">
+                <form id="export-form" action="report_analytics.php" method="post" class="space-y-3">
                     <input type="hidden" name="export_action" id="export-action" value="">
                     <div>
                         <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1">Password</label>
@@ -1083,7 +1073,7 @@ $funnel_types = array_values($funnel_types);
                     </div>
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" id="export-cancel" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Cancel</button>
-                        <button type="submit" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export</button>
+                        <button type="submit" class="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white">Export CSV</button>
                     </div>
                 </form>
             </div>
@@ -1365,7 +1355,7 @@ $funnel_types = array_values($funnel_types);
         const exportTxtBtn = document.getElementById('export-txt-btn');
         function openExport(which){ exportAction.value = which; exportModal.classList.remove('hidden'); }
         function closeExport(){ exportModal.classList.add('hidden'); exportAction.value = ''; }
-        exportPdfBtn?.addEventListener('click', () => openExport('pdf'));
+        exportPdfBtn?.addEventListener('click', () => openExport('csv'));
         exportTxtBtn?.addEventListener('click', () => openExport('txt'));
         exportCancel?.addEventListener('click', closeExport);
         exportModal?.addEventListener('click', (e) => { if (e.target === exportModal) closeExport(); });
