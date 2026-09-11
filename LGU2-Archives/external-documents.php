@@ -384,7 +384,7 @@ function formatFileSize($bytes) {
                             <?php endif; ?>
                             <div class="mt-3 flex gap-2">
                                 <?php if (strtolower($doc['status'] ?? '') !== 'routed'): ?>
-                                    <button type="button" class="route-btn flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg text-center transition" data-id="<?php echo $doc['id']; ?>" data-type="<?php echo htmlspecialchars($doc['document_type'] ?? ''); ?>" data-title="<?php echo htmlspecialchars($doc['title']); ?>" data-date="<?php echo htmlspecialchars($doc['document_date'] ?? ''); ?>" data-ref="<?php echo htmlspecialchars($doc['reference_number'] ?? ''); ?>" data-author="<?php echo htmlspecialchars($doc['source_system'] ?? 'LLRM'); ?>">
+                                    <button type="button" class="route-btn flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg text-center transition" data-id="<?php echo $doc['id']; ?>" data-type="<?php echo htmlspecialchars($doc['document_type'] ?? ''); ?>" data-title="<?php echo htmlspecialchars($doc['title']); ?>" data-date="<?php echo htmlspecialchars($doc['document_date'] ?? ''); ?>" data-ref="<?php echo htmlspecialchars($doc['reference_number'] ?? ''); ?>" data-author="<?php echo htmlspecialchars($doc['source_system'] ?? 'LLRM'); ?>" data-url="<?php echo htmlspecialchars($doc['file_path'] ?? ''); ?>">
                                         <i class="bi bi-folder-plus mr-1"></i> Route to Folder
                                     </button>
                                 <?php else: ?>
@@ -506,6 +506,7 @@ function formatFileSize($bytes) {
                 <!-- Actions -->
                 <div class="flex gap-2 justify-end">
                     <button type="button" onclick="closeRouteModal()" class="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg transition">Cancel</button>
+                    <button type="button" id="routeViewBtn" onclick="viewRouteFile()" class="hidden px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"><i class="bi bi-eye mr-1"></i>View</button>
                     <button type="button" id="routeConfirmBtn" class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition">Confirm Route</button>
                 </div>
             </div>
@@ -813,6 +814,9 @@ function formatFileSize($bytes) {
             if (clearSelBtn) clearSelBtn.addEventListener('click', clearSelection);
             updateBulkUi();
 
+            var routeViewBtn = document.getElementById('routeViewBtn');
+            var currentFileUrl = '';
+
             document.querySelectorAll('.route-btn').forEach(function(btn){
                 btn.addEventListener('click', function(){
                     bulkMode = false;
@@ -823,6 +827,7 @@ function formatFileSize($bytes) {
                     var date = this.getAttribute('data-date') || '';
                     var ref = this.getAttribute('data-ref') || '';
                     var author = this.getAttribute('data-author') || 'LLRM Import';
+                    currentFileUrl = this.getAttribute('data-url') || '';
 
                     if (routeTitle) routeTitle.textContent = title;
 
@@ -832,6 +837,15 @@ function formatFileSize($bytes) {
                     // Show AI scan section only for single mode
                     if (aiScanSection) aiScanSection.classList.remove('hidden');
                     if (aiScanStatus) aiScanStatus.classList.add('hidden');
+
+                    // Show/hide View button based on file availability
+                    if (routeViewBtn) {
+                        if (currentFileUrl) {
+                            routeViewBtn.classList.remove('hidden');
+                        } else {
+                            routeViewBtn.classList.add('hidden');
+                        }
+                    }
 
                     suggestions = [];
                     loadFolders(function(){
@@ -932,6 +946,13 @@ function formatFileSize($bytes) {
                 currentId = null;
                 currentIds = [];
                 bulkMode = false;
+                currentFileUrl = '';
+            };
+
+            window.viewRouteFile = function(){
+                if (currentFileUrl) {
+                    window.open(currentFileUrl, '_blank');
+                }
             };
 
             routeModal && routeModal.addEventListener('click', function(e){

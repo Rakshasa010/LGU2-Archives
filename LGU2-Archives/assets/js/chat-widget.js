@@ -154,6 +154,40 @@ const ArchiveAssistant = {
             el.textContent = text;
         }
         if (chip) el.insertBefore(chip, el.firstChild);
+        this.processNavigateMarkers(el);
+    },
+
+    processNavigateMarkers(el) {
+        const navPattern = /\[NAVIGATE:([\w]+):(\d+):(\d+):([^\]]+)\]/g;
+        let match;
+        while ((match = navPattern.exec(el.textContent)) !== null) {
+            const [full, source, id, folderId, title] = match;
+            let href = '';
+            if (source === 'legislative' || source === 'archive') {
+                href = `folder_view.php?id=${folderId}&highlight=${id}`;
+            } else if (source === 'external') {
+                href = `external-documents.php`;
+            }
+            if (href) {
+                const btn = document.createElement('a');
+                btn.href = href;
+                btn.target = '_blank';
+                btn.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition no-underline';
+                btn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Take me there';
+                const textNode = el.querySelector('*');
+                // Replace the marker text in the element
+                const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while ((node = walker.nextNode())) {
+                    if (node.textContent.includes(full)) {
+                        const after = node.splitText(node.textContent.indexOf(full));
+                        after.textContent = after.textContent.replace(full, '');
+                        node.parentNode.insertBefore(btn, after);
+                        break;
+                    }
+                }
+            }
+        }
     },
 
     buildMetaChip(attached, notes) {
