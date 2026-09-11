@@ -35,7 +35,6 @@ if (!isset($_SESSION['user_id'])) {
 
 try {
     require_once __DIR__ . '/../authdatabase.php';
-    require_once __DIR__ . '/../includes/gemini.php';
 } catch (Throwable $e) {
     while (ob_get_level()) { ob_end_clean(); }
     http_response_code(500);
@@ -50,7 +49,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!function_exists('gemini_is_configured') || !gemini_is_configured()) {
+// Read Gemini config directly from .env — no dependency on includes/gemini.php
+$geminiKey   = '';
+$geminiModel = 'gemini-2.5-flash';
+foreach (['../.env', '../../.env'] as $rel) {
+    $envPath = realpath(__DIR__ . '/' . $rel);
+    if ($envPath && is_file($envPath)) {
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) continue;
+            [$k, $v] = explode('=', $line, 2);
+            $k = trim($k);
+            $v = trim($v, " \t\n\r\0\"'");
+            if ($k === 'GEMINI_API_KEY' && $v !== '') $geminiKey = $v;
+            if ($k === 'GEMINI_MODEL'   && $v !== '') $geminiModel = $v;
+        }
+        break;
+    }
+}
+
+if ($geminiKey === '') {
     echo json_encode(['success' => false, 'error' => 'Gemini API key not configured on this server. Please fill fields manually.']);
     exit;
 }
@@ -145,7 +163,7 @@ if (in_array($ext_lower, $supportedPdf)) {
     exit;
 }
 
-$system = 'You are a metadata extraction assistant. Extract metadata from the document and return ONLY a JSON object with these keys: title, author, type, date (YYYY-MM-DD), reference_number. Use null for unknown fields.';
+$systemPrompt = 'You are a metadata extraction assistant. Extract metadata from the document and return ONLY a JSON object with these keys: title, author, type, date (YYYY-MM-DD), reference_number. Use null for unknown fields.';
 
 if ($mimeType === 'application/pdf') {
     $userMsg = 'Extract metadata from this PDF. Return ONLY the JSON object.';
@@ -158,28 +176,30 @@ if ($mimeType === 'application/pdf') {
     $parts = [['text' => $userMsg]];
 }
 
-$messages = [['role' => 'user', 'parts' => $parts]];
-
-// Build payload directly (avoids old gemini.php that sends temperature/topP which Gemini 3.5+ rejects).
-$cfg = gemini_config();
-$model = gemini_model();
-$apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent';
+// Build Gemini API payload — minimal, no temperature/topP/topK
 $payload = [
-    'contents' => $messages,
+    'contents' => [
+        ['role' => 'user', 'parts' => $parts],
+    ],
+    'systemInstruction' => [
+        'parts' => [['text' => $systemPrompt]],
+    ],
     'generationConfig' => [
         'maxOutputTokens' => 2048,
     ],
 ];
-if (!empty($system)) {
-    $payload['systemInstruction'] = ['parts' => [['text' => $system]]];
-}
+
+$apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' . $geminiModel . ':generateContent';
 
 $ch = curl_init($apiUrl);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
     CURLOPT_POSTFIELDS     => json_encode($payload),
-    CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'x-goog-api-key: ' . $cfg['key']],
+    CURLOPT_HTTPHEADER     => [
+        'Content-Type: application/json',
+        'x-goog-api-key: ' . $geminiKey,
+    ],
     CURLOPT_TIMEOUT        => 120,
     CURLOPT_CONNECTTIMEOUT => 15,
     CURLOPT_SSL_VERIFYPEER => true,
@@ -196,9 +216,11 @@ if ($curlErr !== '') {
 }
 
 $apiData = json_decode((string)$rawBody, true);
+
 if ($httpStatus < 200 || $httpStatus >= 300) {
     $apiMsg = $apiData['error']['message'] ?? ('HTTP ' . $httpStatus);
-    error_log('[ai-extract-metadata] Gemini error (HTTP ' . $httpStatus . '): ' . $apiMsg);
+    $apiStatus = $apiData['error']['status'] ?? '';
+    error_log('[ai-extract-metadata] Gemini error (HTTP ' . $httpStatus . ' status=' . $apiStatus . '): ' . $apiMsg);
     echo json_encode(['success' => false, 'error' => 'AI failed: ' . $apiMsg]);
     exit;
 }
