@@ -120,13 +120,55 @@ if ($ext_lower === 'pdf') {
     exit;
 }
 
-$prompt = 'You are a metadata extraction assistant. '
+$prompt = 'You are a metadata extraction assistant for Philippine LGU (Local Government Unit) documents. '
     . 'Extract metadata from the document below and return ONLY a JSON object (no markdown, no code fences) '
     . 'with these keys: title, author, type, date, reference_number. '
     . 'Use null for unknown fields. '
     . '"type" must be one of: ordinance, resolution, public hearing, meeting, executive order, '
     . 'memorandum, certificate, permit, contract, report, letter, form, other. '
-    . '"date" must be YYYY-MM-DD format.';
+    . '"date" must be YYYY-MM-DD format. '
+    . '"author" is the person or office that created/authored the document. '
+    . 'Look for these keywords (in order of priority): '
+    '"Authored by:", "Co-Authored by:", "Author:", "FROM:", "Filed by:", "Prepared by:", '
+    '"Submitted by:", "By:", "Issued by:", "Approved by:", "By order of:". '
+    . 'If the document has a signing official (e.g. "Mayor", "City Mayor", "Governor"), '
+    . 'use their name. For resolutions/ordinances, the author is usually the author/sponsor listed near the title.';
+
+// ── Pre-scan text for author keywords ───────────────────────────────
+function scan_for_authors($text) {
+    $keywords = [
+        'authored by', 'co-authored by', 'author:',
+        'from:', 'filed by:', 'prepared by:',
+        'submitted by:', 'issued by:', 'approved by:',
+        'by order of:', 'signed by:',
+    ];
+    $candidates = [];
+    $lines = explode("\n", $text);
+    foreach ($lines as $line) {
+        $lower = strtolower(trim($line));
+        foreach ($keywords as $kw) {
+            $pos = strpos($lower, $kw);
+            if ($pos !== false) {
+                $value = trim(substr($line, $pos + strlen($kw)));
+                $value = preg_replace('/^[:\-\s]+/', '', $value);
+                $value = preg_replace('/\s+$/', '', $value);
+                if (strlen($value) >= 2 && strlen($value) <= 120) {
+                    $candidates[] = $kw . ' ' . $value;
+                }
+            }
+        }
+    }
+    // Also look for "HON. NAME" or "HON. NAME, TITLE" patterns near "Approved" or "By:"
+    if (preg_match_all('/(?:Approved|By)\s*[:.]?\s*(HON\.?\s+[A-Z][A-Z\s\.]+(?:,\s*[A-Z\s]+)?)/i', $text, $m)) {
+        foreach ($m[1] as $name) {
+            $clean = trim(preg_replace('/\s+/', ' ', $name));
+            if (strlen($clean) >= 4 && !in_array($clean, $candidates)) {
+                $candidates[] = 'Approved by: ' . $clean;
+            }
+        }
+    }
+    return array_unique($candidates);
+}
 
 if ($mimeType === 'application/pdf') {
     // Extract text from PDF — don't send raw PDF as inlineData (Gemini rejects it).
@@ -193,13 +235,21 @@ if ($mimeType === 'application/pdf') {
         $pdfText = mb_substr($pdfText, 0, 120000);
     }
 
+    // Run author pre-scan on extracted PDF text
+    $authorHints = scan_for_authors($pdfText);
+
     $fname = $ext['file_name'] ?? basename($absFile);
-    $parts = [['text' => $prompt . "\n\nFilename: {$fname}\n\nContent extracted from PDF:\n{$pdfText}"]];
+    $hintBlock = !empty($authorHints) ? "\n\nAuthor candidates found in the document:\n- " . implode("\n- ", $authorHints) : '';
+    $parts = [['text' => $prompt . $hintBlock . "\n\nFilename: {$fname}\n\nContent extracted from PDF:\n{$pdfText}"]];
     unset($raw);
 
 } else {
+    // Run author pre-scan on text/DOCX content
+    $authorHints = scan_for_authors($fileContent);
+
     $fname = $ext['file_name'] ?? basename($absFile);
-    $parts = [['text' => $prompt . "\n\nFilename: {$fname}\n\nContent:\n{$fileContent}"]];
+    $hintBlock = !empty($authorHints) ? "\n\nAuthor candidates found in the document:\n- " . implode("\n- ", $authorHints) : '';
+    $parts = [['text' => $prompt . $hintBlock . "\n\nFilename: {$fname}\n\nContent:\n{$fileContent}"]];
 }
 
 $payload = [
@@ -212,7 +262,7 @@ $payload = [
 ];
 
 $url = "https://generativelanguage.googleapis.com/v1beta/models/{$geminiModel}:generateContent";
-error_log("[metadata-scan-v3] model={$geminiModel} file=" . basename($absFile));
+error_log("[metadata-scan-v3] model={$geminiModel} file=" . basename($absFile) . " author_hints=" . count($authorHints));
 
 $ch = curl_init($url);
 curl_setopt_array($ch, [
