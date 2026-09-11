@@ -292,12 +292,8 @@ function gemini_chat_system_prompt($conn) {
     }
 
     $ext = $conn->query(
-        "SELECT ed.id, ed.title, ed.document_type, ed.reference_number, ed.description, ed.status,
-                ed.folder_id, ed.created_at,
-                COALESCE(lf.name, lf2.name, 'Unfiled') AS folder
+        "SELECT ed.id, ed.title, ed.document_type, ed.reference_number, ed.description, ed.status, ed.created_at
          FROM external_documents ed
-         LEFT JOIN legislative_folders lf ON ed.folder_id = lf.id AND ed.route_to = 'legislative'
-         LEFT JOIN archive_folders lf2 ON ed.folder_id = lf2.id AND ed.route_to = 'archive'
          ORDER BY ed.created_at DESC LIMIT 20"
     );
     if ($ext) {
