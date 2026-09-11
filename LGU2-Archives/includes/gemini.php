@@ -68,17 +68,24 @@ function gemini_endpoint($stream = false) {
  *
  * @param string $system  System instruction text (optional).
  * @param array  $messages List of ['role' => 'user'|'model', 'parts' => [['text' => ...]]].
- * @param array  $opts    temperature, maxOutputTokens, topP.
+ * @param array  $opts    maxOutputTokens, and optionally temperature/topP (not supported on Gemini 3.5+).
  * @return array
  */
 function gemini_request_payload($system, array $messages, array $opts = []) {
+    $genConfig = [
+        'maxOutputTokens' => $opts['maxOutputTokens'] ?? 2048,
+    ];
+    // Gemini 3.5+ no longer accepts temperature/topP in generationConfig;
+    // only include them when explicitly provided by the caller.
+    if (isset($opts['temperature'])) {
+        $genConfig['temperature'] = $opts['temperature'];
+    }
+    if (isset($opts['topP'])) {
+        $genConfig['topP'] = $opts['topP'];
+    }
     $payload = [
-        'contents' => array_values($messages),
-        'generationConfig' => [
-            'temperature'     => $opts['temperature'] ?? 0.7,
-            'maxOutputTokens' => $opts['maxOutputTokens'] ?? 2048,
-            'topP'            => $opts['topP'] ?? 0.95,
-        ],
+        'contents'         => array_values($messages),
+        'generationConfig' => $genConfig,
     ];
     if (!empty($system)) {
         $payload['systemInstruction'] = ['parts' => [['text' => $system]]];
@@ -837,7 +844,6 @@ function gemini_file_content_part($absPath, $label = '') {
  */
 function gemini_compare_versions($v1, $v2, $conn, array $opts = []) {
     $opts += [
-        'temperature'     => 0.2,
         'maxOutputTokens' => 8192,
     ];
 
