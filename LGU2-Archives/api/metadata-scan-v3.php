@@ -129,8 +129,8 @@ $prompt = 'You are a metadata extraction assistant for Philippine LGU (Local Gov
     . '"date" must be YYYY-MM-DD format. '
     . '"author" is the person or office that created/authored the document. '
     . 'Look for these keywords (in order of priority): '
-    '"Authored by:", "Co-Authored by:", "Author:", "FROM:", "Filed by:", "Prepared by:", '
-    '"Submitted by:", "By:", "Issued by:", "Approved by:", "By order of:". '
+    . '"Authored by:", "Co-Authored by:", "Author:", "FROM:", "Filed by:", "Prepared by:", '
+    . '"Submitted by:", "By:", "Issued by:", "Approved by:", "By order of:". '
     . 'If the document has a signing official (e.g. "Mayor", "City Mayor", "Governor"), '
     . 'use their name. For resolutions/ordinances, the author is usually the author/sponsor listed near the title.';
 
