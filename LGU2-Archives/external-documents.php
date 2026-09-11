@@ -753,7 +753,7 @@ function formatFileSize($bytes) {
                 aiScanBtn.addEventListener('click', function() {
                     if (!currentId) return;
                     setAiLoading(true);
-                    var apiUrl = window.location.pathname.replace(/\/[^\/]*$/, '') + '/api/ai-extract-metadata.php';
+                    var apiUrl = window.location.pathname.replace(/\/[^\/]*$/, '') + '/api/metadata-scan.php';
                     var body = 'external_id=' + encodeURIComponent(currentId);
                     fetch(apiUrl, {
                         method: 'POST',
