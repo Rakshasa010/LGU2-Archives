@@ -147,26 +147,29 @@ const ArchiveAssistant = {
 
     renderMarkdown(el, text) {
         const chip = el.querySelector('[data-ai-meta]');
+        // Extract NAVIGATE markers before markdown rendering
+        const navPattern = /\[NAVIGATE:([\w]+):(\d+):(\d+):([^\]]+)\]/g;
+        const navMatches = [];
+        let cleanText = text;
+        let m;
+        while ((m = navPattern.exec(text)) !== null) {
+            navMatches.push({ source: m[1], id: m[2], folderId: m[3], title: m[4] });
+        }
+        cleanText = text.replace(navPattern, '').trim();
         if (window.marked && window.DOMPurify) {
-            el.innerHTML = window.DOMPurify.sanitize(window.marked.parse(text || ''));
+            el.innerHTML = window.DOMPurify.sanitize(window.marked.parse(cleanText || ''));
         } else {
             el.classList.add('whitespace-pre-wrap');
-            el.textContent = text;
+            el.textContent = cleanText;
         }
         if (chip) el.insertBefore(chip, el.firstChild);
-        this.processNavigateMarkers(el);
-    },
-
-    processNavigateMarkers(el) {
-        const navPattern = /\[NAVIGATE:([\w]+):(\d+):(\d+):([^\]]+)\]/g;
-        let match;
-        while ((match = navPattern.exec(el.textContent)) !== null) {
-            const [full, source, id, folderId, title] = match;
+        // Render navigation buttons
+        navMatches.forEach(function(nav) {
             let href = '';
-            if (source === 'legislative' || source === 'archive') {
-                href = `folder_view.php?id=${folderId}&highlight=${id}`;
-            } else if (source === 'external') {
-                href = `external-documents.php`;
+            if (nav.source === 'legislative' || nav.source === 'archive') {
+                href = 'folder_view.php?id=' + nav.folderId + '&highlight=' + nav.id;
+            } else if (nav.source === 'external') {
+                href = 'external-documents.php';
             }
             if (href) {
                 const btn = document.createElement('a');
@@ -174,20 +177,9 @@ const ArchiveAssistant = {
                 btn.target = '_blank';
                 btn.className = 'inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition no-underline';
                 btn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Take me there';
-                const textNode = el.querySelector('*');
-                // Replace the marker text in the element
-                const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
-                let node;
-                while ((node = walker.nextNode())) {
-                    if (node.textContent.includes(full)) {
-                        const after = node.splitText(node.textContent.indexOf(full));
-                        after.textContent = after.textContent.replace(full, '');
-                        node.parentNode.insertBefore(btn, after);
-                        break;
-                    }
-                }
+                el.appendChild(btn);
             }
-        }
+        });
     },
 
     buildMetaChip(attached, notes) {
