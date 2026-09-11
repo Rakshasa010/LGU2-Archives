@@ -919,7 +919,15 @@ function formatFileSize($fileSize) {
                                     elseif (in_array($fileExt, ['mp4','avi','mov'])) $iconClass = 'bi-file-earmark-play text-pink-500';
                                     elseif (in_array($fileExt, ['doc','docx'])) $iconClass = 'bi-file-earmark-word text-blue-700';
                                     $fileSize = $record['file_size'] ?? (file_exists($fileUrl) ? filesize($fileUrl) : 0);
-                                    $uniqueId = !empty($record['unique_number']) ? htmlspecialchars($record['unique_number']) : sprintf("DOC-%06d", $record['id']);
+                                    $docType = strtolower(trim($record['type'] ?? ''));
+                                    if (in_array($docType, ['ordinance', 'resolution'])) {
+                                        $typePrefix = $docType === 'ordinance' ? 'ORD' : 'RES';
+                                        $docDate = $record['document_date'] ?? $record['created_at'] ?? date('Y-m-d');
+                                        $docYear = date('Y', strtotime($docDate));
+                                        $uniqueId = $typePrefix . '-' . $docYear . '-' . str_pad($record['id'], 3, '0', STR_PAD_LEFT);
+                                    } else {
+                                        $uniqueId = !empty($record['unique_number']) ? htmlspecialchars($record['unique_number']) : sprintf("DOC-%06d", $record['id']);
+                                    }
                                 ?>
                                 <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group relative flex flex-col overflow-hidden" id="record-<?php echo $record['id']; ?>">
                                     <!-- Thumbnail Preview Area -->
@@ -979,7 +987,7 @@ function formatFileSize($fileSize) {
                                         <!-- Unique ID Badge -->
                                         <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600">
                                             <div class="bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/30 text-center">
-                                                <div class="text-xs text-blue-700 dark:text-blue-300 font-semibold">Document ID</div>
+                                                <div class="text-xs text-blue-700 dark:text-blue-300 font-semibold"><?php echo in_array($docType, ['ordinance', 'resolution']) ? ($docType === 'ordinance' ? 'Ordinance ID' : 'Resolution ID') : 'Document ID'; ?></div>
                                                 <div class="text-xs font-mono text-blue-900 dark:text-blue-200 font-bold"><?php echo $uniqueId; ?></div>
                                             </div>
                                         </div>
@@ -1756,7 +1764,16 @@ function formatFileSize($fileSize) {
                 else if (['mp4','avi','mov','webm','ogg'].includes(fileExt)) iconClass = 'bi-file-earmark-play text-pink-500';
                 else if (['doc','docx'].includes(fileExt)) iconClass = 'bi-file-earmark-word text-blue-700';
                 const fileSize = record.file_size || 0;
-                const uniqueId = record.unique_number || 'DOC-' + String(record.id).padStart(6, '0');
+                const docType = (record.type || '').toLowerCase().trim();
+                let uniqueId;
+                if (docType === 'ordinance' || docType === 'resolution') {
+                    const typePrefix = docType === 'ordinance' ? 'ORD' : 'RES';
+                    const docDate = record.document_date || record.created_at || new Date().toISOString();
+                    const docYear = new Date(docDate).getFullYear();
+                    uniqueId = typePrefix + '-' + docYear + '-' + String(record.id).padStart(3, '0');
+                } else {
+                    uniqueId = record.unique_number || 'DOC-' + String(record.id).padStart(6, '0');
+                }
                 const author = record.author || 'Unknown';
                 const date = record.file_date ? new Date(record.file_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (record.month ? record.month + ' ' + record.year : new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
                 
@@ -1790,7 +1807,7 @@ function formatFileSize($fileSize) {
                         </div>
                         <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600">
                             <div class="bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/30 text-center">
-                                <div class="text-xs text-blue-700 dark:text-blue-300 font-semibold">Document ID</div>
+                                <div class="text-xs text-blue-700 dark:text-blue-300 font-semibold">${docType === 'ordinance' ? 'Ordinance ID' : docType === 'resolution' ? 'Resolution ID' : 'Document ID'}</div>
                                 <div class="text-xs font-mono text-blue-900 dark:text-blue-200 font-bold">${uniqueId}</div>
                             </div>
                         </div>
