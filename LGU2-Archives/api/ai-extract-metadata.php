@@ -160,18 +160,65 @@ if ($mimeType === 'application/pdf') {
 
 $messages = [['role' => 'user', 'parts' => $parts]];
 
-$result = gemini_generate($system, $messages, [
-    'maxOutputTokens' => 2048,
-]);
+// Build payload directly (avoids old gemini.php that sends temperature/topP which Gemini 3.5+ rejects).
+$cfg = gemini_config();
+$model = gemini_model();
+$apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent';
+$payload = [
+    'contents' => $messages,
+    'generationConfig' => [
+        'maxOutputTokens' => 2048,
+    ],
+];
+if (!empty($system)) {
+    $payload['systemInstruction'] = ['parts' => [['text' => $system]]];
+}
 
-if (!$result['success']) {
-    $debugInfo = $result['status'] ?? 'no_status';
-    error_log('[ai-extract-metadata] Gemini failed (HTTP ' . $debugInfo . '): ' . ($result['error'] ?? 'unknown'));
-    echo json_encode(['success' => false, 'error' => 'AI failed: ' . ($result['error'] ?? 'Unknown error')]);
+$ch = curl_init($apiUrl);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => json_encode($payload),
+    CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'x-goog-api-key: ' . $cfg['key']],
+    CURLOPT_TIMEOUT        => 120,
+    CURLOPT_CONNECTTIMEOUT => 15,
+    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_SSL_VERIFYHOST => 2,
+]);
+$rawBody = curl_exec($ch);
+$curlErr = curl_error($ch);
+$httpStatus = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+curl_close($ch);
+
+if ($curlErr !== '') {
+    echo json_encode(['success' => false, 'error' => 'Gemini request failed: ' . $curlErr]);
     exit;
 }
 
-$responseText = trim($result['text'] ?? '');
+$apiData = json_decode((string)$rawBody, true);
+if ($httpStatus < 200 || $httpStatus >= 300) {
+    $apiMsg = $apiData['error']['message'] ?? ('HTTP ' . $httpStatus);
+    error_log('[ai-extract-metadata] Gemini error (HTTP ' . $httpStatus . '): ' . $apiMsg);
+    echo json_encode(['success' => false, 'error' => 'AI failed: ' . $apiMsg]);
+    exit;
+}
+
+$responseText = '';
+foreach (($apiData['candidates'][0]['content']['parts'] ?? []) as $part) {
+    if (isset($part['text'])) {
+        $responseText .= $part['text'];
+    }
+}
+if ($responseText === '' && isset($apiData['promptFeedback']['blockReason'])) {
+    echo json_encode(['success' => false, 'error' => 'AI blocked: ' . $apiData['promptFeedback']['blockReason']]);
+    exit;
+}
+if ($responseText === '') {
+    echo json_encode(['success' => false, 'error' => 'AI returned empty response']);
+    exit;
+}
+
+$responseText = trim($responseText);
 $responseText = preg_replace('/^```(?:json)?\s*/i', '', $responseText);
 $responseText = preg_replace('/\s*```\s*$/i', '', $responseText);
 $responseText = trim($responseText);
