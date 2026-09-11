@@ -4,6 +4,8 @@
  *
  * POST { external_id: int }
  * Returns: { success, metadata? | error }
+ *
+ * VERSION: 2026-09-11-direct-curl (no gemini.php dependency)
  */
 
 error_reporting(0);
@@ -21,7 +23,7 @@ register_shutdown_function(function() {
         while (ob_get_level()) { ob_end_clean(); }
         header('Content-Type: application/json');
         http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Fatal: ' . $error['message']]);
+        echo json_encode(['success' => false, 'error' => 'Fatal: ' . $error['message'], '_version' => '2026-09-11-direct-curl']);
     }
 });
 
@@ -38,7 +40,7 @@ try {
 } catch (Throwable $e) {
     while (ob_get_level()) { ob_end_clean(); }
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Init failed: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Init failed: ' . $e->getMessage(), '_version' => '2026-09-11-direct-curl']);
     exit;
 }
 
@@ -52,9 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Read Gemini config directly from .env — no dependency on includes/gemini.php
 $geminiKey   = '';
 $geminiModel = 'gemini-2.5-flash';
+$envFound    = false;
 foreach (['../.env', '../../.env'] as $rel) {
     $envPath = realpath(__DIR__ . '/' . $rel);
     if ($envPath && is_file($envPath)) {
+        $envFound = true;
         foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             $line = trim($line);
             if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) continue;
@@ -69,7 +73,7 @@ foreach (['../.env', '../../.env'] as $rel) {
 }
 
 if ($geminiKey === '') {
-    echo json_encode(['success' => false, 'error' => 'Gemini API key not configured on this server. Please fill fields manually.']);
+    echo json_encode(['success' => false, 'error' => 'Gemini API key not configured on this server. Please fill fields manually.', '_version' => '2026-09-11-direct-curl']);
     exit;
 }
 
@@ -185,11 +189,13 @@ $payload = [
         'parts' => [['text' => $systemPrompt]],
     ],
     'generationConfig' => [
-        'maxOutputTokens' => 2048,
+        'maxOutputTokens' => 4096,
     ],
 ];
 
 $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' . $geminiModel . ':generateContent';
+
+error_log('[ai-extract-metadata] Calling ' . $geminiModel . ' | model=' . $geminiModel . ' | file=' . basename($absFile) . ' | type=' . $mimeType . ' | size=' . strlen($fileContent));
 
 $ch = curl_init($apiUrl);
 curl_setopt_array($ch, [
@@ -211,17 +217,25 @@ $httpStatus = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
 curl_close($ch);
 
 if ($curlErr !== '') {
-    echo json_encode(['success' => false, 'error' => 'Gemini request failed: ' . $curlErr]);
+    error_log('[ai-extract-metadata] cURL error: ' . $curlErr);
+    echo json_encode(['success' => false, 'error' => 'Gemini request failed: ' . $curlErr, '_version' => '2026-09-11-direct-curl']);
     exit;
 }
 
 $apiData = json_decode((string)$rawBody, true);
 
+error_log('[ai-extract-metadata] Gemini response HTTP ' . $httpStatus . ': ' . substr((string)$rawBody, 0, 1000));
+
 if ($httpStatus < 200 || $httpStatus >= 300) {
-    $apiMsg = $apiData['error']['message'] ?? ('HTTP ' . $httpStatus);
+    $apiMsg    = $apiData['error']['message'] ?? ('HTTP ' . $httpStatus);
     $apiStatus = $apiData['error']['status'] ?? '';
-    error_log('[ai-extract-metadata] Gemini error (HTTP ' . $httpStatus . ' status=' . $apiStatus . '): ' . $apiMsg);
-    echo json_encode(['success' => false, 'error' => 'AI failed: ' . $apiMsg]);
+    error_log('[ai-extract-metadata] FAILED (HTTP ' . $httpStatus . ' status=' . $apiStatus . '): ' . $apiMsg);
+    echo json_encode([
+        'success' => false,
+        'error'   => 'Gemini API error (HTTP ' . $httpStatus . '): ' . $apiMsg,
+        'status'  => $apiStatus,
+        '_version' => '2026-09-11-direct-curl',
+    ]);
     exit;
 }
 
@@ -232,11 +246,12 @@ foreach (($apiData['candidates'][0]['content']['parts'] ?? []) as $part) {
     }
 }
 if ($responseText === '' && isset($apiData['promptFeedback']['blockReason'])) {
-    echo json_encode(['success' => false, 'error' => 'AI blocked: ' . $apiData['promptFeedback']['blockReason']]);
+    echo json_encode(['success' => false, 'error' => 'AI blocked: ' . $apiData['promptFeedback']['blockReason'], '_version' => '2026-09-11-direct-curl']);
     exit;
 }
 if ($responseText === '') {
-    echo json_encode(['success' => false, 'error' => 'AI returned empty response']);
+    $finish = $apiData['candidates'][0]['finishReason'] ?? 'unknown';
+    echo json_encode(['success' => false, 'error' => 'AI returned empty response (finish: ' . $finish . ')', '_version' => '2026-09-11-direct-curl']);
     exit;
 }
 
@@ -252,7 +267,7 @@ if (!is_array($metadata) && preg_match('/\{[\s\S]*\}/', $responseText, $m)) {
 }
 
 if (!is_array($metadata)) {
-    echo json_encode(['success' => false, 'error' => 'AI returned invalid response. Fill fields manually.']);
+    echo json_encode(['success' => false, 'error' => 'AI returned invalid response. Fill fields manually.', '_raw' => $responseText, '_version' => '2026-09-11-direct-curl']);
     exit;
 }
 
@@ -274,4 +289,4 @@ echo json_encode(['success' => true, 'metadata' => [
     'type'             => $cleanType !== '' ? $cleanType : null,
     'date'             => $cleanDate,
     'reference_number' => !empty($metadata['reference_number']) ? trim($metadata['reference_number']) : null,
-]]);
+], '_version' => '2026-09-11-direct-curl']);
