@@ -267,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (isset($success)): ?>
             <div class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-700/60 text-green-700 dark:text-green-300 rounded-xl font-semibold flex items-start gap-3">
                 <i class="bi bi-check-circle-fill text-xl flex-shrink-0"></i>
-                <span><?php echo strip_tags($success); ?></span>
+                <span><?php echo $success; ?></span>
             </div>
         <?php endif; ?>
 

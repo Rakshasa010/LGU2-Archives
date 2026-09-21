@@ -511,6 +511,21 @@ foreach ($external_docs_cols as $col => $def) {
     }
 }
 
+// AI Comparison Logs table
+$ai_logs_sql = "CREATE TABLE IF NOT EXISTS ai_comparison_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    file_v1_name VARCHAR(255) DEFAULT NULL,
+    file_v2_name VARCHAR(255) DEFAULT NULL,
+    folder_name VARCHAR(255) DEFAULT NULL,
+    comparison_type ENUM('ai','text') DEFAULT 'ai',
+    status ENUM('success','failed') DEFAULT 'success',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user (user_id),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+$conn->query($ai_logs_sql);
+
 } // end include guard
 
 // Database setup completed - no output when included

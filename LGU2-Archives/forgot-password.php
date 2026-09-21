@@ -53,7 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $cfg = require $cfgFile;
                 $smtpUser = trim((string)($cfg['username'] ?? ''));
                 $smtpPass = trim((string)($cfg['password'] ?? ''));
-                if ($smtpUser !== '' && $smtpPass !== '') {
+                $isPlaceholder = (stripos($smtpUser, 'YOUR_GMAIL') !== false) || (stripos($smtpPass, 'YOUR_16_CHAR') !== false);
+                if ($smtpUser !== '' && $smtpPass !== '' && !$isPlaceholder) {
                     try {
                         require_once __DIR__ . '/PHPMailer-master/src/Exception.php';
                         require_once __DIR__ . '/PHPMailer-master/src/PHPMailer.php';

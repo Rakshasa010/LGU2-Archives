@@ -67,6 +67,7 @@ if ($fileV1 !== null || $fileV2 !== null) {
         exit;
     }
     $result = gemini_compare_versions($fileV1, $fileV2, $conn);
+    gemini_log_comparison($conn, $_SESSION['user_id'], $result, $fileV1, $fileV2, 'ai');
     gemini_respond_compare($result);
     exit;
 }
@@ -108,6 +109,7 @@ if ($compareRefs && $compareRefs['v1'] !== null && $compareRefs['v2'] !== null) 
         exit;
     }
     $result = gemini_compare_versions($compareRefs['v1'], $compareRefs['v2'], $conn);
+    gemini_log_comparison($conn, $_SESSION['user_id'], $result, $compareRefs['v1'], $compareRefs['v2'], 'ai');
     if ($result['success']) {
         echo json_encode([
             'success'      => true,
@@ -232,6 +234,26 @@ if ($result['success']) {
     echo json_encode(['success' => false, 'mode' => 'chat', 'error' => $result['error'], 'notes' => $notes]);
 }
 exit;
+
+/**
+ * Log an AI version comparison to the ai_comparison_logs table.
+ */
+function gemini_log_comparison($conn, $userId, $result, $fileV1, $fileV2, $type = 'ai') {
+    $v1Name = $result['file_v1_name'] ?? null;
+    $v2Name = $result['file_v2_name'] ?? null;
+    $status = !empty($result['success']) ? 'success' : 'failed';
+    $folder = null;
+    if (is_array($fileV1) && isset($fileV1['source']) && $fileV1['source'] === 'archive' && isset($fileV1['id'])) {
+        $folderQ = $conn->query("SELECT fo.name FROM archive_files af LEFT JOIN archive_folders fo ON fo.id = af.folder_id WHERE af.id = " . (int)$fileV1['id']);
+        if ($folderQ && $row = $folderQ->fetch_assoc()) $folder = $row['name'];
+    }
+    $stmt = $conn->prepare("INSERT INTO ai_comparison_logs (user_id, file_v1_name, file_v2_name, folder_name, comparison_type, status) VALUES (?, ?, ?, ?, ?, ?)");
+    if ($stmt) {
+        $stmt->bind_param("isssss", $userId, $v1Name, $v2Name, $folder, $type, $status);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
 
 /**
  * Emit a version-comparison response (shared by the dedicated compare endpoint

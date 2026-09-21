@@ -1009,7 +1009,7 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                     data: {
                         labels: storageLabels,
                         datasets: [{
-                            label: 'Storage Used (Bytes)',
+                            label: 'Storage Used',
                             data: storageValues,
                             borderColor: '#dc2626',
                             backgroundColor: 'rgba(220, 38, 38, 0.2)',
@@ -1023,7 +1023,18 @@ if (is_string($profile_picture) && $profile_picture !== '') {
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { ticks: { maxRotation: 0, autoSkip: true } },
-                            y: { beginAtZero: true, precision: 0 }
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0,
+                                    callback: function(value) {
+                                        if (value >= 1073741824) return (value / 1073741824).toFixed(1) + ' GB';
+                                        if (value >= 1048576) return (value / 1048576).toFixed(1) + ' MB';
+                                        if (value >= 1024) return (value / 1024).toFixed(1) + ' KB';
+                                        return value + ' B';
+                                    }
+                                }
+                            }
                         }
                     }
                 });

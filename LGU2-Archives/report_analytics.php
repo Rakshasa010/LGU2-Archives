@@ -394,6 +394,26 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     } else {
         fputcsv($out, ['No recent activity available']);
     }
+    fputcsv($out, []);
+    fputcsv($out, ['Monitored User Activity Logs']);
+    if ($conn->query("SHOW TABLES LIKE 'notifications'")->num_rows > 0) {
+        $ml_export = $conn->query("SELECT user_name, about, content, date, time, status, created_at FROM notifications WHERE about = 'Monitored User Activity' ORDER BY created_at DESC LIMIT 50");
+        if ($ml_export && $ml_export->num_rows > 0) {
+            fputcsv($out, ['User', 'Action', 'Content', 'Date', 'Time', 'Status']);
+            while ($ml = $ml_export->fetch_assoc()) {
+                fputcsv($out, [
+                    $ml['user_name'] ?? '',
+                    $ml['about'] ?? '',
+                    $ml['content'] ?? '',
+                    $ml['date'] ?? '',
+                    $ml['time'] ?? '',
+                    $ml['status'] ?? '',
+                ]);
+            }
+        } else {
+            fputcsv($out, ['No monitored activity available']);
+        }
+    }
     fclose($out);
     exit();
 }
@@ -508,50 +528,31 @@ if ($folders_result && $folders_result->num_rows > 0) {
     }
 }
 
-// Funnel and active users
-$views_by_type = [];
-$funnel_types = [];
-$has_ae = $conn->query("SHOW TABLES LIKE 'analytics_events'");
-if ($has_ae && $has_ae->num_rows > 0) {
-    $vw_where = "event_type='view'";
-    if ($f_start) $vw_where .= " AND created_at >= '".$conn->real_escape_string($f_start)." 00:00:00'";
-    if ($f_end) $vw_where .= " AND created_at <= '".$conn->real_escape_string($f_end)." 23:59:59'";
-    if ($safe_type) $vw_where .= " AND record_type = '".$safe_type."'";
-    $qe = $conn->query("SELECT COALESCE(record_type,'Unknown') AS k, COUNT(*) AS c FROM analytics_events WHERE $vw_where GROUP BY COALESCE(record_type,'Unknown')");
-    if ($qe) { while ($r = $qe->fetch_assoc()) $views_by_type[$r['k']] = (int)$r['c']; }
-    $funnel_types = array_unique(array_merge(array_keys($views_by_type), array_keys($stats['downloads_by_type'] ?? [])));
-    $dau = 0; $wau = 0; $mau = 0;
-    $col = $conn->query("SHOW COLUMNS FROM analytics_events LIKE 'user_id'");
-    if ($col && $col->num_rows > 0) {
-        $q1 = $conn->query("SELECT COUNT(DISTINCT user_id) AS c FROM analytics_events WHERE created_at >= CURDATE()");
-        if ($q1 && ($r=$q1->fetch_assoc())) $dau = (int)$r['c'];
-        $q2 = $conn->query("SELECT COUNT(DISTINCT user_id) AS c FROM analytics_events WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)");
-        if ($q2 && ($r=$q2->fetch_assoc())) $wau = (int)$r['c'];
-        $q3 = $conn->query("SELECT COUNT(DISTINCT user_id) AS c FROM analytics_events WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
-        if ($q3 && ($r=$q3->fetch_assoc())) $mau = (int)$r['c'];
-    }
-    $top_downloaders = [];
-    $qd = $conn->query("SELECT ae.user_id, 
-                        COALESCE(NULLIF(u.full_name,''), 
-                                 NULLIF(u.username,''), 
-                                 NULLIF(u.email,''), 
-                                 CONCAT('User #', ae.user_id)) AS name, 
-                        COUNT(*) AS c
-                        FROM analytics_events ae
-                        LEFT JOIN users u ON u.id = ae.user_id
-                        WHERE ae.event_type='download' AND ae.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                        GROUP BY ae.user_id, name
-                        ORDER BY c DESC
-                        LIMIT 10");
-    if ($qd) { while ($r = $qd->fetch_assoc()) $top_downloaders[] = $r; }
-} else {
-    $funnel_types = array_keys($stats['downloads_by_type'] ?? []);
-    $dau = $wau = $mau = 0;
-    $top_downloaders = [];
+// AI Comparison Logs
+$ai_logs = [];
+if ($conn->query("SHOW TABLES LIKE 'ai_comparison_logs'")->num_rows > 0) {
+    $ai_q = $conn->query("SELECT acl.*, u.full_name AS user_name
+                           FROM ai_comparison_logs acl
+                           LEFT JOIN users u ON u.id = acl.user_id
+                           ORDER BY acl.created_at DESC
+                           LIMIT 20");
+    if ($ai_q) while ($r = $ai_q->fetch_assoc()) $ai_logs[] = $r;
 }
-$funnel_types = array_values($funnel_types);
+
+// Monitored User Activity Logs
+$monitored_logs = [];
+if ($conn->query("SHOW TABLES LIKE 'notifications'")->num_rows > 0) {
+    $ml_q = $conn->query("SELECT n.*, u.full_name AS user_full_name
+                           FROM notifications n
+                           LEFT JOIN users u ON u.full_name = n.user_name
+                           WHERE n.about = 'Monitored User Activity'
+                           ORDER BY n.created_at DESC
+                           LIMIT 50");
+    if ($ml_q) while ($r = $ml_q->fetch_assoc()) $monitored_logs[] = $r;
+}
 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -703,14 +704,13 @@ $funnel_types = array_values($funnel_types);
                             <div class="flex flex-col items-end gap-1">
                                 <div class="flex items-center gap-2">
                                     <button id="export-txt-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export Plain</button>
-                                    <?php /* <button id="export-pdf-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</button> */ ?>
+                                    <button id="export-pdf-btn" class="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200">Export CSV</button>
                                     <a href="archives-landing.php" class="px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white">Back</a>
                                     <div class="relative">
                                         <button id="more-actions-btn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200" title="More options">
                                             <i class="bi bi-three-dots-vertical text-lg"></i>
                                         </button>
                                         <div id="more-actions-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
-                                            <a href="<?php echo htmlspecialchars($exportUrl); ?>" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Export CSV</a>
                                             <button id="refresh-analytics" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">Refresh Data</button>
                                             <a href="audit-logs.php" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">View Audit Logs</a>
                                         </div>
@@ -731,6 +731,7 @@ $funnel_types = array_values($funnel_types);
                                         <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo $stats['total_records']; ?></div>
                                     </div>
                                 </div>
+                                <div class="mt-3 h-10"><canvas id="sparkTotalRecords"></canvas></div>
                             </div>
                             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
@@ -740,6 +741,7 @@ $funnel_types = array_values($funnel_types);
                                         <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo $stats['downloads']; ?></div>
                                     </div>
                                 </div>
+                                <div class="mt-3 h-10"><canvas id="sparkTotalDownloads"></canvas></div>
                             </div>
                             <div class="card p-4 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
                                 <div class="flex items-center gap-3">
@@ -836,8 +838,8 @@ $funnel_types = array_values($funnel_types);
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <div class="grid grid-cols-1 gap-4 mb-6">
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records by Type</h3>
                                 <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['by_type'] ?? []); ?> types</span>
@@ -849,68 +851,12 @@ $funnel_types = array_values($funnel_types);
                                 <canvas id="recordsTypeChart"></canvas>
                             </div>
                         </div>
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads by Type</h3>
-                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo array_sum($stats['downloads_by_type'] ?? []); ?></span>
-                            </div>
-                            <div id="sk-downloads-type" class="skeleton mb-2">
-                                <div class="skeleton-block"></div>
-                            </div>
-                            <div class="relative w-full h-64 md:h-72">
-                                <canvas id="downloadsTypeChart"></canvas>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                        <div class="col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Conversion Funnel (Views ? Downloads)</h3>
-                            </div>
-                            <div class="relative w-full h-64 md:h-72">
-                                <canvas id="funnelChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <div class="grid grid-cols-3 gap-3">
-                                <div class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/40 border border-gray-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="text-xs text-gray-500">DAU</div>
-                                    <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$dau; ?></div>
-                                </div>
-                                <div class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/40 border border-gray-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="text-xs text-gray-500">WAU</div>
-                                    <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$wau; ?></div>
-                                </div>
-                                <div class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/40 border border-gray-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="text-xs text-gray-500">MAU</div>
-                                    <div class="text-xl font-bold text-gray-800 dark:text-gray-100"><?php echo (int)$mau; ?></div>
-                                </div>
-                            </div>
-                            <div class="mt-4">
-                                <div class="text-sm font-semibold mb-2 text-gray-800 dark:text-gray-100">Top Downloaders (30d)</div>
-                                <?php if (!empty($top_downloaders)): ?>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left text-sm">
-                                        <thead class="text-xs text-gray-500"><tr><th class="py-1 pr-3">User</th><th class="py-1 pr-3">Downloads</th></tr></thead>
-                                        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
-                                            <?php foreach ($top_downloaders as $u): ?>
-                                            <tr><td class="py-1 pr-3 truncate"><?php echo htmlspecialchars($u['name']); ?></td><td class="py-1 pr-3"><?php echo (int)$u['c']; ?></td></tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <?php else: ?>
-                                <div class="text-xs text-gray-500">No data</div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads Over Time (30 days)</h3>
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads Over Time</h3>
                             </div>
                             <div id="sk-downloads-time" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
@@ -921,7 +867,7 @@ $funnel_types = array_values($funnel_types);
                         </div>
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
-                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Over Time (30 days)</h3>
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Records Over Time</h3>
                             </div>
                             <div id="sk-records-time" class="skeleton mb-2">
                                 <div class="skeleton-block"></div>
@@ -930,9 +876,6 @@ $funnel_types = array_values($funnel_types);
                                 <canvas id="recordsTimeChart"></canvas>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                         <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-100">Downloads by Format</h3>
@@ -945,97 +888,130 @@ $funnel_types = array_values($funnel_types);
                                 <canvas id="downloadsFormatChart"></canvas>
                             </div>
                         </div>
-                        <?php if ($is_admin): ?>
-                            <div class="lg:col-span-2 card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</h3>
-                                    <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['recent_activity'] ?? []); ?></span>
-                                </div>
-                                <div id="sk-recent-activity" class="skeleton space-y-2 mb-2">
-                                    <div class="skeleton-line w-2/3"></div>
-                                    <div class="skeleton-line w-full"></div>
-                                    <div class="skeleton-line w-5/6"></div>
-                                    <div class="skeleton-line w-full"></div>
-                                    <div class="skeleton-line w-4/5"></div>
-                                    <div class="skeleton-line w-full"></div>
-                                </div>
-                                <?php if (!empty($stats['recent_activity'])): ?>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-left text-sm">
-                                            <thead class="text-xs text-gray-500">
-                                                <tr>
-                                                    <?php if ($stats['has_user_attr']): ?><th class="py-2 pr-3">User / App</th><?php endif; ?>
-                                                    <th class="py-2 pr-3">Date &amp; time</th>
-                                                    <th class="py-2 pr-3">Event</th>
-                                                    <th class="py-2 pr-3">Event ID</th>
-                                                    <th class="py-2 pr-3">Status</th>
-                                                    <th class="py-2 pr-3">Entity type</th>
-                                                    <th class="py-2 pr-3">Entity name</th>
-                                                    <th class="py-2 pr-3">Entity ID</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
-                                            <?php foreach ($stats['recent_activity'] as $a): ?>
-                                                <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
-                                                    <?php if ($stats['has_user_attr']): ?><td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars(($a['user_name'] ?? '') ?: 'Unknown'); ?></td><?php endif; ?>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['created_at']); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['event_type']); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo isset($a['id']) ? (int)$a['id'] : ''; ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo 'Succeeded'; ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
-                                                    <td class="py-2 pr-3"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
-                                                    <td class="py-2 pr-3 whitespace-nowrap"><?php echo isset($a['record_id']) ? (int)$a['record_id'] : ''; ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="text-sm text-gray-500">No tracked activity yet. Downloads will appear here after using the download modal.</div>
-                                <?php endif; ?>
-                            </div>
-                        <?php else: ?>
-                            <div class="lg:col-span-2 card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300 shadow-sm">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
-                                        <i class="bi bi-lock"></i>
-                                    </div>
-                                    <div>
-                                        <div class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</div>
-                                        <div class="text-sm text-gray-600 dark:text-gray-400">Visible to administrators only.</div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endif; ?>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300">
-                            <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recent Downloads</h3>
-                            <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
-                                <?php if (!empty($stats['recent_downloads'])): ?>
-                                    <table class="w-full text-left text-sm">
-                                        <thead class="text-xs text-gray-500">
-                                            <tr><th>Title</th><th>Type</th><th>Author</th><th>When</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($stats['recent_downloads'] as $row): ?>
-                                                <tr class="border-t"><td><?php echo htmlspecialchars($row['title']); ?></td><td><?php echo htmlspecialchars($row['type']); ?></td><td><?php echo htmlspecialchars($row['author']); ?></td><td><?php echo htmlspecialchars($row['last_accessed']); ?></td></tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                <?php elseif (!empty($stats['downloads_by_type'])): ?>
-                                    <ul class="list-disc pl-5">
-                                        <?php foreach ($stats['downloads_by_type'] as $type => $count): ?>
-                                            <li><?php echo htmlspecialchars($type); ?>  <?php echo (int)$count; ?> downloads</li>
-                                        <?php endforeach; ?>
-                                    </ul>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                        <?php if ($is_admin): ?>
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($stats['recent_activity'] ?? []); ?></span>
+                            </div>
+                            <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                                <?php if (!empty($stats['recent_activity'])): ?>
+                                <table class="w-full text-left text-sm">
+                                    <thead class="text-xs text-gray-500 sticky top-0 bg-white dark:bg-slate-800">
+                                        <tr>
+                                            <?php if ($stats['has_user_attr']): ?><th class="py-2 pr-2">User</th><?php endif; ?>
+                                            <th class="py-2 pr-2">Date</th>
+                                            <th class="py-2 pr-2">Event</th>
+                                            <th class="py-2 pr-2">Type</th>
+                                            <th class="py-2 pr-2">Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                    <?php foreach ($stats['recent_activity'] as $a): ?>
+                                        <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
+                                            <?php if ($stats['has_user_attr']): ?><td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars(($a['user_name'] ?? '') ?: 'Unknown'); ?></td><?php endif; ?>
+                                            <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($a['created_at']); ?></td>
+                                            <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($a['event_type']); ?></td>
+                                            <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($a['record_type'] ?? ''); ?></td>
+                                            <td class="py-2 pr-2 text-xs truncate max-w-[120px]"><?php echo htmlspecialchars($a['record_title'] ?? ''); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                                 <?php else: ?>
-                                    <div class="text-gray-500">No downloads yet.</div>
+                                <div class="text-sm text-gray-500 py-4 text-center">No tracked activity yet.</div>
                                 <?php endif; ?>
                             </div>
                         </div>
+                        <?php else: ?>
+                        <div class="card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
+                                    <i class="bi bi-lock"></i>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-gray-800 dark:text-gray-100">Recent Activity</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">Visible to administrators only.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
+                        <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-100"><i class="bi bi-stars text-purple-600 dark:text-purple-400 mr-1"></i>AI Version Tracking Audit</h3>
+                                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200"><?php echo count($ai_logs); ?></span>
+                            </div>
+                            <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                                <?php if (!empty($ai_logs)): ?>
+                                <table class="w-full text-left text-sm">
+                                    <thead class="text-xs text-gray-500 dark:text-gray-400 sticky top-0 bg-white dark:bg-slate-800">
+                                        <tr>
+                                            <th class="py-2 pr-2">User</th>
+                                            <th class="py-2 pr-2">File V1</th>
+                                            <th class="py-2 pr-2">File V2</th>
+                                            <th class="py-2 pr-2">Status</th>
+                                            <th class="py-2 pr-2">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                    <?php foreach ($ai_logs as $log): ?>
+                                        <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
+                                            <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($log['user_name'] ?? 'Unknown'); ?></td>
+                                            <td class="py-2 pr-2 truncate max-w-[100px] text-xs" title="<?php echo htmlspecialchars($log['file_v1_name'] ?? ''); ?>"><?php echo htmlspecialchars($log['file_v1_name'] ?? '-'); ?></td>
+                                            <td class="py-2 pr-2 truncate max-w-[100px] text-xs" title="<?php echo htmlspecialchars($log['file_v2_name'] ?? ''); ?>"><?php echo htmlspecialchars($log['file_v2_name'] ?? '-'); ?></td>
+                                            <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php if ($log['status'] === 'success'): ?><span class="text-green-600 dark:text-green-400">OK</span><?php else: ?><span class="text-red-600 dark:text-red-400">Failed</span><?php endif; ?></td>
+                                            <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($log['created_at']); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <?php else: ?>
+                                <div class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">No AI comparisons yet.</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php if ($is_admin && !empty($monitored_logs)): ?>
+                    <div class="card p-4 sm:p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold text-gray-800 dark:text-gray-100"><i class="bi bi-eye-fill text-orange-600 dark:text-orange-400 mr-1"></i>Monitored User Activity Logs</h3>
+                            <span class="text-xs px-2 py-1 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"><?php echo count($monitored_logs); ?> entries</span>
+                        </div>
+                        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="text-xs text-gray-500 dark:text-gray-400 sticky top-0 bg-white dark:bg-slate-800">
+                                    <tr>
+                                        <th class="py-2 pr-2">User</th>
+                                        <th class="py-2 pr-2">Action</th>
+                                        <th class="py-2 pr-2">Content</th>
+                                        <th class="py-2 pr-2">Date</th>
+                                        <th class="py-2 pr-2">Time</th>
+                                        <th class="py-2 pr-2">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                                <?php foreach ($monitored_logs as $ml): ?>
+                                    <tr class="even:bg-gray-50 dark:even:bg-slate-800/60">
+                                        <td class="py-2 pr-2 whitespace-nowrap text-xs font-medium text-orange-700 dark:text-orange-300"><?php echo htmlspecialchars($ml['user_name'] ?? 'Unknown'); ?></td>
+                                        <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($ml['about'] ?? ''); ?></td>
+                                        <td class="py-2 pr-2 text-xs truncate max-w-[200px]" title="<?php echo htmlspecialchars($ml['content'] ?? ''); ?>"><?php echo htmlspecialchars($ml['content'] ?? ''); ?></td>
+                                        <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($ml['date'] ?? ''); ?></td>
+                                        <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php echo htmlspecialchars($ml['time'] ?? ''); ?></td>
+                                        <td class="py-2 pr-2 whitespace-nowrap text-xs"><?php if (($ml['status'] ?? '') === 'unread'): ?><span class="px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium">Unread</span><?php else: ?><span class="text-gray-500 dark:text-gray-400">Read</span><?php endif; ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="grid grid-cols-1 gap-6">
                         <div class="card p-6 bg-white dark:bg-slate-800 shadow-lg rounded-2xl border border-gray-100 dark:border-slate-700/60 ring-1 ring-black/5 dark:ring-white/10 hover:shadow-xl transition-all duration-300">
                             <h3 class="font-semibold mb-3 text-gray-800 dark:text-gray-100">Recently Added</h3>
                             <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
@@ -1259,20 +1235,16 @@ $funnel_types = array_values($funnel_types);
 
         // Charts
         const byType = <?php echo json_encode($stats['by_type']); ?>;
-        const downloadsByType = <?php echo json_encode($stats['downloads_by_type']); ?>;
         const downloadsByFormat = <?php echo json_encode($stats['downloads_by_format']); ?>;
         const seriesLabels = <?php echo json_encode($series_labels); ?>;
         const seriesDownloads = <?php echo json_encode($series_downloads_values); ?>;
         const seriesRecords = <?php echo json_encode($series_records_values); ?>;
         function labelsAndData(obj) { const labels = Object.keys(obj); const data = Object.values(obj); return { labels, data }; }
         const rt = labelsAndData(byType);
-        const dt = labelsAndData(downloadsByType);
         const df = labelsAndData(downloadsByFormat);
         const hideSk = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
         const recordsCtx = document.getElementById('recordsTypeChart')?.getContext('2d');
-        if (recordsCtx) { new Chart(recordsCtx, { type: 'pie', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-records'); }
-        const downloadsCtx = document.getElementById('downloadsTypeChart')?.getContext('2d');
-        if (downloadsCtx) { new Chart(downloadsCtx, { type: 'bar', data: { labels: dt.labels, datasets: [{ label: 'Downloads', data: dt.data, backgroundColor: '#2563eb' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision:0 } } } }); hideSk('sk-downloads-type'); }
+        if (recordsCtx) { new Chart(recordsCtx, { type: 'doughnut', data: { labels: rt.labels, datasets: [{ data: rt.data, backgroundColor: ['#dc2626','#f97316','#3b82f6','#10b981','#6b21a8','#f59e0b','#ec4899','#14b8a6'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-records'); }
         const downloadsFormatCtx = document.getElementById('downloadsFormatChart')?.getContext('2d');
         if (downloadsFormatCtx) { new Chart(downloadsFormatCtx, { type: 'doughnut', data: { labels: df.labels, datasets: [{ data: df.data, backgroundColor: ['#dc2626','#3b82f6','#10b981','#6b7280'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } }); hideSk('sk-downloads-format'); }
         hideSk('sk-recent-activity');
@@ -1280,6 +1252,11 @@ $funnel_types = array_values($funnel_types);
         if (downloadsTimeCtx) { new Chart(downloadsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Downloads', data: seriesDownloads, tension: 0.3, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-downloads-time'); }
         const recordsTimeCtx = document.getElementById('recordsTimeChart')?.getContext('2d');
         if (recordsTimeCtx) { new Chart(recordsTimeCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ label: 'Records', data: seriesRecords, tension: 0.3, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.2)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, precision: 0 } } } }); hideSk('sk-records-time'); }
+        // Sparklines for stat cards
+        const sparkRecordsCtx = document.getElementById('sparkTotalRecords')?.getContext('2d');
+        if (sparkRecordsCtx) { new Chart(sparkRecordsCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ data: seriesRecords, borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.3, borderWidth: 1.5, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } } }); }
+        const sparkDownloadsCtx = document.getElementById('sparkTotalDownloads')?.getContext('2d');
+        if (sparkDownloadsCtx) { new Chart(sparkDownloadsCtx, { type: 'line', data: { labels: seriesLabels, datasets: [{ data: seriesDownloads, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', fill: true, tension: 0.3, borderWidth: 1.5, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } } }); }
         const applyBtn = document.getElementById('apply-filters');
         let filtersApplied = false;
         function updateApplyBtn() {
@@ -1327,26 +1304,6 @@ $funnel_types = array_values($funnel_types);
 
     </script>
     <script src="assets/js/theme-toggle.js"></script>
-    <script>
-        (function(){
-            var funnelLabels = <?php echo json_encode($funnel_types); ?>;
-            var viewsByType = <?php echo json_encode($views_by_type); ?>;
-            var downloadsByType = <?php echo json_encode($stats['downloads_by_type'] ?? []); ?>;
-            var v = funnelLabels.map(function(k){ return viewsByType[k] || 0; });
-            var d = funnelLabels.map(function(k){ return downloadsByType[k] || 0; });
-            var ctx = document.getElementById('funnelChart');
-            if (ctx) {
-                new Chart(ctx.getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: funnelLabels, datasets: [
-                        { label: 'Views', data: v, backgroundColor: '#3b82f6' },
-                        { label: 'Downloads', data: d, backgroundColor: '#dc2626' }
-                    ]},
-                    options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true, precision:0 } } }
-                });
-            }
-        })();
-    </script>
     <script>
         const exportModal = document.getElementById('export-modal');
         const exportAction = document.getElementById('export-action');
