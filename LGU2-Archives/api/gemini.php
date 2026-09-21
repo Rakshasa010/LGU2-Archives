@@ -288,8 +288,8 @@ function gemini_chat_system_prompt($conn) {
     ];
 
     $leg = $conn->query(
-        "SELECT lr.title, lr.type, lr.month, lr.year, lr.author, lr.version,
-                lr.unique_number, COALESCE(lf.name, 'Unfiled') AS folder
+        "SELECT lr.id, lr.title, lr.type, lr.month, lr.year, lr.author, lr.version,
+                lr.unique_number, lr.folder_id, COALESCE(lf.name, 'Unfiled') AS folder
          FROM legislative_records lr
          LEFT JOIN legislative_folders lf ON lr.folder_id = lf.id
          ORDER BY lr.created_at DESC LIMIT 40"
@@ -301,8 +301,8 @@ function gemini_chat_system_prompt($conn) {
     }
 
     $arc = $conn->query(
-        "SELECT af.name, af.author, af.version, af.unique_number, af.file_date,
-                COALESCE(fo.name, 'Unfiled') AS folder
+        "SELECT af.id, af.name, af.author, af.version, af.unique_number, af.file_date,
+                af.folder_id, COALESCE(fo.name, 'Unfiled') AS folder
          FROM archive_files af
          LEFT JOIN archive_folders fo ON af.folder_id = fo.id
          ORDER BY af.created_at DESC LIMIT 40"
@@ -314,8 +314,9 @@ function gemini_chat_system_prompt($conn) {
     }
 
     $ext = $conn->query(
-        "SELECT title, document_type, reference_number, description, status, created_at
-         FROM external_documents ORDER BY created_at DESC LIMIT 20"
+        "SELECT ed.id, ed.title, ed.document_type, ed.reference_number, ed.description, ed.status, ed.created_at
+         FROM external_documents ed
+         ORDER BY ed.created_at DESC LIMIT 20"
     );
     if ($ext) {
         while ($row = $ext->fetch_assoc()) {
@@ -346,6 +347,15 @@ function gemini_chat_system_prompt($conn) {
         . "- When the user wants a comparison or a document's contents but none are attached, tell them to "
         . "use the 'AI Compare with Archive Assistant' button in Version Tracking, or type e.g. "
         . "'compare <file1> vs <file2>' (accepting record id:N, leg:N/arc:N, a unique number, a path, or a Pinata CID).\n"
+        . "- If the user asks where a file is, which folder it is in, or wants to navigate to a file, "
+        . "you MUST include a NAVIGATE block at the end of your response on its own line.\n"
+        . "  Format: [NAVIGATE:source:id:folderId:title]\n"
+        . "  - source: 'legislative', 'archive', or 'external'\n"
+        . "  - id: the record's id from the metadata\n"
+        . "  - folderId: the folder_id from the metadata (use 0 if unfiled/unknown)\n"
+        . "  - title: a short label for the button (e.g. the document title)\n"
+        . "  Example: [NAVIGATE:legislative:42:5:Supplemental Budget 2025]\n"
+        . "  If the file is not in the index, do NOT emit a NAVIGATE block — just say where to look.\n"
         . "- If you do not know an answer, say so instead of inventing data.\n"
         . "- Keep responses concise, friendly, and professional.";
 }
